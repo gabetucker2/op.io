@@ -1,0 +1,11 @@
+{
+    "Circle": {
+        "Radius": 20,
+        "Speed": 200.0,
+        "Color": [ 0, 0, 255, 255 ] // Blue in RGBA
+    },
+    "Square": {
+        "InitialCount": 10,
+        "Color": [ 255, 0, 0, 255 ] // Red in RGBA
+    }
+}
