@@ -1,8 +1,8 @@
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework;
 
-namespace op_io.Scripts
+namespace op_io
 {
     public class Circle
     {
@@ -11,7 +11,6 @@ namespace op_io.Scripts
         private int _radius;
         private Color _color;
         private Texture2D _texture;
-
         private int _viewportWidth;
         private int _viewportHeight;
 
@@ -28,7 +27,7 @@ namespace op_io.Scripts
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
             _texture = new Texture2D(graphicsDevice, _radius * 2, _radius * 2);
-            Color[] circleData = new Color[_radius * 2 * _radius * 2];
+            Color[] data = new Color[_radius * _radius * 4];
             for (int y = 0; y < _radius * 2; y++)
             {
                 for (int x = 0; x < _radius * 2; x++)
@@ -36,30 +35,21 @@ namespace op_io.Scripts
                     int dx = x - _radius;
                     int dy = y - _radius;
                     if (dx * dx + dy * dy <= _radius * _radius)
-                    {
-                        circleData[y * _radius * 2 + x] = _color;
-                    }
+                        data[y * _radius * 2 + x] = _color;
                     else
-                    {
-                        circleData[y * _radius * 2 + x] = Color.Transparent;
-                    }
+                        data[y * _radius * 2 + x] = Color.Transparent;
                 }
             }
-            _texture.SetData(circleData);
+            _texture.SetData(data);
         }
 
         public void Update(float deltaTime)
         {
-            var keyboardState = Keyboard.GetState();
-
-            if (keyboardState.IsKeyDown(Keys.W))
-                _position.Y -= _speed * deltaTime;
-            if (keyboardState.IsKeyDown(Keys.S))
-                _position.Y += _speed * deltaTime;
-            if (keyboardState.IsKeyDown(Keys.A))
-                _position.X -= _speed * deltaTime;
-            if (keyboardState.IsKeyDown(Keys.D))
-                _position.X += _speed * deltaTime;
+            var keyboard = Keyboard.GetState();
+            if (keyboard.IsKeyDown(Keys.W)) _position.Y -= _speed * deltaTime;
+            if (keyboard.IsKeyDown(Keys.S)) _position.Y += _speed * deltaTime;
+            if (keyboard.IsKeyDown(Keys.A)) _position.X -= _speed * deltaTime;
+            if (keyboard.IsKeyDown(Keys.D)) _position.X += _speed * deltaTime;
 
             _position.X = MathHelper.Clamp(_position.X, _radius, _viewportWidth - _radius);
             _position.Y = MathHelper.Clamp(_position.Y, _radius, _viewportHeight - _radius);

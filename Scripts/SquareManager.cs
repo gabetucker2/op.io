@@ -1,48 +1,42 @@
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
-using System.Collections.Generic;
+using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Collections.Generic;
 
-namespace op_io.Scripts
+namespace op_io
 {
     public class SquareManager
     {
         private List<Rectangle> _squares;
+        private Color _color;
         private Texture2D _texture;
-        private Random _random;
 
-        private int _viewportWidth;
-        private int _viewportHeight;
-
-        public SquareManager(int initialCount, int viewportWidth, int viewportHeight)
+        public SquareManager(int count, int screenWidth, int screenHeight, Color color)
         {
             _squares = new List<Rectangle>();
-            _random = new Random();
-            _viewportWidth = viewportWidth;
-            _viewportHeight = viewportHeight;
-
-            for (int i = 0; i < initialCount; i++)
+            _color = color;
+            for (int i = 0; i < count; i++)
             {
-                GenerateRandomSquare();
+                int x = Random.Shared.Next(0, screenWidth - 40);
+                int y = Random.Shared.Next(0, screenHeight - 40);
+                _squares.Add(new Rectangle(x, y, 40, 40));
             }
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
             _texture = new Texture2D(graphicsDevice, 40, 40);
-            Color[] squareData = new Color[40 * 40];
-            for (int i = 0; i < squareData.Length; i++)
-            {
-                squareData[i] = Color.Red;
-            }
-            _texture.SetData(squareData);
+            Color[] data = new Color[40 * 40];
+            for (int i = 0; i < data.Length; i++) data[i] = _color;
+            _texture.SetData(data);
         }
 
         public void CheckCollisions(Circle circle)
         {
             for (int i = _squares.Count - 1; i >= 0; i--)
             {
-                if (CircleIntersectsRectangle(circle.Position, circle.Radius, _squares[i]))
+                Rectangle square = _squares[i];
+                if (CircleIntersectsRectangle(circle.Position, circle.Radius, square))
                 {
                     _squares.RemoveAt(i);
                 }
@@ -57,22 +51,15 @@ namespace op_io.Scripts
             }
         }
 
-        private void GenerateRandomSquare()
+        private bool CircleIntersectsRectangle(Vector2 circlePos, int radius, Rectangle rect)
         {
-            int x = _random.Next(0, _viewportWidth - 40);
-            int y = _random.Next(0, _viewportHeight - 40);
-            _squares.Add(new Rectangle(x, y, 40, 40));
-        }
+            float closestX = MathHelper.Clamp(circlePos.X, rect.Left, rect.Right);
+            float closestY = MathHelper.Clamp(circlePos.Y, rect.Top, rect.Bottom);
 
-        private bool CircleIntersectsRectangle(Vector2 circleCenter, float radius, Rectangle rectangle)
-        {
-            float nearestX = MathHelper.Clamp(circleCenter.X, rectangle.Left, rectangle.Right);
-            float nearestY = MathHelper.Clamp(circleCenter.Y, rectangle.Top, rectangle.Bottom);
+            float distanceX = circlePos.X - closestX;
+            float distanceY = circlePos.Y - closestY;
 
-            float deltaX = circleCenter.X - nearestX;
-            float deltaY = circleCenter.Y - nearestY;
-
-            return (deltaX * deltaX + deltaY * deltaY) < (radius * radius);
+            return (distanceX * distanceX + distanceY * distanceY) < (radius * radius);
         }
     }
 }
