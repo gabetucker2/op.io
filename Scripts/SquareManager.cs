@@ -31,7 +31,7 @@ namespace op_io
             _texture.SetData(data);
         }
 
-        public void CheckCollisions(Circle circle)
+        public void CheckCollisions(Player circle)
         {
             for (int i = _squares.Count - 1; i >= 0; i--)
             {

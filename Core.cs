@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using op.io.Scripts;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -16,7 +17,7 @@ namespace op_io
         private int _viewportWidth;
         private int _viewportHeight;
 
-        private Circle _circle;
+        private Player _player;
         private SquareManager _squareManager;
 
         private JsonDocument _config;
@@ -28,21 +29,11 @@ namespace op_io
             IsMouseVisible = true;
 
             // Load configuration from JSON
-            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Config.json");
-            if (!File.Exists(configPath))
-                throw new FileNotFoundException($"Config file not found at path: {configPath}");
+            _config = BaseFunctions.Config();
 
-            string json = File.ReadAllText(configPath);
-            _config = JsonDocument.Parse(json);
-
-            _viewportWidth = GetProperty<int>(_config, "Viewport", "Width", 800);
-            _viewportHeight = GetProperty<int>(_config, "Viewport", "Height", 600);
-            _backgroundColor = new Color(
-                GetProperty<int>(_config, "Viewport", "BackgroundColorR", 0),
-                GetProperty<int>(_config, "Viewport", "BackgroundColorG", 0),
-                GetProperty<int>(_config, "Viewport", "BackgroundColorB", 0),
-                GetProperty<int>(_config, "Viewport", "BackgroundColorA", 255)
-            );
+            _viewportWidth = BaseFunctions.GetJSON(_config, "Viewport", "Width", 600);
+            _viewportHeight = BaseFunctions.GetJSON(_config, "Viewport", "Height", 600);
+            _backgroundColor = BaseFunctions.GetColor(_config, "Viewport", "BackgroundColor", Color.CornflowerBlue);
 
             // Apply viewport size
             _graphics.PreferredBackBufferWidth = _viewportWidth;
@@ -53,27 +44,17 @@ namespace op_io
         protected override void Initialize()
         {
             // Circle settings
-            float circleX = GetProperty<float>(_config, "Circle", "X", _viewportWidth / 2f);
-            float circleY = GetProperty<float>(_config, "Circle", "Y", _viewportHeight / 2f);
-            int circleRadius = GetProperty<int>(_config, "Circle", "Radius", 20);
-            float circleSpeed = GetProperty<float>(_config, "Circle", "Speed", 200f);
-            Color circleColor = new Color(
-                GetProperty<int>(_config, "Circle", "ColorR", 255),
-                GetProperty<int>(_config, "Circle", "ColorG", 0),
-                GetProperty<int>(_config, "Circle", "ColorB", 0),
-                GetProperty<int>(_config, "Circle", "ColorA", 255)
-            );
+            float circleX = BaseFunctions.GetJSON(_config, "Circle", "X", _viewportWidth / 2f);
+            float circleY = BaseFunctions.GetJSON(_config, "Circle", "Y", _viewportHeight / 2f);
+            int circleRadius = BaseFunctions.GetJSON(_config, "Circle", "Radius", 20);
+            float circleSpeed = BaseFunctions.GetJSON(_config, "Circle", "Speed", 200f);
+            Color circleColor = BaseFunctions.GetColor(_config, "Circle", "Color", Color.Red);
 
-            _circle = new Circle(circleX, circleY, circleRadius, circleSpeed, circleColor, _viewportWidth, _viewportHeight);
+            _player = new Player(new GameObject(), circleX, circleY, circleRadius, circleSpeed, circleColor, _viewportWidth, _viewportHeight);
 
             // SquareManager settings
-            int squareCount = GetProperty<int>(_config, "Square", "InitialCount", 10);
-            Color squareColor = new Color(
-                GetProperty<int>(_config, "Square", "ColorR", 0),
-                GetProperty<int>(_config, "Square", "ColorG", 255),
-                GetProperty<int>(_config, "Square", "ColorB", 0),
-                GetProperty<int>(_config, "Square", "ColorA", 255)
-            );
+            int squareCount = BaseFunctions.GetJSON(_config, "Square", "InitialCount", 10);
+            Color squareColor = BaseFunctions.GetColor(_config, "Square", "Color", Color.Green);
 
             _squareManager = new SquareManager(squareCount, _viewportWidth, _viewportHeight, squareColor);
 
@@ -83,7 +64,7 @@ namespace op_io
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _circle.LoadContent(GraphicsDevice);
+            _player.LoadContent(GraphicsDevice);
             _squareManager.LoadContent(GraphicsDevice);
         }
 
@@ -92,8 +73,8 @@ namespace op_io
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            _circle.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-            _squareManager.CheckCollisions(_circle);
+            _player.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+            _squareManager.CheckCollisions(_player);
 
             base.Update(gameTime);
         }
@@ -103,24 +84,11 @@ namespace op_io
             GraphicsDevice.Clear(_backgroundColor);
 
             _spriteBatch.Begin();
-            _circle.Draw(_spriteBatch);
+            _player.Draw(_spriteBatch);
             _squareManager.Draw(_spriteBatch);
             _spriteBatch.End();
 
             base.Draw(gameTime);
-        }
-
-        private T GetProperty<T>(JsonDocument doc, string section, string key, T defaultValue = default)
-        {
-            try
-            {
-                var element = doc.RootElement.GetProperty(section).GetProperty(key);
-                return (T)Convert.ChangeType(element.GetRawText(), typeof(T));
-            }
-            catch (Exception)
-            {
-                return defaultValue;
-            }
         }
     }
 }

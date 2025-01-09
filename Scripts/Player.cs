@@ -1,11 +1,13 @@
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
+using op.io.Scripts;
 
 namespace op_io
 {
-    public class Circle
+    public class Player
     {
+        private GameObject _gameObject;
         private Vector2 _position;
         private float _speed;
         private int _radius;
@@ -14,8 +16,9 @@ namespace op_io
         private int _viewportWidth;
         private int _viewportHeight;
 
-        public Circle(float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight)
+        public Player(GameObject gameObject, float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight)
         {
+            _gameObject = gameObject;
             _position = new Vector2(x, y);
             _radius = radius;
             _speed = speed;
@@ -45,14 +48,11 @@ namespace op_io
 
         public void Update(float deltaTime)
         {
-            var keyboard = Keyboard.GetState();
-            if (keyboard.IsKeyDown(Keys.W)) _position.Y -= _speed * deltaTime;
-            if (keyboard.IsKeyDown(Keys.S)) _position.Y += _speed * deltaTime;
-            if (keyboard.IsKeyDown(Keys.A)) _position.X -= _speed * deltaTime;
-            if (keyboard.IsKeyDown(Keys.D)) _position.X += _speed * deltaTime;
+            // Move GameObject
+            ActionHandler.Move(_gameObject, InputManager.MoveVector(), _speed, deltaTime);
 
-            _position.X = MathHelper.Clamp(_position.X, _radius, _viewportWidth - _radius);
-            _position.Y = MathHelper.Clamp(_position.Y, _radius, _viewportHeight - _radius);
+            // Sync Player position with GameObject position TODO: move to GameObject functionality
+            _position = _gameObject.Position;
         }
 
         public void Draw(SpriteBatch spriteBatch)

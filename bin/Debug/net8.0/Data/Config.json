@@ -1,27 +1,33 @@
 {
     "Viewport": {
-        "Width": 1024,
-        "Height": 768,
-        "BackgroundColorR": 30,
-        "BackgroundColorG": 30,
-        "BackgroundColorB": 60,
-        "BackgroundColorA": 255
+        "Width": 800,
+        "Height": 800,
+        "BackgroundColor": {
+            "R": 0,
+            "G": 0,
+            "B": 30,
+            "A": 255
+        }
     },
     "Circle": {
         "X": 100,
         "Y": 100,
         "Radius": 25,
-        "Speed": 300.0,
-        "ColorR": 255,
-        "ColorG": 100,
-        "ColorB": 100,
-        "ColorA": 255
+        "Speed": 200.0,
+        "Color": {
+            "R": 255,
+            "B": 100,
+            "G": 100,
+            "A": 255
+        }
     },
     "Square": {
         "InitialCount": 10,
-        "ColorR": 100,
-        "ColorG": 255,
-        "ColorB": 100,
-        "ColorA": 255
+        "Color": {
+            "R": 255,
+            "G": 255,
+            "B": 100,
+            "A": 255
+        }
     }
 }
