@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using op.io.Scripts;
@@ -7,38 +6,40 @@ namespace op_io
 {
     public class Player
     {
-        private Vector2 _position;
-        private float _speed;
-        private int _radius;
+        public Vector2 Position;
+        public float Speed;
+        public int Radius;
+        public int Weight;
         private Color _color;
         private Texture2D _texture;
         private int _viewportWidth;
         private int _viewportHeight;
 
-        public Player(float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight)
+        public Player(float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight, int weight)
         {
-            _position = new Vector2(x, y);
-            _radius = radius;
-            _speed = speed;
+            Position = new Vector2(x, y);
+            Radius = radius;
+            Speed = speed;
             _color = color;
             _viewportWidth = viewportWidth;
             _viewportHeight = viewportHeight;
+            Weight = weight;
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
-            _texture = new Texture2D(graphicsDevice, _radius * 2, _radius * 2);
-            Color[] data = new Color[_radius * _radius * 4];
-            for (int y = 0; y < _radius * 2; y++)
+            _texture = new Texture2D(graphicsDevice, Radius * 2, Radius * 2);
+            Color[] data = new Color[Radius * Radius * 4];
+            for (int y = 0; y < Radius * 2; y++)
             {
-                for (int x = 0; x < _radius * 2; x++)
+                for (int x = 0; x < Radius * 2; x++)
                 {
-                    int dx = x - _radius;
-                    int dy = y - _radius;
-                    if (dx * dx + dy * dy <= _radius * _radius)
-                        data[y * _radius * 2 + x] = _color;
+                    int dx = x - Radius;
+                    int dy = y - Radius;
+                    if (dx * dx + dy * dy <= Radius * Radius)
+                        data[y * Radius * 2 + x] = _color;
                     else
-                        data[y * _radius * 2 + x] = Color.Transparent;
+                        data[y * Radius * 2 + x] = Color.Transparent;
                 }
             }
             _texture.SetData(data);
@@ -47,19 +48,16 @@ namespace op_io
         public void Update(float deltaTime)
         {
             Vector2 input = InputManager.MoveVector();
-            _position += input * _speed * deltaTime;
+            Position += input * Speed * deltaTime;
 
             // Ensure the player stays within bounds
-            _position.X = MathHelper.Clamp(_position.X, _radius, _viewportWidth - _radius);
-            _position.Y = MathHelper.Clamp(_position.Y, _radius, _viewportHeight - _radius);
+            Position.X = MathHelper.Clamp(Position.X, Radius, _viewportWidth - Radius);
+            Position.Y = MathHelper.Clamp(Position.Y, Radius, _viewportHeight - Radius);
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(_texture, _position - new Vector2(_radius), Color.White);
+            spriteBatch.Draw(_texture, Position - new Vector2(Radius), Color.White);
         }
-
-        public Vector2 Position => _position;
-        public int Radius => _radius;
     }
 }

@@ -17,6 +17,7 @@ namespace op_io
 
         private Player _player;
         private FarmManager _farmManager;
+        private PhysicsManager _physicsManager;
 
         public Core()
         {
@@ -42,16 +43,31 @@ namespace op_io
             _graphics.ApplyChanges();
         }
 
+        public static Player InitializePlayer(JsonDocument config, int viewportWidth, int viewportHeight)
+        {
+            float playerX = config.RootElement.GetProperty("Player").GetProperty("X").GetSingle();
+            float playerY = config.RootElement.GetProperty("Player").GetProperty("Y").GetSingle();
+            int playerRadius = config.RootElement.GetProperty("Player").GetProperty("Radius").GetInt32();
+            float playerSpeed = config.RootElement.GetProperty("Player").GetProperty("Speed").GetSingle();
+            int playerWeight = config.RootElement.GetProperty("Player").GetProperty("Weight").GetInt32();
+            var colorProperty = config.RootElement.GetProperty("Player").GetProperty("Color");
+            Color playerColor = BaseFunctions.GetColor(colorProperty, Color.Red);
+
+            return new Player(playerX, playerY, playerRadius, playerSpeed, playerColor, viewportWidth, viewportHeight, playerWeight);
+        }
+
         private void InitializeComponents(JsonDocument config)
         {
-            _player = FarmManager.InitializePlayer(config, _viewportWidth, _viewportHeight);
+            _player = InitializePlayer(config, _viewportWidth, _viewportHeight);
             _farmManager = new FarmManager(config, _viewportWidth, _viewportHeight);
+            _physicsManager = new PhysicsManager();
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _farmManager.LoadContent(GraphicsDevice, _player);
+            _farmManager.LoadContent(GraphicsDevice);
+            _player.LoadContent(GraphicsDevice);
         }
 
         protected override void Update(GameTime gameTime)
@@ -59,7 +75,16 @@ namespace op_io
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            _farmManager.Update((float)gameTime.ElapsedGameTime.TotalSeconds, _player);
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Get input from InputManager
+            Vector2 input = InputManager.MoveVector();
+
+            // Apply player movement using PhysicsManager
+            _physicsManager.ApplyPlayerInput(_player, input, deltaTime);
+
+            // Update farm manager and resolve collisions
+            _farmManager.Update(deltaTime, _player);
 
             base.Update(gameTime);
         }

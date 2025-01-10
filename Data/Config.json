@@ -14,10 +14,11 @@
         "Y": 100,
         "Radius": 25,
         "Speed": 500.0,
+        "Weight": 10,
         "Color": {
-            "R": 255,
-            "B": 80,
-            "G": 80,
+            "R": 220,
+            "B": 220,
+            "G": 220,
             "A": 255
         }
     },
@@ -25,20 +26,22 @@
         {
             "Type": "Triangle",
             "NumberOfSides": 3,
-            "Size": 30,
-            "Count": 10,
+            "Size": 35,
+            "Count": 20,
+            "Weight": 5,
             "Color": {
                 "R": 255,
-                "G": 165,
-                "B": 0,
+                "G": 100,
+                "B": 100,
                 "A": 255
             }
         },
         {
             "Type": "Square",
             "NumberOfSides": 4,
-            "Size": 25,
-            "Count": 15,
+            "Size": 40,
+            "Count": 12,
+            "Weight": 8,
             "Color": {
                 "R": 255,
                 "G": 255,
@@ -49,14 +52,29 @@
         {
             "Type": "Pentagon",
             "NumberOfSides": 5,
-            "Size": 35,
-            "Count": 5,
+            "Size": 50,
+            "Count": 6,
+            "Weight": 12,
             "Color": {
                 "R": 100,
                 "G": 100,
                 "B": 255,
                 "A": 255
             }
+        },
+        {
+            "Type": "Octagon",
+            "NumberOfSides": 8,
+            "Size": 80,
+            "Count": 2,
+            "Weight": 20,
+            "Color": {
+                "R": 200,
+                "G": 255,
+                "B": 200,
+                "A": 255
+            }
         }
-    ]
+    ],
+    "CollisionDestroyShapes": true
 }
