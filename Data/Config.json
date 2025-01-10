@@ -1,33 +1,62 @@
 {
     "Viewport": {
-        "Width": 800,
-        "Height": 800,
+        "Width": 1000,
+        "Height": 1000,
         "BackgroundColor": {
             "R": 0,
             "G": 0,
-            "B": 30,
+            "B": 20,
             "A": 255
         }
     },
-    "Circle": {
+    "Player": {
         "X": 100,
         "Y": 100,
         "Radius": 25,
-        "Speed": 200.0,
+        "Speed": 500.0,
         "Color": {
             "R": 255,
-            "B": 100,
-            "G": 100,
+            "B": 80,
+            "G": 80,
             "A": 255
         }
     },
-    "Square": {
-        "InitialCount": 10,
-        "Color": {
-            "R": 255,
-            "G": 255,
-            "B": 100,
-            "A": 255
+    "Farms": [
+        {
+            "Type": "Triangle",
+            "NumberOfSides": 3,
+            "Size": 30,
+            "Count": 10,
+            "Color": {
+                "R": 255,
+                "G": 165,
+                "B": 0,
+                "A": 255
+            }
+        },
+        {
+            "Type": "Square",
+            "NumberOfSides": 4,
+            "Size": 25,
+            "Count": 15,
+            "Color": {
+                "R": 255,
+                "G": 255,
+                "B": 100,
+                "A": 255
+            }
+        },
+        {
+            "Type": "Pentagon",
+            "NumberOfSides": 5,
+            "Size": 35,
+            "Count": 5,
+            "Color": {
+                "R": 100,
+                "G": 100,
+                "B": 255,
+                "A": 255
+            }
         }
-    }
+    ]
 }

@@ -21,30 +21,64 @@ namespace op.io.Scripts
         {
             try
             {
-                var element = doc.RootElement.GetProperty(section).GetProperty(key);
-                int r = element.GetProperty("R").GetInt32();
-                int g = element.GetProperty("G").GetInt32();
-                int b = element.GetProperty("B").GetInt32();
-                int a = element.GetProperty("A").GetInt32();
-                return new Color(r, g, b, a);
+                if (doc.RootElement.TryGetProperty(section, out var sectionElement) &&
+                    sectionElement.TryGetProperty(key, out var colorElement))
+                {
+                    return ParseColor(colorElement);
+                }
             }
             catch (Exception)
             {
-                return defaultColor;
+                // Swallow exception and return default color
             }
+            return defaultColor;
+        }
+
+        public static Color GetColor(JsonElement element, Color defaultColor)
+        {
+            try
+            {
+                return ParseColor(element);
+            }
+            catch (Exception)
+            {
+                // Swallow exception and return default color
+            }
+            return defaultColor;
+        }
+
+        private static Color ParseColor(JsonElement element)
+        {
+            int r = element.GetProperty("R").GetInt32();
+            int g = element.GetProperty("G").GetInt32();
+            int b = element.GetProperty("B").GetInt32();
+            int a = element.GetProperty("A").GetInt32();
+            return new Color(r, g, b, a);
         }
 
         public static T GetJSON<T>(JsonDocument doc, string section, string key, T defaultValue = default)
         {
             try
             {
-                var element = doc.RootElement.GetProperty(section).GetProperty(key);
-                return (T)Convert.ChangeType(element.GetRawText(), typeof(T));
+                if (doc.RootElement.TryGetProperty(section, out var sectionElement) &&
+                    sectionElement.TryGetProperty(key, out var keyElement))
+                {
+                    // Deserialize directly for complex types
+                    if (typeof(T) == typeof(JsonElement)) return (T)(object)keyElement;
+                    if (typeof(T) == typeof(string)) return (T)(object)keyElement.GetString();
+                    if (typeof(T) == typeof(int)) return (T)(object)keyElement.GetInt32();
+                    if (typeof(T) == typeof(float)) return (T)(object)keyElement.GetSingle();
+                    if (typeof(T) == typeof(bool)) return (T)(object)keyElement.GetBoolean();
+
+                    // If it's not a known type, attempt JSON deserialization
+                    return JsonSerializer.Deserialize<T>(keyElement.GetRawText());
+                }
             }
             catch (Exception)
             {
-                return defaultValue;
+                // Swallow exception and return default value
             }
+            return defaultValue;
         }
     }
 }

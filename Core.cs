@@ -2,8 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.Scripts;
-using System;
-using System.IO;
 using System.Text.Json;
 
 namespace op_io
@@ -18,9 +16,7 @@ namespace op_io
         private int _viewportHeight;
 
         private Player _player;
-        private SquareManager _squareManager;
-
-        private JsonDocument _config;
+        private FarmManager _farmManager;
 
         public Core()
         {
@@ -29,43 +25,33 @@ namespace op_io
             IsMouseVisible = true;
 
             // Load configuration from JSON
-            _config = BaseFunctions.Config();
+            var config = BaseFunctions.Config();
 
-            _viewportWidth = BaseFunctions.GetJSON(_config, "Viewport", "Width", 600);
-            _viewportHeight = BaseFunctions.GetJSON(_config, "Viewport", "Height", 600);
-            _backgroundColor = BaseFunctions.GetColor(_config, "Viewport", "BackgroundColor", Color.CornflowerBlue);
+            InitializeViewport(config);
+            InitializeComponents(config);
+        }
 
-            // Apply viewport size
+        private void InitializeViewport(JsonDocument config)
+        {
+            _viewportWidth = BaseFunctions.GetJSON<int>(config, "Viewport", "Width", 600);
+            _viewportHeight = BaseFunctions.GetJSON<int>(config, "Viewport", "Height", 600);
+            _backgroundColor = BaseFunctions.GetColor(config, "Viewport", "BackgroundColor", Color.CornflowerBlue);
+
             _graphics.PreferredBackBufferWidth = _viewportWidth;
             _graphics.PreferredBackBufferHeight = _viewportHeight;
             _graphics.ApplyChanges();
         }
 
-        protected override void Initialize()
+        private void InitializeComponents(JsonDocument config)
         {
-            // Circle settings
-            float circleX = BaseFunctions.GetJSON(_config, "Circle", "X", _viewportWidth / 2f);
-            float circleY = BaseFunctions.GetJSON(_config, "Circle", "Y", _viewportHeight / 2f);
-            int circleRadius = BaseFunctions.GetJSON(_config, "Circle", "Radius", 20);
-            float circleSpeed = BaseFunctions.GetJSON(_config, "Circle", "Speed", 200f);
-            Color circleColor = BaseFunctions.GetColor(_config, "Circle", "Color", Color.Red);
-
-            _player = new Player(new GameObject(), circleX, circleY, circleRadius, circleSpeed, circleColor, _viewportWidth, _viewportHeight);
-
-            // SquareManager settings
-            int squareCount = BaseFunctions.GetJSON(_config, "Square", "InitialCount", 10);
-            Color squareColor = BaseFunctions.GetColor(_config, "Square", "Color", Color.Green);
-
-            _squareManager = new SquareManager(squareCount, _viewportWidth, _viewportHeight, squareColor);
-
-            base.Initialize();
+            _player = FarmManager.InitializePlayer(config, _viewportWidth, _viewportHeight);
+            _farmManager = new FarmManager(config, _viewportWidth, _viewportHeight);
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _player.LoadContent(GraphicsDevice);
-            _squareManager.LoadContent(GraphicsDevice);
+            _farmManager.LoadContent(GraphicsDevice, _player);
         }
 
         protected override void Update(GameTime gameTime)
@@ -73,8 +59,7 @@ namespace op_io
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            _player.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-            _squareManager.CheckCollisions(_player);
+            _farmManager.Update((float)gameTime.ElapsedGameTime.TotalSeconds, _player);
 
             base.Update(gameTime);
         }
@@ -84,8 +69,7 @@ namespace op_io
             GraphicsDevice.Clear(_backgroundColor);
 
             _spriteBatch.Begin();
-            _player.Draw(_spriteBatch);
-            _squareManager.Draw(_spriteBatch);
+            _farmManager.Draw(_spriteBatch, _player);
             _spriteBatch.End();
 
             base.Draw(gameTime);

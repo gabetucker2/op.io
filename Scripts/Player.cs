@@ -7,7 +7,6 @@ namespace op_io
 {
     public class Player
     {
-        private GameObject _gameObject;
         private Vector2 _position;
         private float _speed;
         private int _radius;
@@ -16,9 +15,8 @@ namespace op_io
         private int _viewportWidth;
         private int _viewportHeight;
 
-        public Player(GameObject gameObject, float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight)
+        public Player(float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight)
         {
-            _gameObject = gameObject;
             _position = new Vector2(x, y);
             _radius = radius;
             _speed = speed;
@@ -48,11 +46,12 @@ namespace op_io
 
         public void Update(float deltaTime)
         {
-            // Move GameObject
-            ActionHandler.Move(_gameObject, InputManager.MoveVector(), _speed, deltaTime);
+            Vector2 input = InputManager.MoveVector();
+            _position += input * _speed * deltaTime;
 
-            // Sync Player position with GameObject position TODO: move to GameObject functionality
-            _position = _gameObject.Position;
+            // Ensure the player stays within bounds
+            _position.X = MathHelper.Clamp(_position.X, _radius, _viewportWidth - _radius);
+            _position.Y = MathHelper.Clamp(_position.Y, _radius, _viewportHeight - _radius);
         }
 
         public void Draw(SpriteBatch spriteBatch)
