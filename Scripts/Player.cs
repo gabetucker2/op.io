@@ -53,18 +53,18 @@ namespace op_io
             Vector2 input = InputManager.MoveVector();
             Position += input * Speed * deltaTime;
         }
-
-        public void Draw(SpriteBatch spriteBatch, Texture2D debugTexture)
+        public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
-            // Render the player with Position as the center
+            // Render the player
             spriteBatch.Draw(_texture, Position - new Vector2(Radius), Color.White);
 
-            // Render a large white dot at the render center
-            spriteBatch.Draw(debugTexture, Position - new Vector2(debugTexture.Width / 2f), Color.White);
-
-            // Render a small red dot at the collision center
-            spriteBatch.Draw(debugTexture, Position - new Vector2(2, 2), null, Color.Red, 0f, Vector2.Zero, 0.25f, SpriteEffects.None, 0f);
+            if (debugEnabled)
+            {
+                // Render a circle at the visual render center
+                DebugVisualizer.DrawDebugCircle(spriteBatch, Position);
+            }
         }
+
 
         public bool IsCollidingWith(FarmShape farmShape)
         {

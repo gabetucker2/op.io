@@ -16,7 +16,7 @@
         "Speed": 500.0,
         "Weight": 10,
         "Color": {
-            "R": 255,
+            "R": 0,
             "B": 255,
             "G": 255,
             "A": 255
@@ -104,5 +104,12 @@
             "OutlineWidth": 4
         }
     ],
+    "Debugging": {
+        "Enabled": false,
+        "DebugCircle": {
+            "Color": "Red",
+            "Radius": 7
+        }
+    },
     "CollisionDestroyShapes": true
 }
