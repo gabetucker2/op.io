@@ -1,11 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
+using op_io;
+using System;
 using System.Collections.Generic;
 
-namespace op_io
+namespace op.io.Scripts
 {
     public class PhysicsManager
     {
-        public void ResolveCollisions(List<FarmManager.FarmShape> shapes, Player player, bool destroyOnCollision)
+        public void ResolveCollisions(List<FarmShape> shapes, Player player, bool destroyOnCollision)
         {
             for (int i = 0; i < shapes.Count; i++)
             {
@@ -28,49 +30,39 @@ namespace op_io
             }
         }
 
-        public void ApplyPlayerInput(Player player, Vector2 input, float deltaTime)
+        private bool CheckCollision(Vector2 posA, float radiusA, Vector2 posB, float radiusB)
         {
-            // Normalize input vector
-            if (input.LengthSquared() > 1)
-                input.Normalize();
+            // Distance between the centers of two objects
+            float distance = Vector2.Distance(posA, posB);
 
-            // Calculate force based on input and player speed
-            Vector2 force = input * player.Speed * deltaTime;
-
-            // Apply force to player position
-            player.Position += force;
+            // Check if distance is less than the sum of their radii
+            return distance < (radiusA + radiusB);
         }
 
-        private void ApplyForces(FarmManager.FarmShape a, FarmManager.FarmShape b)
+        private void ApplyForces(FarmShape a, FarmShape b)
         {
             Vector2 direction = b.Position - a.Position;
             float distance = direction.Length();
             if (distance == 0) return;
 
             direction.Normalize();
-            float force = (a.Weight + b.Weight) / distance;
+            float force = (a.Weight + b.Weight) / Math.Max(distance, 0.1f); // Avoid division by zero
 
             a.Position -= direction * force * (b.Weight / (a.Weight + b.Weight));
             b.Position += direction * force * (a.Weight / (a.Weight + b.Weight));
         }
 
-        private void ApplyForces(Player player, FarmManager.FarmShape shape)
+        private void ApplyForces(Player player, FarmShape shape)
         {
             Vector2 direction = shape.Position - player.Position;
             float distance = direction.Length();
             if (distance == 0) return;
 
             direction.Normalize();
-            float force = (player.Weight + shape.Weight) / distance;
+            float force = (player.Weight + shape.Weight) / Math.Max(distance, 0.1f); // Avoid division by zero
 
             player.Position -= direction * force * (shape.Weight / (player.Weight + shape.Weight));
             shape.Position += direction * force * (player.Weight / (player.Weight + shape.Weight));
-        }
-
-        private bool CheckCollision(Vector2 posA, float radiusA, Vector2 posB, float radiusB)
-        {
-            float distance = Vector2.Distance(posA, posB);
-            return distance < radiusA + radiusB;
         }
     }
 }

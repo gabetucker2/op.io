@@ -16,9 +16,9 @@
         "Speed": 500.0,
         "Weight": 10,
         "Color": {
-            "R": 220,
-            "B": 220,
-            "G": 220,
+            "R": 255,
+            "B": 255,
+            "G": 255,
             "A": 255
         }
     },
@@ -26,15 +26,22 @@
         {
             "Type": "Triangle",
             "NumberOfSides": 3,
-            "Size": 35,
+            "Size": 30,
             "Count": 20,
             "Weight": 5,
             "Color": {
                 "R": 255,
-                "G": 100,
-                "B": 100,
+                "G": 150,
+                "B": 150,
                 "A": 255
-            }
+            },
+            "OutlineColor": {
+                "R": 50,
+                "G": 50,
+                "B": 50,
+                "A": 255
+            },
+            "OutlineWidth": 2
         },
         {
             "Type": "Square",
@@ -47,7 +54,14 @@
                 "G": 255,
                 "B": 100,
                 "A": 255
-            }
+            },
+            "OutlineColor": {
+                "R": 30,
+                "G": 30,
+                "B": 30,
+                "A": 255
+            },
+            "OutlineWidth": 3
         },
         {
             "Type": "Pentagon",
@@ -60,7 +74,14 @@
                 "G": 100,
                 "B": 255,
                 "A": 255
-            }
+            },
+            "OutlineColor": {
+                "R": 70,
+                "G": 70,
+                "B": 70,
+                "A": 255
+            },
+            "OutlineWidth": 2
         },
         {
             "Type": "Octagon",
@@ -69,11 +90,18 @@
             "Count": 2,
             "Weight": 20,
             "Color": {
-                "R": 200,
-                "G": 255,
-                "B": 200,
+                "R": 255,
+                "G": 150,
+                "B": 255,
                 "A": 255
-            }
+            },
+            "OutlineColor": {
+                "R": 100,
+                "G": 100,
+                "B": 100,
+                "A": 255
+            },
+            "OutlineWidth": 4
         }
     ],
     "CollisionDestroyShapes": true

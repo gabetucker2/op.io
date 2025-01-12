@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using op.io.Scripts;
@@ -12,17 +13,13 @@ namespace op_io
         public int Weight;
         private Color _color;
         private Texture2D _texture;
-        private int _viewportWidth;
-        private int _viewportHeight;
 
-        public Player(float x, float y, int radius, float speed, Color color, int viewportWidth, int viewportHeight, int weight)
+        public Player(float x, float y, int radius, float speed, Color color, int weight)
         {
             Position = new Vector2(x, y);
             Radius = radius;
             Speed = speed;
             _color = color;
-            _viewportWidth = viewportWidth;
-            _viewportHeight = viewportHeight;
             Weight = weight;
         }
 
@@ -45,19 +42,37 @@ namespace op_io
             _texture.SetData(data);
         }
 
+        public void ApplyInput(Vector2 input, float deltaTime)
+        {
+            Position += input * Speed * deltaTime;
+            Position = new Vector2(Position.X, Position.Y);
+        }
+
         public void Update(float deltaTime)
         {
             Vector2 input = InputManager.MoveVector();
             Position += input * Speed * deltaTime;
-
-            // Ensure the player stays within bounds
-            Position.X = MathHelper.Clamp(Position.X, Radius, _viewportWidth - Radius);
-            Position.Y = MathHelper.Clamp(Position.Y, Radius, _viewportHeight - Radius);
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Texture2D debugTexture)
         {
+            // Render the player with Position as the center
             spriteBatch.Draw(_texture, Position - new Vector2(Radius), Color.White);
+
+            // Render a large white dot at the render center
+            spriteBatch.Draw(debugTexture, Position - new Vector2(debugTexture.Width / 2f), Color.White);
+
+            // Render a small red dot at the collision center
+            spriteBatch.Draw(debugTexture, Position - new Vector2(2, 2), null, Color.Red, 0f, Vector2.Zero, 0.25f, SpriteEffects.None, 0f);
         }
+
+        public bool IsCollidingWith(FarmShape farmShape)
+        {
+            // Check if the player's position is inside the farm shape
+            bool isColliding = farmShape.IsPointInsidePolygon(Position);
+            Console.WriteLine($"Player at {Position} colliding with FarmShape: {isColliding}");
+            return isColliding;
+        }
+
     }
 }
