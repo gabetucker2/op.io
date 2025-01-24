@@ -2,9 +2,12 @@
 
 ## TODO:
 
-* Fix public IsPointInsidePolygon to ensure radius of circle matches and also that it's not colliding at bottom left of circle
+* Fix physics being static
 * Add outlines to the shapes, soften their edges
+* Add cards I can drag on the side of the screen
+* Make each card procedurally generated and an NFT you can trade with other players
 * Add acceleration
+* Make the screen resizable: square in middle for playing, cards and misc settings in remaining space
 * Fix collision physics so when destroy is false, it pushes shapes based on weight
 * Add health to objects
 * Use GameObject more for handling physics, ensure movement updates GameObject position

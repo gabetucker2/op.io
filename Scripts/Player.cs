@@ -53,6 +53,7 @@ namespace op_io
             Vector2 input = InputManager.MoveVector();
             Position += input * Speed * deltaTime;
         }
+
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
             // Render the player
@@ -65,14 +66,20 @@ namespace op_io
             }
         }
 
-
         public bool IsCollidingWith(FarmShape farmShape)
         {
             // Check if the player's position is inside the farm shape
-            bool isColliding = farmShape.IsPointInsidePolygon(Position);
+            bool isColliding = farmShape.IsPointInsidePolygon(
+                (int)Position.X,
+                (int)Position.Y,
+                farmShape.Size / 2,
+                farmShape.Size / 2,
+                farmShape.Sides, // Use public property
+                farmShape.Size / 2,
+                farmShape.Rotation // Use public property
+            );
             Console.WriteLine($"Player at {Position} colliding with FarmShape: {isColliding}");
             return isColliding;
         }
-
     }
 }

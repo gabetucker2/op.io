@@ -46,7 +46,7 @@ namespace op.io.Scripts
             if (distance == 0) return;
 
             direction.Normalize();
-            float force = (a.Weight + b.Weight) / Math.Max(distance, 0.1f); // Avoid division by zero
+            float force = (a.Weight + b.Weight) / (distance > 0.1 ? distance : 0.1f);
 
             a.Position -= direction * force * (b.Weight / (a.Weight + b.Weight));
             b.Position += direction * force * (a.Weight / (a.Weight + b.Weight));

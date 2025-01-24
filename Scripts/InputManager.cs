@@ -32,5 +32,17 @@ namespace op.io.Scripts
             // Return
             return direction;
         }
+        public static Vector2 GetMousePosition()
+        {
+            MouseState mouseState = Mouse.GetState();
+            return new Vector2(mouseState.X, mouseState.Y);
+        }
+
+        public static float GetAngleToMouse(Vector2 playerPosition)
+        {
+            Vector2 mousePosition = GetMousePosition();
+            Vector2 direction = mousePosition - playerPosition;
+            return (float)Math.Atan2(direction.Y, direction.X); // Return angle in radians
+        }
     }
 }
