@@ -36,7 +36,7 @@ namespace op.io
             Weight = weight;
 
             // Create a circle shape for the player
-            _shape = new Shape(Position, "Circle", radius * 2, 0, color, outlineColor, outlineWidth, false, false);
+            _shape = new Shape(Position, "Circle", radius * 2, radius * 2, 0, color, outlineColor, outlineWidth, false, false);
 
             // Initialize rotation line length and outline settings
             _pointerLength = 50; // Default length of the rotation pointer

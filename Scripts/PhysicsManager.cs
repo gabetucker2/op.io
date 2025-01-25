@@ -18,7 +18,7 @@ namespace op.io
             {
                 Shape shape = shapes[i];
 
-                // Check for collision using radius-based or polygon detection
+                // Check for collision using shape-specific logic
                 if (CheckCollision(player, shape))
                 {
                     ApplyForces(player, shape);
@@ -38,18 +38,26 @@ namespace op.io
             if (shape == null)
                 throw new ArgumentNullException(nameof(shape), "Shape cannot be null.");
 
-            // Step 1: Check circular collision (player's area vs. shape's bounding circle)
-            float distanceSquared = Vector2.DistanceSquared(player.Position, shape.Position);
-            float combinedRadius = player.Radius + (shape.Size / 2);
-            if (distanceSquared <= combinedRadius * combinedRadius)
+            // Handle rectangle collisions
+            if (shape.Type == "Rectangle")
             {
-                return true; // Circular overlap detected
+                return IsCircleOverlappingRectangle(player.Position, player.Radius, shape);
             }
 
-            // Step 2: Check if the player's center is inside the polygon (if applicable)
+            // Handle circle collisions
+            if (shape.Type == "Circle")
+            {
+                float distanceSquared = Vector2.DistanceSquared(player.Position, shape.Position);
+                float shapeBoundingRadius = shape.Radius - (shape.OutlineWidth > 0 ? 0.1f : 0f);
+                float combinedRadius = player.Radius + shapeBoundingRadius;
+
+                return distanceSquared <= combinedRadius * combinedRadius;
+            }
+
+            // Handle polygon collisions
             if (shape.Type == "Polygon")
             {
-                return shape.IsPointInsidePolygon(player.Position);
+                return IsCircleOverlappingPolygon(player.Position, player.Radius, shape);
             }
 
             return false;
@@ -74,6 +82,103 @@ namespace op.io
             // Apply forces to the player and shape
             player.Position -= direction * force * (shape.Weight / (player.Weight + shape.Weight));
             shape.Position += direction * force * (player.Weight / (player.Weight + shape.Weight));
+        }
+
+        private bool IsCircleOverlappingRectangle(Vector2 circleCenter, float circleRadius, Shape rectangle)
+        {
+            if (rectangle == null || rectangle.Type != "Rectangle")
+                throw new ArgumentException("Shape must be a rectangle.", nameof(rectangle));
+
+            float left = rectangle.Position.X - rectangle.Width / 2;
+            float right = rectangle.Position.X + rectangle.Width / 2;
+            float top = rectangle.Position.Y - rectangle.Height / 2;
+            float bottom = rectangle.Position.Y + rectangle.Height / 2;
+
+            // Clamp the circle's center to the nearest point on the rectangle
+            float nearestX = Math.Clamp(circleCenter.X, left, right);
+            float nearestY = Math.Clamp(circleCenter.Y, top, bottom);
+
+            // Calculate the distance from the circle's center to this point
+            float distanceSquared = Vector2.DistanceSquared(circleCenter, new Vector2(nearestX, nearestY));
+
+            // Check if the distance is less than or equal to the circle's radius squared
+            return distanceSquared <= circleRadius * circleRadius;
+        }
+
+        private bool IsCircleOverlappingPolygon(Vector2 circleCenter, float circleRadius, Shape polygon)
+        {
+            if (polygon == null || polygon.Type != "Polygon")
+                throw new ArgumentException("Shape must be a polygon.", nameof(polygon));
+
+            float adjustedRadius = polygon.Radius - (polygon.OutlineWidth > 0 ? 0.1f : 0f);
+            var vertices = GeneratePolygonVertices(polygon.Position, polygon.Sides, adjustedRadius);
+
+            // Step 1: Check if the circle's center is inside the polygon
+            int intersections = 0;
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                Vector2 p1 = vertices[i];
+                Vector2 p2 = vertices[(i + 1) % vertices.Count];
+
+                if ((p1.Y > circleCenter.Y) != (p2.Y > circleCenter.Y)) // Check if circle center is between p1.Y and p2.Y
+                {
+                    float intersectX = p1.X + (circleCenter.Y - p1.Y) * (p2.X - p1.X) / (p2.Y - p1.Y);
+                    if (circleCenter.X < intersectX)
+                    {
+                        intersections++;
+                    }
+                }
+            }
+
+            if (intersections % 2 != 0) // Circle's center is inside the polygon
+            {
+                return true;
+            }
+
+            // Step 2: Check if the circle overlaps any polygon edge
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                Vector2 p1 = vertices[i];
+                Vector2 p2 = vertices[(i + 1) % vertices.Count];
+
+                if (CircleIntersectsSegment(circleCenter, circleRadius, p1, p2))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool CircleIntersectsSegment(Vector2 circleCenter, float radius, Vector2 segA, Vector2 segB)
+        {
+            Vector2 seg = segB - segA;
+            Vector2 pointToA = circleCenter - segA;
+
+            float projection = Vector2.Dot(pointToA, seg) / seg.LengthSquared();
+            projection = Math.Clamp(projection, 0, 1);
+
+            Vector2 closestPoint = segA + projection * seg;
+            float distanceSquared = Vector2.DistanceSquared(circleCenter, closestPoint);
+
+            return distanceSquared <= radius * radius;
+        }
+
+        private List<Vector2> GeneratePolygonVertices(Vector2 center, int sides, float radius)
+        {
+            var vertices = new List<Vector2>();
+            double angleIncrement = 2 * Math.PI / sides;
+
+            for (int i = 0; i < sides; i++)
+            {
+                double angle = i * angleIncrement;
+                vertices.Add(new Vector2(
+                    center.X + (float)(radius * Math.Cos(angle)),
+                    center.Y + (float)(radius * Math.Sin(angle))
+                ));
+            }
+
+            return vertices;
         }
     }
 }

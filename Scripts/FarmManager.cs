@@ -14,13 +14,13 @@ namespace op.io
             _shapesManager = new ShapesManager();
         }
 
-        public void AddFarmShape(Vector2 position, string type, int size, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
+        public void AddFarmShape(Vector2 position, string type, int width, int height, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
         {
             if (string.IsNullOrWhiteSpace(type))
                 throw new ArgumentException("Shape type cannot be null or whitespace.", nameof(type));
 
-            if (size <= 0)
-                throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than zero.");
+            if (width <= 0 || height <= 0)
+                throw new ArgumentOutOfRangeException(nameof(width), "Width and height must be greater than zero.");
 
             if (sides < 0)
                 throw new ArgumentOutOfRangeException(nameof(sides), "Number of sides cannot be negative.");
@@ -28,7 +28,8 @@ namespace op.io
             if (outlineWidth < 0)
                 throw new ArgumentOutOfRangeException(nameof(outlineWidth), "Outline width cannot be negative.");
 
-            _shapesManager.AddShape(position, type, size, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics);
+            // Use the correct AddShape method with width and height explicitly
+            _shapesManager.AddShape(position, type, width, height, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics);
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)

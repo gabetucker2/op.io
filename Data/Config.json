@@ -31,6 +31,45 @@
     },
     "Farms": [
         {
+            "Type": "Rectangle",
+            "Width": 20,
+            "Height": 40,
+            "Count": 2,
+            "Weight": 10,
+            "Color": {
+                "R": 255,
+                "G": 200,
+                "B": 200,
+                "A": 255
+            },
+            "OutlineColor": {
+                "R": 128,
+                "G": 75,
+                "B": 75,
+                "A": 255
+            },
+            "OutlineWidth": 3
+        },
+        {
+            "Type": "Circle",
+            "Radius": 25,
+            "Count": 5,
+            "Weight": 15,
+            "Color": {
+                "R": 200,
+                "G": 255,
+                "B": 150,
+                "A": 255
+            },
+            "OutlineColor": {
+                "R": 75,
+                "G": 128,
+                "B": 75,
+                "A": 255
+            },
+            "OutlineWidth": 4
+        },
+        {
             "Type": "Polygon",
             "NumberOfSides": 3,
             "Size": 30,
@@ -112,7 +151,7 @@
         }
     ],
     "Debugging": {
-        "Enabled": false,
+        "Enabled": true,
         "DebugCircle": {
             "Color": {
                 "R": 255,

@@ -2,6 +2,9 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using XnaColor = Microsoft.Xna.Framework.Color;
+using XnaRectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace op.io
 {
@@ -14,18 +17,43 @@ namespace op.io
             _shapes = new List<Shape>();
         }
 
-        public void AddShape(Vector2 position, string type, int size, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
+        public void AddShape(Vector2 position, string type, int width, int height, int sides, XnaColor color, XnaColor outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
         {
             if (string.IsNullOrEmpty(type))
                 throw new ArgumentException("Shape type cannot be null or empty.", nameof(type));
-            if (size <= 0)
-                throw new ArgumentException("Size must be greater than 0.", nameof(size));
-            if (sides < 0)
-                throw new ArgumentException("Number of sides must be 0 or greater.", nameof(sides));
+            if (type == "Circle" && width <= 0 && height <= 0)
+                throw new ArgumentException("Circle must have a valid radius specified.", nameof(width));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException("Width and height must be greater than 0.", nameof(width));
+            if (type == "Polygon" && sides < 3)
+                throw new ArgumentException("Number of sides must be 3 or greater for polygons.", nameof(sides));
             if (outlineWidth < 0)
                 throw new ArgumentException("Outline width must be non-negative.", nameof(outlineWidth));
 
-            _shapes.Add(new Shape(position, type, size, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics));
+            // Handle circle shapes by converting radius into width and height
+            if (type == "Circle")
+            {
+                if (width <= 0 || height <= 0)
+                    throw new ArgumentException("Circle must have a valid radius specified.", nameof(width));
+
+                int radius = Math.Max(width, height) / 2;
+                width = height = 2 * radius; // Enforce proper width and height for circles
+            }
+
+            // Handle rectangle shape explicitly
+            if (type == "Rectangle")
+            {
+                _shapes.Add(new Shape(position, type, width, height, 0, color, outlineColor, outlineWidth, enableCollision, enablePhysics));
+            }
+            else if (type == "Polygon" || type == "Circle")
+            {
+                int size = Math.Max(width, height); // Use the larger dimension
+                _shapes.Add(new Shape(position, type, size, size, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics));
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported shape type: {type}", nameof(type));
+            }
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
@@ -70,23 +98,27 @@ namespace op.io
     public class Shape
     {
         public Vector2 Position { get; set; }
-        public int Size { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Radius { get; private set; }
         public int Weight { get; set; }
         public string Type { get; set; }
         private int _sides;
-        private Color _color;
-        private Color _outlineColor;
+        public int Sides { get { return _sides; } }
+        private Microsoft.Xna.Framework.Color _color;
+        private Microsoft.Xna.Framework.Color _outlineColor;
         private int _outlineWidth;
+        public int OutlineWidth { get { return _outlineWidth; } }
         private Texture2D _texture;
         private bool _enableCollision;
         private bool _enablePhysics;
 
-        public Shape(Vector2 position, string type, int size, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
+        public Shape(Vector2 position, string type, int width, int height, int sides, Microsoft.Xna.Framework.Color color, Microsoft.Xna.Framework.Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
         {
             if (string.IsNullOrEmpty(type))
                 throw new ArgumentException("Shape type cannot be null or empty.", nameof(type));
-            if (size <= 0)
-                throw new ArgumentException("Size must be greater than 0.", nameof(size));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException("Width and height must be greater than 0.", nameof(width));
             if (sides < 0)
                 throw new ArgumentException("Number of sides must be 0 or greater.", nameof(sides));
             if (outlineWidth < 0)
@@ -94,14 +126,30 @@ namespace op.io
 
             Position = position;
             Type = type;
-            Size = size;
+
+            // Set width and height for all shapes
+            Width = width;
+            Height = height;
+
+            // Specific handling for circles
+            if (type == "Circle")
+            {
+                Radius = Math.Max(width, height) / 2;
+            }
+
+            // Specific handling for polygons
+            if (type == "Polygon")
+            {
+                Radius = Math.Max(width, height) / 2;
+            }
+
             _sides = sides;
             _color = color;
             _outlineColor = outlineColor;
             _outlineWidth = outlineWidth;
             _enableCollision = enableCollision;
             _enablePhysics = enablePhysics;
-            Weight = size;
+            Weight = Math.Max(width, height);
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
@@ -109,20 +157,24 @@ namespace op.io
             if (graphicsDevice == null)
                 throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null.");
 
-            _texture = new Texture2D(graphicsDevice, Size, Size);
-            Color[] data = new Color[Size * Size];
+            // Use appropriate dimensions for texture creation
+            int textureWidth = Type == "Rectangle" ? Width : Radius * 2;
+            int textureHeight = Type == "Rectangle" ? Height : Radius * 2;
 
-            for (int y = 0; y < Size; y++)
+            _texture = new Texture2D(graphicsDevice, textureWidth, textureHeight);
+            var data = new Microsoft.Xna.Framework.Color[textureWidth * textureHeight];
+
+            for (int y = 0; y < textureHeight; y++)
             {
-                for (int x = 0; x < Size; x++)
+                for (int x = 0; x < textureWidth; x++)
                 {
-                    if (IsPointInsideShape(x, y))
+                    if (IsPointInsideShape(x, y, textureWidth, textureHeight))
                     {
-                        data[y * Size + x] = IsOnOutline(x, y) ? _outlineColor : _color;
+                        data[y * textureWidth + x] = IsOnOutline(x, y, textureWidth, textureHeight) ? _outlineColor : _color;
                     }
                     else
                     {
-                        data[y * Size + x] = Color.Transparent;
+                        data[y * textureWidth + x] = Microsoft.Xna.Framework.Color.Transparent;
                     }
                 }
             }
@@ -145,12 +197,32 @@ namespace op.io
         {
             if (spriteBatch == null)
                 throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
-
             if (_texture == null)
                 throw new InvalidOperationException("Texture must be loaded before drawing.");
 
-            Rectangle bounds = new Rectangle((int)(Position.X - Size / 2), (int)(Position.Y - Size / 2), Size, Size);
-            spriteBatch.Draw(_texture, bounds, Color.White);
+            Microsoft.Xna.Framework.Rectangle bounds;
+
+            if (Type == "Rectangle")
+            {
+                bounds = new Microsoft.Xna.Framework.Rectangle(
+                    (int)(Position.X - Width / 2),
+                    (int)(Position.Y - Height / 2),
+                    Width,
+                    Height
+                );
+            }
+            else
+            {
+                int diameter = Radius * 2;
+                bounds = new Microsoft.Xna.Framework.Rectangle(
+                    (int)(Position.X - Radius),
+                    (int)(Position.Y - Radius),
+                    diameter,
+                    diameter
+                );
+            }
+
+            spriteBatch.Draw(_texture, bounds, Microsoft.Xna.Framework.Color.White);
 
             if (debugEnabled)
             {
@@ -158,45 +230,48 @@ namespace op.io
             }
         }
 
-        private bool IsPointInsideShape(int x, int y)
+        private bool IsPointInsideShape(int x, int y, int textureWidth, int textureHeight)
         {
-            int centerX = Size / 2;
-            int centerY = Size / 2;
+            int centerX = textureWidth / 2;
+            int centerY = textureHeight / 2;
 
             if (Type == "Circle")
             {
-                float radius = Size / 2f - (_outlineWidth > 0 ? 0.1f : 0f);
+                float radius = Radius - (_outlineWidth > 0 ? 0.1f : 0f); // Reduce fill-border artifacting
                 return Math.Pow(x - centerX, 2) + Math.Pow(y - centerY, 2) <= radius * radius;
             }
-            else if (_sides >= 3) // Handle polygons
+            else if (Type == "Polygon")
             {
+                // Adjust the radius for artifacting reduction
+                float adjustedRadius = Radius - (_outlineWidth > 0 ? 0.1f : 0f);
                 Vector2 point = new Vector2(x - centerX, y - centerY);
-                return IsPointInsidePolygon(point);
+                return IsPointInsidePolygon(point, adjustedRadius);
+            }
+            else if (Type == "Rectangle")
+            {
+                return x >= 0 && x < Width && y >= 0 && y < Height;
             }
 
             return false;
         }
 
-        public bool IsPointInsidePolygon(Vector2 point)
+        public bool IsPointInsidePolygon(Vector2 point, float adjustedRadius)
         {
-            // Translate the point to local space
             float localX = point.X;
             float localY = point.Y;
 
             double angleIncrement = 2 * Math.PI / _sides;
             var vertices = new List<Vector2>();
 
-            // Generate polygon vertices in local space
             for (int i = 0; i < _sides; i++)
             {
                 double angle = i * angleIncrement;
                 vertices.Add(new Vector2(
-                    (float)(Size / 2 * Math.Cos(angle)),
-                    (float)(Size / 2 * Math.Sin(angle))
+                    (float)(adjustedRadius * Math.Cos(angle)),
+                    (float)(adjustedRadius * Math.Sin(angle))
                 ));
             }
 
-            // Ray-casting algorithm to count intersections
             int intersections = 0;
             for (int i = 0; i < vertices.Count; i++)
             {
@@ -216,38 +291,54 @@ namespace op.io
             return intersections % 2 != 0;
         }
 
-        private bool IsOnOutline(int x, int y)
+        private bool IsOnOutline(int x, int y, int textureWidth, int textureHeight)
         {
-            float distanceToEdge = DistanceToShapeEdge(x, y);
+            float distanceToEdge = DistanceToShapeEdge(x, y, textureWidth, textureHeight);
+
+            if (Type == "Rectangle")
+            {
+                // Check if the point is within the outline bounds of the rectangle
+                float left = _outlineWidth;
+                float right = Width - _outlineWidth;
+                float top = _outlineWidth;
+                float bottom = Height - _outlineWidth;
+
+                bool insideInnerRectangle = (x > left && x < right && y > top && y < bottom);
+                bool insideOuterRectangle = (x >= 0 && x < Width && y >= 0 && y < Height);
+
+                return insideOuterRectangle && !insideInnerRectangle;
+            }
+
+            // For other shapes
             return distanceToEdge <= _outlineWidth && distanceToEdge > 0;
         }
 
-        private float DistanceToShapeEdge(int x, int y)
+        private float DistanceToShapeEdge(int x, int y, int textureWidth, int textureHeight)
         {
-            int centerX = Size / 2;
-            int centerY = Size / 2;
+            int centerX = textureWidth / 2;
+            int centerY = textureHeight / 2;
 
             if (Type == "Circle")
             {
                 float dx = x - centerX;
                 float dy = y - centerY;
                 float distanceToCenter = MathF.Sqrt(dx * dx + dy * dy);
-                return MathF.Abs(distanceToCenter - Size / 2f);
+                return MathF.Abs(distanceToCenter - Radius);
             }
-            else if (_sides >= 3) // Handle polygons
+            else if (Type == "Polygon")
             {
-                return DistanceToPolygonEdge(x, y, centerX, centerY, _sides, Size / 2);
+                return DistanceToPolygonEdge(x, y, centerX, centerY, Radius);
             }
 
-            return float.MaxValue;
+            return float.MaxValue; // Rectangles do not use distance-based checks for edges
         }
 
-        private float DistanceToPolygonEdge(int x, int y, int centerX, int centerY, int sides, float radius)
+        private float DistanceToPolygonEdge(int x, int y, int centerX, int centerY, int radius)
         {
-            double angleIncrement = 2 * Math.PI / sides;
+            double angleIncrement = 2 * Math.PI / _sides;
             var points = new List<Vector2>();
 
-            for (int i = 0; i < sides; i++)
+            for (int i = 0; i < _sides; i++)
             {
                 double angle = i * angleIncrement;
                 points.Add(new Vector2(
