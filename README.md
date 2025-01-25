@@ -2,10 +2,10 @@
 
 ## TODO:
 
-* Ensure Player movement uses Physics script
 * Add enable/disable player/destructable/collidable
 * Split JSON files
 * --------------
+* Ensure Player movement uses Physics script
 * Refactor physics functions, e.g., velocity/accel, collisions, etc
 * Add leveling up from destroying GameObjects
 * Add regeneration of farm
