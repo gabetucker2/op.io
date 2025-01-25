@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
-using System.Collections.Generic;
 
 namespace op.io
 {
@@ -21,7 +20,8 @@ namespace op.io
 
         public Core()
         {
-            _graphics = new GraphicsDeviceManager(this);
+            _graphics = new GraphicsDeviceManager(this)
+                ?? throw new ArgumentNullException(nameof(_graphics), "GraphicsDeviceManager initialization failed.");
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
         }
@@ -29,11 +29,19 @@ namespace op.io
         protected override void Initialize()
         {
             var config = BaseFunctions.Config();
+            if (config == null)
+                throw new ArgumentException("Configuration cannot be null or invalid.", nameof(config));
 
             // Set viewport dimensions and background color
             _viewportWidth = config.RootElement.GetProperty("Viewport").GetProperty("Width").GetInt32();
             _viewportHeight = config.RootElement.GetProperty("Viewport").GetProperty("Height").GetInt32();
-            _backgroundColor = BaseFunctions.GetColor(config.RootElement.GetProperty("Viewport").GetProperty("BackgroundColor"), Color.Black);
+
+            if (_viewportWidth <= 0 || _viewportHeight <= 0)
+                throw new ArgumentException("Viewport dimensions must be positive values.");
+
+            _backgroundColor = BaseFunctions.GetColor(config.RootElement.GetProperty("Viewport").GetProperty("BackgroundColor"), Color.HotPink);
+            if (_backgroundColor == Color.HotPink)
+                throw new ArgumentNullException(nameof(_backgroundColor), "Background color cannot be null.");
 
             _graphics.PreferredBackBufferWidth = _viewportWidth;
             _graphics.PreferredBackBufferHeight = _viewportHeight;
@@ -43,7 +51,8 @@ namespace op.io
             _debugEnabled = config.RootElement.GetProperty("Debugging").GetProperty("Enabled").GetBoolean();
             if (_debugEnabled)
             {
-                var debugSettings = config.RootElement.GetProperty("Debugging");
+                if (!config.RootElement.TryGetProperty("Debugging", out var debugSettings))
+                    throw new ArgumentException("Debugging configuration is missing.");
                 DebugVisualizer.Initialize(GraphicsDevice, debugSettings);
             }
 
@@ -60,6 +69,15 @@ namespace op.io
                 int weight = farm.GetProperty("Weight").GetInt32();
                 Color outlineColor = BaseFunctions.GetColor(farm.GetProperty("OutlineColor"), Color.Black);
                 int outlineWidth = farm.GetProperty("OutlineWidth").GetInt32();
+
+                if (count <= 0)
+                    throw new ArgumentException("Farm count must be greater than 0.");
+
+                if (size <= 0)
+                    throw new ArgumentException("Farm size must be greater than 0.");
+
+                if (sides < 3)
+                    throw new ArgumentException("Farm shapes must have at least 3 sides.");
 
                 for (int i = 0; i < count; i++)
                 {
@@ -81,7 +99,6 @@ namespace op.io
                 config.RootElement.GetProperty("Player").GetProperty("OutlineWidth").GetInt32()
             );
 
-
             _physicsManager = new PhysicsManager();
             _collisionDestroyShapes = config.RootElement.GetProperty("CollisionDestroyShapes").GetBoolean();
 
@@ -90,7 +107,11 @@ namespace op.io
 
         protected override void LoadContent()
         {
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            if (GraphicsDevice == null)
+                throw new ArgumentNullException(nameof(GraphicsDevice), "GraphicsDevice cannot be null during content loading.");
+
+            _spriteBatch = new SpriteBatch(GraphicsDevice)
+                ?? throw new ArgumentNullException(nameof(_spriteBatch), "SpriteBatch initialization failed.");
 
             _player.LoadContent(GraphicsDevice);
             _shapesManager.LoadContent(GraphicsDevice);
@@ -98,15 +119,23 @@ namespace op.io
 
         protected override void Update(GameTime gameTime)
         {
+            if (gameTime == null)
+                throw new ArgumentNullException(nameof(gameTime), "GameTime cannot be null.");
+
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (deltaTime <= 0)
+                deltaTime = 0.0001f;
 
             _player.Update(deltaTime);
             _shapesManager.Update(deltaTime);
 
             // Resolve collisions
+            if (_physicsManager == null)
+                throw new InvalidOperationException("PhysicsManager is not initialized.");
+
             _physicsManager.ResolveCollisions(_shapesManager.GetShapes(), _player, _collisionDestroyShapes);
 
             base.Update(gameTime);
@@ -114,7 +143,13 @@ namespace op.io
 
         protected override void Draw(GameTime gameTime)
         {
+            if (gameTime == null)
+                throw new ArgumentNullException(nameof(gameTime), "GameTime cannot be null.");
+
             GraphicsDevice.Clear(_backgroundColor);
+
+            if (_spriteBatch == null)
+                throw new InvalidOperationException("SpriteBatch is not initialized.");
 
             // Configure SpriteBatch for transparency and default sorting
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
@@ -127,6 +162,5 @@ namespace op.io
 
             base.Draw(gameTime);
         }
-
     }
 }

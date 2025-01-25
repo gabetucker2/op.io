@@ -16,11 +16,23 @@ namespace op.io
 
         public void AddShape(Vector2 position, string type, int size, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
         {
+            if (string.IsNullOrEmpty(type))
+                throw new ArgumentException("Shape type cannot be null or empty.", nameof(type));
+            if (size <= 0)
+                throw new ArgumentException("Size must be greater than 0.", nameof(size));
+            if (sides < 0)
+                throw new ArgumentException("Number of sides must be 0 or greater.", nameof(sides));
+            if (outlineWidth < 0)
+                throw new ArgumentException("Outline width must be non-negative.", nameof(outlineWidth));
+
             _shapes.Add(new Shape(position, type, size, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics));
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
+            if (graphicsDevice == null)
+                throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null.");
+
             foreach (var shape in _shapes)
             {
                 shape.LoadContent(graphicsDevice);
@@ -29,6 +41,9 @@ namespace op.io
 
         public void Update(float deltaTime)
         {
+            if (deltaTime < 0)
+                throw new ArgumentException("Delta time cannot be negative.", nameof(deltaTime));
+
             foreach (var shape in _shapes)
             {
                 shape.Update(deltaTime);
@@ -37,13 +52,19 @@ namespace op.io
 
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
+            if (spriteBatch == null)
+                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
+
             foreach (var shape in _shapes)
             {
                 shape.Draw(spriteBatch, debugEnabled);
             }
         }
 
-        public List<Shape> GetShapes() => _shapes;
+        public List<Shape> GetShapes()
+        {
+            return _shapes;
+        }
     }
 
     public class Shape
@@ -62,6 +83,15 @@ namespace op.io
 
         public Shape(Vector2 position, string type, int size, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
         {
+            if (string.IsNullOrEmpty(type))
+                throw new ArgumentException("Shape type cannot be null or empty.", nameof(type));
+            if (size <= 0)
+                throw new ArgumentException("Size must be greater than 0.", nameof(size));
+            if (sides < 0)
+                throw new ArgumentException("Number of sides must be 0 or greater.", nameof(sides));
+            if (outlineWidth < 0)
+                throw new ArgumentException("Outline width must be non-negative.", nameof(outlineWidth));
+
             Position = position;
             Type = type;
             Size = size;
@@ -76,12 +106,11 @@ namespace op.io
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
+            if (graphicsDevice == null)
+                throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null.");
+
             _texture = new Texture2D(graphicsDevice, Size, Size);
             Color[] data = new Color[Size * Size];
-
-            int filledPixels = 0;
-            int outlinePixels = 0;
-            int transparentPixels = 0;
 
             for (int y = 0; y < Size; y++)
             {
@@ -89,21 +118,11 @@ namespace op.io
                 {
                     if (IsPointInsideShape(x, y))
                     {
-                        if (IsOnOutline(x, y))
-                        {
-                            data[y * Size + x] = _outlineColor;
-                            outlinePixels++;
-                        }
-                        else
-                        {
-                            data[y * Size + x] = _color;
-                            filledPixels++;
-                        }
+                        data[y * Size + x] = IsOnOutline(x, y) ? _outlineColor : _color;
                     }
                     else
                     {
                         data[y * Size + x] = Color.Transparent;
-                        transparentPixels++;
                     }
                 }
             }
@@ -113,19 +132,22 @@ namespace op.io
 
         public void Update(float deltaTime)
         {
+            if (deltaTime < 0)
+                throw new ArgumentException("Delta time cannot be negative.", nameof(deltaTime));
+
             if (_enablePhysics)
             {
-                // Add any desired physics behavior here, such as movement or collision response
+                // Add any desired physics behavior here
             }
         }
 
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
+            if (spriteBatch == null)
+                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
+
             if (_texture == null)
-            {
-                Console.WriteLine("Error: Texture not loaded for shape at position " + Position);
-                return;
-            }
+                throw new InvalidOperationException("Texture must be loaded before drawing.");
 
             Rectangle bounds = new Rectangle((int)(Position.X - Size / 2), (int)(Position.Y - Size / 2), Size, Size);
             spriteBatch.Draw(_texture, bounds, Color.White);
@@ -143,12 +165,12 @@ namespace op.io
 
             if (Type == "Circle")
             {
-                float radius = Size / 2f - (_outlineWidth > 0 ? 0.1f : 0f); // Adjust radius if outline exists
+                float radius = Size / 2f - (_outlineWidth > 0 ? 0.1f : 0f);
                 return Math.Pow(x - centerX, 2) + Math.Pow(y - centerY, 2) <= radius * radius;
             }
-            else if (_sides >= 3) // Handle polygons as shapes with sides >= 3
+            else if (_sides >= 3) // Handle polygons
             {
-                Vector2 point = new Vector2(x - centerX, y - centerY); // Convert to local space
+                Vector2 point = new Vector2(x - centerX, y - centerY);
                 return IsPointInsidePolygon(point);
             }
 

@@ -112,7 +112,7 @@
         }
     ],
     "Debugging": {
-        "Enabled": true,
+        "Enabled": false,
         "DebugCircle": {
             "Color": {
                 "R": 255,

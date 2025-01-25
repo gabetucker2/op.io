@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -15,21 +16,42 @@ namespace op.io
 
         public void AddFarmShape(Vector2 position, string type, int size, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
         {
+            if (string.IsNullOrWhiteSpace(type))
+                throw new ArgumentException("Shape type cannot be null or whitespace.", nameof(type));
+
+            if (size <= 0)
+                throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than zero.");
+
+            if (sides < 0)
+                throw new ArgumentOutOfRangeException(nameof(sides), "Number of sides cannot be negative.");
+
+            if (outlineWidth < 0)
+                throw new ArgumentOutOfRangeException(nameof(outlineWidth), "Outline width cannot be negative.");
+
             _shapesManager.AddShape(position, type, size, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics);
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
+            if (graphicsDevice == null)
+                throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null.");
+
             _shapesManager.LoadContent(graphicsDevice);
         }
 
         public void Update(float deltaTime)
         {
+            if (deltaTime < 0)
+                throw new ArgumentOutOfRangeException(nameof(deltaTime), "Delta time cannot be negative.");
+
             _shapesManager.Update(deltaTime);
         }
 
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
+            if (spriteBatch == null)
+                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
+
             _shapesManager.Draw(spriteBatch, debugEnabled);
         }
 

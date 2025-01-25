@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 
 namespace op.io
@@ -7,6 +8,12 @@ namespace op.io
     {
         public void ResolveCollisions(List<Shape> shapes, Player player, bool destroyOnCollision)
         {
+            if (shapes == null)
+                throw new ArgumentNullException(nameof(shapes), "Shapes list cannot be null.");
+
+            if (player == null)
+                throw new ArgumentNullException(nameof(player), "Player cannot be null.");
+
             for (int i = 0; i < shapes.Count; i++)
             {
                 Shape shape = shapes[i];
@@ -28,6 +35,9 @@ namespace op.io
 
         private bool CheckCollision(Player player, Shape shape)
         {
+            if (shape == null)
+                throw new ArgumentNullException(nameof(shape), "Shape cannot be null.");
+
             // Step 1: Check circular collision (player's area vs. shape's bounding circle)
             float distanceSquared = Vector2.DistanceSquared(player.Position, shape.Position);
             float combinedRadius = player.Radius + (shape.Size / 2);
@@ -47,6 +57,12 @@ namespace op.io
 
         private void ApplyForces(Player player, Shape shape)
         {
+            if (player == null)
+                throw new ArgumentNullException(nameof(player), "Player cannot be null.");
+
+            if (shape == null)
+                throw new ArgumentNullException(nameof(shape), "Shape cannot be null.");
+
             // Calculate direction of force
             Vector2 direction = shape.Position - player.Position;
             float distance = direction.Length();

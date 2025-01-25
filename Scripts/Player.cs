@@ -18,6 +18,18 @@ namespace op.io
 
         public Player(float x, float y, int radius, float speed, Color color, int weight, Color outlineColor, int outlineWidth)
         {
+            if (radius <= 0)
+                throw new ArgumentException("Radius must be greater than 0", nameof(radius));
+
+            if (speed <= 0)
+                throw new ArgumentException("Speed must be greater than 0", nameof(speed));
+
+            if (weight <= 0)
+                throw new ArgumentException("Weight must be greater than 0", nameof(weight));
+
+            if (outlineWidth < 0)
+                throw new ArgumentException("Outline width cannot be negative", nameof(outlineWidth));
+
             Position = new Vector2(x, y);
             Radius = radius;
             Speed = speed;
@@ -34,12 +46,18 @@ namespace op.io
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
+            if (graphicsDevice == null)
+                throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null");
+
             // Delegate texture generation to the Shape class
             _shape.LoadContent(graphicsDevice);
         }
 
         public void Update(float deltaTime)
         {
+            if (deltaTime <= 0)
+                throw new ArgumentException("DeltaTime must be greater than 0", nameof(deltaTime));
+
             // Update rotation to face the mouse
             _rotation = InputManager.GetAngleToMouse(Position);
 
@@ -53,6 +71,9 @@ namespace op.io
 
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
+            if (spriteBatch == null)
+                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null");
+
             // Draw the player's shape (with outline and fill handled by the Shape class)
             _shape.Draw(spriteBatch, debugEnabled);
 
@@ -66,6 +87,9 @@ namespace op.io
 
         private void DrawRotationPointer(SpriteBatch spriteBatch)
         {
+            if (spriteBatch == null)
+                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null");
+
             // Create a 1x1 texture for the line
             Texture2D lineTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
             lineTexture.SetData(new[] { Color.Red });
