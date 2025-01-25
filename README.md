@@ -2,14 +2,18 @@
 
 ## TODO:
 
-* Make static shapes
+* Ensure Player movement uses Physics script
+* Add enable/disable player/destructable/collidable
+* Split JSON files
 * --------------
-* Fix physics having no acceleration, ensure Player movement uses Physics script
+* Refactor physics functions, e.g., velocity/accel, collisions, etc
+* Add leveling up from destroying GameObjects
+* Add regeneration of farm
+* Fix physics having no acceleration
 * Add stochastic farm starting rotation
 * Add farm hover effect when sitting still
 * Hotline miami shift camera movement
 * Add collision and physics options to shapes
-* Rendering should be object agnostic; polygons, rectangles, and circles, with collision enabled/disabled and physics enabled/disabled
 * Make config.json more modular
 * Add rotations for all shapes
 * Compartmentalize different physics functions
@@ -27,5 +31,6 @@
 * 80's graphics theme
 
 ## Finished:
-* Add farm, shapes, polygons, player, player console-agnostic movement
+* Add farm, shapes, polygons, player, player console-agnostic movement, collision
 * Fix non circle shape edge artifacting
+* Make static shapes
