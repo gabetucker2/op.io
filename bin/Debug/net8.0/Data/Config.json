@@ -20,11 +20,18 @@
             "G": 255,
             "B": 255,
             "A": 255
-        }
+        },
+        "OutlineColor": {
+            "R": 0,
+            "G": 150,
+            "B": 150,
+            "A": 255
+        },
+        "OutlineWidth": 4
     },
     "Farms": [
         {
-            "Type": "Triangle",
+            "Type": "Polygon",
             "NumberOfSides": 3,
             "Size": 30,
             "Count": 30,
@@ -44,7 +51,7 @@
             "OutlineWidth": 2
         },
         {
-            "Type": "Square",
+            "Type": "Polygon",
             "NumberOfSides": 4,
             "Size": 40,
             "Count": 12,
@@ -64,7 +71,7 @@
             "OutlineWidth": 3
         },
         {
-            "Type": "Pentagon",
+            "Type": "Polygon",
             "NumberOfSides": 5,
             "Size": 50,
             "Count": 6,
@@ -84,7 +91,7 @@
             "OutlineWidth": 4
         },
         {
-            "Type": "Octagon",
+            "Type": "Polygon",
             "NumberOfSides": 8,
             "Size": 80,
             "Count": 2,

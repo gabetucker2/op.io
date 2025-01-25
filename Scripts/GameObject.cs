@@ -22,12 +22,11 @@ namespace op.io
             get => _rotation;
             set
             {
-                _rotation = value % 360f; // Keep rotation within 0-360
+                _rotation = value % 360f;
                 OnTransformChanged?.Invoke(this);
             }
         }
 
-        // Event to notify when position or rotation changes
         public event System.Action<GameObject> OnTransformChanged;
 
         public GameObject(Vector2 initialPosition = default, float initialRotation = 0f)

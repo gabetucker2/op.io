@@ -1,8 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 
 namespace op.io
 {
@@ -14,9 +14,9 @@ namespace op.io
         private int _viewportWidth;
         private int _viewportHeight;
         private Player _player;
-        private List<FarmShape> _farmShapes = new List<FarmShape>();
-        private PhysicsManager _physicsManager = new PhysicsManager();
-        private bool _collisionDestroyShapes = false;
+        private ShapesManager _shapesManager;
+        private PhysicsManager _physicsManager;
+        private bool _collisionDestroyShapes;
         private bool _debugEnabled;
 
         public Core()
@@ -47,7 +47,8 @@ namespace op.io
                 DebugVisualizer.Initialize(GraphicsDevice, debugSettings);
             }
 
-            // Populate _farmShapes dynamically
+            // Initialize ShapesManager
+            _shapesManager = new ShapesManager();
             var farms = config.RootElement.GetProperty("Farms").EnumerateArray();
             foreach (var farm in farms)
             {
@@ -64,7 +65,7 @@ namespace op.io
                 {
                     int x = Random.Shared.Next(0, _viewportWidth - size);
                     int y = Random.Shared.Next(0, _viewportHeight - size);
-                    _farmShapes.Add(new FarmShape(new Vector2(x, y), size, shapeType, sides, fillColor, weight, outlineColor, outlineWidth));
+                    _shapesManager.AddShape(new Vector2(x, y), shapeType, size, sides, fillColor, outlineColor, outlineWidth, true, false);
                 }
             }
 
@@ -75,9 +76,13 @@ namespace op.io
                 config.RootElement.GetProperty("Player").GetProperty("Radius").GetInt32(),
                 config.RootElement.GetProperty("Player").GetProperty("Speed").GetSingle(),
                 BaseFunctions.GetColor(config.RootElement.GetProperty("Player").GetProperty("Color"), Color.Cyan),
-                config.RootElement.GetProperty("Player").GetProperty("Weight").GetInt32()
+                config.RootElement.GetProperty("Player").GetProperty("Weight").GetInt32(),
+                BaseFunctions.GetColor(config.RootElement.GetProperty("Player").GetProperty("OutlineColor"), Color.DarkBlue),
+                config.RootElement.GetProperty("Player").GetProperty("OutlineWidth").GetInt32()
             );
 
+
+            _physicsManager = new PhysicsManager();
             _collisionDestroyShapes = config.RootElement.GetProperty("CollisionDestroyShapes").GetBoolean();
 
             base.Initialize();
@@ -88,10 +93,7 @@ namespace op.io
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             _player.LoadContent(GraphicsDevice);
-            foreach (var farmShape in _farmShapes)
-            {
-                farmShape.LoadContent(GraphicsDevice);
-            }
+            _shapesManager.LoadContent(GraphicsDevice);
         }
 
         protected override void Update(GameTime gameTime)
@@ -102,9 +104,10 @@ namespace op.io
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             _player.Update(deltaTime);
+            _shapesManager.Update(deltaTime);
 
             // Resolve collisions
-            _physicsManager.ResolveCollisions(_farmShapes, _player, _collisionDestroyShapes);
+            _physicsManager.ResolveCollisions(_shapesManager.GetShapes(), _player, _collisionDestroyShapes);
 
             base.Update(gameTime);
         }
@@ -113,17 +116,17 @@ namespace op.io
         {
             GraphicsDevice.Clear(_backgroundColor);
 
-            _spriteBatch.Begin();
+            // Configure SpriteBatch for transparency and default sorting
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
+            // Draw the player and shapes
             _player.Draw(_spriteBatch, _debugEnabled);
-            foreach (var farmShape in _farmShapes)
-            {
-                farmShape.Draw(_spriteBatch, _debugEnabled);
-            }
+            _shapesManager.Draw(_spriteBatch, _debugEnabled);
 
             _spriteBatch.End();
 
             base.Draw(gameTime);
         }
+
     }
 }

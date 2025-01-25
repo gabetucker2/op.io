@@ -5,11 +5,11 @@ namespace op.io
 {
     public class PhysicsManager
     {
-        public void ResolveCollisions(List<FarmShape> shapes, Player player, bool destroyOnCollision)
+        public void ResolveCollisions(List<Shape> shapes, Player player, bool destroyOnCollision)
         {
             for (int i = 0; i < shapes.Count; i++)
             {
-                FarmShape shape = shapes[i];
+                Shape shape = shapes[i];
 
                 // Check for collision using radius-based or polygon detection
                 if (CheckCollision(player, shape))
@@ -26,9 +26,9 @@ namespace op.io
             }
         }
 
-        private bool CheckCollision(Player player, FarmShape shape)
+        private bool CheckCollision(Player player, Shape shape)
         {
-            // Step 1: Check circular collision (player's area vs. farm's bounding circle)
+            // Step 1: Check circular collision (player's area vs. shape's bounding circle)
             float distanceSquared = Vector2.DistanceSquared(player.Position, shape.Position);
             float combinedRadius = player.Radius + (shape.Size / 2);
             if (distanceSquared <= combinedRadius * combinedRadius)
@@ -36,11 +36,16 @@ namespace op.io
                 return true; // Circular overlap detected
             }
 
-            // Step 2: Optional - Check if the player's center is inside the polygon
-            return shape.IsPointInsidePolygon(player.Position);
+            // Step 2: Check if the player's center is inside the polygon (if applicable)
+            if (shape.Type == "Polygon")
+            {
+                return shape.IsPointInsidePolygon(player.Position);
+            }
+
+            return false;
         }
 
-        private void ApplyForces(Player player, FarmShape shape)
+        private void ApplyForces(Player player, Shape shape)
         {
             // Calculate direction of force
             Vector2 direction = shape.Position - player.Position;

@@ -10,41 +10,32 @@ namespace op.io
         public float Speed;
         public int Radius;
         public int Weight;
-        private Color _color;
-        private Texture2D _texture;
+        private Shape _shape;
         private float _rotation; // Rotation angle in radians
         private int _pointerLength; // Length of the rotation line
+        private Color _outlineColor; // Outline color for the player
+        private int _outlineWidth; // Outline width for the player
 
-        public Player(float x, float y, int radius, float speed, Color color, int weight)
+        public Player(float x, float y, int radius, float speed, Color color, int weight, Color outlineColor, int outlineWidth)
         {
             Position = new Vector2(x, y);
             Radius = radius;
             Speed = speed;
-            _color = color;
             Weight = weight;
+
+            // Create a circle shape for the player
+            _shape = new Shape(Position, "Circle", radius * 2, 0, color, outlineColor, outlineWidth, false, false);
+
+            // Initialize rotation line length and outline settings
             _pointerLength = 50; // Default length of the rotation pointer
+            _outlineColor = outlineColor;
+            _outlineWidth = outlineWidth;
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
-            // Create the player's circular texture
-            _texture = new Texture2D(graphicsDevice, Radius * 2, Radius * 2);
-            Color[] data = new Color[Radius * Radius * 4];
-
-            for (int y = 0; y < Radius * 2; y++)
-            {
-                for (int x = 0; x < Radius * 2; x++)
-                {
-                    int dx = x - Radius;
-                    int dy = y - Radius;
-                    if (dx * dx + dy * dy <= Radius * Radius)
-                        data[y * Radius * 2 + x] = _color;
-                    else
-                        data[y * Radius * 2 + x] = Color.Transparent;
-                }
-            }
-
-            _texture.SetData(data);
+            // Delegate texture generation to the Shape class
+            _shape.LoadContent(graphicsDevice);
         }
 
         public void Update(float deltaTime)
@@ -52,55 +43,48 @@ namespace op.io
             // Update rotation to face the mouse
             _rotation = InputManager.GetAngleToMouse(Position);
 
-            // Update position based on input
+            // Update player position based on input
             Vector2 input = InputManager.MoveVector();
             Position += input * Speed * deltaTime;
+
+            // Update the shape's position to match the player's position
+            _shape.Position = Position;
         }
 
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
-            // Draw the player texture centered at Position
-            spriteBatch.Draw(
-                _texture,
-                Position - new Vector2(Radius), // Centered at Position
-                null,
-                Color.White,
-                0f, // No rotation applied to the texture itself
-                Vector2.Zero,
-                1f,
-                SpriteEffects.None,
-                0f
-            );
+            // Draw the player's shape (with outline and fill handled by the Shape class)
+            _shape.Draw(spriteBatch, debugEnabled);
 
-            // Draw debug visuals if enabled
+            // Additional debug visuals
             if (debugEnabled)
             {
-                DebugVisualizer.DrawDebugCircle(spriteBatch, Position); // Debug circle at Position
-                DrawRotationPointer(spriteBatch, Position, _rotation, _pointerLength, Color.Red); // Rotation pointer
+                DrawRotationPointer(spriteBatch);
+                DebugVisualizer.DrawDebugCircle(spriteBatch, Position);
             }
         }
 
-        private void DrawRotationPointer(SpriteBatch spriteBatch, Vector2 center, float rotation, int length, Color color)
+        private void DrawRotationPointer(SpriteBatch spriteBatch)
         {
             // Create a 1x1 texture for the line
             Texture2D lineTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
-            lineTexture.SetData(new[] { color });
+            lineTexture.SetData(new[] { Color.Red });
 
             // Calculate the endpoint of the pointer based on the rotation
-            Vector2 endpoint = center + new Vector2(
-                (float)Math.Cos(rotation) * length,
-                (float)Math.Sin(rotation) * length
+            Vector2 endpoint = Position + new Vector2(
+                (float)Math.Cos(_rotation) * _pointerLength,
+                (float)Math.Sin(_rotation) * _pointerLength
             );
 
             // Draw the line from the player's center to the pointer endpoint
-            float distance = Vector2.Distance(center, endpoint);
-            float angle = (float)Math.Atan2(endpoint.Y - center.Y, endpoint.X - center.X);
+            float distance = Vector2.Distance(Position, endpoint);
+            float angle = (float)Math.Atan2(endpoint.Y - Position.Y, endpoint.X - Position.X);
 
             spriteBatch.Draw(
                 lineTexture,
-                center,
+                Position,
                 null,
-                color,
+                Color.Red,
                 angle,
                 Vector2.Zero,
                 new Vector2(distance, 1), // Scale to match distance
