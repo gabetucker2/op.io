@@ -1,6 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 
-namespace op.io.Scripts
+namespace op.io
 {
     public static class ActionHandler
     {

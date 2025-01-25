@@ -17,8 +17,8 @@
         "Weight": 10,
         "Color": {
             "R": 0,
-            "B": 255,
             "G": 255,
+            "B": 255,
             "A": 255
         }
     },
@@ -105,16 +105,16 @@
         }
     ],
     "Debugging": {
-        "Enabled": false,
+        "Enabled": true,
         "DebugCircle": {
             "Color": {
                 "R": 255,
-                "G": 192,
-                "B": 203,
+                "G": 255,
+                "B": 255,
                 "A": 255
             },
-            "Radius": 7
+            "Radius": 3
         }
     },
-    "CollisionDestroyShapes": false
+    "CollisionDestroyShapes": true
 }

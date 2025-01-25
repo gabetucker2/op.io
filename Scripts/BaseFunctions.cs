@@ -3,7 +3,7 @@ using System;
 using Microsoft.Xna.Framework;
 using System.IO;
 
-namespace op.io.Scripts
+namespace op.io
 {
     public static class BaseFunctions
     {

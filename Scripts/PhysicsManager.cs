@@ -1,9 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using op_io;
-using System;
 using System.Collections.Generic;
 
-namespace op.io.Scripts
+namespace op.io
 {
     public class PhysicsManager
     {
@@ -11,14 +9,12 @@ namespace op.io.Scripts
         {
             for (int i = 0; i < shapes.Count; i++)
             {
-                for (int j = i + 1; j < shapes.Count; j++)
-                {
-                    ApplyForces(shapes[i], shapes[j]);
-                }
+                FarmShape shape = shapes[i];
 
-                if (CheckCollision(player.Position, player.Radius, shapes[i].Position, shapes[i].Size / 2))
+                // Check for collision using radius-based or polygon detection
+                if (CheckCollision(player, shape))
                 {
-                    ApplyForces(player, shapes[i]);
+                    ApplyForces(player, shape);
 
                     if (destroyOnCollision)
                     {
@@ -30,37 +26,31 @@ namespace op.io.Scripts
             }
         }
 
-        private bool CheckCollision(Vector2 posA, float radiusA, Vector2 posB, float radiusB)
+        private bool CheckCollision(Player player, FarmShape shape)
         {
-            // Distance between the centers of two objects
-            float distance = Vector2.Distance(posA, posB);
+            // Step 1: Check circular collision (player's area vs. farm's bounding circle)
+            float distanceSquared = Vector2.DistanceSquared(player.Position, shape.Position);
+            float combinedRadius = player.Radius + (shape.Size / 2);
+            if (distanceSquared <= combinedRadius * combinedRadius)
+            {
+                return true; // Circular overlap detected
+            }
 
-            // Check if distance is less than the sum of their radii
-            return distance < (radiusA + radiusB);
-        }
-
-        private void ApplyForces(FarmShape a, FarmShape b)
-        {
-            Vector2 direction = b.Position - a.Position;
-            float distance = direction.Length();
-            if (distance == 0) return;
-
-            direction.Normalize();
-            float force = (a.Weight + b.Weight) / (distance > 0.1 ? distance : 0.1f);
-
-            a.Position -= direction * force * (b.Weight / (a.Weight + b.Weight));
-            b.Position += direction * force * (a.Weight / (a.Weight + b.Weight));
+            // Step 2: Optional - Check if the player's center is inside the polygon
+            return shape.IsPointInsidePolygon(player.Position);
         }
 
         private void ApplyForces(Player player, FarmShape shape)
         {
+            // Calculate direction of force
             Vector2 direction = shape.Position - player.Position;
             float distance = direction.Length();
             if (distance == 0) return;
 
             direction.Normalize();
-            float force = (player.Weight + shape.Weight) / Math.Max(distance, 0.1f); // Avoid division by zero
+            float force = (player.Weight + shape.Weight) / (distance > 0.1f ? distance : 0.1f);
 
+            // Apply forces to the player and shape
             player.Position -= direction * force * (shape.Weight / (player.Weight + shape.Weight));
             shape.Position += direction * force * (player.Weight / (player.Weight + shape.Weight));
         }

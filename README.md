@@ -2,7 +2,13 @@
 
 ## TODO:
 
-* Fix physics being static
+* Add argument exceptions for every function
+* Add stochastic farm generation/starting rotation, farm outlines
+* Rendering should be object agnostic; polygons, rectangles, and circles, with collision enabled/disabled and physics enabled/disabled
+* Make config.json more modular
+* Add rotations for all shapes
+* Compartmentalize different physics functions
+* Fix physics having no acceleration, ensure Player movement uses Physics script
 * Add outlines to the shapes, soften their edges
 * Add cards I can drag on the side of the screen
 * Make each card procedurally generated and an NFT you can trade with other players
