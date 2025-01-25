@@ -6,19 +6,27 @@ namespace op.io
 {
     public class PhysicsManager
     {
-        public void ResolveCollisions(List<Shape> shapes, Player player, bool destroyOnCollision)
+        public void ResolveCollisions(
+            List<Shape> shapes,
+            List<StaticObject> staticObjects,
+            Player player,
+            bool destroyOnCollision
+        )
         {
             if (shapes == null)
                 throw new ArgumentNullException(nameof(shapes), "Shapes list cannot be null.");
 
+            if (staticObjects == null)
+                throw new ArgumentNullException(nameof(staticObjects), "Static objects list cannot be null.");
+
             if (player == null)
                 throw new ArgumentNullException(nameof(player), "Player cannot be null.");
 
+            // Handle collisions with dynamic shapes
             for (int i = 0; i < shapes.Count; i++)
             {
                 Shape shape = shapes[i];
 
-                // Check for collision using shape-specific logic
                 if (CheckCollision(player, shape))
                 {
                     ApplyForces(player, shape);
@@ -31,6 +39,15 @@ namespace op.io
                     }
                 }
             }
+
+            // Handle collisions with static objects
+            foreach (var staticObject in staticObjects)
+            {
+                if (CheckCollision(player, staticObject))
+                {
+                    HandleStaticCollision(player, staticObject);
+                }
+            }
         }
 
         private bool CheckCollision(Player player, Shape shape)
@@ -38,13 +55,11 @@ namespace op.io
             if (shape == null)
                 throw new ArgumentNullException(nameof(shape), "Shape cannot be null.");
 
-            // Handle rectangle collisions
             if (shape.Type == "Rectangle")
             {
-                return IsCircleOverlappingRectangle(player.Position, player.Radius, shape);
+                return IsCircleOverlappingRectangle(player.Position, player.Radius, shape.Position, shape.Width, shape.Height);
             }
 
-            // Handle circle collisions
             if (shape.Type == "Circle")
             {
                 float distanceSquared = Vector2.DistanceSquared(player.Position, shape.Position);
@@ -54,13 +69,20 @@ namespace op.io
                 return distanceSquared <= combinedRadius * combinedRadius;
             }
 
-            // Handle polygon collisions
             if (shape.Type == "Polygon")
             {
                 return IsCircleOverlappingPolygon(player.Position, player.Radius, shape);
             }
 
-            return false;
+            throw new ArgumentException($"Unsupported shape type: {shape.Type}", nameof(shape));
+        }
+
+        private bool CheckCollision(Player player, StaticObject staticObject)
+        {
+            if (staticObject == null)
+                throw new ArgumentNullException(nameof(staticObject), "Static object cannot be null.");
+
+            return IsCircleOverlappingRectangle(player.Position, player.Radius, staticObject.Position, staticObject.Width, staticObject.Height);
         }
 
         private void ApplyForces(Player player, Shape shape)
@@ -71,7 +93,6 @@ namespace op.io
             if (shape == null)
                 throw new ArgumentNullException(nameof(shape), "Shape cannot be null.");
 
-            // Calculate direction of force
             Vector2 direction = shape.Position - player.Position;
             float distance = direction.Length();
             if (distance == 0) return;
@@ -79,29 +100,41 @@ namespace op.io
             direction.Normalize();
             float force = (player.Weight + shape.Weight) / (distance > 0.1f ? distance : 0.1f);
 
-            // Apply forces to the player and shape
             player.Position -= direction * force * (shape.Weight / (player.Weight + shape.Weight));
             shape.Position += direction * force * (player.Weight / (player.Weight + shape.Weight));
         }
 
-        private bool IsCircleOverlappingRectangle(Vector2 circleCenter, float circleRadius, Shape rectangle)
+        private void HandleStaticCollision(Player player, StaticObject staticObject)
         {
-            if (rectangle == null || rectangle.Type != "Rectangle")
-                throw new ArgumentException("Shape must be a rectangle.", nameof(rectangle));
+            if (player == null)
+                throw new ArgumentNullException(nameof(player), "Player cannot be null.");
 
-            float left = rectangle.Position.X - rectangle.Width / 2;
-            float right = rectangle.Position.X + rectangle.Width / 2;
-            float top = rectangle.Position.Y - rectangle.Height / 2;
-            float bottom = rectangle.Position.Y + rectangle.Height / 2;
+            if (staticObject == null)
+                throw new ArgumentNullException(nameof(staticObject), "Static object cannot be null.");
 
-            // Clamp the circle's center to the nearest point on the rectangle
+            Vector2 direction = player.Position - staticObject.Position;
+            float distance = direction.Length();
+            float overlap = (player.Radius + staticObject.BoundingRadius) - distance;
+
+            if (distance > 0 && overlap > 0)
+            {
+                direction.Normalize();
+                player.Position += direction * overlap;
+            }
+        }
+
+        private bool IsCircleOverlappingRectangle(Vector2 circleCenter, float circleRadius, Vector2 rectCenter, int rectWidth, int rectHeight)
+        {
+            float left = rectCenter.X - rectWidth / 2;
+            float right = rectCenter.X + rectWidth / 2;
+            float top = rectCenter.Y - rectHeight / 2;
+            float bottom = rectCenter.Y + rectHeight / 2;
+
             float nearestX = Math.Clamp(circleCenter.X, left, right);
             float nearestY = Math.Clamp(circleCenter.Y, top, bottom);
 
-            // Calculate the distance from the circle's center to this point
             float distanceSquared = Vector2.DistanceSquared(circleCenter, new Vector2(nearestX, nearestY));
 
-            // Check if the distance is less than or equal to the circle's radius squared
             return distanceSquared <= circleRadius * circleRadius;
         }
 
@@ -113,29 +146,6 @@ namespace op.io
             float adjustedRadius = polygon.Radius - (polygon.OutlineWidth > 0 ? 0.1f : 0f);
             var vertices = GeneratePolygonVertices(polygon.Position, polygon.Sides, adjustedRadius);
 
-            // Step 1: Check if the circle's center is inside the polygon
-            int intersections = 0;
-            for (int i = 0; i < vertices.Count; i++)
-            {
-                Vector2 p1 = vertices[i];
-                Vector2 p2 = vertices[(i + 1) % vertices.Count];
-
-                if ((p1.Y > circleCenter.Y) != (p2.Y > circleCenter.Y)) // Check if circle center is between p1.Y and p2.Y
-                {
-                    float intersectX = p1.X + (circleCenter.Y - p1.Y) * (p2.X - p1.X) / (p2.Y - p1.Y);
-                    if (circleCenter.X < intersectX)
-                    {
-                        intersections++;
-                    }
-                }
-            }
-
-            if (intersections % 2 != 0) // Circle's center is inside the polygon
-            {
-                return true;
-            }
-
-            // Step 2: Check if the circle overlaps any polygon edge
             for (int i = 0; i < vertices.Count; i++)
             {
                 Vector2 p1 = vertices[i];
@@ -166,6 +176,12 @@ namespace op.io
 
         private List<Vector2> GeneratePolygonVertices(Vector2 center, int sides, float radius)
         {
+            if (sides < 3)
+                throw new ArgumentException("A polygon must have at least 3 sides.", nameof(sides));
+
+            if (radius <= 0)
+                throw new ArgumentException("Radius must be greater than 0.", nameof(radius));
+
             var vertices = new List<Vector2>();
             double angleIncrement = 2 * Math.PI / sides;
 

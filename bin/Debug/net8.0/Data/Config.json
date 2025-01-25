@@ -37,15 +37,15 @@
             "Count": 2,
             "Weight": 10,
             "Color": {
-                "R": 255,
-                "G": 200,
-                "B": 200,
+                "R": 128,
+                "G": 0,
+                "B": 128,
                 "A": 255
             },
             "OutlineColor": {
-                "R": 128,
-                "G": 75,
-                "B": 75,
+                "R": 75,
+                "G": 0,
+                "B": 130,
                 "A": 255
             },
             "OutlineWidth": 3
@@ -148,6 +148,30 @@
                 "A": 255
             },
             "OutlineWidth": 5
+        }
+    ],
+    "StaticObjects": [
+        {
+            "Type": "Rectangle",
+            "Position": {
+                "X": 500,
+                "Y": 500
+            },
+            "Width": 100,
+            "Height": 50,
+            "Color": {
+                "R": 50,
+                "G": 50,
+                "B": 200,
+                "A": 255
+            },
+            "OutlineColor": {
+                "R": 0,
+                "G": 0,
+                "B": 128,
+                "A": 255
+            },
+            "OutlineWidth": 4
         }
     ],
     "Debugging": {

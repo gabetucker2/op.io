@@ -16,6 +16,7 @@ namespace op.io
         private Player _player;
         private ShapesManager _shapesManager;
         private PhysicsManager _physicsManager;
+        private List<StaticObject> _staticObjects;
         private bool _collisionDestroyShapes;
         private bool _debugEnabled;
 
@@ -31,16 +32,22 @@ namespace op.io
         {
             var config = BaseFunctions.Config();
             if (config == null)
+            {
                 throw new ArgumentException("Configuration cannot be null or invalid.", nameof(config));
+            }
 
             try
             {
                 // Viewport configuration
-                var viewport = config.RootElement.GetProperty("Viewport");
+                if (!config.RootElement.TryGetProperty("Viewport", out var viewport))
+                    throw new KeyNotFoundException("Missing required 'Viewport' configuration.");
+
                 _viewportWidth = viewport.GetProperty("Width").GetInt32();
                 _viewportHeight = viewport.GetProperty("Height").GetInt32();
+
                 if (_viewportWidth <= 0 || _viewportHeight <= 0)
-                    throw new ArgumentException("Viewport dimensions must be positive values.");
+                    throw new ArgumentException("Viewport dimensions must be positive integers.", nameof(viewport));
+
                 _backgroundColor = BaseFunctions.GetColor(viewport.GetProperty("BackgroundColor"), Color.Black);
 
                 _graphics.PreferredBackBufferWidth = _viewportWidth;
@@ -52,83 +59,75 @@ namespace op.io
                                 debugSettings.GetProperty("Enabled").GetBoolean();
 
                 if (_debugEnabled)
+                {
                     DebugVisualizer.Initialize(GraphicsDevice, debugSettings);
+                }
 
-                // ShapesManager configuration
+                // ShapeManager configuration
                 _shapesManager = new ShapesManager();
+
+                // Farms configuration
                 if (config.RootElement.TryGetProperty("Farms", out var farmsArray))
                 {
                     foreach (var farm in farmsArray.EnumerateArray())
                     {
-                        string shapeType = farm.GetProperty("Type").GetString() ?? "Polygon";
-                        int count = farm.GetProperty("Count").GetInt32();
-                        if (count <= 0)
-                            throw new ArgumentException("Shape count must be greater than 0.");
-
-                        int width = 0, height = 0, sides = 0;
-                        int radius = 0;
-
-                        // Configure shape-specific properties
-                        switch (shapeType)
+                        if (!farm.TryGetProperty("Type", out var typeElement) || string.IsNullOrEmpty(typeElement.GetString()))
                         {
-                            case "Circle":
-                                if (!farm.TryGetProperty("Radius", out var radiusProperty))
-                                    throw new ArgumentException("Circle must have a valid radius specified.");
-                                radius = radiusProperty.GetInt32();
-                                if (radius <= 0)
-                                    throw new ArgumentException("Radius must be greater than 0.");
-                                width = height = radius * 2;
-                                break;
-
-                            case "Polygon":
-                                if (!farm.TryGetProperty("NumberOfSides", out var sidesProperty))
-                                    throw new ArgumentException("Polygon must have a valid number of sides specified.");
-                                sides = sidesProperty.GetInt32();
-                                if (sides < 3)
-                                    throw new ArgumentException("Polygon must have at least 3 sides.");
-                                if (!farm.TryGetProperty("Size", out var sizeProperty))
-                                    throw new ArgumentException("Polygon must have a valid size specified.");
-                                width = height = sizeProperty.GetInt32();
-                                break;
-
-                            case "Rectangle":
-                                if (!farm.TryGetProperty("Width", out var widthProperty) || !farm.TryGetProperty("Height", out var heightProperty))
-                                    throw new ArgumentException("Rectangle must have valid width and height specified.");
-                                width = widthProperty.GetInt32();
-                                height = heightProperty.GetInt32();
-                                break;
-
-                            default:
-                                throw new ArgumentException($"Unsupported shape type: {shapeType}");
+                            throw new KeyNotFoundException("A 'Type' key is missing or invalid in the Farms configuration.");
                         }
 
-                        // Common properties
-                        Color fillColor = BaseFunctions.GetColor(farm.GetProperty("Color"), Color.White);
+                        string shapeType = typeElement.GetString();
+                        int width = 0, height = 0, sides = 0;
+
+                        if (shapeType == "Circle")
+                        {
+                            if (!farm.TryGetProperty("Radius", out var radiusElement))
+                                throw new KeyNotFoundException("A 'Radius' key is missing for a Circle in the Farms configuration.");
+                            int radius = radiusElement.GetInt32();
+                            width = height = radius * 2;
+                        }
+                        else if (shapeType == "Rectangle")
+                        {
+                            if (!farm.TryGetProperty("Width", out var widthElement) || !farm.TryGetProperty("Height", out var heightElement))
+                                throw new KeyNotFoundException("A 'Width' or 'Height' key is missing for a Rectangle in the Farms configuration.");
+                            width = widthElement.GetInt32();
+                            height = heightElement.GetInt32();
+                        }
+                        else if (shapeType == "Polygon")
+                        {
+                            if (!farm.TryGetProperty("NumberOfSides", out var sidesElement))
+                                throw new KeyNotFoundException("A 'NumberOfSides' key is missing for a Polygon in the Farms configuration.");
+                            sides = sidesElement.GetInt32();
+                            if (sides < 3)
+                                throw new ArgumentException("Polygons must have at least 3 sides.");
+                            if (!farm.TryGetProperty("Size", out var sizeElement))
+                                throw new KeyNotFoundException("A 'Size' key is missing for a Polygon in the Farms configuration.");
+                            width = height = sizeElement.GetInt32();
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Unsupported shape type: {shapeType}");
+                        }
+
+                        if (!farm.TryGetProperty("Count", out var countElement))
+                            throw new KeyNotFoundException("A 'Count' key is missing in the Farms configuration.");
+                        int count = countElement.GetInt32();
+
+                        Color color = BaseFunctions.GetColor(farm.GetProperty("Color"), Color.White);
                         Color outlineColor = BaseFunctions.GetColor(farm.GetProperty("OutlineColor"), Color.Black);
-                        int outlineWidth = farm.TryGetProperty("OutlineWidth", out var outlineWidthProperty)
-                            ? outlineWidthProperty.GetInt32()
-                            : 0;
-                        int weight = farm.GetProperty("Weight").GetInt32();
+                        int outlineWidth = farm.GetProperty("OutlineWidth").GetInt32();
 
                         for (int i = 0; i < count; i++)
                         {
                             int x = Random.Shared.Next(0, _viewportWidth - width);
                             int y = Random.Shared.Next(0, _viewportHeight - height);
-
-                            _shapesManager.AddShape(
-                                new Vector2(x, y),
-                                shapeType,
-                                width,
-                                height,
-                                sides,
-                                fillColor,
-                                outlineColor,
-                                outlineWidth,
-                                true,   // Enable collision
-                                false   // Enable physics
-                            );
+                            _shapesManager.AddShape(new Vector2(x, y), shapeType, width, height, sides, color, outlineColor, outlineWidth, true, false);
                         }
                     }
+                }
+                else
+                {
+                    throw new KeyNotFoundException("Missing 'Farms' configuration.");
                 }
 
                 // Player configuration
@@ -147,7 +146,29 @@ namespace op.io
                 }
                 else
                 {
-                    throw new ArgumentException("Player configuration is missing or invalid.");
+                    throw new KeyNotFoundException("Missing 'Player' configuration.");
+                }
+
+                // StaticObjects configuration
+                _staticObjects = new List<StaticObject>();
+
+                if (config.RootElement.TryGetProperty("StaticObjects", out var staticObjectsArray))
+                {
+                    foreach (var staticObject in staticObjectsArray.EnumerateArray())
+                    {
+                        string type = staticObject.GetProperty("Type").GetString();
+                        int width = staticObject.GetProperty("Width").GetInt32();
+                        int height = staticObject.GetProperty("Height").GetInt32();
+                        Vector2 position = new Vector2(
+                            staticObject.GetProperty("Position").GetProperty("X").GetSingle(),
+                            staticObject.GetProperty("Position").GetProperty("Y").GetSingle()
+                        );
+                        Color color = BaseFunctions.GetColor(staticObject.GetProperty("Color"), Color.White);
+                        Color outlineColor = BaseFunctions.GetColor(staticObject.GetProperty("OutlineColor"), Color.Black);
+                        int outlineWidth = staticObject.GetProperty("OutlineWidth").GetInt32();
+
+                        _staticObjects.Add(new StaticObject(position, width, height, color, outlineColor, outlineWidth));
+                    }
                 }
 
                 // Initialize PhysicsManager
@@ -155,9 +176,9 @@ namespace op.io
                 _collisionDestroyShapes = config.RootElement.TryGetProperty("CollisionDestroyShapes", out var destroyShapesProperty) &&
                                           destroyShapesProperty.GetBoolean();
             }
-            catch (KeyNotFoundException ex)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException($"A required configuration key is missing: {ex.Message}", ex);
+                throw new InvalidOperationException($"An error occurred during initialization: {ex.Message}", ex);
             }
 
             base.Initialize();
@@ -173,6 +194,11 @@ namespace op.io
 
             _player.LoadContent(GraphicsDevice);
             _shapesManager.LoadContent(GraphicsDevice);
+
+            foreach (var staticObject in _staticObjects)
+            {
+                staticObject.LoadContent(GraphicsDevice);
+            }
         }
 
         protected override void Update(GameTime gameTime)
@@ -194,7 +220,12 @@ namespace op.io
             if (_physicsManager == null)
                 throw new InvalidOperationException("PhysicsManager is not initialized.");
 
-            _physicsManager.ResolveCollisions(_shapesManager.GetShapes(), _player, _collisionDestroyShapes);
+            _physicsManager.ResolveCollisions(
+                _shapesManager.GetShapes(),
+                _staticObjects, // Pass the list of static objects
+                _player,
+                _collisionDestroyShapes // Pass the destroyOnCollision flag
+            );
 
             base.Update(gameTime);
         }
@@ -215,6 +246,12 @@ namespace op.io
             // Draw the player and shapes
             _player.Draw(_spriteBatch, _debugEnabled);
             _shapesManager.Draw(_spriteBatch, _debugEnabled);
+
+            // Draw static objects
+            foreach (var staticObject in _staticObjects)
+            {
+                staticObject.Draw(_spriteBatch);
+            }
 
             _spriteBatch.End();
 
