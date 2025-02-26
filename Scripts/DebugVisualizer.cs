@@ -70,7 +70,7 @@ namespace op.io
             return texture;
         }
 
-        public static void DrawDebugCircle(SpriteBatch spriteBatch, Vector2 position)
+        public static void DrawDebugCircle(SpriteBatch spriteBatch, GameObject gameObject)
         {
             if (spriteBatch == null)
                 throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
@@ -78,10 +78,23 @@ namespace op.io
             if (_debugTexture == null)
                 throw new InvalidOperationException("DebugVisualizer is not initialized. Call Initialize before drawing.");
 
+            if (gameObject == null)
+                throw new ArgumentNullException(nameof(gameObject), "GameObject cannot be null.");
+
+            if (!gameObject.IsCollidable)
+                return; // Skip non-collidable objects
+
+            // Draw the debug circle for the object's bounding radius
             spriteBatch.Draw(
                 _debugTexture,
-                position - new Vector2(_debugTexture.Width / 2f),
-                Color.White
+                gameObject.Position - new Vector2(gameObject.BoundingRadius),
+                null,
+                Color.White,
+                0f,
+                new Vector2(_debugTexture.Width / 2f),
+                gameObject.BoundingRadius / (_debugTexture.Width / 2f), // Scale texture to match the bounding radius
+                SpriteEffects.None,
+                0f
             );
         }
     }

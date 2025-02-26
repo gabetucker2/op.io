@@ -3,14 +3,6 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="Data\Config.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Data\Config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
   <ItemGroup>
     <!-- Ensure the Data folder is copied to the output directory -->

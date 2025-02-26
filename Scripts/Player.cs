@@ -4,56 +4,31 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace op.io
 {
-    public class Player
+    public class Player : GameObject
     {
-        public Vector2 Position; // Center of the player
-        public float Speed;
-        public int Radius;
-        public int Weight;
-        private Shape _shape;
+        public float Speed { get; private set; } // Movement speed multiplier
         private float _rotation; // Rotation angle in radians
-        private int _pointerLength; // Length of the rotation line
-        private Color _outlineColor; // Outline color for the player
-        private int _outlineWidth; // Outline width for the player
+        private int _pointerLength = 50; // Length of the rotation pointer
 
-        public Player(float x, float y, int radius, float speed, Color color, int weight, Color outlineColor, int outlineWidth)
+        public Player(Vector2 position, int radius, float speed, Color fillColor, Color outlineColor, int outlineWidth)
+            : base(position, 0f, 1f, radius, true, false, true, new Shape(position, "Circle", radius * 2, radius * 2, 0, fillColor, outlineColor, outlineWidth))
         {
             if (radius <= 0)
                 throw new ArgumentException("Radius must be greater than 0", nameof(radius));
-
             if (speed <= 0)
                 throw new ArgumentException("Speed must be greater than 0", nameof(speed));
-
-            if (weight <= 0)
-                throw new ArgumentException("Weight must be greater than 0", nameof(weight));
-
             if (outlineWidth < 0)
                 throw new ArgumentException("Outline width cannot be negative", nameof(outlineWidth));
 
-            Position = new Vector2(x, y);
-            Radius = radius;
             Speed = speed;
-            Weight = weight;
-
-            // Create a circle shape for the player
-            _shape = new Shape(Position, "Circle", radius * 2, radius * 2, 0, color, outlineColor, outlineWidth, false, false);
-
-            // Initialize rotation line length and outline settings
-            _pointerLength = 50; // Default length of the rotation pointer
-            _outlineColor = outlineColor;
-            _outlineWidth = outlineWidth;
         }
 
-        public void LoadContent(GraphicsDevice graphicsDevice)
+        public override void LoadContent(GraphicsDevice graphicsDevice)
         {
-            if (graphicsDevice == null)
-                throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null");
-
-            // Delegate texture generation to the Shape class
-            _shape.LoadContent(graphicsDevice);
+            base.LoadContent(graphicsDevice); // Call the base implementation
         }
 
-        public void Update(float deltaTime)
+        public override void Update(float deltaTime)
         {
             if (deltaTime <= 0)
                 throw new ArgumentException("DeltaTime must be greater than 0", nameof(deltaTime));
@@ -61,27 +36,24 @@ namespace op.io
             // Update rotation to face the mouse
             _rotation = InputManager.GetAngleToMouse(Position);
 
-            // Update player position based on input
+            // Handle input-based movement
             Vector2 input = InputManager.MoveVector();
-            Position += input * Speed * deltaTime;
+            ApplyForce(input * Speed);
 
             // Update the shape's position to match the player's position
-            _shape.Position = Position;
+            Shape.Position = Position;
+
+            base.Update(deltaTime);
         }
 
-        public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
+        public override void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
-            if (spriteBatch == null)
-                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null");
-
-            // Draw the player's shape (with outline and fill handled by the Shape class)
-            _shape.Draw(spriteBatch, debugEnabled);
+            base.Draw(spriteBatch, debugEnabled); // Call the base implementation
 
             // Additional debug visuals
             if (debugEnabled)
             {
                 DrawRotationPointer(spriteBatch);
-                DebugVisualizer.DrawDebugCircle(spriteBatch, Position);
             }
         }
 

@@ -1,4 +1,3 @@
-C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\Config.json
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\op.io.exe
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\op.io.deps.json
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\op.io.runtimeconfig.json
@@ -28,3 +27,8 @@ C:\Users\gabeq\source\repos\op.io\obj\Debug\net8.0\op.io.genruntimeconfig.cache
 C:\Users\gabeq\source\repos\op.io\obj\Debug\net8.0\ref\op.io.dll
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Content\DebugFont.spritefont.xnb
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Content\DebugFont.xnb
+C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\Debug.json
+C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\Farm.json
+C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\Map.json
+C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\Player.json
+C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\General.json

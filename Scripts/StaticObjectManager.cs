@@ -13,9 +13,10 @@ namespace op.io
             _staticObjects = new List<StaticObject>();
         }
 
-        public void AddStaticObject(Vector2 position, int width, int height, Color color, Color outlineColor, int outlineWidth)
+        // Updated method to include isCollidable and isDestructible parameters
+        public void AddStaticObject(Vector2 position, int width, int height, Color color, Color outlineColor, int outlineWidth, bool isCollidable = true, bool isDestructible = false)
         {
-            _staticObjects.Add(new StaticObject(position, width, height, color, outlineColor, outlineWidth));
+            _staticObjects.Add(new StaticObject(position, width, height, color, outlineColor, outlineWidth, isCollidable, isDestructible));
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)

@@ -7,22 +7,20 @@ namespace op.io
 {
     public static class BaseFunctions
     {
-        public static JsonDocument Config()
+        private static readonly string DataDirectory = "Data/";
+
+        public static JsonDocument LoadJson(string fileName)
         {
-            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Config.json");
+            if (string.IsNullOrWhiteSpace(fileName))
+                throw new ArgumentException("File name cannot be null or empty.", nameof(fileName));
 
-            if (string.IsNullOrWhiteSpace(configPath))
-                throw new ArgumentException("Config path cannot be null, empty, or whitespace.", nameof(configPath));
+            string fullPath = Path.Combine(DataDirectory, fileName);
 
-            if (!File.Exists(configPath))
-                throw new FileNotFoundException($"Config file not found at path: {configPath}", configPath);
+            if (!File.Exists(fullPath))
+                throw new FileNotFoundException($"JSON file not found: {fullPath}");
 
-            string json = File.ReadAllText(configPath);
-
-            if (string.IsNullOrWhiteSpace(json))
-                throw new InvalidOperationException("Config file is empty or contains only whitespace.");
-
-            return JsonDocument.Parse(json);
+            string jsonText = File.ReadAllText(fullPath);
+            return JsonDocument.Parse(jsonText);
         }
 
         public static Color GetColor(JsonDocument doc, string section, string key, Color defaultColor)
@@ -52,16 +50,22 @@ namespace op.io
             return defaultColor;
         }
 
-        public static Color GetColor(JsonElement element, Color defaultColor)
+        public static Color GetColor(JsonElement colorElement)
         {
-            try
+            if (!colorElement.TryGetProperty("R", out var r) ||
+                !colorElement.TryGetProperty("G", out var g) ||
+                !colorElement.TryGetProperty("B", out var b) ||
+                !colorElement.TryGetProperty("A", out var a))
             {
-                return ParseColor(element);
+                throw new ArgumentException("Color must include R, G, B, and A properties.");
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Failed to parse color from JsonElement.", ex);
-            }
+
+            return new Color(
+                r.GetByte(),
+                g.GetByte(),
+                b.GetByte(),
+                a.GetByte()
+            );
         }
 
         private static Color ParseColor(JsonElement element)

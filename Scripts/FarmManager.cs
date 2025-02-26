@@ -7,14 +7,25 @@ namespace op.io
 {
     public class FarmManager
     {
-        private ShapesManager _shapesManager;
+        private List<GameObject> _farmObjects; // A list to hold farm-specific GameObjects
 
         public FarmManager()
         {
-            _shapesManager = new ShapesManager();
+            _farmObjects = new List<GameObject>();
         }
 
-        public void AddFarmShape(Vector2 position, string type, int width, int height, int sides, Color color, Color outlineColor, int outlineWidth, bool enableCollision, bool enablePhysics)
+        public void AddFarmShape(
+            Vector2 position,
+            string type,
+            int width,
+            int height,
+            int sides,
+            Color fillColor,
+            Color outlineColor,
+            int outlineWidth,
+            bool enableCollision,
+            bool enablePhysics
+        )
         {
             if (string.IsNullOrWhiteSpace(type))
                 throw new ArgumentException("Shape type cannot be null or whitespace.", nameof(type));
@@ -22,14 +33,36 @@ namespace op.io
             if (width <= 0 || height <= 0)
                 throw new ArgumentOutOfRangeException(nameof(width), "Width and height must be greater than zero.");
 
-            if (sides < 0)
-                throw new ArgumentOutOfRangeException(nameof(sides), "Number of sides cannot be negative.");
-
             if (outlineWidth < 0)
                 throw new ArgumentOutOfRangeException(nameof(outlineWidth), "Outline width cannot be negative.");
 
-            // Use the correct AddShape method with width and height explicitly
-            _shapesManager.AddShape(position, type, width, height, sides, color, outlineColor, outlineWidth, enableCollision, enablePhysics);
+            float boundingRadius = type == "Circle"
+                ? width / 2f
+                : MathF.Sqrt(width * width + height * height) / 2f;
+
+            var shape = new Shape(
+                position,
+                type,
+                width,
+                height,
+                sides,
+                fillColor,
+                outlineColor,
+                outlineWidth
+            );
+
+            var gameObject = new GameObject(
+                position,
+                0f,
+                1f,
+                boundingRadius,
+                false,
+                isDestructible: enablePhysics,
+                isCollidable: enableCollision,
+                shape: shape
+            );
+
+            _farmObjects.Add(gameObject);
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
@@ -37,7 +70,10 @@ namespace op.io
             if (graphicsDevice == null)
                 throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null.");
 
-            _shapesManager.LoadContent(graphicsDevice);
+            foreach (var farmObject in _farmObjects)
+            {
+                farmObject.LoadContent(graphicsDevice);
+            }
         }
 
         public void Update(float deltaTime)
@@ -45,7 +81,10 @@ namespace op.io
             if (deltaTime < 0)
                 throw new ArgumentOutOfRangeException(nameof(deltaTime), "Delta time cannot be negative.");
 
-            _shapesManager.Update(deltaTime);
+            foreach (var farmObject in _farmObjects)
+            {
+                farmObject.Update(deltaTime);
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
@@ -53,12 +92,15 @@ namespace op.io
             if (spriteBatch == null)
                 throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
 
-            _shapesManager.Draw(spriteBatch, debugEnabled);
+            foreach (var farmObject in _farmObjects)
+            {
+                farmObject.Draw(spriteBatch, debugEnabled);
+            }
         }
 
-        public List<Shape> GetFarmShapes()
+        public List<GameObject> GetFarmShapes()
         {
-            return _shapesManager.GetShapes();
+            return _farmObjects;
         }
     }
 }
