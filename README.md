@@ -1,12 +1,30 @@
 # Welcome to op.io
 
+# Local setup instructions
+
+* Clone the repo to your client using Git, or download the zip file and extract it to your desired location
+* From Windows, download sqlite-tools-win-x64-3490100.zip in the following link: https://www.sqlite.org/download.html
+* Move sqlite to your C drive
+* Add the sqlite folder to your system environmental variables PATH
+* To initialize an uninitialized database, do:
+  > sqlite3 C:\...\Data\GameData.db
+  > .read C:\...\Data\InitDatabase.sql
+* Download sqlitebrowser from https://sqlitebrowser.org/dl/ to visualize the tables
+* Lauanch DB Browser for SQLite then `Open Database` and select Data/GameData.db
+
 ## TODO (migrate):
 
 * https://zapier.com/editor/282794365/published
 
-* Add enable/disable player/destructable/collidable
+* Write a .bat script to reinit database
+* Add enable/disable player/destructable/collidable, and also have an opacity option
 * Split JSON files and correct parsisng
+* JSON to SQLite migration
 * --------------
+* Add more sophisticated Debugging methodology
+* --------------
+* Migrate inputs to InputManager.cs and a new input json file
+* Write case tests for all functions
 * Ensure redundant code is simplified away, e.g., ensure Player.cs and StaticObject.cs are not any longer than absolutely necessary and modularize as needed, also ensure Physics are split up
 * Create Agent class for GOs that can move and interact with the environment
 * Ensure Player movement uses Physics script
