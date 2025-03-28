@@ -55,23 +55,23 @@ namespace op.io
                 return;
             }
 
-            DebugManager.PrintDebug($"[Player] Update started. deltaTime: {deltaTime}");
+            DebugManager.PrintDebug($"Update started. deltaTime: {deltaTime}");
 
             base.Update(deltaTime);
 
             _rotation = InputManager.GetAngleToMouse(Position);
-            DebugManager.PrintDebug($"[Player] Rotation updated to {_rotation} radians");
+            //DebugManager.PrintDebug($"Rotation updated to {_rotation} radians");
 
             Vector2 input = InputManager.MoveVector();
-            DebugManager.PrintDebug($"[Player] Input vector: {input}");
+            //DebugManager.PrintDebug($"Input vector: {input}");
 
             ActionHandler.Move(this, input, Speed, deltaTime);
-            DebugManager.PrintDebug($"[Player] Called ActionHandler.Move with input={input}, speed={Speed}, deltaTime={deltaTime}");
+            //DebugManager.PrintDebug($"Called ActionHandler.Move with input={input}, speed={Speed}, deltaTime={deltaTime}");
 
             if (Shape != null)
             {
                 Shape.Position = Position;
-                DebugManager.PrintDebug($"[Player] Shape position synced to {Position}");
+                //DebugManager.PrintDebug($"Shape position synced to {Position}");
             }
         }
 
@@ -93,7 +93,7 @@ namespace op.io
                 return;
             }
 
-            DebugManager.PrintDebug("[Player] Drawing rotation pointer...");
+            DebugManager.PrintDebug("Drawing rotation pointer...");
 
             Texture2D lineTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
             lineTexture.SetData([Color.Red]);
@@ -118,7 +118,7 @@ namespace op.io
                 0f
             );
 
-            DebugManager.PrintDebug($"[Player] Rotation pointer drawn from {Position} to {endpoint} (angle: {angle}, distance: {distance})");
+            //DebugManager.PrintDebug($"Rotation pointer drawn from {Position} to {endpoint} (angle: {angle}, distance: {distance})");
         }
 
     }

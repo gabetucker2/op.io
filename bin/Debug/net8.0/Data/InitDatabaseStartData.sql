@@ -12,7 +12,7 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1280')
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '720');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('Fullscreen', 'false');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '120');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '360');
 
 -- Insert default player
 INSERT INTO Players (
@@ -27,7 +27,7 @@ INSERT INTO Players (
     1, 0, 1, 1.0
 );
 
--- Insert map object
+-- Insert a map object
 INSERT INTO MapData (
     Name, Type, PositionX, PositionY, Width, Height, Sides,
     FillR, FillG, FillB, FillA,
@@ -41,7 +41,7 @@ INSERT INTO MapData (
     1, 0, 1.0, 0
 );
 
--- Insert farm objects (based on farm.json examples)
+-- Insert farm prototypes (used for instancing)
 INSERT INTO FarmData (
     Type, PositionX, PositionY, Size, Sides, Width, Height, Weight, Count,
     FillR, FillG, FillB, FillA,

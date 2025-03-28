@@ -94,7 +94,7 @@ namespace op.io
             Vector2 acceleration = force / Mass;
             Position += acceleration * deltaTime;
 
-            DebugManager.PrintDebug($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
+            //DebugManager.PrintDebug($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
         }
 
         public static void ValidateSinglePlayer(GameObject[] objects)
@@ -119,8 +119,5 @@ namespace op.io
                 }
             }
         }
-
-        // Event for transform changes
-        public event Action<GameObject> OnTransformChanged;
     }
 }

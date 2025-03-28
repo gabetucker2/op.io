@@ -19,14 +19,16 @@ namespace op.io
 
             _alreadyInitialized = true;
 
-            if (DebugManager.IsDebugEnabled() && File.Exists(DatabaseConfig.DatabaseFilePath))
+            string fullPath = Path.GetFullPath(DatabaseConfig.DatabaseFilePath);
+
+            if (DebugManager.IsDebugEnabled() && File.Exists(fullPath))
             {
-                File.Delete(DatabaseConfig.DatabaseFilePath);
-                DebugManager.PrintWarning("Deleted existing database file for clean reinitialization.");
+                File.Delete(fullPath);
+                DebugManager.PrintWarning($"Deleted existing database file at: {fullPath}");
             }
-            else if (!File.Exists(DatabaseConfig.DatabaseFilePath))
+            else if (!File.Exists(fullPath))
             {
-                DebugManager.PrintMeta($"Database file not found at '{DatabaseConfig.DatabaseFilePath}'. A new one will be created.");
+                DebugManager.PrintMeta($"Database file not found at: {fullPath}. A new one will be created.");
             }
 
             string structurePath = Path.Combine("Data", "InitDatabaseStructure.sql");
@@ -35,6 +37,7 @@ namespace op.io
             using (var connection = new SQLiteConnection(ConnectionString))
             {
                 connection.Open();
+                DebugManager.PrintMeta($"Database connection opened at: {fullPath}");
 
                 foreach (var scriptPath in new[] { structurePath, dataPath })
                 {
@@ -42,7 +45,6 @@ namespace op.io
                     {
                         RunSQLScript(connection, scriptPath);
 
-                        // Only check for duplicates after the data insert script runs
                         if (Path.GetFileName(scriptPath).Equals("InitDatabaseStartData.sql", StringComparison.OrdinalIgnoreCase))
                         {
                             WarnIfDuplicateSettings(connection);
@@ -53,6 +55,8 @@ namespace op.io
                         DebugManager.PrintError($"Failed executing {Path.GetFileName(scriptPath)}: {ex.Message}");
                     }
                 }
+
+                DebugManager.PrintMeta("Database initialization complete.");
             }
         }
 

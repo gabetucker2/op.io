@@ -1,94 +1,75 @@
 ﻿-- InitDatabaseStructure.sql
 
--- Create DebugSettings table
-CREATE TABLE DebugSettings (
+-- Table for debug settings
+CREATE TABLE IF NOT EXISTS DebugSettings (
     Setting TEXT PRIMARY KEY,
-    Enabled BOOLEAN NOT NULL DEFAULT 0,
-    TextureDebugView BOOLEAN NOT NULL DEFAULT 0,
-    MaxRepeats INTEGER NOT NULL DEFAULT 5
+    Enabled INTEGER NOT NULL,
+    MaxRepeats INTEGER NOT NULL
 );
 
--- Create GeneralSettings table
-CREATE TABLE GeneralSettings (
+-- Table for general game settings
+CREATE TABLE IF NOT EXISTS GeneralSettings (
     SettingKey TEXT PRIMARY KEY,
     Value TEXT NOT NULL
 );
 
--- Create Players table
-CREATE TABLE Players (
+-- Table for player data
+CREATE TABLE IF NOT EXISTS Players (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL,
-    Type TEXT NOT NULL DEFAULT 'Circle',
-    PositionX REAL NOT NULL DEFAULT 100,
-    PositionY REAL NOT NULL DEFAULT 100,
-    Speed REAL NOT NULL DEFAULT 500.0,
-    Radius INTEGER NOT NULL DEFAULT 25,
-    Width INTEGER NOT NULL DEFAULT 50,
-    Height INTEGER NOT NULL DEFAULT 50,
-    Sides INTEGER NOT NULL DEFAULT 0,
-    FillR INTEGER NOT NULL DEFAULT 0,
-    FillG INTEGER NOT NULL DEFAULT 255,
-    FillB INTEGER NOT NULL DEFAULT 255,
-    FillA INTEGER NOT NULL DEFAULT 255,
-    OutlineR INTEGER NOT NULL DEFAULT 0,
-    OutlineG INTEGER NOT NULL DEFAULT 150,
-    OutlineB INTEGER NOT NULL DEFAULT 150,
-    OutlineA INTEGER NOT NULL DEFAULT 255,
-    OutlineWidth INTEGER NOT NULL DEFAULT 4,
-    IsPlayer BOOLEAN NOT NULL DEFAULT 1,
-    IsDestructible BOOLEAN NOT NULL DEFAULT 0,
-    IsCollidable BOOLEAN NOT NULL DEFAULT 1,
-    Mass REAL NOT NULL DEFAULT 1.0
+    Name TEXT,
+    Type TEXT,
+    PositionX REAL,
+    PositionY REAL,
+    Speed REAL,
+    Radius INTEGER,
+    Width INTEGER,
+    Height INTEGER,
+    Sides INTEGER,
+    FillR INTEGER, FillG INTEGER, FillB INTEGER, FillA INTEGER,
+    OutlineR INTEGER, OutlineG INTEGER, OutlineB INTEGER, OutlineA INTEGER,
+    OutlineWidth INTEGER,
+    IsPlayer INTEGER,
+    IsDestructible INTEGER,
+    IsCollidable INTEGER,
+    Mass REAL
 );
 
--- Create MapData table
-CREATE TABLE MapData (
+-- Table for static map objects
+CREATE TABLE IF NOT EXISTS MapData (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL,
-    Type TEXT NOT NULL DEFAULT 'Rectangle',
-    PositionX REAL NOT NULL,
-    PositionY REAL NOT NULL,
-    Width INTEGER NOT NULL,
-    Height INTEGER NOT NULL,
-    Sides INTEGER NOT NULL DEFAULT 0,
-    FillR INTEGER NOT NULL DEFAULT 255,
-    FillG INTEGER NOT NULL DEFAULT 255,
-    FillB INTEGER NOT NULL DEFAULT 255,
-    FillA INTEGER NOT NULL DEFAULT 255,
-    OutlineR INTEGER NOT NULL DEFAULT 0,
-    OutlineG INTEGER NOT NULL DEFAULT 0,
-    OutlineB INTEGER NOT NULL DEFAULT 0,
-    OutlineA INTEGER NOT NULL DEFAULT 255,
-    OutlineWidth INTEGER NOT NULL DEFAULT 4,
-    IsCollidable BOOLEAN NOT NULL DEFAULT 1,
-    IsDestructible BOOLEAN NOT NULL DEFAULT 0,
-    Mass REAL NOT NULL DEFAULT 1.0,
-    IsPlayer BOOLEAN NOT NULL DEFAULT 0
+    Name TEXT,
+    Type TEXT,
+    PositionX REAL,
+    PositionY REAL,
+    Width INTEGER,
+    Height INTEGER,
+    Sides INTEGER,
+    FillR INTEGER, FillG INTEGER, FillB INTEGER, FillA INTEGER,
+    OutlineR INTEGER, OutlineG INTEGER, OutlineB INTEGER, OutlineA INTEGER,
+    OutlineWidth INTEGER,
+    IsCollidable INTEGER,
+    IsDestructible INTEGER,
+    Mass REAL,
+    IsPlayer INTEGER
 );
 
--- Create FarmData table
-CREATE TABLE FarmData (
+-- Table for farm prototype data
+CREATE TABLE IF NOT EXISTS FarmData (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Type TEXT NOT NULL,
-    PositionX REAL NOT NULL,
-    PositionY REAL NOT NULL,
-    Size INTEGER NOT NULL,
-    Sides INTEGER NOT NULL DEFAULT 0,
-    Width INTEGER NOT NULL DEFAULT 0,
-    Height INTEGER NOT NULL DEFAULT 0,
-    Weight INTEGER NOT NULL DEFAULT 0,
-    Count INTEGER NOT NULL DEFAULT 1,
-    FillR INTEGER NOT NULL,
-    FillG INTEGER NOT NULL,
-    FillB INTEGER NOT NULL,
-    FillA INTEGER NOT NULL,
-    OutlineR INTEGER NOT NULL,
-    OutlineG INTEGER NOT NULL,
-    OutlineB INTEGER NOT NULL,
-    OutlineA INTEGER NOT NULL,
-    OutlineWidth INTEGER NOT NULL,
-    IsCollidable BOOLEAN NOT NULL,
-    IsDestructible BOOLEAN NOT NULL,
-    IsPlayer BOOLEAN NOT NULL DEFAULT 0,
-    Mass REAL NOT NULL DEFAULT 1.0
+    Type TEXT,
+    PositionX REAL,
+    PositionY REAL,
+    Size INTEGER,
+    Sides INTEGER,
+    Width INTEGER,
+    Height INTEGER,
+    Weight REAL,
+    Count INTEGER,
+    FillR INTEGER, FillG INTEGER, FillB INTEGER, FillA INTEGER,
+    OutlineR INTEGER, OutlineG INTEGER, OutlineB INTEGER, OutlineA INTEGER,
+    OutlineWidth INTEGER,
+    IsCollidable INTEGER,
+    IsDestructible INTEGER,
+    IsPlayer INTEGER,
+    Mass REAL
 );

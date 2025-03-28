@@ -41,10 +41,7 @@ namespace op.io
                 List<GameObject> mapShapes = GameObjectLoader.LoadGameObjects("MapData");
                 AddShapes(mapShapes, "MapData");
 
-                List<GameObject> playerShapes = GameObjectLoader.LoadGameObjects("PlayerData");
-                AddShapes(playerShapes, "PlayerData");
-
-                DebugManager.PrintInfo($"Total shapes loaded (including player): {_shapes.Count}");
+                DebugManager.PrintInfo($"Total static shapes loaded: {_shapes.Count}");
             }
             catch (Exception ex)
             {
