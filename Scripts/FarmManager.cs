@@ -15,6 +15,8 @@ namespace op.io
 
         public FarmManager(int viewportWidth, int viewportHeight)
         {
+            DebugManager.PrintMeta("Initializing FarmManager...");
+
             if (viewportWidth <= 0 || viewportHeight <= 0)
             {
                 DebugManager.PrintError($"Invalid viewport dimensions: {viewportWidth}x{viewportHeight}. Must be greater than 0.");
@@ -32,6 +34,8 @@ namespace op.io
 
         private void LoadFarmObjectsFromDatabase()
         {
+            _farmObjects.Clear();
+
             DebugManager.PrintDebug("Loading farm objects from database...");
             var prototypes = GameObjectLoader.LoadGameObjects("FarmData");
 

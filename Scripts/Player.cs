@@ -44,6 +44,7 @@ namespace op.io
         public override void LoadContent(GraphicsDevice graphicsDevice)
         {
             base.LoadContent(graphicsDevice);
+            DebugManager.PrintDebug("Player LoadContent completed.");
         }
 
         public override void Update(float deltaTime)
@@ -54,15 +55,24 @@ namespace op.io
                 return;
             }
 
+            DebugManager.PrintDebug($"[Player] Update started. deltaTime: {deltaTime}");
+
             base.Update(deltaTime);
 
             _rotation = InputManager.GetAngleToMouse(Position);
+            DebugManager.PrintDebug($"[Player] Rotation updated to {_rotation} radians");
 
             Vector2 input = InputManager.MoveVector();
-            ApplyForce(input * Speed);
+            DebugManager.PrintDebug($"[Player] Input vector: {input}");
+
+            ActionHandler.Move(this, input, Speed, deltaTime);
+            DebugManager.PrintDebug($"[Player] Called ActionHandler.Move with input={input}, speed={Speed}, deltaTime={deltaTime}");
 
             if (Shape != null)
+            {
                 Shape.Position = Position;
+                DebugManager.PrintDebug($"[Player] Shape position synced to {Position}");
+            }
         }
 
         public override void Draw(SpriteBatch spriteBatch, bool debugEnabled)
@@ -83,8 +93,10 @@ namespace op.io
                 return;
             }
 
+            DebugManager.PrintDebug("[Player] Drawing rotation pointer...");
+
             Texture2D lineTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
-            lineTexture.SetData(new[] { Color.Red });
+            lineTexture.SetData([Color.Red]);
 
             Vector2 endpoint = Position + new Vector2(
                 MathF.Cos(_rotation) * _pointerLength,
@@ -105,6 +117,9 @@ namespace op.io
                 SpriteEffects.None,
                 0f
             );
+
+            DebugManager.PrintDebug($"[Player] Rotation pointer drawn from {Position} to {endpoint} (angle: {angle}, distance: {distance})");
         }
+
     }
 }

@@ -32,22 +32,19 @@ namespace op.io
             LoadShapesFromDatabase();
         }
 
-        /// <summary>
-        /// Loads shapes from GameObjects, FarmData, and MapData tables.
-        /// </summary>
         public void LoadShapesFromDatabase()
         {
             DebugManager.PrintMeta("Loading shapes from database...");
 
             try
             {
-                List<GameObject> farmShapes = GameObjectLoader.LoadGameObjects("FarmData");
                 List<GameObject> mapShapes = GameObjectLoader.LoadGameObjects("MapData");
-
-                AddShapes(farmShapes, "FarmData");
                 AddShapes(mapShapes, "MapData");
 
-                DebugManager.PrintInfo($"Total shapes loaded: {_shapes.Count}");
+                List<GameObject> playerShapes = GameObjectLoader.LoadGameObjects("PlayerData");
+                AddShapes(playerShapes, "PlayerData");
+
+                DebugManager.PrintInfo($"Total shapes loaded (including player): {_shapes.Count}");
             }
             catch (Exception ex)
             {
@@ -55,9 +52,6 @@ namespace op.io
             }
         }
 
-        /// <summary>
-        /// Helper method to add shapes from different tables.
-        /// </summary>
         private void AddShapes(List<GameObject> shapeObjects, string sourceTable)
         {
             if (shapeObjects.Count == 0)
@@ -82,9 +76,6 @@ namespace op.io
             }
         }
 
-        /// <summary>
-        /// Updates all shapes.
-        /// </summary>
         public void Update(float deltaTime)
         {
             foreach (var shape in _shapes)
@@ -93,9 +84,6 @@ namespace op.io
             }
         }
 
-        /// <summary>
-        /// Draws all shapes.
-        /// </summary>
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
             foreach (var shape in _shapes)
@@ -104,9 +92,6 @@ namespace op.io
             }
         }
 
-        /// <summary>
-        /// Retrieves the list of shapes.
-        /// </summary>
         public List<GameObject> GetShapes()
         {
             return _shapes;

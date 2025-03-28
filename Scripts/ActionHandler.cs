@@ -37,10 +37,8 @@ namespace op.io
                 return;
             }
 
-            Vector2 movement = direction * speed * deltaTime;
-            gameObject.Position += movement;
-
-            DebugManager.PrintDebug($"Moved GameObject by {movement} to new position {gameObject.Position}");
+            Vector2 force = direction * speed;
+            gameObject.ApplyForce(force, deltaTime);
         }
     }
 }

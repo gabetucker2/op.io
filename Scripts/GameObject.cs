@@ -86,17 +86,15 @@ namespace op.io
             Shape.Draw(spriteBatch, debugEnabled, appliedRotation);
         }
 
-        public virtual void ApplyForce(Vector2 force)
+        public virtual void ApplyForce(Vector2 force, float deltaTime)
         {
-            if (float.IsNaN(force.X) || float.IsNaN(force.Y))
-            {
-                DebugManager.PrintWarning($"GameObject at {Position} received invalid force vector: {force}");
+            if (force == Vector2.Zero || deltaTime <= 0f)
                 return;
-            }
 
-            float effectiveMass = Mass > 0 ? Mass : 1f;
-            Position += force / effectiveMass;
-            OnTransformChanged?.Invoke(this);
+            Vector2 acceleration = force / Mass;
+            Position += acceleration * deltaTime;
+
+            DebugManager.PrintDebug($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
         }
 
         public static void ValidateSinglePlayer(GameObject[] objects)
