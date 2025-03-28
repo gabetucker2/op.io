@@ -25,7 +25,10 @@ namespace op.io
             int debugRadius = BaseFunctions.GetValue<int>(tableName, "Radius", keyColumn, "DebugCircleRadius", 3);
 
             if (debugRadius <= 0)
-                throw new ArgumentException("DebugCircle Radius must be greater than 0.");
+            {
+                DebugManager.PrintError($"Invalid debug radius: {debugRadius}. Radius must be greater than 0.");
+                return; // Skip drawing the circle
+            }
 
             _debugTexture = CreateCircleTexture(graphicsDevice, debugColor, debugRadius);
         }

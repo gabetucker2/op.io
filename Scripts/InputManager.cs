@@ -40,13 +40,19 @@ namespace op.io
         public static float GetAngleToMouse(Vector2 playerPosition)
         {
             if (float.IsNaN(playerPosition.X) || float.IsNaN(playerPosition.Y))
-                throw new ArgumentException("Player position must contain valid numeric values.", nameof(playerPosition));
+            {
+                DebugManager.PrintError($"Invalid player position: {playerPosition}");
+                return 0f;
+            }
 
             Vector2 mousePosition = GetMousePosition();
             Vector2 direction = mousePosition - playerPosition;
 
             if (direction == Vector2.Zero)
-                throw new ArgumentException("Direction vector between player and mouse cannot be zero.", nameof(playerPosition));
+            {
+                DebugManager.PrintWarning("[InputManager.cs:GetAngleToMouse] Player is already at mouse position. Defaulting angle to 0.");
+                return 0f;
+            }
 
             return (float)Math.Atan2(direction.Y, direction.X); // Angle in radians
         }

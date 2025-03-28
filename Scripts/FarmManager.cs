@@ -16,7 +16,11 @@ namespace op.io
         public FarmManager(int viewportWidth, int viewportHeight)
         {
             if (viewportWidth <= 0 || viewportHeight <= 0)
-                throw new ArgumentException("Viewport dimensions must be greater than 0.");
+            {
+                DebugManager.PrintError($"Invalid viewport dimensions: {viewportWidth}x{viewportHeight}. Must be greater than 0.");
+                viewportWidth = Math.Max(1, viewportWidth);
+                viewportHeight = Math.Max(1, viewportHeight);
+            }
 
             _farmObjects = new List<GameObject>();
             _random = new Random(); // Optional: seed for repeatable tests
@@ -49,7 +53,7 @@ namespace op.io
                 {
                     var clone = CloneWithRandomViewportPosition(prototype);
                     _farmObjects.Add(clone);
-                    DebugManager.PrintDebug($"Spawned instance {i + 1}/{count} at {clone.Position}");
+                    DebugManager.PrintDebug($"Spawned instance {i + 1}/{count} at {clone.Position} with rotation {clone.Rotation:F2} radians");
                 }
             }
 
@@ -57,7 +61,7 @@ namespace op.io
         }
 
         /// <summary>
-        /// Creates a randomized copy of a GameObject within the screen bounds.
+        /// Creates a randomized copy of a GameObject within the screen bounds and assigns a random rotation.
         /// </summary>
         private GameObject CloneWithRandomViewportPosition(GameObject source)
         {
@@ -68,6 +72,8 @@ namespace op.io
                 _random.Next(0, maxX),
                 _random.Next(0, maxY)
             );
+
+            float rotation = (float)(_random.NextDouble() * MathF.Tau); // Random rotation between 0 and 2π
 
             var clonedShape = new Shape(
                 position,
@@ -83,6 +89,7 @@ namespace op.io
             return new GameObject
             {
                 Position = position,
+                Rotation = rotation, // Inject stochastic rotation here
                 Mass = source.Mass,
                 IsPlayer = source.IsPlayer,
                 IsDestructible = source.IsDestructible,

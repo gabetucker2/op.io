@@ -14,9 +14,16 @@ namespace op.io
         public ShapeManager(int viewportWidth, int viewportHeight)
         {
             if (viewportWidth <= 0)
-                throw new ArgumentException("Viewport width must be greater than 0.", nameof(viewportWidth));
+            {
+                DebugManager.PrintError($"Invalid viewport width: {viewportWidth}. Defaulting to 1280.");
+                viewportWidth = 1280;
+            }
+
             if (viewportHeight <= 0)
-                throw new ArgumentException("Viewport height must be greater than 0.", nameof(viewportHeight));
+            {
+                DebugManager.PrintError($"Invalid viewport height: {viewportHeight}. Defaulting to 720.");
+                viewportHeight = 720;
+            }
 
             _shapes = new List<GameObject>();
             _viewportWidth = viewportWidth;

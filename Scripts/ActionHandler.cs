@@ -8,21 +8,39 @@ namespace op.io
         public static void Move(GameObject gameObject, Vector2 direction, float speed, float deltaTime)
         {
             if (gameObject == null)
-                throw new ArgumentNullException(nameof(gameObject), "GameObject cannot be null.");
+            {
+                DebugManager.PrintError("Move failed: GameObject is null.");
+                return;
+            }
 
             if (float.IsNaN(direction.X) || float.IsNaN(direction.Y))
-                throw new ArgumentException("Direction vector must contain valid numeric values.", nameof(direction));
+            {
+                DebugManager.PrintWarning($"Move aborted: Direction vector contains NaN values: {direction}");
+                return;
+            }
 
             if (direction == Vector2.Zero)
-                throw new ArgumentException("Direction vector cannot be zero.", nameof(direction));
+            {
+                DebugManager.PrintDebug("Move skipped: Direction vector is zero.");
+                return;
+            }
 
             if (speed <= 0)
-                throw new ArgumentException("Speed must be greater than 0.", nameof(speed));
+            {
+                DebugManager.PrintWarning($"Move aborted: Speed must be positive but was {speed}");
+                return;
+            }
 
             if (deltaTime <= 0)
-                throw new ArgumentException("DeltaTime must be greater than 0.", nameof(deltaTime));
+            {
+                DebugManager.PrintWarning($"Move skipped: DeltaTime must be positive but was {deltaTime}");
+                return;
+            }
 
-            gameObject.Position += direction * speed * deltaTime;
+            Vector2 movement = direction * speed * deltaTime;
+            gameObject.Position += movement;
+
+            DebugManager.PrintDebug($"Moved GameObject by {movement} to new position {gameObject.Position}");
         }
     }
 }

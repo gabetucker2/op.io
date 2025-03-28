@@ -2,7 +2,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Text.Json;
 
 namespace op.io
 {
@@ -18,35 +17,55 @@ namespace op.io
         [JsonInclude] public Shape Shape { get; set; }
         public int Count { get; set; } = 1;
 
-        // Computed property (not serialized, calculated from Shape)
-        public float BoundingRadius => Shape != null ? MathF.Sqrt(Shape.Width * Shape.Width + Shape.Height * Shape.Height) / 2 : 0f;
+        // Computed property
+        public float BoundingRadius =>
+            Shape != null
+                ? MathF.Sqrt(Shape.Width * Shape.Width + Shape.Height * Shape.Height) / 2f
+                : 0f;
 
-        // Parameterless Constructor for JSON Deserialization
+        // Parameterless Constructor
         public GameObject() { }
 
         // Main Constructor
         public GameObject(Vector2 initialPosition, float initialRotation, float mass, bool isPlayer, bool isDestructible, bool isCollidable, Shape shape)
         {
+            if (shape == null)
+            {
+                DebugManager.PrintError("Attempted to construct GameObject with null Shape.");
+                return;
+            }
+
             Position = initialPosition;
             Rotation = initialRotation;
-            Mass = mass;
+            Mass = mass > 0 ? mass : 1f; // Default mass to 1 if invalid
             IsPlayer = isPlayer;
             IsDestructible = isDestructible;
             IsCollidable = isCollidable;
             Shape = shape;
 
-            DebugManager.PrintDebug($"Created GameObject at {Position}, Shape: {Shape?.Type ?? "None"}");
+            DebugManager.PrintDebug($"Created GameObject at {Position}, Shape: {Shape.Type}");
         }
 
         public virtual void LoadContent(GraphicsDevice graphicsDevice)
         {
+            if (graphicsDevice == null)
+            {
+                DebugManager.PrintError("LoadContent called with null GraphicsDevice.");
+                return;
+            }
+
             Shape?.LoadContent(graphicsDevice);
         }
 
         public virtual void Update(float deltaTime)
         {
             if (deltaTime <= 0)
-                throw new ArgumentException("DeltaTime must be greater than 0.", nameof(deltaTime));
+            {
+                DebugManager.PrintWarning($"GameObject skipped update due to non-positive deltaTime: {deltaTime}");
+                return;
+            }
+
+            // Add per-object behavior here as needed
         }
 
         public virtual void Draw(SpriteBatch spriteBatch, bool debugEnabled)
@@ -57,23 +76,37 @@ namespace op.io
                 return;
             }
 
-            Shape.Draw(spriteBatch, debugEnabled);
+            if (spriteBatch == null)
+            {
+                DebugManager.PrintError("Draw called with null SpriteBatch.");
+                return;
+            }
+
+            float appliedRotation = Shape.Type == "Circle" ? 0f : Rotation;
+            Shape.Draw(spriteBatch, debugEnabled, appliedRotation);
         }
 
-        // Adds ApplyForce for physics movement
         public virtual void ApplyForce(Vector2 force)
         {
             if (float.IsNaN(force.X) || float.IsNaN(force.Y))
-                throw new ArgumentException("Force vector must contain valid numeric values.", nameof(force));
+            {
+                DebugManager.PrintWarning($"GameObject at {Position} received invalid force vector: {force}");
+                return;
+            }
 
-            Position += force / Mass;
+            float effectiveMass = Mass > 0 ? Mass : 1f;
+            Position += force / effectiveMass;
             OnTransformChanged?.Invoke(this);
         }
 
-        // Ensure only one player exists
         public static void ValidateSinglePlayer(GameObject[] objects)
         {
-            if (objects == null) throw new ArgumentNullException(nameof(objects), "Object list cannot be null.");
+            if (objects == null)
+            {
+                DebugManager.PrintError("ValidateSinglePlayer called with null object array.");
+                return;
+            }
+
             int playerCount = 0;
             foreach (var obj in objects)
             {
@@ -81,7 +114,10 @@ namespace op.io
                 {
                     playerCount++;
                     if (playerCount > 1)
-                        throw new InvalidOperationException("Multiple GameObjects cannot have IsPlayer set to true.");
+                    {
+                        DebugManager.PrintError("Multiple GameObjects have IsPlayer set to true. Only one is allowed.");
+                        return;
+                    }
                 }
             }
         }
