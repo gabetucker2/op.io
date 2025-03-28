@@ -1,0 +1,13 @@
+{
+    "BackgroundColor": {
+        "R": 30,
+        "G": 30,
+        "B": 30,
+        "A": 255
+    },
+    "ViewportWidth": 1280,
+    "ViewportHeight": 720,
+    "Fullscreen": false,
+    "VSync": true,
+    "TargetFrameRate": 120
+}

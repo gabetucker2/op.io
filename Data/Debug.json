@@ -1,0 +1,13 @@
+{
+    "Enabled": false,
+    "MaxRepeats":  5,
+    "DebugCircle": {
+        "Color": {
+            "R": 255,
+            "G": 255,
+            "B": 255,
+            "A": 255
+        },
+        "Radius": 3
+    }
+}
