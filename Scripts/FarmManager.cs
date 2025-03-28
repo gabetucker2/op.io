@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,97 +7,68 @@ namespace op.io
 {
     public class FarmManager
     {
-        private List<GameObject> _farmObjects; // A list to hold farm-specific GameObjects
+        private List<GameObject> _farmObjects;
 
         public FarmManager()
         {
             _farmObjects = new List<GameObject>();
+            LoadFarmObjectsFromDatabase();
         }
 
-        public void AddFarmShape(
-            Vector2 position,
-            string type,
-            int width,
-            int height,
-            int sides,
-            Color fillColor,
-            Color outlineColor,
-            int outlineWidth,
-            bool enableCollision,
-            bool enablePhysics
-        )
+        /// <summary>
+        /// Loads all farm objects from the database.
+        /// </summary>
+        private void LoadFarmObjectsFromDatabase()
         {
-            if (string.IsNullOrWhiteSpace(type))
-                throw new ArgumentException("Shape type cannot be null or whitespace.", nameof(type));
+            DebugManager.DebugPrint("Loading farm objects from database...");
+            _farmObjects = GameObjectLoader.LoadGameObjects("FarmData");
 
-            if (width <= 0 || height <= 0)
-                throw new ArgumentOutOfRangeException(nameof(width), "Width and height must be greater than zero.");
-
-            if (outlineWidth < 0)
-                throw new ArgumentOutOfRangeException(nameof(outlineWidth), "Outline width cannot be negative.");
-
-            float boundingRadius = type == "Circle"
-                ? width / 2f
-                : MathF.Sqrt(width * width + height * height) / 2f;
-
-            var shape = new Shape(
-                position,
-                type,
-                width,
-                height,
-                sides,
-                fillColor,
-                outlineColor,
-                outlineWidth
-            );
-
-            var gameObject = new GameObject(
-                position,
-                0f,
-                1f,
-                boundingRadius,
-                false,
-                isDestructible: enablePhysics,
-                isCollidable: enableCollision,
-                shape: shape
-            );
-
-            _farmObjects.Add(gameObject);
+            if (_farmObjects.Count == 0)
+            {
+                DebugManager.DebugPrint("[WARNING] No farm objects found in database.");
+            }
+            else
+            {
+                DebugManager.DebugPrint($"Successfully loaded {_farmObjects.Count} farm objects from database.");
+            }
         }
 
+        /// <summary>
+        /// Loads textures for farm objects.
+        /// </summary>
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
-            if (graphicsDevice == null)
-                throw new ArgumentNullException(nameof(graphicsDevice), "GraphicsDevice cannot be null.");
-
             foreach (var farmObject in _farmObjects)
             {
                 farmObject.LoadContent(graphicsDevice);
             }
         }
 
+        /// <summary>
+        /// Updates all farm objects.
+        /// </summary>
         public void Update(float deltaTime)
         {
-            if (deltaTime < 0)
-                throw new ArgumentOutOfRangeException(nameof(deltaTime), "Delta time cannot be negative.");
-
             foreach (var farmObject in _farmObjects)
             {
                 farmObject.Update(deltaTime);
             }
         }
 
+        /// <summary>
+        /// Draws all farm objects.
+        /// </summary>
         public void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
-            if (spriteBatch == null)
-                throw new ArgumentNullException(nameof(spriteBatch), "SpriteBatch cannot be null.");
-
             foreach (var farmObject in _farmObjects)
             {
                 farmObject.Draw(spriteBatch, debugEnabled);
             }
         }
 
+        /// <summary>
+        /// Retrieves the list of farm objects.
+        /// </summary>
         public List<GameObject> GetFarmShapes()
         {
             return _farmObjects;

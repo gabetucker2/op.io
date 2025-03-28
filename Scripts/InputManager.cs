@@ -6,6 +6,8 @@ namespace op.io
 {
     public static class InputManager
     {
+        private static KeyboardState _previousState;
+
         public static Vector2 MoveVector()
         {
             KeyboardState state = Keyboard.GetState();
@@ -48,5 +50,20 @@ namespace op.io
 
             return (float)Math.Atan2(direction.Y, direction.X); // Angle in radians
         }
+
+        public static bool IsDebugTogglePressed()
+        {
+            KeyboardState currentState = Keyboard.GetState();
+            bool isPressed = currentState.IsKeyDown(Keys.F1) && !_previousState.IsKeyDown(Keys.F1);
+            _previousState = currentState;
+            return isPressed;
+        }
+
+        public static bool IsExitPressed()
+        {
+            KeyboardState state = Keyboard.GetState();
+            return state.IsKeyDown(Keys.Escape);
+        }
+
     }
 }

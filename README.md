@@ -10,4 +10,4 @@
   > sqlite3 C:\...\Data\GameData.db
   > .read C:\...\Data\InitDatabase.sql
 * Download sqlitebrowser from https://sqlitebrowser.org/dl/ to visualize the tables
-* Lauanch DB Browser for SQLite then `Open Database` and select Data/GameData.db
+* Launch DB Browser for SQLite then `Open Database` and select Data/GameData.db

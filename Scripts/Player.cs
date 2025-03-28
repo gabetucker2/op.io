@@ -8,10 +8,18 @@ namespace op.io
     {
         public float Speed { get; private set; } // Movement speed multiplier
         private float _rotation; // Rotation angle in radians
-        private int _pointerLength = 50; // Length of the rotation pointer
+        private const int _pointerLength = 50; // Length of the rotation pointer
 
+        // Constructor
         public Player(Vector2 position, int radius, float speed, Color fillColor, Color outlineColor, int outlineWidth)
-            : base(position, 0f, 1f, radius, true, false, true, new Shape(position, "Circle", radius * 2, radius * 2, 0, fillColor, outlineColor, outlineWidth))
+            : base(
+                position,
+                0f,
+                1f,
+                isPlayer: true,
+                isDestructible: false,
+                isCollidable: true,
+                shape: new Shape(position, "Circle", radius * 2, radius * 2, 0, fillColor, outlineColor, outlineWidth))
         {
             if (radius <= 0)
                 throw new ArgumentException("Radius must be greater than 0", nameof(radius));
@@ -25,13 +33,15 @@ namespace op.io
 
         public override void LoadContent(GraphicsDevice graphicsDevice)
         {
-            base.LoadContent(graphicsDevice); // Call the base implementation
+            base.LoadContent(graphicsDevice);
         }
 
         public override void Update(float deltaTime)
         {
             if (deltaTime <= 0)
                 throw new ArgumentException("DeltaTime must be greater than 0", nameof(deltaTime));
+
+            base.Update(deltaTime);
 
             // Update rotation to face the mouse
             _rotation = InputManager.GetAngleToMouse(Position);
@@ -42,13 +52,11 @@ namespace op.io
 
             // Update the shape's position to match the player's position
             Shape.Position = Position;
-
-            base.Update(deltaTime);
         }
 
         public override void Draw(SpriteBatch spriteBatch, bool debugEnabled)
         {
-            base.Draw(spriteBatch, debugEnabled); // Call the base implementation
+            base.Draw(spriteBatch, debugEnabled);
 
             // Additional debug visuals
             if (debugEnabled)
@@ -64,7 +72,7 @@ namespace op.io
 
             // Create a 1x1 texture for the line
             Texture2D lineTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
-            lineTexture.SetData(new[] { Color.Red });
+            lineTexture.SetData([Color.Red]);
 
             // Calculate the endpoint of the pointer based on the rotation
             Vector2 endpoint = Position + new Vector2(

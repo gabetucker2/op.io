@@ -1,127 +1,80 @@
-﻿using System.Text.Json;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Xna.Framework;
-using System.IO;
 
 namespace op.io
 {
     public static class BaseFunctions
     {
-        private static readonly string DataDirectory = "Data/";
-
-        public static JsonDocument LoadJson(string fileName)
+        public static T GetValue<T>(
+            string tableName,
+            string column,
+            string conditionColumn,
+            object conditionValue,
+            T defaultValue = default,
+            bool suppressLog = false)
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-                throw new ArgumentException("File name cannot be null or empty.", nameof(fileName));
+            string query = $"SELECT {column} FROM {tableName} WHERE {conditionColumn} = @value LIMIT 1;";
+            var result = DatabaseQuery.ExecuteQuery(query, new Dictionary<string, object> { { "@value", conditionValue } });
 
-            string fullPath = Path.Combine(DataDirectory, fileName);
-
-            if (!File.Exists(fullPath))
-                throw new FileNotFoundException($"JSON file not found: {fullPath}");
-
-            string jsonText = File.ReadAllText(fullPath);
-            return JsonDocument.Parse(jsonText);
-        }
-
-        public static Color GetColor(JsonDocument doc, string section, string key, Color defaultColor)
-        {
-            if (doc == null)
-                throw new ArgumentNullException(nameof(doc), "JsonDocument cannot be null.");
-
-            if (string.IsNullOrWhiteSpace(section))
-                throw new ArgumentException("Section name cannot be null, empty, or whitespace.", nameof(section));
-
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Key name cannot be null, empty, or whitespace.", nameof(key));
-
-            try
+            if (result.Count > 0 && result[0].ContainsKey(column))
             {
-                if (doc.RootElement.TryGetProperty(section, out var sectionElement) &&
-                    sectionElement.TryGetProperty(key, out var colorElement))
-                {
-                    return ParseColor(colorElement);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve color for section '{section}', key '{key}'.", ex);
+                return (T)Convert.ChangeType(result[0][column], typeof(T));
             }
 
-            return defaultColor;
-        }
-
-        public static Color GetColor(JsonElement colorElement)
-        {
-            if (!colorElement.TryGetProperty("R", out var r) ||
-                !colorElement.TryGetProperty("G", out var g) ||
-                !colorElement.TryGetProperty("B", out var b) ||
-                !colorElement.TryGetProperty("A", out var a))
-            {
-                throw new ArgumentException("Color must include R, G, B, and A properties.");
-            }
-
-            return new Color(
-                r.GetByte(),
-                g.GetByte(),
-                b.GetByte(),
-                a.GetByte()
-            );
-        }
-
-        private static Color ParseColor(JsonElement element)
-        {
-            if (!element.TryGetProperty("R", out var rProp) ||
-                !element.TryGetProperty("G", out var gProp) ||
-                !element.TryGetProperty("B", out var bProp) ||
-                !element.TryGetProperty("A", out var aProp))
-            {
-                throw new ArgumentException("JsonElement does not contain valid color properties.");
-            }
-
-            int r = rProp.GetInt32();
-            int g = gProp.GetInt32();
-            int b = bProp.GetInt32();
-            int a = aProp.GetInt32();
-
-            if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255 || a < 0 || a > 255)
-                throw new ArgumentOutOfRangeException("Color values must be between 0 and 255.");
-
-            return new Color(r, g, b, a);
-        }
-
-        public static T GetJSON<T>(JsonDocument doc, string section, string key, T defaultValue = default)
-        {
-            if (doc == null)
-                throw new ArgumentNullException(nameof(doc), "JsonDocument cannot be null.");
-
-            if (string.IsNullOrWhiteSpace(section))
-                throw new ArgumentException("Section name cannot be null, empty, or whitespace.", nameof(section));
-
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Key name cannot be null, empty, or whitespace.", nameof(key));
-
-            try
-            {
-                if (doc.RootElement.TryGetProperty(section, out var sectionElement) &&
-                    sectionElement.TryGetProperty(key, out var keyElement))
-                {
-                    // Deserialize directly for complex types
-                    if (typeof(T) == typeof(JsonElement)) return (T)(object)keyElement;
-                    if (typeof(T) == typeof(string)) return (T)(object)keyElement.GetString();
-                    if (typeof(T) == typeof(int)) return (T)(object)keyElement.GetInt32();
-                    if (typeof(T) == typeof(float)) return (T)(object)keyElement.GetSingle();
-                    if (typeof(T) == typeof(bool)) return (T)(object)keyElement.GetBoolean();
-
-                    // If it's not a known type, attempt JSON deserialization
-                    return JsonSerializer.Deserialize<T>(keyElement.GetRawText());
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to retrieve JSON value for section '{section}', key '{key}'.", ex);
-            }
+            if (!suppressLog)
+                DebugManager.DebugWarning($"[WARNING] Defaulting {column} from {tableName} to {defaultValue}");
 
             return defaultValue;
+        }
+
+
+        /// <summary>
+        /// Retrieves a color value from the database.
+        /// </summary>
+        public static Color GetColor(string tableName, string conditionColumn, object conditionValue, Color defaultColor)
+        {
+            try
+            {
+                int r = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_R", defaultColor.R);
+                int g = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_G", defaultColor.G);
+                int b = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_B", defaultColor.B);
+                int a = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_A", defaultColor.A);
+
+                Color color = new Color(r, g, b, a);
+                DebugManager.DebugPrint($"Retrieved color from {tableName} -> {color}");
+                return color;
+            }
+            catch (Exception ex)
+            {
+                DebugManager.DebugError($"Failed to retrieve color from {tableName}: {ex.Message}");
+                return defaultColor;
+            }
+        }
+
+        /// <summary>
+        /// Parses a color from a JSON document.
+        /// </summary>
+        public static Color ParseColor(JsonElement element)
+        {
+            try
+            {
+                int r = element.GetProperty("R").GetInt32();
+                int g = element.GetProperty("G").GetInt32();
+                int b = element.GetProperty("B").GetInt32();
+                int a = element.GetProperty("A").GetInt32();
+
+                Color color = new Color(r, g, b, a);
+                DebugManager.DebugPrint($"Parsed color from JSON -> {color}");
+                return color;
+            }
+            catch (Exception ex)
+            {
+                DebugManager.DebugError($"Failed to parse color from JSON: {ex.Message}");
+                return Color.White; // Default fallback
+            }
         }
     }
 }
