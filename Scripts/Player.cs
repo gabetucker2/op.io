@@ -9,6 +9,7 @@ namespace op.io
         public float Speed { get; private set; }
         private float _rotation;
         private const int _pointerLength = 50;
+        private static Texture2D _pointerTexture;
 
         public Player(Vector2 position, int radius, float speed, Color fillColor, Color outlineColor, int outlineWidth)
             : base(
@@ -21,21 +22,13 @@ namespace op.io
                 shape: new Shape(position, "Circle", radius * 2, radius * 2, 0, fillColor, outlineColor, outlineWidth))
         {
             if (radius <= 0)
-            {
-                DebugManager.PrintError($"Player initialization failed: radius must be > 0 (received {radius})");
-                return;
-            }
+                DebugManager.PrintError($"Initialization failed: radius must be > 0 (received {radius})");
 
             if (speed <= 0)
-            {
-                DebugManager.PrintError($"Player initialization failed: speed must be > 0 (received {speed})");
-                return;
-            }
+                DebugManager.PrintError($"Initialization failed: speed must be > 0 (received {speed})");
 
             if (outlineWidth < 0)
-            {
                 DebugManager.PrintWarning($"Outline width should not be negative (received {outlineWidth})");
-            }
 
             Speed = speed;
             DebugManager.PrintDebug($"Player created at {position} with radius {radius}, speed {speed}");
@@ -44,6 +37,13 @@ namespace op.io
         public override void LoadContent(GraphicsDevice graphicsDevice)
         {
             base.LoadContent(graphicsDevice);
+
+            if (_pointerTexture == null)
+            {
+                _pointerTexture = new Texture2D(graphicsDevice, 1, 1);
+                _pointerTexture.SetData(new[] { Color.Red });
+            }
+
             DebugManager.PrintDebug("Player LoadContent completed.");
         }
 
@@ -51,28 +51,19 @@ namespace op.io
         {
             if (deltaTime <= 0)
             {
-                DebugManager.PrintWarning($"Skipped Player update: deltaTime must be positive (received {deltaTime})");
+                DebugManager.PrintWarning("Skipped update: deltaTime must be positive.");
                 return;
             }
-
-            DebugManager.PrintDebug($"Update started. deltaTime: {deltaTime}");
 
             base.Update(deltaTime);
 
             _rotation = InputManager.GetAngleToMouse(Position);
-            //DebugManager.PrintDebug($"Rotation updated to {_rotation} radians");
-
             Vector2 input = InputManager.MoveVector();
-            //DebugManager.PrintDebug($"Input vector: {input}");
 
             ActionHandler.Move(this, input, Speed, deltaTime);
-            //DebugManager.PrintDebug($"Called ActionHandler.Move with input={input}, speed={Speed}, deltaTime={deltaTime}");
 
             if (Shape != null)
-            {
                 Shape.Position = Position;
-                //DebugManager.PrintDebug($"Shape position synced to {Position}");
-            }
         }
 
         public override void Draw(SpriteBatch spriteBatch, bool debugEnabled)
@@ -80,9 +71,7 @@ namespace op.io
             base.Draw(spriteBatch, debugEnabled);
 
             if (debugEnabled)
-            {
                 DrawRotationPointer(spriteBatch);
-            }
         }
 
         private void DrawRotationPointer(SpriteBatch spriteBatch)
@@ -93,11 +82,6 @@ namespace op.io
                 return;
             }
 
-            DebugManager.PrintDebug("Drawing rotation pointer...");
-
-            Texture2D lineTexture = new Texture2D(spriteBatch.GraphicsDevice, 1, 1);
-            lineTexture.SetData([Color.Red]);
-
             Vector2 endpoint = Position + new Vector2(
                 MathF.Cos(_rotation) * _pointerLength,
                 MathF.Sin(_rotation) * _pointerLength
@@ -107,7 +91,7 @@ namespace op.io
             float angle = MathF.Atan2(endpoint.Y - Position.Y, endpoint.X - Position.X);
 
             spriteBatch.Draw(
-                lineTexture,
+                _pointerTexture,
                 Position,
                 null,
                 Color.Red,
@@ -117,9 +101,6 @@ namespace op.io
                 SpriteEffects.None,
                 0f
             );
-
-            //DebugManager.PrintDebug($"Rotation pointer drawn from {Position} to {endpoint} (angle: {angle}, distance: {distance})");
         }
-
     }
 }

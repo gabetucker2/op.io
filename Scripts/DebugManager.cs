@@ -15,6 +15,7 @@ namespace op.io
         private static extern bool AllocConsole();
 
         private static bool _consoleInitialized = false;
+        private static int debugMode = 2; // 0: disabled; 1: enabled; 2: unknown, sqlite check needed
 
         /// <summary>
         /// Initializes the debug console if debug mode is enabled.
@@ -26,6 +27,9 @@ namespace op.io
 
             if (IsDebugEnabled() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
+                maxMessageRepeats = BaseFunctions.GetValue<int>(
+                    "DebugSettings", "MaxRepeats", "Setting", "General", 5, suppressLog: true
+                );
                 AllocConsole();
                 int width = 225;
                 int height = 40;
@@ -42,19 +46,29 @@ namespace op.io
 
         public static bool IsDebugEnabled()
         {
-            try
+            switch (debugMode)
             {
-                maxMessageRepeats = BaseFunctions.GetValue<int>(
-                    "DebugSettings", "MaxRepeats", "Setting", "General", 5, suppressLog: true
-                );
-                return BaseFunctions.GetValue<bool>(
-                    "DebugSettings", "Enabled", "Setting", "General", false, suppressLog: true
-                );
-            }
-            catch (Exception ex)
-            {
-                PrintError($"Failed to check if debug mode is enabled: {ex.Message}");
-                return false;
+                case 0:
+                    return false;
+                case 1:
+                    return true;
+                case 2: // needs to be set
+                    try
+                    {
+                        bool debugEnabled = BaseFunctions.GetValue<bool>(
+                            "DebugSettings", "Enabled", "Setting", "General", false, suppressLog: true
+                        );
+                        debugMode = debugEnabled ? 1 : 0;
+                        return debugEnabled;
+                    }
+                    catch (Exception ex)
+                    {
+                        PrintError($"Failed to check if debug mode is enabled: {ex.Message}");
+                        return false;
+                    }
+                default:
+                    PrintError($"Debug mode var is set to invalid integer (not 0, 1, or 2)");
+                    return false;
             }
         }
 

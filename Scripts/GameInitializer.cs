@@ -10,10 +10,7 @@ namespace op.io
         {
             DatabaseInitializer.InitializeDatabase();
             LoadGeneralSettings(game);
-
             DebugManager.PrintMeta("Game initialized");
-
-            game.ShapesManager = new ShapeManager(game.ViewportWidth, game.ViewportHeight);
         }
 
         private static void LoadGeneralSettings(Core game)
@@ -22,21 +19,50 @@ namespace op.io
 
             try
             {
+                // Background color
                 int r = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_R", 30);
                 int g = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G", 30);
                 int b = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B", 30);
                 int a = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A", 255);
-
                 game.BackgroundColor = new Color(r, g, b, a);
 
-                game.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth", 1280);
-                game.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight", 720);
+                // Load WindowMode first
+                string modeStr = BaseFunctions.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode", "BorderedWindowed");
+                if (!Enum.TryParse(modeStr, true, out WindowMode mode))
+                {
+                    DebugManager.PrintWarning($"Unrecognized WindowMode '{modeStr}'. Defaulting to BorderedWindowed.");
+                    mode = WindowMode.BorderedWindowed;
+                }
+                game.WindowMode = mode;
+
+                // Check if fullscreen mode was selected
+                if (mode == WindowMode.BorderlessFullscreen || mode == WindowMode.LegacyFullscreen)
+                {
+                    var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+                    game.ViewportWidth = display.Width;
+                    game.ViewportHeight = display.Height;
+
+                    DebugManager.PrintMeta($"Fullscreen mode detected. Using display resolution: {display.Width}x{display.Height}");
+                }
+                else
+                {
+                    game.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth", 1280);
+                    game.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight", 720);
+                }
 
                 game.Graphics.PreferredBackBufferWidth = game.ViewportWidth;
                 game.Graphics.PreferredBackBufferHeight = game.ViewportHeight;
+
+                // Render settings
+                game.VSyncEnabled = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync", false);
+                game.UseFixedTimeStep = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep", false);
+                game.TargetFrameRate = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate", 240);
+
                 game.Graphics.ApplyChanges();
 
-                DebugManager.PrintMeta($"Loaded general settings: BackgroundColor={game.BackgroundColor}, Viewport={game.ViewportWidth}x{game.ViewportHeight}");
+                DebugManager.PrintMeta(
+                    $"Loaded general settings: BackgroundColor={game.BackgroundColor}, Viewport={game.ViewportWidth}x{game.ViewportHeight}, Mode={game.WindowMode}, VSync={game.VSyncEnabled}, FixedTimeStep={game.UseFixedTimeStep}, FPS={game.TargetFrameRate}"
+                );
             }
             catch (Exception ex)
             {

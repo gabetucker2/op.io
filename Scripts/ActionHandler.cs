@@ -15,7 +15,7 @@ namespace op.io
 
             if (float.IsNaN(direction.X) || float.IsNaN(direction.Y))
             {
-                DebugManager.PrintWarning($"Move aborted: Direction vector contains NaN values: {direction}");
+                DebugManager.PrintWarning($"Move aborted: Direction contains NaN values: {direction}");
                 return;
             }
 
@@ -27,18 +27,20 @@ namespace op.io
 
             if (speed <= 0)
             {
-                DebugManager.PrintWarning($"Move aborted: Speed must be positive but was {speed}");
+                DebugManager.PrintWarning($"Move aborted: Speed must be positive (received {speed})");
                 return;
             }
 
             if (deltaTime <= 0)
             {
-                DebugManager.PrintWarning($"Move skipped: DeltaTime must be positive but was {deltaTime}");
+                DebugManager.PrintWarning($"Move skipped: DeltaTime must be positive (received {deltaTime})");
                 return;
             }
 
             Vector2 force = direction * speed;
             gameObject.ApplyForce(force, deltaTime);
+
+            DebugManager.PrintDebug($"Applied force {force} with deltaTime {deltaTime} to {gameObject.Shape?.Type ?? "UnknownObject"} at {gameObject.Position}");
         }
     }
 }

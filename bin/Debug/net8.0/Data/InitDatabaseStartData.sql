@@ -8,11 +8,12 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '30
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_G', '30');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '30');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_A', '255');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1280');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '720');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('Fullscreen', 'false');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '360');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1400');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1400');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderlessFullscreen');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false'); -- G-Sync will override this
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('FixedTimeStep', 'false');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '240');
 
 -- Insert default player
 INSERT INTO Players (
@@ -47,23 +48,18 @@ INSERT INTO FarmData (
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, IsPlayer, Mass
-) VALUES 
-    ('Circle', 200, 200, 25, 0, 50, 50, 15, 5,
-     200, 255, 150, 255,
-     75, 128, 75, 255, 4,
-     1, 1, 0, 1.0),
-
-    ('Polygon', 300, 300, 30, 3, 60, 60, 5, 30,
+) VALUES
+    ('Polygon', 300, 300, 30, 3, 60, 60, 5, 15,
      255, 150, 150, 255,
      128, 75, 75, 255, 2,
      1, 1, 0, 1.0),
 
-    ('Polygon', 350, 350, 40, 4, 70, 70, 8, 12,
+    ('Polygon', 350, 350, 40, 4, 70, 70, 8, 10,
      255, 255, 100, 255,
      128, 128, 50, 255, 3,
      1, 1, 0, 1.0),
 
-    ('Polygon', 400, 400, 50, 5, 80, 80, 12, 6,
+    ('Polygon', 400, 400, 50, 5, 80, 80, 12, 4,
      100, 100, 255, 255,
      50, 50, 128, 255, 4,
      1, 1, 0, 1.0),
