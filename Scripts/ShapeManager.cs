@@ -30,20 +30,21 @@ namespace op.io
         /// </summary>
         public void LoadShapesFromDatabase()
         {
-            DebugManager.DebugPrint("Loading shapes from database...");
+            DebugManager.PrintMeta("Loading shapes from database...");
 
             try
             {
-                // Load shapes from GameObjects table
-                List<GameObject> gameObjectShapes = GameObjectLoader.LoadGameObjects("GameObjects");
                 List<GameObject> farmShapes = GameObjectLoader.LoadGameObjects("FarmData");
                 List<GameObject> mapShapes = GameObjectLoader.LoadGameObjects("MapData");
 
-                DebugManager.DebugPrint($"Total shapes loaded: {_shapes.Count}");
+                AddShapes(farmShapes, "FarmData");
+                AddShapes(mapShapes, "MapData");
+
+                DebugManager.PrintInfo($"Total shapes loaded: {_shapes.Count}");
             }
             catch (Exception ex)
             {
-                DebugManager.DebugError($"Failed to load shapes from database: {ex.Message}");
+                DebugManager.PrintError($"Failed to load shapes from database: {ex.Message}");
             }
         }
 
@@ -54,7 +55,7 @@ namespace op.io
         {
             if (shapeObjects.Count == 0)
             {
-                DebugManager.DebugWarning($"No shapes were loaded from {sourceTable}.");
+                DebugManager.PrintWarning($"No shapes were loaded from {sourceTable}.");
                 return;
             }
 
@@ -63,7 +64,7 @@ namespace op.io
                 _shapes.Add(shape);
             }
 
-            DebugManager.DebugPrint($"Loaded {shapeObjects.Count} shapes from {sourceTable}.");
+            DebugManager.PrintInfo($"Loaded {shapeObjects.Count} shapes from {sourceTable}.");
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)

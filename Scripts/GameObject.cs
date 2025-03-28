@@ -16,6 +16,7 @@ namespace op.io
         [JsonInclude] public bool IsDestructible { get; set; }
         [JsonInclude] public bool IsCollidable { get; set; }
         [JsonInclude] public Shape Shape { get; set; }
+        public int Count { get; set; } = 1;
 
         // Computed property (not serialized, calculated from Shape)
         public float BoundingRadius => Shape != null ? MathF.Sqrt(Shape.Width * Shape.Width + Shape.Height * Shape.Height) / 2 : 0f;
@@ -34,7 +35,7 @@ namespace op.io
             IsCollidable = isCollidable;
             Shape = shape;
 
-            DebugManager.DebugPrint($"Created GameObject at {Position}, Shape: {Shape?.Type ?? "None"}");
+            DebugManager.PrintDebug($"Created GameObject at {Position}, Shape: {Shape?.Type ?? "None"}");
         }
 
         public virtual void LoadContent(GraphicsDevice graphicsDevice)
@@ -52,7 +53,7 @@ namespace op.io
         {
             if (Shape == null)
             {
-                DebugManager.DebugError($"GameObject at {Position} has no Shape. Skipping draw.");
+                DebugManager.PrintError($"GameObject at {Position} has no Shape. Skipping draw.");
                 return;
             }
 

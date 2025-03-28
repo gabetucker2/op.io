@@ -26,15 +26,20 @@ namespace op.io
         protected override void Initialize()
         {
             DebugManager.InitializeConsoleIfEnabled();
+
             PhysicsManager = new PhysicsManager();
+
             GameInitializer.Initialize(this);
+            ShapesManager = new ShapeManager(ViewportWidth, ViewportHeight);
             ObjectManager.InitializeObjects(this);
+
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
             SpriteBatch = new SpriteBatch(GraphicsDevice);
+            ShapesManager.LoadContent(GraphicsDevice);
         }
 
         protected override void Update(GameTime gameTime)

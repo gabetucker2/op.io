@@ -25,7 +25,7 @@ namespace op.io
             }
 
             if (!suppressLog)
-                DebugManager.DebugWarning($"[WARNING] Defaulting {column} from {tableName} to {defaultValue}");
+                DebugManager.PrintWarning($"[WARNING] Defaulting {column} from {tableName} to {defaultValue}");
 
             return defaultValue;
         }
@@ -44,12 +44,12 @@ namespace op.io
                 int a = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_A", defaultColor.A);
 
                 Color color = new Color(r, g, b, a);
-                DebugManager.DebugPrint($"Retrieved color from {tableName} -> {color}");
+                DebugManager.PrintDebug($"Retrieved color from {tableName} -> {color}");
                 return color;
             }
             catch (Exception ex)
             {
-                DebugManager.DebugError($"Failed to retrieve color from {tableName}: {ex.Message}");
+                DebugManager.PrintError($"Failed to retrieve color from {tableName}: {ex.Message}");
                 return defaultColor;
             }
         }
@@ -67,12 +67,12 @@ namespace op.io
                 int a = element.GetProperty("A").GetInt32();
 
                 Color color = new Color(r, g, b, a);
-                DebugManager.DebugPrint($"Parsed color from JSON -> {color}");
+                DebugManager.PrintDebug($"Parsed color from JSON -> {color}");
                 return color;
             }
             catch (Exception ex)
             {
-                DebugManager.DebugError($"Failed to parse color from JSON: {ex.Message}");
+                DebugManager.PrintError($"Failed to parse color from JSON: {ex.Message}");
                 return Color.White; // Default fallback
             }
         }
