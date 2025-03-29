@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <ApplicationIcon>Graphics\op.io.ico</ApplicationIcon> <!-- Ensure correct path -->
+    <ApplicationIcon>Content\Graphics\op.io.ico</ApplicationIcon> <!-- Updated path -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,7 +31,12 @@
 
   <ItemGroup>
     <!-- Ensure the icon file is included in the project and copied -->
-    <None Include="Graphics\op.io.ico">
+    <None Include="Content\Graphics\op.io.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <!-- Ensure the PNG file is included in the project and copied -->
+    <None Include="Content\Graphics\op.io.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

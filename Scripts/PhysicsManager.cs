@@ -23,6 +23,7 @@ namespace op.io
                 return;
             }
 
+            // Resolve collisions between dynamic gameObjects
             for (int i = 0; i < gameObjects.Count; i++)
             {
                 var objA = gameObjects[i];
@@ -31,33 +32,26 @@ namespace op.io
                 {
                     var objB = gameObjects[j];
 
-                    if (objA.IsCollidable && objB.IsCollidable && CollisionManager.CheckCollision(objA, objB))
+                    if (objA.IsCollidable && objB.IsCollidable)
                     {
-                        PhysicsResolver.HandleCollision(objA, objB);
+                        // Use the unified collision handling function from CollisionManager
+                        bool removed = CollisionManager.HandleCollision(objA, objB, destroyOnCollision, gameObjects);
 
-                        if (destroyOnCollision)
+                        if (removed)
                         {
-                            if (objA.IsDestructible)
-                            {
-                                gameObjects.RemoveAt(i);
-                                i--;
-                                break;
-                            }
-                            if (objB.IsDestructible)
-                            {
-                                gameObjects.RemoveAt(j);
-                                j--;
-                            }
+                            i--; // Adjust index if objA was removed
+                            break;
                         }
                     }
                 }
             }
 
+            // Resolve collisions between player and static objects
             foreach (var staticObject in staticObjects)
             {
-                if (staticObject.IsCollidable && CollisionManager.CheckCollision(player, staticObject))
+                if (staticObject.IsCollidable)
                 {
-                    PhysicsResolver.HandleCollision(player, staticObject);
+                    CollisionManager.HandleCollision(player, staticObject, destroyOnCollision, gameObjects);
                 }
             }
         }

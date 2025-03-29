@@ -5,8 +5,12 @@
   <Config />
   <SourceFiles>
     <File>C:/Users/gabeq/source/repos/op.io/Content/DebugFont.spritefont.spritefont</File>
+    <File>C:/Users/gabeq/source/repos/op.io/Content/Graphics/op.io.ico</File>
+    <File>C:/Users/gabeq/source/repos/op.io/Content/Graphics/op.io.png</File>
   </SourceFiles>
   <DestFiles>
     <File>DebugFont.spritefont</File>
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
   </DestFiles>
 </SourceFileCollection>

@@ -1,2 +1,4 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
-"C:/Users/gabeq/source/repos/op.io/Content/DebugFont.spritefont.spritefont","C:/Users/gabeq/source/repos/op.io/Content/bin/DesktopGL/Content/DebugFont.xnb","FontDescriptionProcessor","SpriteFontContent",2075,21535,0.1279725
+"C:/Users/gabeq/source/repos/op.io/Content/DebugFont.spritefont.spritefont","C:/Users/gabeq/source/repos/op.io/Content/bin/DesktopGL/Content/DebugFont.xnb","FontDescriptionProcessor","SpriteFontContent",2075,21535,0.1245933
+"C:/Users/gabeq/source/repos/op.io/Content/Graphics/op.io.ico","C:/Users/gabeq/source/repos/op.io/Content/bin/DesktopGL/Content/Graphics/op.io.xnb","TextureProcessor","Texture2DContent",5111,5597,0.0768891
+"C:/Users/gabeq/source/repos/op.io/Content/Graphics/op.io.png","C:/Users/gabeq/source/repos/op.io/Content/bin/DesktopGL/Content/Graphics/op.io.xnb","TextureProcessor","Texture2DContent",17727,87525,0.0192294

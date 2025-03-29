@@ -1,29 +1,48 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using System.Collections.Generic;
 
 namespace op.io
 {
     public static class CollisionManager
     {
+        public static bool HandleCollision(GameObject objA, GameObject objB, bool destroyOnCollision, List<GameObject> gameObjects)
+        {
+            if (!CheckCollision(objA, objB))
+                return false;
+
+            PhysicsResolver.HandleCollision(objA, objB);
+
+            if (destroyOnCollision)
+            {
+                if (objA.IsDestructible)
+                {
+                    gameObjects.Remove(objA);
+                    return true; // Indicating objA was removed
+                }
+                if (objB.IsDestructible)
+                {
+                    gameObjects.Remove(objB);
+                }
+            }
+
+            return false;
+        }
+
         public static bool CheckCollision(GameObject objA, GameObject objB)
         {
             if (objA.Shape == null || objB.Shape == null)
                 return false;
 
-            if (objA.Shape.Type == "Circle" && objB.Shape.Type == "Circle")
-                return CircleCollision(objA, objB);
-
-            if ((objA.Shape.Type == "Circle" && objB.Shape.Type == "Rectangle") ||
-                (objA.Shape.Type == "Rectangle" && objB.Shape.Type == "Circle"))
-                return CircleRectangleCollision(objA, objB);
-
-            if (objA.Shape.Type == "Rectangle" && objB.Shape.Type == "Rectangle")
-                return RectangleCollision(objA, objB);
-
-            if (objA.Shape.Type == "Polygon" || objB.Shape.Type == "Polygon")
-                return PolygonCollision(objA, objB);
-
-            return false;
+            return objA.Shape.Type switch
+            {
+                "Circle" when objB.Shape.Type == "Circle" => CircleCollision(objA, objB),
+                "Circle" when objB.Shape.Type == "Rectangle" => CircleRectangleCollision(objA, objB),
+                "Rectangle" when objB.Shape.Type == "Circle" => CircleRectangleCollision(objB, objA),
+                "Rectangle" when objB.Shape.Type == "Rectangle" => RectangleCollision(objA, objB),
+                _ when objA.Shape.Type == "Polygon" || objB.Shape.Type == "Polygon" => PolygonCollision(objA, objB),
+                _ => false
+            };
         }
 
         private static bool CircleCollision(GameObject objA, GameObject objB)
