@@ -1,6 +1,0 @@
-C:\Users\gabeq\source\repos\op.io\obj\Debug\net6.0\op.io.csproj.AssemblyReference.cache
-C:\Users\gabeq\source\repos\op.io\obj\Debug\net6.0\op.io.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\gabeq\source\repos\op.io\obj\Debug\net6.0\op.io.AssemblyInfoInputs.cache
-C:\Users\gabeq\source\repos\op.io\obj\Debug\net6.0\op.io.AssemblyInfo.cs
-C:\Users\gabeq\source\repos\op.io\obj\Debug\net6.0\op.io.csproj.CoreCompileInputs.cache
-C:\Users\gabeq\source\repos\op.io\obj\Debug\net6.0\op.io.sourcelink.json

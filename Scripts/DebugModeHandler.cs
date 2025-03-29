@@ -4,7 +4,7 @@ namespace op.io
 {
     public static class DebugModeHandler
     {
-        public static bool ForceDebugMode { get; private set; } = true;
+        public static bool ForceDebugMode { get; private set; } = false;
         public static int DebugMode { get; private set; } = 2; // 0: Disabled, 1: Enabled, 2: Unknown
 
         private static bool isDebugModeChecked = false;

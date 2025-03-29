@@ -34,8 +34,7 @@
               "RelativeToolTip": "Data\\InitDatabaseStructure.sql",
               "ViewState": "AgIAACYAAAAAAAAAAAAowCsAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-03-28T06:08:41.827Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-28T06:08:41.827Z"
             },
             {
               "$type": "Document",
@@ -45,7 +44,7 @@
               "RelativeDocumentMoniker": "Data\\InitDatabaseStartData.sql",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
               "RelativeToolTip": "Data\\InitDatabaseStartData.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAABRAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-03-28T06:08:39.414Z",
               "EditorCaption": ""

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <ApplicationIcon>Content\Graphics\op.io.ico</ApplicationIcon> <!-- Updated path -->
+    <ApplicationIcon>Icon.ico</ApplicationIcon> <!-- Icon.ico located in the root directory -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,17 +27,26 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Ensure the icon file is included in the project and copied -->
-    <None Include="Content\Graphics\op.io.ico">
+    <!-- Ensure the icon files are included in the project and copied -->
+    <None Include="Icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Icon.bmp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
-    <!-- Ensure the PNG file is included in the project and copied -->
-    <None Include="Content\Graphics\op.io.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+  <ItemGroup>
+    <!-- Embedding the icon resources explicitly -->
+    <EmbeddedResource Include="Icon.ico">
+      <LogicalName>Icon.ico</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Icon.bmp">
+      <LogicalName>Icon.bmp</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

@@ -2,6 +2,9 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Drawing;
+using System.Runtime.InteropServices;
 
 namespace op.io
 {
@@ -9,7 +12,7 @@ namespace op.io
     {
         public GraphicsDeviceManager Graphics { get; private set; }
         public SpriteBatch SpriteBatch { get; private set; }
-        public Color BackgroundColor { get; set; }
+        public Microsoft.Xna.Framework.Color BackgroundColor { get; set; }
         public int ViewportWidth { get; set; }
         public int ViewportHeight { get; set; }
 
@@ -18,8 +21,8 @@ namespace op.io
         public int TargetFrameRate { get; set; }
         public WindowMode WindowMode { get; set; } = WindowMode.BorderlessFullscreen;
 
-        public List<GameObject> GameObjects { get; set; }
-        public List<GameObject> StaticObjects { get; set; }
+        public List<GameObject> GameObjects { get; set; } = new List<GameObject>();
+        public List<GameObject> StaticObjects { get; set; } = new List<GameObject>();
         public ShapeManager ShapesManager { get; set; }
         public PhysicsManager PhysicsManager { get; private set; }
 
@@ -29,7 +32,6 @@ namespace op.io
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            // Safe defaults until loaded from DB
             VSyncEnabled = false;
             UseFixedTimeStep = false;
             TargetFrameRate = 240;
@@ -41,13 +43,9 @@ namespace op.io
 
         protected override void Initialize()
         {
-            DebugManager.InitializeConsoleIfEnabled();
-
             PhysicsManager = new PhysicsManager();
-
-            GameInitializer.Initialize(this); // Loads Viewport, VSync, etc.
-
-            ApplyWindowMode(); // Apply selected window mode
+            GameInitializer.Initialize(this);
+            ApplyWindowMode();
 
             Graphics.SynchronizeWithVerticalRetrace = VSyncEnabled;
             IsFixedTimeStep = UseFixedTimeStep;
@@ -61,7 +59,49 @@ namespace op.io
             ObjectManager.InitializeObjects(this);
 
             base.Initialize();
+
+            ApplyWindowIcon();
         }
+
+        private void ApplyWindowIcon()
+        {
+#if WINDOWS
+    string iconPathIco = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Icon.ico");
+    string iconPathBmp = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Icon.bmp");
+
+    if (File.Exists(iconPathIco))
+    {
+        using (var icon = new Icon(iconPathIco))
+        {
+            IntPtr hIcon = icon.Handle;
+            SendMessage(Window.Handle, WM_SETICON, ICON_SMALL, hIcon);
+            SendMessage(Window.Handle, WM_SETICON, ICON_BIG, hIcon);
+            Console.WriteLine("Icon.ico applied successfully.");
+        }
+    }
+    else if (File.Exists(iconPathBmp))
+    {
+        using (var bmp = new Bitmap(iconPathBmp))
+        {
+            IntPtr hBitmap = bmp.GetHbitmap();
+            SendMessage(Window.Handle, WM_SETICON, ICON_SMALL, hBitmap);
+            SendMessage(Window.Handle, WM_SETICON, ICON_BIG, hBitmap);
+            Console.WriteLine("Icon.bmp applied successfully.");
+        }
+    }
+    else
+    {
+        Console.WriteLine("No Icon.ico or Icon.bmp found in root directory.");
+    }
+#endif
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, IntPtr lParam);
+
+        private const int WM_SETICON = 0x80;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
 
         private void ApplyWindowMode()
         {
@@ -96,12 +136,7 @@ namespace op.io
         {
             SpriteBatch = new SpriteBatch(GraphicsDevice);
             ShapesManager.LoadContent(GraphicsDevice);
-
-            // Initialize DebugVisualizer here with GraphicsDevice
             DebugVisualizer.Initialize(GraphicsDevice);
-
-            // Print to confirm initialization
-            DebugLogger.PrintDebug("DebugVisualizer successfully initialized during LoadContent.");
         }
 
         protected override void Update(GameTime gameTime)
