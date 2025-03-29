@@ -15,13 +15,13 @@ namespace op.io
         {
             if (viewportWidth <= 0)
             {
-                DebugManager.PrintError($"Invalid viewport width: {viewportWidth}. Defaulting to 1280.");
+                DebugLogger.PrintError($"Invalid viewport width: {viewportWidth}. Defaulting to 1280.");
                 viewportWidth = 1280;
             }
 
             if (viewportHeight <= 0)
             {
-                DebugManager.PrintError($"Invalid viewport height: {viewportHeight}. Defaulting to 720.");
+                DebugLogger.PrintError($"Invalid viewport height: {viewportHeight}. Defaulting to 720.");
                 viewportHeight = 720;
             }
 
@@ -34,18 +34,18 @@ namespace op.io
 
         public void LoadShapesFromDatabase()
         {
-            DebugManager.PrintMeta("Loading shapes from database...");
+            DebugLogger.PrintMeta("Loading shapes from database...");
 
             try
             {
                 List<GameObject> mapShapes = GameObjectLoader.LoadGameObjects("MapData");
                 AddShapes(mapShapes, "MapData");
 
-                DebugManager.PrintInfo($"Total static shapes loaded: {_shapes.Count}");
+                DebugLogger.PrintInfo($"Total static shapes loaded: {_shapes.Count}");
             }
             catch (Exception ex)
             {
-                DebugManager.PrintError($"Failed to load shapes from database: {ex.Message}");
+                DebugLogger.PrintError($"Failed to load shapes from database: {ex.Message}");
             }
         }
 
@@ -53,7 +53,7 @@ namespace op.io
         {
             if (shapeObjects.Count == 0)
             {
-                DebugManager.PrintWarning($"No shapes were loaded from {sourceTable}.");
+                DebugLogger.PrintWarning($"No shapes were loaded from {sourceTable}.");
                 return;
             }
 
@@ -62,7 +62,7 @@ namespace op.io
                 _shapes.Add(shape);
             }
 
-            DebugManager.PrintInfo($"Loaded {shapeObjects.Count} shapes from {sourceTable}.");
+            DebugLogger.PrintInfo($"Loaded {shapeObjects.Count} shapes from {sourceTable}.");
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)

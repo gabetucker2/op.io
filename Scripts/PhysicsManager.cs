@@ -12,9 +12,16 @@ namespace op.io
             bool destroyOnCollision)
         {
             if (gameObjects == null)
-                throw new ArgumentNullException(nameof(gameObjects), "GameObjects list cannot be null.");
+            {
+                DebugLogger.PrintError("PhysicsManager.ResolveCollisions failed: GameObjects list is null.");
+                return;
+            }
+
             if (player == null)
-                throw new ArgumentNullException(nameof(player), "Player object cannot be null.");
+            {
+                DebugLogger.PrintError("PhysicsManager.ResolveCollisions failed: Player object is null.");
+                return;
+            }
 
             for (int i = 0; i < gameObjects.Count; i++)
             {

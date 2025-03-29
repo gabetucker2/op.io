@@ -42,6 +42,7 @@ namespace op.io
         protected override void Initialize()
         {
             DebugManager.InitializeConsoleIfEnabled();
+
             PhysicsManager = new PhysicsManager();
 
             GameInitializer.Initialize(this); // Loads Viewport, VSync, etc.
@@ -95,6 +96,12 @@ namespace op.io
         {
             SpriteBatch = new SpriteBatch(GraphicsDevice);
             ShapesManager.LoadContent(GraphicsDevice);
+
+            // Initialize DebugVisualizer here with GraphicsDevice
+            DebugVisualizer.Initialize(GraphicsDevice);
+
+            // Print to confirm initialization
+            DebugLogger.PrintDebug("DebugVisualizer successfully initialized during LoadContent.");
         }
 
         protected override void Update(GameTime gameTime)

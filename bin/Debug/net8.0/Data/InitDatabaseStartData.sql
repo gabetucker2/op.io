@@ -1,7 +1,14 @@
 -- InitDatabaseStartData.sql
 
 -- Insert default debug settings
-INSERT INTO DebugSettings (Setting, Enabled, MaxRepeats) VALUES ('General', 1, 2);
+INSERT INTO DebugSettings (Setting, Enabled, MaxRepeats) VALUES ('General', 0, 2);
+
+-- Insert debug circle visual settings
+INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_R', '255');
+INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_G', '0');
+INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_B', '0');
+INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_A', '255');
+INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleRadius', '3');
 
 -- Insert default general settings
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '30');
@@ -10,7 +17,7 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '30
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_A', '255');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1400');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1400');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderlessFullscreen');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderedWindowed');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false'); -- G-Sync will override this
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('FixedTimeStep', 'false');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '240');
@@ -22,7 +29,7 @@ INSERT INTO Players (
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsPlayer, IsDestructible, IsCollidable, Mass
 ) VALUES (
-    'Player1', 'Circle', 100, 100, 500.0, 25, 80, 80, 0,
+    'Player1', 'Circle', 100, 100, 800.0, 25, 80, 80, 0,
     0, 255, 255, 255,
     0, 150, 150, 255, 4,
     1, 0, 1, 1.0
@@ -58,7 +65,7 @@ INSERT INTO FarmData (
      255, 255, 100, 255,
      128, 128, 50, 255, 3,
      1, 1, 0, 1.0),
-
+     
     ('Polygon', 400, 400, 50, 5, 80, 80, 12, 4,
      100, 100, 255, 255,
      50, 50, 128, 255, 4,

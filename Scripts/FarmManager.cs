@@ -15,11 +15,11 @@ namespace op.io
 
         public FarmManager(int viewportWidth, int viewportHeight)
         {
-            DebugManager.PrintMeta("Initializing FarmManager...");
+            DebugLogger.PrintMeta("Initializing FarmManager...");
 
             if (viewportWidth <= 0 || viewportHeight <= 0)
             {
-                DebugManager.PrintError($"Invalid viewport dimensions: {viewportWidth}x{viewportHeight}. Must be greater than 0.");
+                DebugLogger.PrintError($"Invalid viewport dimensions: {viewportWidth}x{viewportHeight}. Must be greater than 0.");
                 viewportWidth = Math.Max(1, viewportWidth);
                 viewportHeight = Math.Max(1, viewportHeight);
             }
@@ -36,32 +36,32 @@ namespace op.io
         {
             _farmObjects.Clear();
 
-            DebugManager.PrintDebug("Loading farm objects from database...");
+            DebugLogger.PrintDebug("Loading farm objects from database...");
             var prototypes = GameObjectLoader.LoadGameObjects("FarmData");
 
             if (prototypes.Count == 0)
             {
-                DebugManager.PrintWarning("No farm objects found in database.");
+                DebugLogger.PrintWarning("No farm objects found in database.");
                 return;
             }
 
-            DebugManager.PrintMeta($"Loaded {prototypes.Count} prototype entries from FarmData.");
+            DebugLogger.PrintMeta($"Loaded {prototypes.Count} prototype entries from FarmData.");
 
             foreach (var prototype in prototypes)
             {
                 int count = Math.Max(1, prototype.Count); // fallback to 1
 
-                DebugManager.PrintDebug($"Generating {count} instances of type {prototype.Shape?.Type ?? "Unknown"}");
+                DebugLogger.PrintDebug($"Generating {count} instances of type {prototype.Shape?.Type ?? "Unknown"}");
 
                 for (int i = 0; i < count; i++)
                 {
                     var clone = CloneWithRandomViewportPosition(prototype);
                     _farmObjects.Add(clone);
-                    DebugManager.PrintDebug($"Spawned instance {i + 1}/{count} at {clone.Position} with rotation {clone.Rotation:F2} radians");
+                    DebugLogger.PrintDebug($"Spawned instance {i + 1}/{count} at {clone.Position} with rotation {clone.Rotation:F2} radians");
                 }
             }
 
-            DebugManager.PrintMeta($"Final farm object count: {_farmObjects.Count}");
+            DebugLogger.PrintMeta($"Final farm object count: {_farmObjects.Count}");
         }
 
         /// <summary>

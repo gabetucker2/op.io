@@ -7,10 +7,6 @@
       "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdatabasestartdata.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\enums\\windowmode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:enums\\windowmode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\data\\initdatabasestructure.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdatabasestructure.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     }
@@ -22,7 +18,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
@@ -31,26 +27,15 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "WindowMode.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\WindowMode.cs",
-              "RelativeDocumentMoniker": "Enums\\WindowMode.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\WindowMode.cs",
-              "RelativeToolTip": "Enums\\WindowMode.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAcAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-28T19:20:28.605Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
               "Title": "InitDatabaseStructure.sql",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStructure.sql",
               "RelativeDocumentMoniker": "Data\\InitDatabaseStructure.sql",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStructure.sql",
               "RelativeToolTip": "Data\\InitDatabaseStructure.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAALAAAAAAAAAA==",
+              "ViewState": "AgIAACYAAAAAAAAAAAAowCsAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-03-28T06:08:41.827Z"
+              "WhenOpened": "2025-03-28T06:08:41.827Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -60,7 +45,7 @@
               "RelativeDocumentMoniker": "Data\\InitDatabaseStartData.sql",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
               "RelativeToolTip": "Data\\InitDatabaseStartData.sql",
-              "ViewState": "AgIAACEAAAAAAAAAAAAAACUAAAAdAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-03-28T06:08:39.414Z",
               "EditorCaption": ""

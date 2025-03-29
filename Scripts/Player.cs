@@ -22,16 +22,16 @@ namespace op.io
                 shape: new Shape(position, "Circle", radius * 2, radius * 2, 0, fillColor, outlineColor, outlineWidth))
         {
             if (radius <= 0)
-                DebugManager.PrintError($"Initialization failed: radius must be > 0 (received {radius})");
+                DebugLogger.PrintError($"Initialization failed: radius must be > 0 (received {radius})");
 
             if (speed <= 0)
-                DebugManager.PrintError($"Initialization failed: speed must be > 0 (received {speed})");
+                DebugLogger.PrintError($"Initialization failed: speed must be > 0 (received {speed})");
 
             if (outlineWidth < 0)
-                DebugManager.PrintWarning($"Outline width should not be negative (received {outlineWidth})");
+                DebugLogger.PrintWarning($"Outline width should not be negative (received {outlineWidth})");
 
             Speed = speed;
-            DebugManager.PrintDebug($"Player created at {position} with radius {radius}, speed {speed}");
+            DebugLogger.PrintDebug($"Player created at {position} with radius {radius}, speed {speed}");
         }
 
         public override void LoadContent(GraphicsDevice graphicsDevice)
@@ -44,14 +44,14 @@ namespace op.io
                 _pointerTexture.SetData(new[] { Color.Red });
             }
 
-            DebugManager.PrintDebug("Player LoadContent completed.");
+            DebugLogger.PrintDebug("Player LoadContent completed.");
         }
 
         public override void Update(float deltaTime)
         {
             if (deltaTime <= 0)
             {
-                DebugManager.PrintWarning("Skipped update: deltaTime must be positive.");
+                DebugLogger.PrintWarning("Skipped update: deltaTime must be positive.");
                 return;
             }
 
@@ -78,7 +78,7 @@ namespace op.io
         {
             if (spriteBatch == null)
             {
-                DebugManager.PrintError("DrawRotationPointer failed: SpriteBatch is null.");
+                DebugLogger.PrintError("DrawRotationPointer failed: SpriteBatch is null.");
                 return;
             }
 

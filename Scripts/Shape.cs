@@ -25,19 +25,19 @@ namespace op.io
         {
             if (string.IsNullOrEmpty(type))
             {
-                DebugManager.PrintError("Shape type is null or empty. Defaulting to Rectangle.");
+                DebugLogger.PrintError("Shape type is null or empty. Defaulting to Rectangle.");
                 type = "Rectangle";
             }
 
             if (width <= 0 || height <= 0)
             {
-                DebugManager.PrintError($"Invalid shape dimensions: Width={width}, Height={height}. Defaulting to 10x10.");
+                DebugLogger.PrintError($"Invalid shape dimensions: Width={width}, Height={height}. Defaulting to 10x10.");
                 width = height = 10;
             }
 
             if (outlineWidth < 0)
             {
-                DebugManager.PrintWarning($"Negative outline width ({outlineWidth}) detected. Defaulting to 0.");
+                DebugLogger.PrintWarning($"Negative outline width ({outlineWidth}) detected. Defaulting to 0.");
                 outlineWidth = 0;
             }
 
@@ -55,7 +55,7 @@ namespace op.io
         {
             if (graphicsDevice == null)
             {
-                DebugManager.PrintError("LoadContent failed: GraphicsDevice is null.");
+                DebugLogger.PrintError("LoadContent failed: GraphicsDevice is null.");
                 return;
             }
 
@@ -68,48 +68,53 @@ namespace op.io
             {
                 for (int x = 0; x < textureWidth; x++)
                 {
-                    Vector2 center = new Vector2(textureWidth / 2f, textureHeight / 2f);
-                    float dx = x - center.X;
-                    float dy = y - center.Y;
-                    float dist = MathF.Sqrt(dx * dx + dy * dy);
+                    bool isOutline = (x < _outlineWidth || x >= textureWidth - _outlineWidth || y < _outlineWidth || y >= textureHeight - _outlineWidth);
 
-                    float outer = MathF.Min(Width, Height) / 2f + _outlineWidth;
-                    float inner = MathF.Min(Width, Height) / 2f;
+                    if (Type == "Rectangle")
+                    {
+                        data[y * textureWidth + x] = isOutline ? _outlineColor : _fillColor;
+                    }
+                    else if (Type == "Circle")
+                    {
+                        Vector2 center = new Vector2(textureWidth / 2f, textureHeight / 2f);
+                        float dx = x - center.X;
+                        float dy = y - center.Y;
+                        float dist = MathF.Sqrt(dx * dx + dy * dy);
 
-                    bool isInside = dist <= inner;
-                    bool isOutline = dist > inner && dist <= outer;
+                        float outer = MathF.Min(Width, Height) / 2f + _outlineWidth;
+                        float inner = MathF.Min(Width, Height) / 2f;
 
-                    if (Type == "Circle")
-                        data[y * textureWidth + x] = isInside ? _fillColor : (isOutline ? _outlineColor : Color.Transparent);
+                        bool isInside = dist <= inner;
+                        bool isOutlineCircle = dist > inner && dist <= outer;
+
+                        data[y * textureWidth + x] = isInside ? _fillColor : (isOutlineCircle ? _outlineColor : Color.Transparent);
+                    }
                     else if (Type == "Polygon" && Sides >= 3)
                     {
-                        bool inside = RenderPolygonPixel(dx, dy, Sides, inner);
-                        bool inOutline = !inside && RenderPolygonPixel(dx, dy, Sides, outer);
+                        bool inside = RenderPolygonPixel(x, y, textureWidth, textureHeight, Sides, Width / 2f);
+                        bool inOutline = !inside && RenderPolygonPixel(x, y, textureWidth, textureHeight, Sides, Width / 2f + _outlineWidth);
 
-                        data[y * textureWidth + x] = inside ? _fillColor :
-                                                      (inOutline ? _outlineColor : Color.Transparent);
+                        data[y * textureWidth + x] = inside ? _fillColor : (inOutline ? _outlineColor : Color.Transparent);
                     }
-                    else
-                        data[y * textureWidth + x] = _fillColor;
                 }
             }
 
             _texture.SetData(data);
             _origin = new Vector2(textureWidth / 2f, textureHeight / 2f);
-
-            DebugManager.PrintInfo($"Loaded texture for shape {Type} at {Position} [{Width}x{Height}]");
         }
 
-        private bool RenderPolygonPixel(float dx, float dy, int sides, float radius)
+        private bool RenderPolygonPixel(int x, int y, int textureWidth, int textureHeight, int sides, float radius)
         {
-            float angle = MathF.Atan2(dy, dx);
-            float distance = MathF.Sqrt(dx * dx + dy * dy);
+            Vector2 center = new Vector2(textureWidth / 2f, textureHeight / 2f);
+            Vector2 point = new Vector2(x, y) - center;
+
+            float angle = MathF.Atan2(point.Y, point.X);
+            float distance = point.Length();
 
             float sectorAngle = MathF.Tau / sides;
             float halfSector = sectorAngle / 2;
 
             float rotatedAngle = (angle + MathF.Tau) % sectorAngle;
-
             float cornerDistance = MathF.Cos(halfSector) / MathF.Cos(rotatedAngle - halfSector);
             float maxDistance = radius * cornerDistance;
 
@@ -120,38 +125,11 @@ namespace op.io
         {
             if (_texture == null)
             {
-                DebugManager.PrintError($"Shape at {Position} attempted to draw without texture. Call LoadContent first.");
+                DebugLogger.PrintError($"Shape at {Position} attempted to draw without texture. Call LoadContent first.");
                 return;
             }
 
-            if (spriteBatch == null)
-            {
-                DebugManager.PrintError("Draw failed: SpriteBatch is null.");
-                return;
-            }
-
-            if (Width <= 0 || Height <= 0)
-            {
-                DebugManager.PrintError($"Cannot draw shape with non-positive dimensions: Width={Width}, Height={Height}");
-                return;
-            }
-
-            spriteBatch.Draw(
-                _texture,
-                position: Position,
-                sourceRectangle: null,
-                color: Color.White,
-                rotation: Type == "Circle" ? 0f : rotation,
-                origin: _origin,
-                scale: 1f,
-                effects: SpriteEffects.None,
-                layerDepth: 0f
-            );
-
-            if (debugEnabled)
-            {
-                DebugManager.PrintDebug($"Drawing shape at {Position} with dimensions ({Width}, {Height}) and rotation {(Type == "Circle" ? 0f : rotation):F2} rad");
-            }
+            spriteBatch.Draw(_texture, Position, null, Color.White, rotation, _origin, 1f, SpriteEffects.None, 0f);
         }
     }
 }

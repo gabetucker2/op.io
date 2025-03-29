@@ -7,6 +7,12 @@ CREATE TABLE IF NOT EXISTS DebugSettings (
     MaxRepeats INTEGER NOT NULL
 );
 
+-- New table for debug visuals (specifically for debug circle color and radius)
+CREATE TABLE IF NOT EXISTS DebugVisuals (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
 -- Table for general game settings
 CREATE TABLE IF NOT EXISTS GeneralSettings (
     SettingKey TEXT PRIMARY KEY,

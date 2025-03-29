@@ -16,7 +16,7 @@ namespace op.io
                 return DeserializeGameObject(result[0]);
             }
 
-            DebugManager.PrintError($"Failed to load GameObject: {objectId} from {tableName}.");
+            DebugLogger.PrintError($"Failed to load GameObject: {objectId} from {tableName}.");
             return null;
         }
 
@@ -36,7 +36,7 @@ namespace op.io
                 }
             }
 
-            DebugManager.PrintInfo($"Loaded {objects.Count} GameObjects from {tableName}.");
+            DebugLogger.PrintInfo($"Loaded {objects.Count} GameObjects from {tableName}.");
             return objects;
         }
 
@@ -44,7 +44,7 @@ namespace op.io
         {
             if (!row.ContainsKey("Width") || !row.ContainsKey("Height"))
             {
-                DebugManager.PrintError("SQL row missing Width or Height keys.");
+                DebugLogger.PrintError("SQL row missing Width or Height keys.");
                 return null;
             }
 
@@ -78,11 +78,11 @@ namespace op.io
 
                 int count = row.ContainsKey("Count") && int.TryParse(row["Count"].ToString(), out int parsedCount) ? parsedCount : 1;
 
-                DebugManager.PrintDebug($"Deserializing GameObject with Width={width}, Height={height} from table data.");
+                DebugLogger.PrintDebug($"Deserializing GameObject with Width={width}, Height={height} from table data.");
 
                 if (width <= 0 || height <= 0)
                 {
-                    DebugManager.PrintError($"Invalid dimensions found: Width={width}, Height={height}");
+                    DebugLogger.PrintError($"Invalid dimensions found: Width={width}, Height={height}");
                 }
 
                 if (isPlayer)
@@ -106,7 +106,7 @@ namespace op.io
             }
             catch (Exception ex)
             {
-                DebugManager.PrintError($"SQL GameObject deserialization: {ex.Message}");
+                DebugLogger.PrintError($"SQL GameObject deserialization: {ex.Message}");
                 return null;
             }
         }

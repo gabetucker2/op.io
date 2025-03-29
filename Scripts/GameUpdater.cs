@@ -24,7 +24,7 @@ namespace op.io
 
             if (game.GameObjects.Count == 0)
             {
-                DebugManager.PrintWarning("[WARNING] No GameObjects exist in the scene.");
+                DebugLogger.PrintWarning("[WARNING] No GameObjects exist in the scene.");
             }
 
             game.ShapesManager.Update(deltaTime);
@@ -33,7 +33,7 @@ namespace op.io
             GameObject player = game.GameObjects.FirstOrDefault(go => go.IsPlayer);
             if (player == null)
             {
-                DebugManager.PrintWarning("No player object exists. Skipping player physics.");
+                DebugLogger.PrintWarning("No player object exists. Skipping player physics.");
                 player = new GameObject(); // Avoid passing null
             }
 

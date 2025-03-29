@@ -41,7 +41,7 @@ namespace op.io
         {
             if (float.IsNaN(playerPosition.X) || float.IsNaN(playerPosition.Y))
             {
-                DebugManager.PrintError($"Invalid player position: {playerPosition}");
+                DebugLogger.PrintError($"Invalid player position: {playerPosition}");
                 return 0f;
             }
 
@@ -50,7 +50,7 @@ namespace op.io
 
             if (direction == Vector2.Zero)
             {
-                DebugManager.PrintWarning("[InputManager.cs:GetAngleToMouse] Player is already at mouse position. Defaulting angle to 0.");
+                DebugLogger.PrintWarning("[InputManager.cs:GetAngleToMouse] Player is already at mouse position. Defaulting angle to 0.");
                 return 0f;
             }
 

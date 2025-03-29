@@ -10,12 +10,12 @@ namespace op.io
         {
             DatabaseInitializer.InitializeDatabase();
             LoadGeneralSettings(game);
-            DebugManager.PrintMeta("Game initialized");
+            DebugLogger.PrintMeta("Game initialized");
         }
 
         private static void LoadGeneralSettings(Core game)
         {
-            DebugManager.PrintMeta("Loading general settings...");
+            DebugLogger.PrintMeta("Loading general settings...");
 
             try
             {
@@ -30,7 +30,7 @@ namespace op.io
                 string modeStr = BaseFunctions.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode", "BorderedWindowed");
                 if (!Enum.TryParse(modeStr, true, out WindowMode mode))
                 {
-                    DebugManager.PrintWarning($"Unrecognized WindowMode '{modeStr}'. Defaulting to BorderedWindowed.");
+                    DebugLogger.PrintWarning($"Unrecognized WindowMode '{modeStr}'. Defaulting to BorderedWindowed.");
                     mode = WindowMode.BorderedWindowed;
                 }
                 game.WindowMode = mode;
@@ -42,7 +42,7 @@ namespace op.io
                     game.ViewportWidth = display.Width;
                     game.ViewportHeight = display.Height;
 
-                    DebugManager.PrintMeta($"Fullscreen mode detected. Using display resolution: {display.Width}x{display.Height}");
+                    DebugLogger.PrintMeta($"Fullscreen mode detected. Using display resolution: {display.Width}x{display.Height}");
                 }
                 else
                 {
@@ -60,13 +60,13 @@ namespace op.io
 
                 game.Graphics.ApplyChanges();
 
-                DebugManager.PrintMeta(
+                DebugLogger.PrintMeta(
                     $"Loaded general settings: BackgroundColor={game.BackgroundColor}, Viewport={game.ViewportWidth}x{game.ViewportHeight}, Mode={game.WindowMode}, VSync={game.VSyncEnabled}, FixedTimeStep={game.UseFixedTimeStep}, FPS={game.TargetFrameRate}"
                 );
             }
             catch (Exception ex)
             {
-                DebugManager.PrintError($"Failed to load general settings: {ex.Message}");
+                DebugLogger.PrintError($"Failed to load general settings: {ex.Message}");
                 game.BackgroundColor = Color.CornflowerBlue;
                 game.ViewportWidth = 1280;
                 game.ViewportHeight = 720;

@@ -10,12 +10,36 @@ namespace op.io
             game.GraphicsDevice.Clear(game.BackgroundColor);
             game.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-            foreach (var gameObject in game.GameObjects)
+            // Draw all static MapData objects (assuming these are stored in StaticObjects)
+            foreach (var staticObject in game.StaticObjects)
             {
-                gameObject.Draw(game.SpriteBatch, DebugManager.IsDebugEnabled());
+                staticObject.Draw(game.SpriteBatch, DebugModeHandler.IsDebugEnabled());
             }
 
-            game.ShapesManager.Draw(game.SpriteBatch, DebugManager.IsDebugEnabled());
+            // Draw all dynamic GameObjects
+            foreach (var gameObject in game.GameObjects)
+            {
+                gameObject.Draw(game.SpriteBatch, DebugModeHandler.IsDebugEnabled());
+            }
+
+            // Draw shapes managed by ShapesManager
+            game.ShapesManager.Draw(game.SpriteBatch, DebugModeHandler.IsDebugEnabled());
+
+            // Render debug circles last to ensure visibility
+            if (DebugModeHandler.IsDebugEnabled())
+            {
+                // Draw debug circles for StaticObjects
+                foreach (var staticObject in game.StaticObjects)
+                {
+                    DebugVisualizer.DrawDebugCircle(game.SpriteBatch, staticObject);
+                }
+
+                // Draw debug circles for GameObjects
+                foreach (var gameObject in game.GameObjects)
+                {
+                    DebugVisualizer.DrawDebugCircle(game.SpriteBatch, gameObject);
+                }
+            }
 
             game.SpriteBatch.End();
         }

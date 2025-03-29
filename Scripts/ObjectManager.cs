@@ -22,7 +22,7 @@ namespace op.io
 
         private static void InitializePlayer(Core game)
         {
-            DebugManager.PrintMeta("Initializing Player...");
+            DebugLogger.PrintMeta("Initializing Player...");
 
             try
             {
@@ -31,40 +31,40 @@ namespace op.io
 
                 if (player == null)
                 {
-                    DebugManager.PrintError("Failed to initialize Player. Check database configuration.");
+                    DebugLogger.PrintError("Failed to initialize Player. Check database configuration.");
                     return;
                 }
 
                 game.GameObjects.Add(player);
-                DebugManager.PrintMeta($"Player initialized at: {player.Position}, Shape: {player.Shape?.Type ?? "None"}");
+                DebugLogger.PrintMeta($"Player initialized at: {player.Position}, Shape: {player.Shape?.Type ?? "None"}");
             }
             catch (Exception ex)
             {
-                DebugManager.PrintError($"Exception in InitializePlayer: {ex.Message}");
+                DebugLogger.PrintError($"Exception in InitializePlayer: {ex.Message}");
             }
         }
 
         private static void InitializeMap(Core game)
         {
-            DebugManager.PrintMeta("Initializing Map...");
+            DebugLogger.PrintMeta("Initializing Map...");
             game.StaticObjects = GameObjectLoader.LoadGameObjects("MapData");
 
             if (game.StaticObjects.Count == 0)
             {
-                DebugManager.PrintWarning("No static objects were loaded. Check database configuration.");
+                DebugLogger.PrintWarning("No static objects were loaded. Check database configuration.");
             }
 
             game.GameObjects.AddRange(game.StaticObjects);
-            DebugManager.PrintMeta($"Map initialized with {game.StaticObjects.Count} static objects.");
+            DebugLogger.PrintMeta($"Map initialized with {game.StaticObjects.Count} static objects.");
         }
 
         private static void InitializeFarms(Core game)
         {
-            DebugManager.PrintMeta("Initializing Farms...");
+            DebugLogger.PrintMeta("Initializing Farms...");
             var farmManager = new FarmManager(game.ViewportWidth, game.ViewportHeight);
             var farms = farmManager.GetFarmShapes();
             game.GameObjects.AddRange(farms);
-            DebugManager.PrintMeta($"Farms initialized with {farms.Count} objects.");
+            DebugLogger.PrintMeta($"Farms initialized with {farms.Count} objects.");
         }
     }
 }

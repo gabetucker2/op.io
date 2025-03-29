@@ -31,7 +31,7 @@ namespace op.io
         {
             if (shape == null)
             {
-                DebugManager.PrintError("Attempted to construct GameObject with null Shape.");
+                DebugLogger.PrintError("Attempted to construct GameObject with null Shape.");
                 return;
             }
 
@@ -43,14 +43,14 @@ namespace op.io
             IsCollidable = isCollidable;
             Shape = shape;
 
-            DebugManager.PrintDebug($"Created GameObject at {Position}, Shape: {Shape.Type}");
+            DebugLogger.PrintDebug($"Created GameObject at {Position}, Shape: {Shape.Type}");
         }
 
         public virtual void LoadContent(GraphicsDevice graphicsDevice)
         {
             if (graphicsDevice == null)
             {
-                DebugManager.PrintError("LoadContent called with null GraphicsDevice.");
+                DebugLogger.PrintError("LoadContent called with null GraphicsDevice.");
                 return;
             }
 
@@ -61,7 +61,7 @@ namespace op.io
         {
             if (deltaTime <= 0)
             {
-                DebugManager.PrintWarning($"GameObject skipped update due to non-positive deltaTime: {deltaTime}");
+                DebugLogger.PrintWarning($"GameObject skipped update due to non-positive deltaTime: {deltaTime}");
                 return;
             }
 
@@ -72,13 +72,13 @@ namespace op.io
         {
             if (Shape == null)
             {
-                DebugManager.PrintError($"GameObject at {Position} has no Shape. Skipping draw.");
+                DebugLogger.PrintError($"GameObject at {Position} has no Shape. Skipping draw.");
                 return;
             }
 
             if (spriteBatch == null)
             {
-                DebugManager.PrintError("Draw called with null SpriteBatch.");
+                DebugLogger.PrintError("Draw called with null SpriteBatch.");
                 return;
             }
 
@@ -94,14 +94,14 @@ namespace op.io
             Vector2 acceleration = force / Mass;
             Position += acceleration * deltaTime;
 
-            //DebugManager.PrintDebug($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
+            //DebugLogger.PrintDebug($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
         }
 
         public static void ValidateSinglePlayer(GameObject[] objects)
         {
             if (objects == null)
             {
-                DebugManager.PrintError("ValidateSinglePlayer called with null object array.");
+                DebugLogger.PrintError("ValidateSinglePlayer called with null object array.");
                 return;
             }
 
@@ -113,7 +113,7 @@ namespace op.io
                     playerCount++;
                     if (playerCount > 1)
                     {
-                        DebugManager.PrintError("Multiple GameObjects have IsPlayer set to true. Only one is allowed.");
+                        DebugLogger.PrintError("Multiple GameObjects have IsPlayer set to true. Only one is allowed.");
                         return;
                     }
                 }
