@@ -13,7 +13,6 @@ namespace op.io
             string column,
             string conditionColumn,
             object conditionValue,
-            T defaultValue = default,
             bool suppressLog = false)
         {
             string query = $"SELECT {column} FROM {tableName} WHERE {conditionColumn} = @value LIMIT 1;";
@@ -25,9 +24,9 @@ namespace op.io
             }
 
             if (!suppressLog)
-                DebugLogger.PrintWarning($"[WARNING] Defaulting {column} from {tableName} to {defaultValue}");
+                DebugLogger.PrintError($"No data collected in {column} from {tableName}");
 
-            return defaultValue;
+            return default;
         }
 
 
@@ -38,10 +37,10 @@ namespace op.io
         {
             try
             {
-                int r = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_R", defaultColor.R);
-                int g = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_G", defaultColor.G);
-                int b = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_B", defaultColor.B);
-                int a = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_A", defaultColor.A);
+                int r = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_R");
+                int g = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_G");
+                int b = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_B");
+                int a = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_A");
 
                 Color color = new Color(r, g, b, a);
                 DebugLogger.Print($"Retrieved color from {tableName} -> {color}");

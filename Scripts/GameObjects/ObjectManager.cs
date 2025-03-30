@@ -26,7 +26,7 @@ namespace op.io
 
             try
             {
-                int playerId = BaseFunctions.GetValue<int>("Players", "ID", "Name", "Player1", 0);
+                int playerId = BaseFunctions.GetValue<int>("Players", "ID", "Name", "Player1");
                 GameObject player = GameObjectLoader.LoadGameObject("Players", playerId);
 
                 if (player == null)

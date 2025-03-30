@@ -40,26 +40,25 @@ namespace op.io
 
             try
             {
-                int r = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_R", 30);
-                int g = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G", 30);
-                int b = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B", 30);
-                int a = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A", 255);
+                int r = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_R");
+                int g = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G");
+                int b = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B");
+                int a = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A");
                 game.BackgroundColor = new Color(r, g, b, a);
 
-                string modeStr = BaseFunctions.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode", "BorderedWindowed");
+                string modeStr = BaseFunctions.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode");
                 if (!Enum.TryParse(modeStr, true, out WindowMode mode))
                 {
-                    DebugLogger.PrintWarning($"Unrecognized WindowMode '{modeStr}'. Defaulting to BorderedWindowed.");
-                    mode = WindowMode.BorderedWindowed;
+                    DebugLogger.PrintError($"Unrecognized WindowMode '{modeStr}'.");
                 }
                 game.WindowMode = mode;
 
-                game.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth", 1280);
-                game.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight", 720);
+                game.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth");
+                game.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight");
 
-                game.VSyncEnabled = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync", false);
-                game.UseFixedTimeStep = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep", false);
-                game.TargetFrameRate = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate", 240);
+                game.VSyncEnabled = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync");
+                game.UseFixedTimeStep = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep");
+                game.TargetFrameRate = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate");
 
                 game.Graphics.PreferredBackBufferWidth = game.ViewportWidth;
                 game.Graphics.PreferredBackBufferHeight = game.ViewportHeight;
@@ -73,9 +72,6 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to load general settings: {ex.Message}");
-                game.BackgroundColor = Color.CornflowerBlue;
-                game.ViewportWidth = 1280;
-                game.ViewportHeight = 720;
             }
         }
 

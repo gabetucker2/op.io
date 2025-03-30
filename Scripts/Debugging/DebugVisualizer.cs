@@ -23,14 +23,14 @@ namespace op.io
             {
                 // Retrieve the debug circle color from the database
                 Color debugColor = new Color(
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_R", 255),
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_G", 0),
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_B", 0),
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_A", 255)
+                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_R"),
+                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_G"),
+                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_B"),
+                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_A")
                 );
 
                 // Retrieve the debug circle radius from the database
-                int debugRadius = BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleRadius", 50);
+                int debugRadius = BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleRadius");
 
                 if (debugRadius <= 0)
                 {
