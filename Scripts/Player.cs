@@ -19,6 +19,7 @@ namespace op.io
                 isPlayer: true,
                 isDestructible: false,
                 isCollidable: true,
+                staticPhysics: false,
                 shape: new Shape(position, "Circle", radius * 2, radius * 2, 0, fillColor, outlineColor, outlineWidth))
         {
             if (radius <= 0)
@@ -66,11 +67,11 @@ namespace op.io
                 Shape.Position = Position;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, bool debugEnabled)
+        public override void Draw(SpriteBatch spriteBatch)
         {
-            base.Draw(spriteBatch, debugEnabled);
+            base.Draw(spriteBatch);
 
-            if (debugEnabled)
+            if (DebugModeHandler.IsDebugEnabled())
                 DrawRotationPointer(spriteBatch);
         }
 

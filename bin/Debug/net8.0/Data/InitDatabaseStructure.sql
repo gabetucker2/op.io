@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS Players (
     IsPlayer INTEGER,
     IsDestructible INTEGER,
     IsCollidable INTEGER,
-    Mass REAL
+    Mass REAL,
+    StaticPhysics BOOLEAN
 );
 
 -- Table for static map objects
@@ -56,12 +57,14 @@ CREATE TABLE IF NOT EXISTS MapData (
     IsCollidable INTEGER,
     IsDestructible INTEGER,
     Mass REAL,
-    IsPlayer INTEGER
+    IsPlayer INTEGER,
+    StaticPhysics BOOLEAN
 );
 
 -- Table for farm prototype data
 CREATE TABLE IF NOT EXISTS FarmData (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    Name TEXT,
     Type TEXT,
     PositionX REAL,
     PositionY REAL,
@@ -77,5 +80,6 @@ CREATE TABLE IF NOT EXISTS FarmData (
     IsCollidable INTEGER,
     IsDestructible INTEGER,
     IsPlayer INTEGER,
-    Mass REAL
+    Mass REAL,
+    StaticPhysics BOOLEAN
 );

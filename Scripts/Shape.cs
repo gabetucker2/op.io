@@ -14,6 +14,7 @@ namespace op.io
         public Color FillColor => _fillColor;
         public Color OutlineColor => _outlineColor;
         public int OutlineWidth => _outlineWidth;
+        public Vector2[] Vertices { get; private set; }
 
         private Color _fillColor;
         private Color _outlineColor;
@@ -49,6 +50,89 @@ namespace op.io
             _fillColor = fillColor;
             _outlineColor = outlineColor;
             _outlineWidth = outlineWidth;
+
+            if (Type == "Polygon" && Sides >= 3)
+                GeneratePolygonVertices();
+        }
+
+        private void GeneratePolygonVertices()
+        {
+            Vertices = new Vector2[Sides];
+            float angleIncrement = MathF.Tau / Sides;
+
+            for (int i = 0; i < Sides; i++)
+            {
+                float angle = angleIncrement * i;
+                float x = (Width / 2f) * MathF.Cos(angle);
+                float y = (Height / 2f) * MathF.Sin(angle);
+                Vertices[i] = new Vector2(x, y);
+            }
+        }
+
+        public Vector2[] GetTransformedVertices(Vector2 position, float rotation)
+        {
+            try
+            {
+                Vector2[] localVertices;
+
+                switch (Type)
+                {
+                    case "Polygon":
+                        if (Vertices == null || Vertices.Length != Sides)
+                            GeneratePolygonVertices();
+                        localVertices = Vertices;
+                        break;
+
+                    case "Rectangle":
+                        float hw = Width / 2f;
+                        float hh = Height / 2f;
+                        localVertices = new Vector2[]
+                        {
+                    new Vector2(-hw, -hh),
+                    new Vector2(hw, -hh),
+                    new Vector2(hw, hh),
+                    new Vector2(-hw, hh)
+                        };
+                        break;
+
+                    case "Circle":
+                        int circleSides = 16;
+                        localVertices = new Vector2[circleSides];
+                        float angleIncrement = MathF.Tau / circleSides;
+
+                        for (int i = 0; i < circleSides; i++)
+                        {
+                            float angle = angleIncrement * i;
+                            float x = (Width / 2f) * MathF.Cos(angle);
+                            float y = (Height / 2f) * MathF.Sin(angle);
+                            localVertices[i] = new Vector2(x, y);
+                        }
+                        break;
+
+                    default:
+                        DebugLogger.PrintError($"GetTransformedVertices called on unsupported shape type '{Type}'. Returning empty vertices.");
+                        return Array.Empty<Vector2>();
+                }
+
+                Vector2[] transformedVertices = new Vector2[localVertices.Length];
+                float cos = MathF.Cos(rotation);
+                float sin = MathF.Sin(rotation);
+
+                for (int i = 0; i < localVertices.Length; i++)
+                {
+                    Vector2 vertex = localVertices[i];
+                    float rotatedX = vertex.X * cos - vertex.Y * sin;
+                    float rotatedY = vertex.X * sin + vertex.Y * cos;
+                    transformedVertices[i] = new Vector2(rotatedX + position.X, rotatedY + position.Y);
+                }
+
+                return transformedVertices;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in GetTransformedVertices: {ex.Message}");
+                return Array.Empty<Vector2>();
+            }
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice)
@@ -91,10 +175,15 @@ namespace op.io
                     }
                     else if (Type == "Polygon" && Sides >= 3)
                     {
-                        bool inside = RenderPolygonPixel(x, y, textureWidth, textureHeight, Sides, Width / 2f);
-                        bool inOutline = !inside && RenderPolygonPixel(x, y, textureWidth, textureHeight, Sides, Width / 2f + _outlineWidth);
+                        bool inside = RenderPolygonPixel(x, y, textureWidth, textureHeight, Sides, MathF.Min(Width, Height) / 2f);
+                        bool inOutline = !inside && RenderPolygonPixel(x, y, textureWidth, textureHeight, Sides, MathF.Min(Width, Height) / 2f + _outlineWidth);
 
                         data[y * textureWidth + x] = inside ? _fillColor : (inOutline ? _outlineColor : Color.Transparent);
+                    }
+                    else
+                    {
+                        DebugLogger.PrintError($"Invalid shape type: {Type} with {Sides} sides.  Cannot render texture.");
+
                     }
                 }
             }
@@ -121,7 +210,7 @@ namespace op.io
             return distance <= maxDistance;
         }
 
-        public void Draw(SpriteBatch spriteBatch, bool debugEnabled, float rotation = 0f)
+        public void Draw(SpriteBatch spriteBatch, float rotation = 0f)
         {
             if (_texture == null)
             {

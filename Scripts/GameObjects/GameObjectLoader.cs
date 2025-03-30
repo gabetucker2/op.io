@@ -72,6 +72,7 @@ namespace op.io
                 bool isPlayer = Convert.ToBoolean(row["IsPlayer"]);
                 bool isDestructible = Convert.ToBoolean(row["IsDestructible"]);
                 bool isCollidable = Convert.ToBoolean(row["IsCollidable"]);
+                bool staticPhysics = row.ContainsKey("StaticPhysics") && Convert.ToBoolean(row["StaticPhysics"]); // <- added
                 int sides = Convert.ToInt32(row["Sides"]);
                 int outlineWidth = Convert.ToInt32(row["OutlineWidth"]);
                 string shapeType = row["Type"].ToString();
@@ -100,6 +101,7 @@ namespace op.io
                     IsPlayer = isPlayer,
                     IsDestructible = isDestructible,
                     IsCollidable = isCollidable,
+                    StaticPhysics = staticPhysics, // <- crucial addition here
                     Shape = new Shape(position, shapeType, width, height, sides, fillColor, outlineColor, outlineWidth),
                     Count = count
                 };
@@ -110,6 +112,5 @@ namespace op.io
                 return null;
             }
         }
-
     }
 }

@@ -27,17 +27,7 @@ namespace op.io
                 DebugLogger.PrintWarning("[WARNING] No GameObjects exist in the scene.");
             }
 
-            game.ShapesManager.Update(deltaTime);
-
-            // Ensure a valid player is passed into PhysicsManager
-            GameObject player = game.GameObjects.FirstOrDefault(go => go.IsPlayer);
-            if (player == null)
-            {
-                DebugLogger.PrintWarning("No player object exists. Skipping player physics.");
-                player = new GameObject(); // Avoid passing null
-            }
-
-            game.PhysicsManager.ResolveCollisions(game.GameObjects, game.StaticObjects, player, false);
+            game.PhysicsManager.ResolveCollisions(game.GameObjects, false);
         }
     }
 }

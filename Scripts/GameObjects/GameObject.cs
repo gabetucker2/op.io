@@ -14,6 +14,7 @@ namespace op.io
         [JsonInclude] public bool IsPlayer { get; set; }
         [JsonInclude] public bool IsDestructible { get; set; }
         [JsonInclude] public bool IsCollidable { get; set; }
+        [JsonInclude] public bool StaticPhysics { get; set; }
         [JsonInclude] public Shape Shape { get; set; }
         public int Count { get; set; } = 1;
 
@@ -27,7 +28,7 @@ namespace op.io
         public GameObject() { }
 
         // Main Constructor
-        public GameObject(Vector2 initialPosition, float initialRotation, float mass, bool isPlayer, bool isDestructible, bool isCollidable, Shape shape)
+        public GameObject(Vector2 initialPosition, float initialRotation, float mass, bool isPlayer, bool isDestructible, bool isCollidable, bool staticPhysics, Shape shape)
         {
             if (shape == null)
             {
@@ -41,6 +42,7 @@ namespace op.io
             IsPlayer = isPlayer;
             IsDestructible = isDestructible;
             IsCollidable = isCollidable;
+            StaticPhysics = staticPhysics;
             Shape = shape;
 
             DebugLogger.PrintDebug($"Created GameObject at {Position}, Shape: {Shape.Type}");
@@ -65,10 +67,13 @@ namespace op.io
                 return;
             }
 
-            // Add per-object behavior here as needed
+            if (Shape != null)
+                Shape.Position = Position;  // <- This line is crucial
+
+            // Add additional per-object update logic here as needed
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch, bool debugEnabled)
+        public virtual void Draw(SpriteBatch spriteBatch)
         {
             if (Shape == null)
             {
@@ -83,7 +88,7 @@ namespace op.io
             }
 
             float appliedRotation = Shape.Type == "Circle" ? 0f : Rotation;
-            Shape.Draw(spriteBatch, debugEnabled, appliedRotation);
+            Shape.Draw(spriteBatch, appliedRotation);
         }
 
         public virtual void ApplyForce(Vector2 force, float deltaTime)

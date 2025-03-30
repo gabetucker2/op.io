@@ -6,29 +6,6 @@ namespace op.io
 {
     public static class CollisionManager
     {
-        public static bool HandleCollision(GameObject objA, GameObject objB, bool destroyOnCollision, List<GameObject> gameObjects)
-        {
-            if (!CheckCollision(objA, objB))
-                return false;
-
-            PhysicsResolver.HandleCollision(objA, objB);
-
-            if (destroyOnCollision)
-            {
-                if (objA.IsDestructible)
-                {
-                    gameObjects.Remove(objA);
-                    return true; // Indicating objA was removed
-                }
-                if (objB.IsDestructible)
-                {
-                    gameObjects.Remove(objB);
-                }
-            }
-
-            return false;
-        }
-
         public static bool CheckCollision(GameObject objA, GameObject objB)
         {
             if (objA.Shape == null || objB.Shape == null)
@@ -83,8 +60,63 @@ namespace op.io
 
         private static bool PolygonCollision(GameObject objA, GameObject objB)
         {
-            // Placeholder: Implement Separating Axis Theorem (SAT) for polygons
+            return SATCollision(
+                objA.Shape.GetTransformedVertices(objA.Position, objA.Rotation),
+                objB.Shape.GetTransformedVertices(objB.Position, objB.Rotation)
+            );
+        }
+
+        private static bool SATCollision(Vector2[] polyA, Vector2[] polyB)
+        {
+            return !HasSeparatingAxis(polyA, polyB) && !HasSeparatingAxis(polyB, polyA);
+        }
+
+        private static bool HasSeparatingAxis(Vector2[] verticesA, Vector2[] verticesB)
+        {
+            int countA = verticesA.Length;
+
+            for (int i = 0; i < countA; i++)
+            {
+                Vector2 edge = verticesA[(i + 1) % countA] - verticesA[i];
+                Vector2 axis = new Vector2(-edge.Y, edge.X);
+                axis.Normalize();
+
+                float minA, maxA, minB, maxB;
+                ProjectVertices(axis, verticesA, out minA, out maxA);
+                ProjectVertices(axis, verticesB, out minB, out maxB);
+
+                if (maxA < minB || maxB < minA)
+                    return true;
+            }
+
             return false;
         }
+
+        private static void ProjectVertices(Vector2 axis, Vector2[] vertices, out float min, out float max)
+        {
+            min = max = 0f;
+
+            try
+            {
+                if (vertices == null || vertices.Length == 0)
+                    DebugLogger.PrintError($"Vertices array is null or empty.");
+
+                float dot = Vector2.Dot(axis, vertices[0]);
+                min = dot;
+                max = dot;
+
+                for (int i = 1; i < vertices.Length; i++)
+                {
+                    dot = Vector2.Dot(vertices[i], axis);
+                    if (dot < min) min = dot;
+                    if (dot > max) max = dot;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in ProjectVertices: {ex.Message}");
+            }
+        }
+
     }
 }

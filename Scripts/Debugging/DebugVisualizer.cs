@@ -104,9 +104,9 @@ namespace op.io
                 return;
             }
 
-            if (gameObject == null || !gameObject.IsCollidable)
+            if (gameObject == null)
             {
-                DebugLogger.PrintWarning("DrawDebugCircle skipped: GameObject is null or non-collidable.");
+                DebugLogger.PrintWarning("DrawDebugCircle skipped: GameObject is null.");
                 return;
             }
 

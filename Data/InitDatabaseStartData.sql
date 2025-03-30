@@ -11,9 +11,9 @@ INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_A', '255'
 INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleRadius', '3');
 
 -- Insert default general settings
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '30');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_G', '30');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '30');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '20');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_G', '20');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '25');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_A', '255');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1400');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1400');
@@ -27,51 +27,56 @@ INSERT INTO Players (
     Name, Type, PositionX, PositionY, Speed, Radius, Width, Height, Sides,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsPlayer, IsDestructible, IsCollidable, Mass
+    IsPlayer, IsDestructible, IsCollidable, Mass, StaticPhysics
 ) VALUES (
-    'Player1', 'Circle', 100, 100, 800.0, 25, 80, 80, 0,
+    'Player1', 'Circle', 100, 100, 400.0, 25, 80, 80, 0,
     0, 255, 255, 255,
     0, 150, 150, 255, 4,
-    1, 0, 1, 1.0
+    1, 0, 1, 1.0, 0
 );
 
--- Insert a map object
+-- Insert static MapData objects
 INSERT INTO MapData (
     Name, Type, PositionX, PositionY, Width, Height, Sides,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, Mass, IsPlayer
-) VALUES (
-    'BlueWall', 'Rectangle', 
-    500, 500, 100, 50, 4,
+    IsCollidable, IsDestructible, Mass, IsPlayer, StaticPhysics
+) VALUES
+    ('RedWall', 'Rectangle', 
+    300, 300, 300, 30, 0,
+    200, 50, 50, 255,
+    128, 0, 0, 255, 4,
+    1, 0, 0, 0, 1),
+    
+    ('BlueWall', 'Rectangle', 
+    500, 500, 150, 150, 0,
     50, 50, 200, 255,
     0, 0, 128, 255, 4,
-    1, 0, 1.0, 0
-);
+    1, 0, 5.0, 0, 0);
 
 -- Insert farm prototypes (used for instancing)
 INSERT INTO FarmData (
-    Type, PositionX, PositionY, Size, Sides, Width, Height, Weight, Count,
+    Name, Type, PositionX, PositionY, Size, Sides, Width, Height, Weight, Count,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, IsPlayer, Mass
+    IsCollidable, IsDestructible, IsPlayer, Mass, StaticPhysics
 ) VALUES
-    ('Polygon', 300, 300, 30, 3, 60, 60, 5, 15,
+    ('Triangle', 'Polygon', 300, 300, 30, 3, 60, 60, 5, 15,
      255, 150, 150, 255,
      128, 75, 75, 255, 2,
-     1, 1, 0, 1.0),
+     1, 1, 0, 2, 0),
 
-    ('Polygon', 350, 350, 40, 4, 70, 70, 8, 10,
+    ('Square', 'Polygon', 350, 350, 40, 4, 70, 70, 8, 10,
      255, 255, 100, 255,
      128, 128, 50, 255, 3,
-     1, 1, 0, 1.0),
+     1, 1, 0, 3, 0),
      
-    ('Polygon', 400, 400, 50, 5, 80, 80, 12, 4,
+    ('Pentagon', 'Polygon', 400, 400, 50, 5, 80, 80, 12, 4,
      100, 100, 255, 255,
      50, 50, 128, 255, 4,
-     1, 1, 0, 1.0),
+     1, 1, 0, 5, 0),
 
-    ('Polygon', 450, 450, 80, 8, 90, 90, 20, 2,
+    ('Octagon', 'Polygon', 450, 450, 80, 8, 90, 90, 20, 2,
      255, 150, 255, 255,
      128, 75, 128, 255, 5,
-     1, 1, 0, 1.0);
+     1, 1, 0, 15, 0);

@@ -123,7 +123,7 @@ namespace op.io
         {
             foreach (var farmObject in _farmObjects)
             {
-                farmObject.Draw(spriteBatch, debugEnabled);
+                farmObject.Draw(spriteBatch);
             }
         }
 

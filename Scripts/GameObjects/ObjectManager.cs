@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace op.io
 {
@@ -8,7 +9,6 @@ namespace op.io
         public static void InitializeObjects(Core game)
         {
             game.GameObjects = new List<GameObject>();
-            game.StaticObjects = new List<GameObject>();
 
             InitializePlayer(game);
             InitializeMap(game);
@@ -47,15 +47,21 @@ namespace op.io
         private static void InitializeMap(Core game)
         {
             DebugLogger.PrintMeta("Initializing Map...");
-            game.StaticObjects = GameObjectLoader.LoadGameObjects("MapData");
 
-            if (game.StaticObjects.Count == 0)
+            var mapObjects = GameObjectLoader.LoadGameObjects("MapData");
+
+            if (mapObjects.Count == 0)
             {
-                DebugLogger.PrintWarning("No static objects were loaded. Check database configuration.");
+                DebugLogger.PrintWarning("No map objects were loaded. Check database configuration.");
+                return;
             }
 
-            game.GameObjects.AddRange(game.StaticObjects);
-            DebugLogger.PrintMeta($"Map initialized with {game.StaticObjects.Count} static objects.");
+            foreach (var obj in mapObjects)
+            {
+                game.GameObjects.Add(obj);
+            }
+
+            DebugLogger.PrintMeta($"Map initialized with {game.GameObjects.Count} GameObjects.");
         }
 
         private static void InitializeFarms(Core game)

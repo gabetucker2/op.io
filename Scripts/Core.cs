@@ -22,8 +22,6 @@ namespace op.io
         public WindowMode WindowMode { get; set; } = WindowMode.BorderlessFullscreen;
 
         public List<GameObject> GameObjects { get; set; } = new List<GameObject>();
-        public List<GameObject> StaticObjects { get; set; } = new List<GameObject>();
-        public ShapeManager ShapesManager { get; set; }
         public PhysicsManager PhysicsManager { get; set; } = new PhysicsManager();
 
         public Core()
@@ -45,7 +43,7 @@ namespace op.io
         {
             DatabaseInitializer.InitializeDatabase();
             DebugManager.InitializeConsoleIfEnabled();
-            
+
             GameInitializer.Initialize(this);
             ApplyWindowMode();
 
@@ -57,7 +55,6 @@ namespace op.io
 
             Graphics.ApplyChanges();
 
-            ShapesManager = new ShapeManager(ViewportWidth, ViewportHeight);
             ObjectManager.InitializeObjects(this);
 
             base.Initialize();
@@ -95,8 +92,10 @@ namespace op.io
         protected override void LoadContent()
         {
             SpriteBatch = new SpriteBatch(GraphicsDevice);
-            ShapesManager.LoadContent(GraphicsDevice);
             DebugVisualizer.Initialize(GraphicsDevice);
+
+            foreach (var obj in GameObjects)
+                obj.LoadContent(GraphicsDevice);
         }
 
         protected override void Update(GameTime gameTime)
