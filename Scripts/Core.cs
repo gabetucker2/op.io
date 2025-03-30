@@ -7,7 +7,6 @@ namespace op.io
 {
     public class Core : Game
     {
-        // Set to true if you are debugging the database debug mode flag, meaning the console does not currently reliably open
         public static bool ForceDebugMode { get; private set; } = false;
 
         public GraphicsDeviceManager Graphics { get; private set; }
@@ -19,10 +18,11 @@ namespace op.io
         public bool VSyncEnabled { get; set; }
         public bool UseFixedTimeStep { get; set; }
         public int TargetFrameRate { get; set; }
-        public WindowMode WindowMode { get; set; } = WindowMode.BorderlessFullscreen;
+        public WindowMode WindowMode { get; set; }
 
         public List<GameObject> GameObjects { get; set; } = new List<GameObject>();
-        public PhysicsManager PhysicsManager { get; set; } = new PhysicsManager();
+        public List<GameObject> StaticObjects { get; set; } = new List<GameObject>();
+        public PhysicsManager PhysicsManager { get; private set; }
 
         public Core()
         {
@@ -30,63 +30,22 @@ namespace op.io
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
+            PhysicsManager = new PhysicsManager();
+
             VSyncEnabled = false;
             UseFixedTimeStep = false;
             TargetFrameRate = 240;
+            WindowMode = WindowMode.BorderedWindowed;
 
             Graphics.SynchronizeWithVerticalRetrace = false;
             IsFixedTimeStep = false;
             TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 240.0);
         }
 
-        protected override void Initialize()
+        protected override void Initialize() // Necessary for MonoGame's backend to properly init
         {
-            DatabaseInitializer.InitializeDatabase();
-            DebugManager.InitializeConsoleIfEnabled();
-
             GameInitializer.Initialize(this);
-            ApplyWindowMode();
-
-            Graphics.SynchronizeWithVerticalRetrace = VSyncEnabled;
-            IsFixedTimeStep = UseFixedTimeStep;
-
-            int safeFps = Math.Clamp(TargetFrameRate, 1, 1000);
-            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / safeFps);
-
-            Graphics.ApplyChanges();
-
-            ObjectManager.InitializeObjects(this);
-
             base.Initialize();
-        }
-
-        private void ApplyWindowMode()
-        {
-            switch (WindowMode)
-            {
-                case WindowMode.BorderedWindowed:
-                    Graphics.IsFullScreen = false;
-                    Window.IsBorderless = false;
-                    break;
-
-                case WindowMode.BorderlessWindowed:
-                    Graphics.IsFullScreen = false;
-                    Window.IsBorderless = true;
-                    break;
-
-                case WindowMode.LegacyFullscreen:
-                    Graphics.IsFullScreen = true;
-                    Window.IsBorderless = false;
-                    break;
-
-                case WindowMode.BorderlessFullscreen:
-                    Graphics.IsFullScreen = false;
-                    Window.IsBorderless = true;
-                    var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-                    Graphics.PreferredBackBufferWidth = display.Width;
-                    Graphics.PreferredBackBufferHeight = display.Height;
-                    break;
-            }
         }
 
         protected override void LoadContent()

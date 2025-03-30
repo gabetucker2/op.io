@@ -1,7 +1,7 @@
 -- InitDatabaseStartData.sql
 
 -- Insert default debug settings
-INSERT INTO DebugSettings (Setting, Enabled, MaxRepeats) VALUES ('General', 1, 2);
+INSERT INTO DebugSettings (Setting, Enabled, MaxRepeats) VALUES ('General', 0, 2);
 
 -- Insert debug circle visual settings
 INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_R', '255');
@@ -32,12 +32,12 @@ INSERT INTO Players (
     'Player1', 'Circle', 100, 100, 400.0, 25, 80, 80, 0,
     0, 255, 255, 255,
     0, 150, 150, 255, 4,
-    1, 0, 1, 1.0, 0
-);
+    1, 0, 1, 1.0, 0);
 
 -- Insert static MapData objects
 INSERT INTO MapData (
-    Name, Type, PositionX, PositionY, Width, Height, Sides,
+    Name, Type,
+    PositionX, PositionY, Width, Height, Sides,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, IsPlayer, StaticPhysics
@@ -47,8 +47,14 @@ INSERT INTO MapData (
     200, 50, 50, 255,
     128, 0, 0, 255, 4,
     1, 0, 0, 0, 1),
+
+    ('GreenBackground', 'Rectangle',
+    800, 300, 300, 30, 0,
+    50, 200, 50, 255,
+    0, 128, 0, 255, 4,
+    0, 0, 0, 0, 1),
     
-    ('BlueWall', 'Rectangle', 
+    ('BlueLoot', 'Rectangle', 
     500, 500, 150, 150, 0,
     50, 50, 200, 255,
     0, 0, 128, 255, 4,
