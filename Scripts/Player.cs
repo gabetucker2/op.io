@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -7,9 +6,13 @@ namespace op.io
     public class Player : GameObject
     {
         public float Speed { get; private set; }
-        private float _rotation;
+        public static Player player { get; set; }
+
         private const int _pointerLength = 50;
         private static Texture2D _pointerTexture;
+
+        // Store the graphics device used during LoadContent
+        private static GraphicsDevice _graphicsDevice;
 
         public Player(Vector2 position, int radius, float speed, Color fillColor, Color outlineColor, int outlineWidth)
             : base(
@@ -32,6 +35,7 @@ namespace op.io
                 DebugLogger.PrintWarning($"Outline width should not be negative (received {outlineWidth})");
 
             Speed = speed;
+            Position = position;
             DebugLogger.PrintPlayer($"Player created at {position} with radius {radius}, speed {speed}");
         }
 
@@ -39,10 +43,19 @@ namespace op.io
         {
             base.LoadContent(graphicsDevice);
 
+            // Store the graphics device for later use in Draw
+            _graphicsDevice = graphicsDevice;
+
             if (_pointerTexture == null)
             {
-                _pointerTexture = new Texture2D(graphicsDevice, 1, 1);
-                _pointerTexture.SetData(new[] { Color.Red });
+                _pointerTexture = new Texture2D(_graphicsDevice, 1, 1);
+                _pointerTexture.SetData(new[] { Color.White });
+            }
+
+            if (_pointerTexture == null)
+            {
+                DebugLogger.PrintError("Player LoadContent failed: Pointer texture could not be initialized.");
+                return;
             }
 
             DebugLogger.PrintPlayer("Player LoadContent completed.");
@@ -58,7 +71,7 @@ namespace op.io
 
             base.Update(deltaTime);
 
-            _rotation = InputManager.GetAngleToMouse(Position);
+            Rotation = InputManager.GetAngleToMouse(Position);
             Vector2 input = InputManager.MoveVector();
 
             ActionHandler.Move(this, input, Speed, deltaTime);
@@ -71,9 +84,16 @@ namespace op.io
         {
             base.Draw(spriteBatch);
 
+            if (_graphicsDevice == null)
+            {
+                DebugLogger.PrintError("Draw failed: GraphicsDevice is null. Ensure LoadContent() is called before Draw().");
+                return;
+            }
+
             if (DebugModeHandler.IsDebugEnabled())
-                DebugVisualizer.DrawDebugRotationPointer(spriteBatch, Position, _rotation, _pointerLength, _pointerTexture);
+            {
+                DebugVisualizer.DrawDebugRotationPointer(spriteBatch, _graphicsDevice, Position, Rotation, _pointerLength);
+            }
         }
-        
     }
 }

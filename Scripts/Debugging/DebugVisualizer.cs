@@ -132,8 +132,11 @@ namespace op.io
             return true;
         }
 
-        public static void DrawDebugRotationPointer(SpriteBatch spriteBatch, Vector2 position, float rotation, float pointerLength, Texture2D pointerTexture)
+        public static void DrawDebugRotationPointer(SpriteBatch spriteBatch, GraphicsDevice graphicsDevice, Vector2 position, float rotation, float pointerLength)
         {
+            Texture2D pointerTexture = new Texture2D(graphicsDevice, 1, 1);
+            pointerTexture.SetData(new[] { Color.White });
+
             if (spriteBatch == null)
             {
                 DebugLogger.PrintError("DrawRotationPointer failed: SpriteBatch is null.");

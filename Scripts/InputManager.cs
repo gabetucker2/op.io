@@ -9,6 +9,7 @@ namespace op.io
     {
         private static KeyboardState _previousKeyboardState;
         private static MouseState _previousMouseState;
+        private static readonly Dictionary<Keys, bool> _triggerStates = new Dictionary<Keys, bool>();
 
         private static readonly Dictionary<string, (Keys key, InputType inputType)> _controlSettings = new Dictionary<string, (Keys, InputType)>();
 
@@ -39,6 +40,7 @@ namespace op.io
             if (IsInputActive("MoveDown")) direction.Y += 1;
             if (IsInputActive("MoveLeft")) direction.X -= 1;
             if (IsInputActive("MoveRight")) direction.X += 1;
+            //if (IsInputActive("MoveTowardsCursor")) direction = GetAngleToMouse(Player.player.Position);
 
             if (direction.LengthSquared() > 0)
                 direction.Normalize();
@@ -65,8 +67,20 @@ namespace op.io
         private static bool IsKeyTriggered(Keys key)
         {
             KeyboardState currentState = Keyboard.GetState();
-            bool isTriggered = currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
-            return isTriggered;
+
+            if (!_triggerStates.ContainsKey(key))
+                _triggerStates[key] = false;
+
+            bool isCurrentlyPressed = currentState.IsKeyDown(key);
+            bool wasPreviouslyPressed = _previousKeyboardState.IsKeyDown(key);
+
+            if (isCurrentlyPressed && !wasPreviouslyPressed)
+            {
+                // Toggle the trigger state
+                _triggerStates[key] = !_triggerStates[key];
+            }
+
+            return _triggerStates[key];
         }
 
         public static Vector2 GetMousePosition()
