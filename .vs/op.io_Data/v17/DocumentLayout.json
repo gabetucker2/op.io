@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\gabeq\\source\\repos\\op.io\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\enums\\inputtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:enums\\inputtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\data\\initdatabasestartdata.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdatabasestartdata.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
@@ -26,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -34,7 +38,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "InitDatabaseStructure.sql",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStructure.sql",
               "RelativeDocumentMoniker": "Data\\InitDatabaseStructure.sql",
@@ -42,25 +46,24 @@
               "RelativeToolTip": "Data\\InitDatabaseStructure.sql",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAXAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-03-30T03:20:18.602Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-30T03:20:18.602Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "InitDatabaseStartData.sql",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
               "RelativeDocumentMoniker": "Data\\InitDatabaseStartData.sql",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
               "RelativeToolTip": "Data\\InitDatabaseStartData.sql",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAACMAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAwAAAAiAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-03-30T03:20:18.545Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "WindowMode.cs",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\WindowMode.cs",
               "RelativeDocumentMoniker": "Enums\\WindowMode.cs",
@@ -72,7 +75,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "BlockTypes.cs",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\BlockTypes.cs",
               "RelativeDocumentMoniker": "Enums\\BlockTypes.cs",
@@ -81,6 +84,19 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAqwAoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-30T02:36:27.112Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "InputType.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\InputType.cs",
+              "RelativeDocumentMoniker": "Enums\\InputType.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\InputType.cs",
+              "RelativeToolTip": "Enums\\InputType.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-30T05:08:06.249Z",
+              "EditorCaption": ""
             }
           ]
         }
