@@ -19,6 +19,13 @@ CREATE TABLE IF NOT EXISTS GeneralSettings (
     Value TEXT NOT NULL
 );
 
+-- Table for control settings
+CREATE TABLE IF NOT EXISTS ControlSettings (
+    SettingKey TEXT PRIMARY KEY,
+    InputKey TEXT NOT NULL,
+    InputType TEXT NOT NULL
+);
+
 -- Table for player data
 CREATE TABLE IF NOT EXISTS Players (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
