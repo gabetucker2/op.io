@@ -16,7 +16,7 @@ namespace op.io
             // Load general settings BEFORE initializing anything else
             LoadGeneralSettings(game);
 
-            ApplyWindowMode(game);
+            BlockManager.ApplyWindowMode(game);
 
             game.Graphics.SynchronizeWithVerticalRetrace = game.VSyncEnabled;
             game.IsFixedTimeStep = game.UseFixedTimeStep;
@@ -77,33 +77,5 @@ namespace op.io
             }
         }
 
-        private static void ApplyWindowMode(Core game)
-        {
-            switch (game.WindowMode)
-            {
-                case WindowMode.BorderedWindowed:
-                    game.Graphics.IsFullScreen = false;
-                    game.Window.IsBorderless = false;
-                    break;
-
-                case WindowMode.BorderlessWindowed:
-                    game.Graphics.IsFullScreen = false;
-                    game.Window.IsBorderless = true;
-                    break;
-
-                case WindowMode.LegacyFullscreen:
-                    game.Graphics.IsFullScreen = true;
-                    game.Window.IsBorderless = false;
-                    break;
-
-                case WindowMode.BorderlessFullscreen:
-                    game.Graphics.IsFullScreen = false;
-                    game.Window.IsBorderless = true;
-                    var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-                    game.Graphics.PreferredBackBufferWidth = display.Width;
-                    game.Graphics.PreferredBackBufferHeight = display.Height;
-                    break;
-            }
-        }
     }
 }
