@@ -7,6 +7,7 @@ namespace op.io
     public static class DebugVisualizer
     {
         private static Texture2D _debugTexture;
+        private static Texture2D _lineTexture;
 
         /// <summary>
         /// Initializes the debug visualizer by loading debug settings from the database.
@@ -21,28 +22,23 @@ namespace op.io
 
             try
             {
-                // Retrieve the debug circle color from the database
-                Color debugColor = new Color(
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_R"),
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_G"),
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_B"),
-                    BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_A")
-                );
+                // Create a 1x1 white texture for lines
+                _lineTexture = new Texture2D(graphicsDevice, 1, 1);
+                _lineTexture.SetData(new[] { Color.White });
 
-                // Retrieve the debug circle radius from the database
+                // Retrieve debug settings from the database
+                Color debugColor = GetDebugColor();
                 int debugRadius = BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleRadius");
 
-                if (debugRadius <= 0)
+                if (debugRadius > 0)
+                {
+                    _debugTexture = CreateCircleTexture(graphicsDevice, debugColor, debugRadius);
+                    DebugLogger.PrintDebug($"DebugVisualizer initialized with color: {debugColor} and radius: {debugRadius}");
+                }
+                else
                 {
                     DebugLogger.PrintError($"Invalid debug radius: {debugRadius}. Radius must be greater than 0.");
-                    return;
                 }
-
-                _debugTexture = CreateCircleTexture(graphicsDevice, debugColor, debugRadius);
-                if (_debugTexture != null)
-                    DebugLogger.PrintDebug($"DebugVisualizer initialized with color: {debugColor} and radius: {debugRadius}");
-                else
-                    DebugLogger.PrintError("Debug texture creation failed.");
             }
             catch (Exception ex)
             {
@@ -51,40 +47,39 @@ namespace op.io
         }
 
         /// <summary>
+        /// Retrieves the debug color from the database.
+        /// </summary>
+        private static Color GetDebugColor()
+        {
+            return new Color(
+                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_R"),
+                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_G"),
+                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_B"),
+                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_A")
+            );
+        }
+
+        /// <summary>
         /// Creates a circular texture for debugging.
         /// </summary>
         private static Texture2D CreateCircleTexture(GraphicsDevice graphicsDevice, Color color, int radius)
         {
-            if (graphicsDevice == null)
-            {
-                DebugLogger.PrintError("CreateCircleTexture failed: GraphicsDevice is null.");
-                return null;
-            }
+            int diameter = radius * 2;
+            Texture2D texture = new Texture2D(graphicsDevice, diameter, diameter);
+            Color[] data = new Color[diameter * diameter];
 
-            try
+            for (int y = 0; y < diameter; y++)
             {
-                int diameter = radius * 2;
-                Texture2D texture = new Texture2D(graphicsDevice, diameter, diameter);
-                Color[] data = new Color[diameter * diameter];
-
-                for (int y = 0; y < diameter; y++)
+                for (int x = 0; x < diameter; x++)
                 {
-                    for (int x = 0; x < diameter; x++)
-                    {
-                        int dx = x - radius;
-                        int dy = y - radius;
-                        data[y * diameter + x] = (dx * dx + dy * dy <= radius * radius) ? color : Color.Transparent;
-                    }
+                    int dx = x - radius;
+                    int dy = y - radius;
+                    data[y * diameter + x] = (dx * dx + dy * dy <= radius * radius) ? color : Color.Transparent;
                 }
+            }
 
-                texture.SetData(data);
-                return texture;
-            }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintError($"CreateCircleTexture failed: {ex.Message}");
-                return null;
-            }
+            texture.SetData(data);
+            return texture;
         }
 
         /// <summary>
@@ -92,26 +87,11 @@ namespace op.io
         /// </summary>
         public static void DrawDebugCircle(SpriteBatch spriteBatch, GameObject gameObject)
         {
-            if (spriteBatch == null)
+            if (!IsValidDraw(spriteBatch, _debugTexture, gameObject))
             {
-                DebugLogger.PrintError("DrawDebugCircle failed: SpriteBatch is null.");
+                DebugLogger.PrintError("DrawLine failed: Invalid parameters.");
                 return;
             }
-
-            if (_debugTexture == null)
-            {
-                DebugLogger.PrintError("DrawDebugCircle failed: DebugVisualizer is not initialized. Call Initialize before drawing.");
-                return;
-            }
-
-            if (gameObject == null)
-            {
-                DebugLogger.PrintWarning("DrawDebugCircle skipped: GameObject is null.");
-                return;
-            }
-
-            // Instead of using gameObject.BoundingRadius, use the actual texture size
-            float scale = 1f; // Render the texture at its natural size
 
             spriteBatch.Draw(
                 _debugTexture,
@@ -120,13 +100,65 @@ namespace op.io
                 Color.White,
                 0f,
                 new Vector2(_debugTexture.Width / 2f, _debugTexture.Height / 2f),
-                scale,
+                1f,
                 SpriteEffects.None,
                 0f
             );
-
-            //DebugLogger.Print($"DrawDebugCircle: Drawing circle at {gameObject.Position} with texture size {_debugTexture.Width}x{_debugTexture.Height}");
         }
 
+        /// <summary>
+        /// Validates if drawing is possible with the given texture and sprite batch.
+        /// </summary>
+        private static bool IsValidDraw(SpriteBatch spriteBatch, Texture2D texture, GameObject gameObject)
+        {
+            if (spriteBatch == null)
+            {
+                DebugLogger.PrintError("Draw failed: SpriteBatch is null.");
+                return false;
+            }
+
+            if (texture == null)
+            {
+                DebugLogger.PrintError("Draw failed: Texture is not initialized.");
+                return false;
+            }
+
+            if (gameObject == null && texture == _debugTexture)
+            {
+                DebugLogger.PrintWarning("DrawDebugCircle skipped: GameObject is null.");
+                return false;
+            }
+
+            return true;
+        }
+
+        public static void DrawDebugRotationPointer(SpriteBatch spriteBatch, Vector2 position, float rotation, float pointerLength, Texture2D pointerTexture)
+        {
+            if (spriteBatch == null)
+            {
+                DebugLogger.PrintError("DrawRotationPointer failed: SpriteBatch is null.");
+                return;
+            }
+
+            Vector2 endpoint = position + new Vector2(
+                MathF.Cos(rotation) * pointerLength,
+                MathF.Sin(rotation) * pointerLength
+            );
+
+            float distance = Vector2.Distance(position, endpoint);
+            float angle = MathF.Atan2(endpoint.Y - position.Y, endpoint.X - position.X);
+
+            spriteBatch.Draw(
+                pointerTexture,
+                position,
+                null,
+                Color.Red,
+                angle,
+                Vector2.Zero,
+                new Vector2(distance, 1),
+                SpriteEffects.None,
+                0f
+            );
+        }
     }
 }

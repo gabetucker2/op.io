@@ -15,7 +15,7 @@ namespace op.io
                 gameObject.Draw(game.SpriteBatch);
             }
 
-            // Render debug circles last to ensure visibility
+            // Render debug direction line last to ensure visibility
             if (DebugModeHandler.IsDebugEnabled())
             {
                 foreach (var gameObject in game.GameObjects)

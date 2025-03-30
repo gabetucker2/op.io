@@ -72,36 +72,8 @@ namespace op.io
             base.Draw(spriteBatch);
 
             if (DebugModeHandler.IsDebugEnabled())
-                DrawRotationPointer(spriteBatch);
+                DebugVisualizer.DrawDebugRotationPointer(spriteBatch, Position, _rotation, _pointerLength, _pointerTexture);
         }
-
-        private void DrawRotationPointer(SpriteBatch spriteBatch)
-        {
-            if (spriteBatch == null)
-            {
-                DebugLogger.PrintError("DrawRotationPointer failed: SpriteBatch is null.");
-                return;
-            }
-
-            Vector2 endpoint = Position + new Vector2(
-                MathF.Cos(_rotation) * _pointerLength,
-                MathF.Sin(_rotation) * _pointerLength
-            );
-
-            float distance = Vector2.Distance(Position, endpoint);
-            float angle = MathF.Atan2(endpoint.Y - Position.Y, endpoint.X - Position.X);
-
-            spriteBatch.Draw(
-                _pointerTexture,
-                Position,
-                null,
-                Color.Red,
-                angle,
-                Vector2.Zero,
-                new Vector2(distance, 1),
-                SpriteEffects.None,
-                0f
-            );
-        }
+        
     }
 }
