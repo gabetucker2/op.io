@@ -71,10 +71,10 @@ namespace op.io
 
             base.Update(deltaTime);
 
-            Rotation = InputManager.GetAngleToMouse(Position);
-            Vector2 input = InputManager.MoveVector();
+            Rotation = MouseFunctions.GetAngleToMouse(Position);
+            Vector2 input = InputManager.GetMoveVector();
 
-            ActionHandler.Move(this, input, Speed, deltaTime);
+            ActionHandler.Move(this, input, Speed * InputManager.SpeedMultiplier(), deltaTime);
 
             if (Shape != null)
                 Shape.Position = Position;

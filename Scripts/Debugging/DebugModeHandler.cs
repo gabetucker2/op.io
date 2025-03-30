@@ -6,11 +6,6 @@ namespace op.io
     {
         public static int DebugMode { get; set; } = 2; // 0: Disabled, 1: Enabled, 2: Unknown, needs fresh check
 
-        public static void ResetDebugMode()
-        {
-            DebugMode = 2; // Forces a fresh check
-        }
-
         public static bool IsDebugEnabled()
         {
             if (DebugMode == 2)
@@ -44,7 +39,7 @@ namespace op.io
             return DebugMode == 1;
         }
 
-        public static void ToggleDebugMode()
+        public static void SetDebugMode(bool newState)
         {
             if (Core.ForceDebugMode)
             {
@@ -53,14 +48,11 @@ namespace op.io
                 return;
             }
 
-            bool currentState = IsDebugEnabled();
-            bool newState = !currentState;
-
-            // Convert bool to int (true = 1, false = 0)
             int newStateInt = newState ? 1 : 0;
-
+            DebugLogger.PrintDebug($"Setting debug mode to: {newStateInt}");
+            DebugMode = newStateInt;
             DatabaseConfig.ToggleDebugMode(newStateInt);
-            ResetDebugMode();
+
         }
     }
 }

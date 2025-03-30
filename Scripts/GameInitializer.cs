@@ -23,7 +23,7 @@ namespace op.io
             game.Graphics.SynchronizeWithVerticalRetrace = game.VSyncEnabled;
             game.IsFixedTimeStep = game.UseFixedTimeStep;
 
-            int safeFps = Math.Clamp(game.TargetFrameRate, 1, 1000);
+            int safeFps = Math.Clamp(game.TargetFrameRate, 10, 1000);
             game.TargetElapsedTime = TimeSpan.FromSeconds(1.0 / safeFps);
 
             game.Graphics.ApplyChanges();

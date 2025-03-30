@@ -4,6 +4,8 @@ namespace op.io
 {
     public static class BlockManager
     {
+        public static bool DockingModeEnabled { get; set; } = false;
+
         public static void ApplyWindowMode(Core game)
         {
             var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;

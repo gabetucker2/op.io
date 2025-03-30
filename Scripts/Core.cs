@@ -7,7 +7,7 @@ namespace op.io
 {
     public class Core : Game
     {
-        public static bool ForceDebugMode { get; private set; } = false;
+        public static bool ForceDebugMode { get; private set; } = true;
 
         public GraphicsDeviceManager Graphics { get; private set; }
         public SpriteBatch SpriteBatch { get; private set; }
@@ -23,6 +23,8 @@ namespace op.io
         public List<GameObject> GameObjects { get; set; } = new List<GameObject>();
         public List<GameObject> StaticObjects { get; set; } = new List<GameObject>();
         public PhysicsManager PhysicsManager { get; private set; }
+
+        public static float TimeSinceStart { get; set; } = 0f;
 
         public Core()
         {

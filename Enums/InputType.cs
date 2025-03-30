@@ -3,6 +3,7 @@
     public enum InputType
     {
         Hold,
-        Trigger
+        Trigger,
+        Switch
     }
 }

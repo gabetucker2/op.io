@@ -7,15 +7,24 @@ namespace op.io
     {
         public static void Update(Core game, GameTime gameTime)
         {
-            if (InputManager.IsExitPressed())
+            if (InputManager.IsInputActive("Exit"))
                 game.Exit();
 
-            if (InputManager.IsDebugTogglePressed())
-                DebugManager.ToggleDebugMode();
+            //if (!(DebugModeHandler.DebugMode == 2) && ((DebugModeHandler.DebugMode == 1) != InputManager.IsInputActive("DebugMode")))
+            //{
+            //    DebugModeHandler.SetDebugMode(InputManager.IsInputActive("DebugMode"));
+            //}
 
+            if (BlockManager.DockingModeEnabled != InputManager.IsInputActive("DockingMode"))
+            {
+                BlockManager.DockingModeEnabled = InputManager.IsInputActive("DockingMode");
+                DebugLogger.PrintUI($"Docking mode updated to {BlockManager.DockingModeEnabled}");
+            }
+            
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (deltaTime <= 0)
                 deltaTime = 0.0001f;
+            Core.TimeSinceStart += deltaTime;
 
             foreach (var gameObject in game.GameObjects)
             {
@@ -24,7 +33,7 @@ namespace op.io
 
             if (game.GameObjects.Count == 0)
             {
-                DebugLogger.PrintWarning("[WARNING] No GameObjects exist in the scene.");
+                DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
 
             game.PhysicsManager.ResolveCollisions(game.GameObjects, false);

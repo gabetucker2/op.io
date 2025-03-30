@@ -30,11 +30,5 @@ namespace op.io
             }
 
         }
-
-        public static void ToggleDebugMode()
-        {
-            // Using DebugLogger to handle debug mode toggle operations
-            DebugModeHandler.ToggleDebugMode();
-        }
     }
 }

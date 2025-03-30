@@ -19,11 +19,18 @@ CREATE TABLE IF NOT EXISTS GeneralSettings (
     Value TEXT NOT NULL
 );
 
+-- Table for control keys
+CREATE TABLE IF NOT EXISTS ControlKey (
+    SettingKey TEXT PRIMARY KEY,
+    InputKey TEXT NOT NULL,
+    InputType TEXT NOT NULL,
+    SwitchStartState BOOLEAN DEFAULT 0
+);
+
 -- Table for control settings
 CREATE TABLE IF NOT EXISTS ControlSettings (
     SettingKey TEXT PRIMARY KEY,
-    InputKey TEXT NOT NULL,
-    InputType TEXT NOT NULL
+    Value TEXT NOT NULL
 );
 
 -- Table for player data
