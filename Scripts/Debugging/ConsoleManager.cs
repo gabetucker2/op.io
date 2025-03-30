@@ -8,12 +8,14 @@ namespace op.io
         [DllImport("kernel32.dll")]
         private static extern bool AllocConsole();
 
-        public static bool ConsoleInitialized { get; private set; }
+        public static bool ConsoleInitialized { get; set; }
 
         public static void InitializeConsole()
         {
             if (ConsoleInitialized)
                 return;
+
+            ConsoleInitialized = true;
 
             AllocConsole();
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -23,8 +25,6 @@ namespace op.io
                 Console.SetBufferSize(width, height + 800);
                 Console.SetWindowSize(width, height);
             }
-
-            ConsoleInitialized = true;
 
             PrintQueuedMessages();
         }

@@ -13,6 +13,8 @@ namespace op.io
             // Ensure the database is initialized before loading settings
             DatabaseInitializer.InitializeDatabase();
 
+            DebugManager.InitializeConsoleIfEnabled();
+
             // Load general settings BEFORE initializing anything else
             LoadGeneralSettings(game);
 
@@ -34,7 +36,7 @@ namespace op.io
 
         private static void LoadGeneralSettings(Core game)
         {
-            DebugLogger.Print("Loading general settings...");
+            DebugLogger.PrintDatabase("Loading general settings...");
 
             try
             {
@@ -64,7 +66,7 @@ namespace op.io
 
                 game.Graphics.ApplyChanges();
 
-                DebugLogger.Print(
+                DebugLogger.PrintDatabase(
                     $"Loaded general settings: BackgroundColor={game.BackgroundColor}, Viewport={game.ViewportWidth}x{game.ViewportHeight}, Mode={game.WindowMode}, VSync={game.VSyncEnabled}, FixedTimeStep={game.UseFixedTimeStep}, FPS={game.TargetFrameRate}"
                 );
             }

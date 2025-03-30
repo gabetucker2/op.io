@@ -40,7 +40,7 @@ namespace op.io
 
                 _debugTexture = CreateCircleTexture(graphicsDevice, debugColor, debugRadius);
                 if (_debugTexture != null)
-                    DebugLogger.Print($"DebugVisualizer initialized with color: {debugColor} and radius: {debugRadius}");
+                    DebugLogger.PrintDebug($"DebugVisualizer initialized with color: {debugColor} and radius: {debugRadius}");
                 else
                     DebugLogger.PrintError("Debug texture creation failed.");
             }

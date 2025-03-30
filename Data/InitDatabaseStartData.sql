@@ -1,7 +1,7 @@
 -- InitDatabaseStartData.sql
 
 -- Insert default debug settings
-INSERT INTO DebugSettings (Setting, Enabled, MaxRepeats) VALUES ('General', 0, 2);
+INSERT INTO DebugSettings (Setting, Enabled, MaxRepeats) VALUES ('General', 1, 2);
 
 -- Insert debug circle visual settings
 INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleColor_R', '255');
