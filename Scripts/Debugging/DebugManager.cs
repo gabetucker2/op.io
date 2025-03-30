@@ -9,12 +9,12 @@ namespace op.io
         public static void InitializeConsoleIfEnabled()
         {
             // Use PrintDebug to indicate the attempt to initialize the console
-            DebugLogger.PrintDebug("Initializing console...");
+            DebugLogger.PrintMeta("Initializing console...");
 
             if (ConsoleManager.ConsoleInitialized)
             {
                 // If console already initialized, log with PrintDebug
-                DebugLogger.PrintDebug("Console already initialized. Returning early.");
+                DebugLogger.PrintMeta("Console already initialized. Returning early.");
                 return;
             }
 
