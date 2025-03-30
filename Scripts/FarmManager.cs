@@ -115,7 +115,7 @@ namespace op.io
         {
             foreach (var farmObject in _farmObjects)
             {
-                farmObject.Update(deltaTime);
+                farmObject.Update();
             }
         }
 

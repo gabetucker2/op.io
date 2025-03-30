@@ -14,17 +14,17 @@ namespace op.io
             maxMessageRepeats = DatabaseConfig.GetSetting<int>("DebugSettings", "MaxRepeats", "General", 5);
         }
 
-        public static string FormatLogMessage(string rawMessage, string level)
+        public static string FormatLogMessage(string rawMessage, string level, bool includeTrace, int stackTraceNBack)
         {
             // Use StackTrace(3, true) to go back to the original caller of the logging function
-            StackTrace stackTrace = new StackTrace(3, true);
+            StackTrace stackTrace = new(stackTraceNBack, true);
             StackFrame frame = stackTrace.GetFrame(0); // Get the relevant frame (caller)
             string callerFile = frame?.GetFileName();
             string callerMethod = frame?.GetMethod()?.Name;
             int callerLine = frame?.GetFileLineNumber() ?? -1;  // Get the line number of the caller
 
             string callerFileName = callerFile != null ? System.IO.Path.GetFileName(callerFile) : "UnknownFile";
-            string callerLocation = $"{callerFileName}::{callerMethod} @ Line {callerLine}";
+            string callerLocation = DebugHelperFunctions.GenerateSourceTrace(callerFile, callerMethod, callerLine);
 
             // Efficiently sanitize the message by replacing newlines with a single " | "
             StringBuilder sanitizedMessage = new StringBuilder();
@@ -48,7 +48,14 @@ namespace op.io
             }
 
             // Return the formatted log message
-            return $"[{level}] {sanitizedMessage} | {callerLocation}";
+            if (includeTrace)
+            {
+                return $"[{level}] {sanitizedMessage} | {callerLocation}";
+            }
+            else
+            {
+                return $"[{level}] {sanitizedMessage}";
+            }
         }
 
         // Increment the message count for a specific log message

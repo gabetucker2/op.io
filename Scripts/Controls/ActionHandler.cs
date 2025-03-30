@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace op.io
 {
@@ -23,7 +22,7 @@ namespace op.io
             }
         }
 
-        public static void Move(GameObject gameObject, Vector2 direction, float speed, float deltaTime)
+        public static void Move(GameObject gameObject, Vector2 direction, float speed)
         {
             if (gameObject == null)
             {
@@ -49,14 +48,14 @@ namespace op.io
                 return;
             }
 
-            if (deltaTime <= 0)
+            if (Core.deltaTime <= 0)
             {
-                DebugLogger.PrintWarning($"Move skipped: DeltaTime must be positive (received {deltaTime})");
+                DebugLogger.PrintWarning($"Move skipped: DeltaTime must be positive (received {Core.deltaTime})");
                 return;
             }
 
             Vector2 force = direction * speed;
-            gameObject.ApplyForce(force, deltaTime);
+            gameObject.ApplyForce(force);
 
             //DebugLogger.Print($"Applied force {force} with deltaTime {deltaTime} to {gameObject.Shape?.Type ?? "UnknownObject"} at {gameObject.Position}");
         }

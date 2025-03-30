@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace op.io
 {
@@ -20,26 +23,64 @@ namespace op.io
             return logsCopy;
         }
 
-        public static void Log(string rawMessage, string level, ConsoleColor color)
+        public static void Log(
+            string rawMessage,
+            string level,
+            ConsoleColor color,
+            int stackTraceNBack,
+            [CallerFilePath] string callerFilePath = "",
+            [CallerMemberName] string callerMethod = "",
+            [CallerLineNumber] int callerLine = 0)
         {
             if (DebugManager.IsLoggingInternally)
                 return;
 
             DebugManager.IsLoggingInternally = true;
 
-            string formattedMessage = LogFormatter.FormatLogMessage(rawMessage, level); // Combine level with message
+            StackTrace stackTrace = new(stackTraceNBack, true); // +1 to skip this Log() method itself
+            StackFrame frame = stackTrace.GetFrame(0);
+
+            // Determine if the sourceTrace was provided externally
+            string sourceMessage = "";
+            bool sourceTraceProvidedExternally = frame == null; // If the frame is null, assume external source trace
+
+            // Only generate a source trace if it was NOT provided externally
+            if (!sourceTraceProvidedExternally && frame != null)
+            {
+                string fileName = frame.GetFileName();
+                string methodName = frame.GetMethod()?.Name;
+                int lineNumber = frame.GetFileLineNumber();
+
+                if (fileName != null && methodName != null)
+                {
+                    string callerFileName = Path.GetFileName(fileName);
+                    sourceMessage = $"{callerFileName}::{methodName} @ Line {lineNumber}";
+                }
+                else
+                {
+                    sourceMessage = "UnknownSource";
+                }
+            }
+
+            // Format the log message
+            string formattedMessage = LogFormatter.FormatLogMessage(rawMessage, level, !sourceTraceProvidedExternally, stackTraceNBack);
             LogFormatter.IncrementMessageCount(formattedMessage);
 
             int suppressionBehavior = LogFormatter.SuppressMessageBehavior(formattedMessage);
 
+            // If source trace was provided externally, include it. Otherwise, omit it.
+            string completeMessage = sourceTraceProvidedExternally
+                ? $"{formattedMessage} | {sourceMessage}"
+                : $"{formattedMessage}";
+
             if (!ConsoleManager.ConsoleInitialized)
             {
-                QueueLog(formattedMessage, color, suppressionBehavior); // Store suppressionBehavior in the queue
+                QueueLog(completeMessage, color, suppressionBehavior);
                 DebugManager.IsLoggingInternally = false;
                 return;
             }
 
-            PrintToConsole(formattedMessage, color, suppressionBehavior);
+            PrintToConsole(completeMessage, color, suppressionBehavior);
             DebugManager.IsLoggingInternally = false;
         }
 
@@ -68,22 +109,21 @@ namespace op.io
                     break;
 
                 default:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Unknown suppression behavior int (not 0, 1, or 2).");
-                    Console.ResetColor();
+                    PrintError("Unknown suppression behavior int (not 0, 1, or 2).");
                     break;
             }
         }
 
         // Public-facing logging methods for different log levels
-        public static void Print(string message) => Log(message, "GENERAL", ConsoleColor.White);
-        public static void PrintTemporary(string message) => Log(message, "TEMPORARY", ConsoleColor.Green);
-        public static void PrintError(string message) => Log(message, "ERROR", ConsoleColor.Red);
-        public static void PrintWarning(string message) => Log(message, "WARNING", ConsoleColor.DarkYellow);
-        public static void PrintDatabase(string message) => Log(message, "DATABASE", ConsoleColor.Blue);
-        public static void PrintDebug(string message) => Log(message, "DEBUG", ConsoleColor.DarkGray);
-        public static void PrintUI(string message) => Log(message, "UI", ConsoleColor.DarkGray);
-        public static void PrintObject(string message) => Log(message, "OBJECT", ConsoleColor.DarkGreen);
-        public static void PrintPlayer(string message) => Log(message, "PLAYER", ConsoleColor.Cyan);
+        private const int defaultNBack = 3;
+        public static void Print(string message, int stackTraceNBack = defaultNBack) => Log(message, "GENERAL", ConsoleColor.White, stackTraceNBack);
+        public static void PrintTemporary(string message, int stackTraceNBack = defaultNBack) => Log(message, "TEMPORARY", ConsoleColor.Green, stackTraceNBack);
+        public static void PrintError(string message, int stackTraceNBack = defaultNBack) => Log(message, "ERROR", ConsoleColor.Red, stackTraceNBack);
+        public static void PrintWarning(string message, int stackTraceNBack = defaultNBack) => Log(message, "WARNING", ConsoleColor.DarkYellow, stackTraceNBack);
+        public static void PrintDatabase(string message, int stackTraceNBack = defaultNBack) => Log(message, "DATABASE", ConsoleColor.Blue, stackTraceNBack);
+        public static void PrintDebug(string message, int stackTraceNBack = defaultNBack) => Log(message, "DEBUG", ConsoleColor.DarkGray, stackTraceNBack);
+        public static void PrintUI(string message, int stackTraceNBack = defaultNBack) => Log(message, "UI", ConsoleColor.DarkGray, stackTraceNBack);
+        public static void PrintObject(string message, int stackTraceNBack = defaultNBack) => Log(message, "OBJECT", ConsoleColor.DarkGreen, stackTraceNBack);
+        public static void PrintPlayer(string message, int stackTraceNBack = defaultNBack) => Log(message, "PLAYER", ConsoleColor.Cyan, stackTraceNBack);
     }
 }

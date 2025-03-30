@@ -61,20 +61,16 @@ namespace op.io
             DebugLogger.PrintPlayer("Player LoadContent completed.");
         }
 
-        public override void Update(float deltaTime)
+        public override void Update()
         {
-            if (deltaTime <= 0)
-            {
-                DebugLogger.PrintWarning("Skipped update: deltaTime must be positive.");
-                return;
-            }
+            DebugHelperFunctions.DeltaTimeZeroWarning();
 
-            base.Update(deltaTime);
+            base.Update();
 
             Rotation = MouseFunctions.GetAngleToMouse(Position);
             Vector2 input = InputManager.GetMoveVector();
 
-            ActionHandler.Move(this, input, Speed * InputManager.SpeedMultiplier(), deltaTime);
+            ActionHandler.Move(this, input, Speed * InputManager.SpeedMultiplier());
 
             if (Shape != null)
                 Shape.Position = Position;

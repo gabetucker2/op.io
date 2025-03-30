@@ -1,30 +1,29 @@
 ﻿using Microsoft.Xna.Framework;
-using System.Linq;
 
 namespace op.io
 {
     public static class GameUpdater
     {
-        public static void Update(Core game, GameTime gameTime)
+        public static void Update(GameTime gameTime)
         {
-            ActionHandler.CheckActions(game);
+            Core.gameTime = (float)gameTime.TotalGameTime.TotalSeconds;
+            Core.deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (deltaTime <= 0)
-                deltaTime = 0.0001f;
-            Core.TimeSinceStart += deltaTime;
+            DebugHelperFunctions.DeltaTimeZeroWarning();
 
-            foreach (var gameObject in game.GameObjects)
+            ActionHandler.CheckActions(Core.Instance);
+
+            foreach (var gameObject in Core.Instance.GameObjects)
             {
-                gameObject.Update(deltaTime);
+                gameObject.Update();
             }
 
-            if (game.GameObjects.Count == 0)
+            if (Core.Instance.GameObjects.Count == 0)
             {
                 DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
 
-            game.PhysicsManager.ResolveCollisions(game.GameObjects, false);
+            Core.Instance.PhysicsManager.ResolveCollisions(Core.Instance.GameObjects, false);
         }
     }
 }

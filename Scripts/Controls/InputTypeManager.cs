@@ -33,7 +33,6 @@ namespace op.io
         public static bool IsKeyTriggered(Keys key)
         {
             KeyboardState currentState = Keyboard.GetState();
-            double currentTime = Core.TimeSinceStart;
 
             if (!_triggerStates.ContainsKey(key))
                 _triggerStates[key] = false;
@@ -43,12 +42,12 @@ namespace op.io
 
             bool isCurrentlyPressed = currentState.IsKeyDown(key);
             bool wasPreviouslyPressed = _previousKeyboardState.IsKeyDown(key);
-            bool isCooldownPassed = (currentTime - _lastKeyTriggerTime[key]) >= InputManager.TriggerCooldown;
+            bool isCooldownPassed = (Core.gameTime - _lastKeyTriggerTime[key]) >= InputManager.TriggerCooldown;
 
             if (isCurrentlyPressed && !wasPreviouslyPressed && isCooldownPassed)
             {
                 _triggerStates[key] = true;
-                _lastKeyTriggerTime[key] = currentTime; // Update the last trigger time
+                _lastKeyTriggerTime[key] = Core.gameTime; // Update the last trigger time
                 return true;
             }
             else
@@ -62,13 +61,12 @@ namespace op.io
         public static bool IsMouseButtonTriggered(string mouseKey)
         {
             MouseState currentMouseState = Mouse.GetState();
-            double currentTime = Core.TimeSinceStart;
 
             if (!_lastMouseTriggerTime.ContainsKey(mouseKey))
                 _lastMouseTriggerTime[mouseKey] = 0;
 
             bool isTriggered = false;
-            bool isCooldownPassed = (currentTime - _lastMouseTriggerTime[mouseKey]) >= InputManager.TriggerCooldown;
+            bool isCooldownPassed = (Core.gameTime - _lastMouseTriggerTime[mouseKey]) >= InputManager.TriggerCooldown;
 
             if (mouseKey == "LeftClick" &&
                 currentMouseState.LeftButton == ButtonState.Pressed &&
@@ -76,7 +74,7 @@ namespace op.io
                 isCooldownPassed)
             {
                 isTriggered = true;
-                _lastMouseTriggerTime[mouseKey] = currentTime; // Update the last trigger time
+                _lastMouseTriggerTime[mouseKey] = Core.gameTime; // Update the last trigger time
             }
             else if (mouseKey == "RightClick" &&
                      currentMouseState.RightButton == ButtonState.Pressed &&
@@ -84,7 +82,7 @@ namespace op.io
                      isCooldownPassed)
             {
                 isTriggered = true;
-                _lastMouseTriggerTime[mouseKey] = currentTime; // Update the last trigger time
+                _lastMouseTriggerTime[mouseKey] = Core.gameTime; // Update the last trigger time
             }
 
             return isTriggered;
@@ -104,18 +102,18 @@ namespace op.io
             if (mouseKey == "LeftClick" &&
                 currentMouseState.LeftButton == ButtonState.Pressed &&
                 _previousMouseState.LeftButton == ButtonState.Released &&
-                (Core.TimeSinceStart - _lastMouseSwitchTime[mouseKey] >= InputManager.SwitchCooldown))
+                (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= InputManager.SwitchCooldown))
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
-                _lastMouseSwitchTime[mouseKey] = Core.TimeSinceStart;
+                _lastMouseSwitchTime[mouseKey] = Core.gameTime;
             }
             else if (mouseKey == "RightClick" &&
                      currentMouseState.RightButton == ButtonState.Pressed &&
                      _previousMouseState.RightButton == ButtonState.Released &&
-                     (Core.TimeSinceStart - _lastMouseSwitchTime[mouseKey] >= InputManager.SwitchCooldown))
+                     (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= InputManager.SwitchCooldown))
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
-                _lastMouseSwitchTime[mouseKey] = Core.TimeSinceStart;
+                _lastMouseSwitchTime[mouseKey] = Core.gameTime;
             }
 
             //if (toggled)
@@ -136,10 +134,10 @@ namespace op.io
 
 
             if (currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key) &&
-                (Core.TimeSinceStart - _lastKeySwitchTime[key] >= InputManager.SwitchCooldown))
+                (Core.gameTime - _lastKeySwitchTime[key] >= InputManager.SwitchCooldown))
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
-                _lastKeySwitchTime[key] = Core.TimeSinceStart;
+                _lastKeySwitchTime[key] = Core.gameTime;
             }
 
             //if (toggled)

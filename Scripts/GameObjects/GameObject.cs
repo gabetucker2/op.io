@@ -59,13 +59,9 @@ namespace op.io
             Shape?.LoadContent(graphicsDevice);
         }
 
-        public virtual void Update(float deltaTime)
+        public virtual void Update()
         {
-            if (deltaTime <= 0)
-            {
-                DebugLogger.PrintWarning($"GameObject skipped update due to non-positive deltaTime: {deltaTime}");
-                return;
-            }
+            DebugHelperFunctions.DeltaTimeZeroWarning();
 
             if (Shape != null)
                 Shape.Position = Position;  // <- This line is crucial
@@ -91,13 +87,13 @@ namespace op.io
             Shape.Draw(spriteBatch, appliedRotation);
         }
 
-        public virtual void ApplyForce(Vector2 force, float deltaTime)
+        public virtual void ApplyForce(Vector2 force)
         {
-            if (force == Vector2.Zero || deltaTime <= 0f)
+            if (force == Vector2.Zero || Core.deltaTime <= 0f)
                 return;
 
             Vector2 acceleration = force / Mass;
-            Position += acceleration * deltaTime;
+            Position += acceleration * Core.deltaTime;
 
             //DebugLogger.PrintObject($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
         }
