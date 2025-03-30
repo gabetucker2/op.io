@@ -6,7 +6,6 @@ C:\Users\gabeq\source\repos\op.io\obj\Debug\net8.0\op.io.csproj.CoreCompileInput
 C:\Users\gabeq\source\repos\op.io\obj\Debug\net8.0\op.io.sourcelink.json
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\InitDatabaseStartData.sql
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\InitDatabaseStructure.sql
-C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\op.io.db
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Icon.ico
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\op.io.exe
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\EntityFramework.SqlServer.dll
@@ -80,3 +79,4 @@ C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\op.io.pdb
 C:\Users\gabeq\source\repos\op.io\obj\Debug\net8.0\op.io.genruntimeconfig.cache
 C:\Users\gabeq\source\repos\op.io\obj\Debug\net8.0\ref\op.io.dll
 C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Icon.bmp
+C:\Users\gabeq\source\repos\op.io\bin\Debug\net8.0\Data\op.io.db

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Data.SQLite;
-using System.Threading;
 
 namespace op.io
 {
@@ -19,19 +18,15 @@ namespace op.io
 
             _alreadyInitialized = true;
 
-            string fullPath = Path.GetFullPath(DatabaseConfig.DatabaseFilePath);
-            DebugLogger.PrintMeta($"Full database path being accessed: {fullPath}");
+            // Use the DatabaseConfig for consistent path resolution
+            string fullPath = DatabaseConfig.DatabaseFilePath;
+            DebugLogger.PrintMeta($"Using database file path: {fullPath}");
 
-            // Ensure database deletion only happens if debug mode is enabled.
-            if (DebugModeHandler.IsDebugEnabled())
-            {
-                DeleteDatabaseIfExists(fullPath);
-            }
-
+            DeleteDatabaseIfExists(fullPath);
             CreateDatabaseIfNotExists(fullPath);
 
-            string structurePath = Path.Combine("Data", "InitDatabaseStructure.sql");
-            string dataPath = Path.Combine("Data", "InitDatabaseStartData.sql");
+            string structurePath = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDatabaseStructure.sql");
+            string dataPath = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDatabaseStartData.sql");
 
             using (var connection = DatabaseManager.OpenConnection())
             {
@@ -41,7 +36,7 @@ namespace op.io
                     return;
                 }
 
-                DatabaseManager.ConfigureDatabase(connection);
+                DatabaseConfig.ConfigureDatabase(connection);
 
                 bool structureLoaded = SQLScriptExecutor.RunSQLScript(connection, structurePath);
                 bool dataLoaded = SQLScriptExecutor.RunSQLScript(connection, dataPath);
@@ -71,33 +66,17 @@ namespace op.io
                 return;
             }
 
-            bool deleted = false;
-            int maxRetries = 5;
-            int retryDelay = 200; // Milliseconds
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            try
             {
-                DebugLogger.PrintDebug($"Attempting deletion - Attempt {attempt}/{maxRetries}");
+                DebugLogger.PrintMeta("Attempting to rxisting database...");
 
-                try
-                {
-                    DatabaseManager.ClearConnectionPool();
-
-                    File.Delete(fullPath);
-                    DebugLogger.PrintMeta($"Successfully deleted existing database file at: {fullPath} on attempt {attempt}.");
-                    deleted = true;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    DebugLogger.PrintError($"Attempt {attempt}/{maxRetries}: Error while deleting database file. Reason: {ex.Message}");
-                    Thread.Sleep(retryDelay);
-                }
+                SQLiteConnection.ClearAllPools(); // Clear any connection pool
+                File.Delete(fullPath);
+                DebugLogger.PrintMeta($"Successfully deleted existing database file at: {fullPath}");
             }
-
-            if (!deleted)
+            catch (Exception ex)
             {
-                DebugLogger.PrintError("Failed to delete the database file after maximum retry attempts. Proceeding anyway.");
+                DebugLogger.PrintError($"Error deleting database file. Reason: {ex.Message}");
             }
         }
 
@@ -107,7 +86,7 @@ namespace op.io
 
             try
             {
-                DebugLogger.PrintDebug("Creating new database file...");
+                DebugLogger.PrintMeta("Creating new database file...");
                 SQLiteConnection.CreateFile(fullPath);
                 DebugLogger.PrintMeta($"Created new database file at: {fullPath}");
             }

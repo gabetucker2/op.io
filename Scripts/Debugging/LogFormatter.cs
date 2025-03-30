@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -24,12 +24,31 @@ namespace op.io
             int callerLine = frame?.GetFileLineNumber() ?? -1;  // Get the line number of the caller
 
             string callerFileName = callerFile != null ? System.IO.Path.GetFileName(callerFile) : "UnknownFile";
-
-            // Format the caller location in a cleaner way
             string callerLocation = $"{callerFileName}::{callerMethod} @ Line {callerLine}";
 
+            // Efficiently sanitize the message by replacing newlines with a single " | "
+            StringBuilder sanitizedMessage = new StringBuilder();
+            bool lastWasNewline = false;
+
+            foreach (char c in rawMessage)
+            {
+                if (c == '\r' || c == '\n')
+                {
+                    if (!lastWasNewline)
+                    {
+                        sanitizedMessage.Append(" | ");
+                        lastWasNewline = true;
+                    }
+                }
+                else
+                {
+                    sanitizedMessage.Append(c);
+                    lastWasNewline = false;
+                }
+            }
+
             // Return the formatted log message
-            return $"[{level}] {rawMessage} | {callerLocation}";
+            return $"[{level}] {sanitizedMessage} | {callerLocation}";
         }
 
         // Increment the message count for a specific log message

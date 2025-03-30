@@ -10,19 +10,24 @@ namespace op.io
 
         public static SQLiteConnection OpenConnection()
         {
+            DebugLogger.PrintMeta("Opening database connection...");
+
+            var connection = new SQLiteConnection(ConnectionString);
+
             try
             {
-                var connection = new SQLiteConnection(ConnectionString);
                 connection.Open();
                 DebugLogger.PrintMeta("Database connection opened successfully.");
-                ConfigureDatabase(connection);  // Apply PRAGMA settings upon opening
-                return connection;
+                DebugLogger.PrintMeta("Database connection is ready for use.");
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to open database connection: {ex.Message}");
+                connection.Dispose();
                 return null;
             }
+
+            return connection; // Return the active connection for use
         }
 
         public static void CloseConnection(SQLiteConnection connection)
@@ -49,22 +54,6 @@ namespace op.io
             DebugLogger.PrintMeta("Connection pool cleared.");
         }
 
-        public static void ConfigureDatabase(SQLiteConnection connection)
-        {
-            if (connection == null) return;
-
-            using (var command = new SQLiteCommand("PRAGMA synchronous = FULL;", connection))
-            {
-                command.ExecuteNonQuery();
-            }
-
-            using (var command = new SQLiteCommand("PRAGMA journal_mode = WAL;", connection))
-            {
-                command.ExecuteNonQuery();
-            }
-            DebugLogger.PrintMeta("Database configured with PRAGMA settings.");
-        }
-
         public static T GetSetting<T>(string table, string column, string whereColumn, string whereValue, T defaultValue)
         {
             using (var connection = OpenConnection())
@@ -81,6 +70,7 @@ namespace op.io
                         object result = command.ExecuteScalar();
                         if (result != null && result != DBNull.Value)
                         {
+                            DebugLogger.PrintMeta($"Successfully retrieved setting '{whereValue}' from '{table}'.");
                             return (T)Convert.ChangeType(result, typeof(T));
                         }
                         else
@@ -117,7 +107,6 @@ namespace op.io
                         command.Parameters.AddWithValue("@whereValue", whereValue);
 
                         int rowsAffected = command.ExecuteNonQuery();
-                        CloseConnection(connection);
 
                         if (rowsAffected > 0)
                         {

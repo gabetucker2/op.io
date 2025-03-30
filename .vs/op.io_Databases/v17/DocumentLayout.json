@@ -18,11 +18,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "InitDatabaseStartData.sql",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
+              "RelativeDocumentMoniker": "Data\\InitDatabaseStartData.sql",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
+              "RelativeToolTip": "Data\\InitDatabaseStartData.sql",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
+              "WhenOpened": "2025-03-28T06:08:39.414Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -35,19 +48,6 @@
               "ViewState": "AgIAACYAAAAAAAAAAAAowCsAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-03-28T06:08:41.827Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "InitDatabaseStartData.sql",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
-              "RelativeDocumentMoniker": "Data\\InitDatabaseStartData.sql",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
-              "RelativeToolTip": "Data\\InitDatabaseStartData.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAABRAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-03-28T06:08:39.414Z",
-              "EditorCaption": ""
             }
           ]
         }

@@ -16,8 +16,6 @@ namespace op.io
                 return;
 
             AllocConsole();
-            ConsoleInitialized = true;
-
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 int width = 225;
@@ -26,7 +24,9 @@ namespace op.io
                 Console.SetWindowSize(width, height);
             }
 
-            DebugLogger.PrintMeta("Console initialized.");
+            ConsoleInitialized = true;
+
+            PrintQueuedMessages();
         }
 
         public static void ResetConsole()
@@ -37,5 +37,20 @@ namespace op.io
                 ConsoleInitialized = false;
             }
         }
+
+        public static void PrintQueuedMessages()
+        {
+            var logs = DebugLogger.FlushQueuedLogs();
+
+            foreach (var log in logs)
+            {
+                string logMessage = $"[DEFERRED OUTPUT] {log.Item1}";           // Formatted message string
+                ConsoleColor color = log.Item2;                                 // Console color for the message
+                int suppressionBehavior = log.Item3;                            // Suppression behavior for the message
+
+                DebugLogger.PrintToConsole(logMessage, color, suppressionBehavior);
+            }
+        }
+
     }
 }

@@ -8,7 +8,7 @@ namespace op.io
     {
         public static void Initialize(Core game)
         {
-            DatabaseInitializer.InitializeDatabase();
+            //DatabaseInitializer.InitializeDatabase();
             LoadGeneralSettings(game);
             DebugLogger.PrintMeta("Game initialized");
         }

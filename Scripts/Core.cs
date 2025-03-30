@@ -2,17 +2,17 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Drawing;
-using System.Runtime.InteropServices;
 
 namespace op.io
 {
     public class Core : Game
     {
+        // Set to true if you are debugging the database debug mode flag, meaning the console does not currently reliably open
+        public static bool ForceDebugMode { get; private set; } = false;
+
         public GraphicsDeviceManager Graphics { get; private set; }
         public SpriteBatch SpriteBatch { get; private set; }
-        public Microsoft.Xna.Framework.Color BackgroundColor { get; set; }
+        public Color BackgroundColor { get; set; }
         public int ViewportWidth { get; set; }
         public int ViewportHeight { get; set; }
 
@@ -24,7 +24,7 @@ namespace op.io
         public List<GameObject> GameObjects { get; set; } = new List<GameObject>();
         public List<GameObject> StaticObjects { get; set; } = new List<GameObject>();
         public ShapeManager ShapesManager { get; set; }
-        public PhysicsManager PhysicsManager { get; private set; }
+        public PhysicsManager PhysicsManager { get; set; } = new PhysicsManager();
 
         public Core()
         {
@@ -43,7 +43,9 @@ namespace op.io
 
         protected override void Initialize()
         {
-            PhysicsManager = new PhysicsManager();
+            DatabaseInitializer.InitializeDatabase();
+            DebugManager.InitializeConsoleIfEnabled();
+            
             GameInitializer.Initialize(this);
             ApplyWindowMode();
 
@@ -59,49 +61,7 @@ namespace op.io
             ObjectManager.InitializeObjects(this);
 
             base.Initialize();
-
-            ApplyWindowIcon();
         }
-
-        private void ApplyWindowIcon()
-        {
-#if WINDOWS
-    string iconPathIco = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Icon.ico");
-    string iconPathBmp = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Icon.bmp");
-
-    if (File.Exists(iconPathIco))
-    {
-        using (var icon = new Icon(iconPathIco))
-        {
-            IntPtr hIcon = icon.Handle;
-            SendMessage(Window.Handle, WM_SETICON, ICON_SMALL, hIcon);
-            SendMessage(Window.Handle, WM_SETICON, ICON_BIG, hIcon);
-            Console.WriteLine("Icon.ico applied successfully.");
-        }
-    }
-    else if (File.Exists(iconPathBmp))
-    {
-        using (var bmp = new Bitmap(iconPathBmp))
-        {
-            IntPtr hBitmap = bmp.GetHbitmap();
-            SendMessage(Window.Handle, WM_SETICON, ICON_SMALL, hBitmap);
-            SendMessage(Window.Handle, WM_SETICON, ICON_BIG, hBitmap);
-            Console.WriteLine("Icon.bmp applied successfully.");
-        }
-    }
-    else
-    {
-        Console.WriteLine("No Icon.ico or Icon.bmp found in root directory.");
-    }
-#endif
-        }
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, IntPtr lParam);
-
-        private const int WM_SETICON = 0x80;
-        private const int ICON_SMALL = 0;
-        private const int ICON_BIG = 1;
 
         private void ApplyWindowMode()
         {
