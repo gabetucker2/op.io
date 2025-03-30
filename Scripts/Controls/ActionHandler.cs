@@ -5,6 +5,24 @@ namespace op.io
 {
     public static class ActionHandler
     {
+        public static void CheckActions(Core game)
+        {
+
+            if (InputManager.IsInputActive("Exit"))
+                game.Exit();
+
+            //if (!(DebugModeHandler.DebugMode == 2) && ((DebugModeHandler.DebugMode == 1) != InputManager.IsInputActive("DebugMode")))
+            //{
+            //    DebugModeHandler.SetDebugMode(InputManager.IsInputActive("DebugMode"));
+            //}
+
+            if (BlockManager.DockingModeEnabled != InputManager.IsInputActive("DockingMode"))
+            {
+                BlockManager.DockingModeEnabled = InputManager.IsInputActive("DockingMode");
+                DebugLogger.PrintUI($"Docking mode updated to {BlockManager.DockingModeEnabled}");
+            }
+        }
+
         public static void Move(GameObject gameObject, Vector2 direction, float speed, float deltaTime)
         {
             if (gameObject == null)

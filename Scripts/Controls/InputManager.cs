@@ -131,20 +131,5 @@ namespace op.io
             }
             return false;
         }
-
-        public static bool IsExitPressed()
-        {
-            return Keyboard.GetState().IsKeyDown(Keys.Escape);
-        }
-
-        public static bool IsDebugTogglePressed()
-        {
-            return InputTypeManager.IsKeyTriggered(Keys.F1);
-        }
-
-        public static bool IsDockingModePressed()
-        {
-            return InputTypeManager.IsKeyTriggered(Keys.F1);
-        }
     }
 }
