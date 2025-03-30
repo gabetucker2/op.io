@@ -45,7 +45,7 @@ namespace op.io
             StaticPhysics = staticPhysics;
             Shape = shape;
 
-            DebugLogger.PrintDebug($"Created GameObject at {Position}, Shape: {Shape.Type}");
+            DebugLogger.PrintObject($"Created GameObject at {Position}, Shape: {Shape.Type}");
         }
 
         public virtual void LoadContent(GraphicsDevice graphicsDevice)
@@ -99,7 +99,7 @@ namespace op.io
             Vector2 acceleration = force / Mass;
             Position += acceleration * deltaTime;
 
-            //DebugLogger.PrintDebug($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
+            //DebugLogger.PrintObject($"Applied force: {force}, acceleration: {acceleration}, deltaTime: {deltaTime}, new position: {Position}");
         }
 
         public static void ValidateSinglePlayer(GameObject[] objects)

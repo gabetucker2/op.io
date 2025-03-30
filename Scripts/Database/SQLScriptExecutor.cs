@@ -29,7 +29,7 @@ namespace op.io
                     command.ExecuteNonQuery();
                     transaction.Commit();
                 }
-                DebugLogger.PrintMeta($"Executed successfully: {Path.GetFileName(scriptPath)}");
+                DebugLogger.PrintDatabase($"Executed successfully: {Path.GetFileName(scriptPath)}");
                 return true;
             }
             catch (Exception ex)

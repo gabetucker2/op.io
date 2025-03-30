@@ -8,13 +8,13 @@ namespace op.io
 
         public static void InitializeConsoleIfEnabled()
         {
-            // Use PrintDebug to indicate the attempt to initialize the console
-            DebugLogger.PrintMeta("Initializing console...");
+            // Use Print to indicate the attempt to initialize the console
+            DebugLogger.PrintConsole("Initializing console...");
 
             if (ConsoleManager.ConsoleInitialized)
             {
-                // If console already initialized, log with PrintDebug
-                DebugLogger.PrintMeta("Console already initialized. Returning early.");
+                // If console already initialized, log with Print
+                DebugLogger.PrintConsole("Console already initialized. Returning early.");
                 return;
             }
 
@@ -22,7 +22,7 @@ namespace op.io
             {
                 ConsoleManager.InitializeConsole();
 
-                DebugLogger.PrintMeta("Console opened due to debug mode being enabled.");
+                DebugLogger.PrintConsole("Console opened due to debug mode being enabled.");
             }
             else
             {

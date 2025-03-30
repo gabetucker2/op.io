@@ -3,60 +3,36 @@
   "WorkspaceRootPath": "C:\\Users\\gabeq\\source\\repos\\op.io\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\debugging\\debugmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\debugging\\debugmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\debugging\\debugvisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\debugging\\debugvisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gamerenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gamerenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\physics\\physicsmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\physics\\physicsmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameupdater.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameupdater.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameobjects\\gameobjectloader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameobjects\\gameobjectloader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\physics\\collisionmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\physics\\collisionmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\debugging\\debuglogger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\debugging\\debuglogger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameinitializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameinitializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameobjects\\objectmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameobjects\\objectmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\actionhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\actionhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\debugging\\logformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\debugging\\logformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameobjects\\gameobject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameobjects\\gameobject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\shape.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\shape.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameobjects\\gameobjectloader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameobjects\\gameobjectloader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameobjects\\objectmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameobjects\\objectmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\farmmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -70,98 +46,18 @@
       "DocumentGroups": [
         {
           "DockedHeight": 187,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": -1,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "DebugManager.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\DebugManager.cs",
-              "RelativeDocumentMoniker": "Scripts\\Debugging\\DebugManager.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\DebugManager.cs",
-              "RelativeToolTip": "Scripts\\Debugging\\DebugManager.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAzAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T01:40:38.107Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "DebugVisualizer.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\DebugVisualizer.cs",
-              "RelativeDocumentMoniker": "Scripts\\Debugging\\DebugVisualizer.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\DebugVisualizer.cs",
-              "RelativeToolTip": "Scripts\\Debugging\\DebugVisualizer.cs",
-              "ViewState": "AgIAAFkAAAAAAAAAAADwv3EAAAA4AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T01:36:34.049Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "GameInitializer.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameInitializer.cs",
-              "RelativeDocumentMoniker": "Scripts\\GameInitializer.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameInitializer.cs",
-              "RelativeToolTip": "Scripts\\GameInitializer.cs",
-              "ViewState": "AgIAACgAAAAAAAAAAAAAwD8AAACvAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T01:12:25.464Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "CollisionManager.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Physics\\CollisionManager.cs",
-              "RelativeDocumentMoniker": "Scripts\\Physics\\CollisionManager.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Physics\\CollisionManager.cs",
-              "RelativeToolTip": "Scripts\\Physics\\CollisionManager.cs",
-              "ViewState": "AgIAAE8AAAAAAAAAAAAWwFwAAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:50:30.794Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "PhysicsManager.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Physics\\PhysicsManager.cs",
-              "RelativeDocumentMoniker": "Scripts\\Physics\\PhysicsManager.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Physics\\PhysicsManager.cs",
-              "RelativeToolTip": "Scripts\\Physics\\PhysicsManager.cs",
-              "ViewState": "AgIAADMAAAAAAAAAAAAswEEAAAAxAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:18:33.829Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "GameObjectLoader.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GameObjectLoader.cs",
-              "RelativeDocumentMoniker": "Scripts\\GameObjects\\GameObjectLoader.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GameObjectLoader.cs",
-              "RelativeToolTip": "Scripts\\GameObjects\\GameObjectLoader.cs",
-              "ViewState": "AgIAAEsAAAAAAAAAAAAAwFkAAAARAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:21:18.441Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "GameRenderer.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameRenderer.cs",
-              "RelativeDocumentMoniker": "Scripts\\GameRenderer.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameRenderer.cs",
-              "RelativeToolTip": "Scripts\\GameRenderer.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:22:06.97Z"
-            },
+            }
+          ]
+        },
+        {
+          "DockedHeight": 187,
+          "SelectedChildIndex": 5,
+          "Children": [
             {
               "$type": "Document",
               "DocumentIndex": 4,
@@ -170,88 +66,108 @@
               "RelativeDocumentMoniker": "Scripts\\Player.cs",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Player.cs",
               "RelativeToolTip": "Scripts\\Player.cs",
-              "ViewState": "AgIAADMAAAAAAAAAAAAWwEkAAAAQAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:28:31.315Z"
+              "WhenOpened": "2025-03-30T02:01:18.997Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "GameUpdater.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameUpdater.cs",
-              "RelativeDocumentMoniker": "Scripts\\GameUpdater.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameUpdater.cs",
-              "RelativeToolTip": "Scripts\\GameUpdater.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:44:31.192Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "ActionHandler.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\ActionHandler.cs",
-              "RelativeDocumentMoniker": "Scripts\\ActionHandler.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\ActionHandler.cs",
-              "RelativeToolTip": "Scripts\\ActionHandler.cs",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAmwAgAAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T01:11:59.984Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "ObjectManager.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\ObjectManager.cs",
-              "RelativeDocumentMoniker": "Scripts\\GameObjects\\ObjectManager.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\ObjectManager.cs",
-              "RelativeToolTip": "Scripts\\GameObjects\\ObjectManager.cs",
-              "ViewState": "AgIAACEAAAAAAAAAAAAmwDkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:21:18.494Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "Shape.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Shape.cs",
-              "RelativeDocumentMoniker": "Scripts\\Shape.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Shape.cs",
-              "RelativeToolTip": "Scripts\\Shape.cs",
-              "ViewState": "AgIAAEUAAAAAAAAAAAAuwF0AAAAkAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:26:21.658Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 5,
               "Title": "GameObject.cs",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GameObject.cs",
               "RelativeDocumentMoniker": "Scripts\\GameObjects\\GameObject.cs",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GameObject.cs",
               "RelativeToolTip": "Scripts\\GameObjects\\GameObject.cs",
-              "ViewState": "AgIAAFcAAAAAAAAAAAAmwG8AAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAABAAAAAAAAAAAAA8wCEAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:21:18.383Z"
+              "WhenOpened": "2025-03-30T02:00:51.741Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 6,
+              "Title": "GameObjectLoader.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GameObjectLoader.cs",
+              "RelativeDocumentMoniker": "Scripts\\GameObjects\\GameObjectLoader.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GameObjectLoader.cs",
+              "RelativeToolTip": "Scripts\\GameObjects\\GameObjectLoader.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAAB0AAAAnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-30T01:59:59.37Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "ObjectManager.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\ObjectManager.cs",
+              "RelativeDocumentMoniker": "Scripts\\GameObjects\\ObjectManager.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\ObjectManager.cs",
+              "RelativeToolTip": "Scripts\\GameObjects\\ObjectManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-30T01:59:35.29Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "FarmManager.cs",
               "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\FarmManager.cs",
               "RelativeDocumentMoniker": "Scripts\\FarmManager.cs",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\FarmManager.cs",
               "RelativeToolTip": "Scripts\\FarmManager.cs",
-              "ViewState": "AgIAAFEAAAAAAAAAAAAjwIQAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T00:29:26.9Z"
+              "WhenOpened": "2025-03-30T01:58:08.772Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "GameInitializer.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameInitializer.cs",
+              "RelativeDocumentMoniker": "Scripts\\GameInitializer.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameInitializer.cs",
+              "RelativeToolTip": "Scripts\\GameInitializer.cs",
+              "ViewState": "AgIAABAAAAAAAAAAAAAkwB4AAAA5AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-30T02:01:51.715Z",
+              "EditorCaption": ""
             }
           ]
         },
         {
           "DockedHeight": 187,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "LogFormatter.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\LogFormatter.cs",
+              "RelativeDocumentMoniker": "Scripts\\Debugging\\LogFormatter.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\LogFormatter.cs",
+              "RelativeToolTip": "Scripts\\Debugging\\LogFormatter.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAwwDEAAAAvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-30T02:03:29.328Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "DebugLogger.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\DebugLogger.cs",
+              "RelativeDocumentMoniker": "Scripts\\Debugging\\DebugLogger.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Debugging\\DebugLogger.cs",
+              "RelativeToolTip": "Scripts\\Debugging\\DebugLogger.cs",
+              "ViewState": "AgIAAEkAAAAAAAAAAAD4v1sAAABpAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-30T01:53:10.442Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Document",
               "DocumentIndex": 2,
@@ -260,7 +176,7 @@
               "RelativeDocumentMoniker": "Scripts\\Core.cs",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Core.cs",
               "RelativeToolTip": "Scripts\\Core.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAABIAAAAAAAAAA==",
+              "ViewState": "AgIAAA8AAAAAAAAAAAA0wAgAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-29T18:21:12.589Z",
               "EditorCaption": ""

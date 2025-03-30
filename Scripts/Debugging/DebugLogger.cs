@@ -87,9 +87,11 @@ namespace op.io
         }
 
         // Public-facing logging methods for different log levels
-        public static void PrintMeta(string message) => Log(message, "META", ConsoleColor.DarkGray);
-        public static void PrintInfo(string message) => Log(message, "INFO", ConsoleColor.Blue);
-        public static void PrintDebug(string message) => Log(message, "DEBUG", ConsoleColor.White);
+        public static void Print(string message) => Log(message, "GENERAL", ConsoleColor.White);
+        public static void PrintDatabase(string message) => Log(message, "DATABASE", ConsoleColor.Blue);
+        public static void PrintConsole(string message) => Log(message, "CONSOLE", ConsoleColor.DarkGreen);
+        public static void PrintObject(string message) => Log(message, "OBJECT", ConsoleColor.DarkGray);
+        public static void PrintPlayer(string message) => Log(message, "PLAYER", ConsoleColor.Cyan);
         public static void PrintError(string message) => Log(message, "ERROR", ConsoleColor.Red);
         public static void PrintWarning(string message) => Log(message, "WARNING", ConsoleColor.DarkYellow);
     }

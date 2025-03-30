@@ -21,7 +21,7 @@ namespace op.io
 
             if (direction == Vector2.Zero)
             {
-                //DebugLogger.PrintDebug("Move skipped: Direction vector is zero.");
+                //DebugLogger.Print("Move skipped: Direction vector is zero.");
                 return;
             }
 
@@ -40,7 +40,7 @@ namespace op.io
             Vector2 force = direction * speed;
             gameObject.ApplyForce(force, deltaTime);
 
-            //DebugLogger.PrintDebug($"Applied force {force} with deltaTime {deltaTime} to {gameObject.Shape?.Type ?? "UnknownObject"} at {gameObject.Position}");
+            //DebugLogger.Print($"Applied force {force} with deltaTime {deltaTime} to {gameObject.Shape?.Type ?? "UnknownObject"} at {gameObject.Position}");
         }
     }
 }

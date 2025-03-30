@@ -20,24 +20,24 @@ namespace op.io
                 if (Core.ForceDebugMode)
                 {
                     DebugMode = 1;
-                    DebugLogger.PrintMeta("Debug mode force-enabled by hardcoded flag.");
+                    DebugLogger.PrintConsole("Debug mode force-enabled by hardcoded flag.");
                 }
 
-                DebugLogger.PrintMeta("Checking database for debug mode it should use in case the hardcoded flag is set to false...");
+                DebugLogger.PrintConsole("Checking database for debug mode it should use in case the hardcoded flag is set to false...");
                 int databaseDebugMode = DatabaseConfig.LoadDebugSettings() == 1 ? 1 : 0;
 
                 switch (databaseDebugMode == 1)
                 {
                     case true:
-                        DebugLogger.PrintMeta("Debug mode is enabled in the database.");
+                        DebugLogger.PrintConsole("Debug mode is enabled in the database.");
                         DebugMode = 1;
                         break;
                     case false:
-                        DebugLogger.PrintMeta("Debug mode is not enabled in the database.");
+                        DebugLogger.PrintConsole("Debug mode is not enabled in the database.");
                         break;
                 }
 
-                DebugLogger.PrintMeta($"Final cached debug mode: {DebugMode}");
+                DebugLogger.PrintConsole($"Final cached debug mode: {DebugMode}");
 
             }
 

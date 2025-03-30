@@ -20,7 +20,7 @@ namespace op.io
 
             // Use the DatabaseConfig for consistent path resolution
             string fullPath = DatabaseConfig.DatabaseFilePath;
-            DebugLogger.PrintMeta($"Using database file path: {fullPath}");
+            DebugLogger.PrintDatabase($"Using database file path: {fullPath}");
 
             DeleteDatabaseIfExists(fullPath);
             CreateDatabaseIfNotExists(fullPath);
@@ -43,11 +43,11 @@ namespace op.io
 
                 if (structureLoaded && dataLoaded)
                 {
-                    DebugLogger.PrintMeta("Database structure and data scripts loaded successfully.");
+                    DebugLogger.PrintDatabase("Database structure and data scripts loaded successfully.");
                     VerifyDebugSettingsTable(connection);
                     WarnIfDuplicateSettings(connection);
 
-                    DebugLogger.PrintMeta("Database initialization complete.");
+                    DebugLogger.PrintDatabase("Database initialization complete.");
                 }
                 else
                 {
@@ -68,11 +68,11 @@ namespace op.io
 
             try
             {
-                DebugLogger.PrintMeta("Attempting to rxisting database...");
+                DebugLogger.PrintDatabase("Attempting to rxisting database...");
 
                 SQLiteConnection.ClearAllPools(); // Clear any connection pool
                 File.Delete(fullPath);
-                DebugLogger.PrintMeta($"Successfully deleted existing database file at: {fullPath}");
+                DebugLogger.PrintDatabase($"Successfully deleted existing database file at: {fullPath}");
             }
             catch (Exception ex)
             {
@@ -86,9 +86,9 @@ namespace op.io
 
             try
             {
-                DebugLogger.PrintMeta("Creating new database file...");
+                DebugLogger.PrintDatabase("Creating new database file...");
                 SQLiteConnection.CreateFile(fullPath);
-                DebugLogger.PrintMeta($"Created new database file at: {fullPath}");
+                DebugLogger.PrintDatabase($"Created new database file at: {fullPath}");
             }
             catch (Exception ex)
             {
@@ -103,7 +103,7 @@ namespace op.io
                 using (var command = new SQLiteCommand("SELECT Setting, Enabled, MaxRepeats FROM DebugSettings;", connection))
                 using (var reader = command.ExecuteReader())
                 {
-                    DebugLogger.PrintMeta("DebugSettings table contents after initialization:");
+                    DebugLogger.PrintDatabase("DebugSettings table contents after initialization:");
 
                     while (reader.Read())
                     {
@@ -111,7 +111,7 @@ namespace op.io
                         bool enabled = reader.GetBoolean(1);
                         int maxRepeats = reader.GetInt32(2);
 
-                        DebugLogger.PrintMeta($"Retrieved entry -> Setting: {setting}, Enabled: {enabled}, MaxRepeats: {maxRepeats}");
+                        DebugLogger.PrintDatabase($"Retrieved entry -> Setting: {setting}, Enabled: {enabled}, MaxRepeats: {maxRepeats}");
                     }
                 }
             }

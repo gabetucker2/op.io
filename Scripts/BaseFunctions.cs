@@ -44,7 +44,7 @@ namespace op.io
                 int a = GetValue<int>(tableName, "Value", "SettingKey", $"{conditionValue}_A", defaultColor.A);
 
                 Color color = new Color(r, g, b, a);
-                DebugLogger.PrintDebug($"Retrieved color from {tableName} -> {color}");
+                DebugLogger.Print($"Retrieved color from {tableName} -> {color}");
                 return color;
             }
             catch (Exception ex)
@@ -67,7 +67,7 @@ namespace op.io
                 int a = element.GetProperty("A").GetInt32();
 
                 Color color = new Color(r, g, b, a);
-                DebugLogger.PrintDebug($"Parsed color from JSON -> {color}");
+                DebugLogger.Print($"Parsed color from JSON -> {color}");
                 return color;
             }
             catch (Exception ex)

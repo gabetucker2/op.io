@@ -10,12 +10,12 @@ namespace op.io
         {
             //DatabaseInitializer.InitializeDatabase();
             LoadGeneralSettings(game);
-            DebugLogger.PrintMeta("Game initialized");
+            DebugLogger.Print("Game initialized");
         }
 
         private static void LoadGeneralSettings(Core game)
         {
-            DebugLogger.PrintMeta("Loading general settings...");
+            DebugLogger.Print("Loading general settings...");
 
             try
             {
@@ -42,7 +42,7 @@ namespace op.io
                     game.ViewportWidth = display.Width;
                     game.ViewportHeight = display.Height;
 
-                    DebugLogger.PrintMeta($"Fullscreen mode detected. Using display resolution: {display.Width}x{display.Height}");
+                    DebugLogger.Print($"Fullscreen mode detected. Using display resolution: {display.Width}x{display.Height}");
                 }
                 else
                 {
@@ -60,7 +60,7 @@ namespace op.io
 
                 game.Graphics.ApplyChanges();
 
-                DebugLogger.PrintMeta(
+                DebugLogger.Print(
                     $"Loaded general settings: BackgroundColor={game.BackgroundColor}, Viewport={game.ViewportWidth}x{game.ViewportHeight}, Mode={game.WindowMode}, VSync={game.VSyncEnabled}, FixedTimeStep={game.UseFixedTimeStep}, FPS={game.TargetFrameRate}"
                 );
             }

@@ -20,16 +20,16 @@ namespace op.io
         // Ensure the directory exists before trying to access the database file
         static DatabaseConfig()
         {
-            DebugLogger.PrintMeta("DatabaseConfig static constructor called.");
+            DebugLogger.PrintDatabase("DatabaseConfig static constructor called.");
 
             if (!Directory.Exists(DatabaseDirectory))
             {
                 Directory.CreateDirectory(DatabaseDirectory);
-                DebugLogger.PrintMeta($"Created missing database directory at: {DatabaseDirectory}");
+                DebugLogger.PrintDatabase($"Created missing database directory at: {DatabaseDirectory}");
             }
 
-            DebugLogger.PrintMeta($"Using database file path: {DatabaseFilePath}");
-            DebugLogger.PrintMeta($"Initial value of IsConfigured: {IsConfigured}");
+            DebugLogger.PrintDatabase($"Using database file path: {DatabaseFilePath}");
+            DebugLogger.PrintDatabase($"Initial value of IsConfigured: {IsConfigured}");
         }
 
         // Method to read a setting from the DebugSettings table
@@ -37,12 +37,12 @@ namespace op.io
         {
             try
             {
-                DebugLogger.PrintMeta($"Attempting to open database connection to: {DatabaseFilePath}");
+                DebugLogger.PrintDatabase($"Attempting to open database connection to: {DatabaseFilePath}");
 
                 using (var connection = new SQLiteConnection(ConnectionString))
                 {
                     connection.Open();
-                    DebugLogger.PrintMeta($"Database connection opened successfully to: {DatabaseFilePath}");
+                    DebugLogger.PrintDatabase($"Database connection opened successfully to: {DatabaseFilePath}");
 
                     ConfigureDatabase(connection); // Ensure PRAGMA settings are applied
 
@@ -75,12 +75,12 @@ namespace op.io
         {
             try
             {
-                DebugLogger.PrintMeta($"Attempting to open database connection to: {DatabaseFilePath}");
+                DebugLogger.PrintDatabase($"Attempting to open database connection to: {DatabaseFilePath}");
 
                 using (var connection = new SQLiteConnection(ConnectionString))
                 {
                     connection.Open();
-                    DebugLogger.PrintMeta($"Database connection opened successfully to: {DatabaseFilePath}");
+                    DebugLogger.PrintDatabase($"Database connection opened successfully to: {DatabaseFilePath}");
 
                     ConfigureDatabase(connection); // Ensure PRAGMA settings are applied
 
@@ -95,7 +95,7 @@ namespace op.io
 
                         if (rowsAffected > 0)
                         {
-                            DebugLogger.PrintMeta($"Successfully updated '{settingKey}' in {tableName}.");
+                            DebugLogger.PrintDatabase($"Successfully updated '{settingKey}' in {tableName}.");
                         }
                         else
                         {
@@ -113,35 +113,35 @@ namespace op.io
         public static void ConfigureDatabase(SQLiteConnection connection)
         {
             var caller = new System.Diagnostics.StackTrace().GetFrame(1).GetMethod().Name;
-            DebugLogger.PrintMeta($"ConfigureDatabase called by: {caller}, Thread ID: {Environment.CurrentManagedThreadId}, IsConfigured: {IsConfigured}");
+            DebugLogger.PrintDatabase($"ConfigureDatabase called by: {caller}, Thread ID: {Environment.CurrentManagedThreadId}, IsConfigured: {IsConfigured}");
 
             if (IsConfigured)
             {
-                DebugLogger.PrintMeta("Skipping redundant PRAGMA configuration (Already configured).");
+                DebugLogger.PrintDatabase("Skipping redundant PRAGMA configuration (Already configured).");
                 return;
             }
 
             try
             {
-                DebugLogger.PrintMeta($"Attempting to configure database with PRAGMA settings on connection: {connection.ConnectionString}");
+                DebugLogger.PrintDatabase($"Attempting to configure database with PRAGMA settings on connection: {connection.ConnectionString}");
 
                 using (var command = new SQLiteCommand(connection))
                 {
                     command.CommandText = "PRAGMA foreign_keys = ON;";
                     command.ExecuteNonQuery();
-                    DebugLogger.PrintMeta("Applied: PRAGMA foreign_keys = ON;");
+                    DebugLogger.PrintDatabase("Applied: PRAGMA foreign_keys = ON;");
 
                     command.CommandText = "PRAGMA synchronous = NORMAL;";
                     command.ExecuteNonQuery();
-                    DebugLogger.PrintMeta("Applied: PRAGMA synchronous = NORMAL;");
+                    DebugLogger.PrintDatabase("Applied: PRAGMA synchronous = NORMAL;");
 
                     command.CommandText = "PRAGMA journal_mode = WAL;";
                     command.ExecuteNonQuery();
-                    DebugLogger.PrintMeta("Applied: PRAGMA journal_mode = WAL;");
+                    DebugLogger.PrintDatabase("Applied: PRAGMA journal_mode = WAL;");
                 }
 
                 IsConfigured = true;
-                DebugLogger.PrintMeta($"IsConfigured set to TRUE - Thread ID: {Environment.CurrentManagedThreadId}");
+                DebugLogger.PrintDatabase($"IsConfigured set to TRUE - Thread ID: {Environment.CurrentManagedThreadId}");
             }
             catch (Exception ex)
             {
@@ -151,17 +151,17 @@ namespace op.io
 
         public static int LoadDebugSettings()
         {
-            DebugLogger.PrintMeta("Attempting to load DebugSettings...");
+            DebugLogger.PrintDatabase("Attempting to load DebugSettings...");
             int result = GetSetting<int>("DebugSettings", "Enabled", "General", 0);
-            DebugLogger.PrintMeta($"Loaded DebugSettings value: {result}");
+            DebugLogger.PrintDatabase($"Loaded DebugSettings value: {result}");
             return result;
         }
 
         public static void ToggleDebugMode(int newState)
         {
-            DebugLogger.PrintMeta("Attempting to toggle debug mode...");
+            DebugLogger.PrintDatabase("Attempting to toggle debug mode...");
             UpdateSetting("DebugSettings", "Enabled", "General", "General", newState);
-            DebugLogger.PrintMeta($"Toggled debug mode to: {newState}");
+            DebugLogger.PrintDatabase($"Toggled debug mode to: {newState}");
         }
     }
 }

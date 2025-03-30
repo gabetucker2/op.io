@@ -32,7 +32,7 @@ namespace op.io
                 DebugLogger.PrintWarning($"Outline width should not be negative (received {outlineWidth})");
 
             Speed = speed;
-            DebugLogger.PrintDebug($"Player created at {position} with radius {radius}, speed {speed}");
+            DebugLogger.PrintPlayer($"Player created at {position} with radius {radius}, speed {speed}");
         }
 
         public override void LoadContent(GraphicsDevice graphicsDevice)
@@ -45,7 +45,7 @@ namespace op.io
                 _pointerTexture.SetData(new[] { Color.Red });
             }
 
-            DebugLogger.PrintDebug("Player LoadContent completed.");
+            DebugLogger.PrintPlayer("Player LoadContent completed.");
         }
 
         public override void Update(float deltaTime)

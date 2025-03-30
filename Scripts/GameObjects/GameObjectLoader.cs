@@ -36,7 +36,7 @@ namespace op.io
                 }
             }
 
-            DebugLogger.PrintInfo($"Loaded {objects.Count} GameObjects from {tableName}.");
+            DebugLogger.PrintObject($"Loaded {objects.Count} GameObjects from {tableName}.");
             return objects;
         }
 
@@ -79,7 +79,7 @@ namespace op.io
 
                 int count = row.ContainsKey("Count") && int.TryParse(row["Count"].ToString(), out int parsedCount) ? parsedCount : 1;
 
-                DebugLogger.PrintDebug($"Deserializing GameObject with Width={width}, Height={height} from table data.");
+                DebugLogger.PrintObject($"Deserializing GameObject with Width={width}, Height={height} from table data.");
 
                 if (width <= 0 || height <= 0)
                 {
@@ -108,7 +108,7 @@ namespace op.io
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"SQL GameObject deserialization: {ex.Message}");
+                DebugLogger.PrintObject($"SQL GameObject deserialization: {ex.Message}");
                 return null;
             }
         }

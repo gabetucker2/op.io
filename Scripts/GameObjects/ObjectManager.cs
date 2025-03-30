@@ -22,7 +22,7 @@ namespace op.io
 
         private static void InitializePlayer(Core game)
         {
-            DebugLogger.PrintMeta("Initializing Player...");
+            DebugLogger.PrintObject("Initializing Player...");
 
             try
             {
@@ -36,7 +36,7 @@ namespace op.io
                 }
 
                 game.GameObjects.Add(player);
-                DebugLogger.PrintMeta($"Player initialized at: {player.Position}, Shape: {player.Shape?.Type ?? "None"}");
+                DebugLogger.PrintObject($"Player initialized at: {player.Position}, Shape: {player.Shape?.Type ?? "None"}");
             }
             catch (Exception ex)
             {
@@ -46,7 +46,7 @@ namespace op.io
 
         private static void InitializeMap(Core game)
         {
-            DebugLogger.PrintMeta("Initializing Map...");
+            DebugLogger.PrintObject("Initializing Map...");
 
             var mapObjects = GameObjectLoader.LoadGameObjects("MapData");
 
@@ -61,16 +61,16 @@ namespace op.io
                 game.GameObjects.Add(obj);
             }
 
-            DebugLogger.PrintMeta($"Map initialized with {game.GameObjects.Count} GameObjects.");
+            DebugLogger.PrintObject($"Map initialized with {game.GameObjects.Count} GameObjects.");
         }
 
         private static void InitializeFarms(Core game)
         {
-            DebugLogger.PrintMeta("Initializing Farms...");
+            DebugLogger.PrintObject("Initializing Farms...");
             var farmManager = new FarmManager(game.ViewportWidth, game.ViewportHeight);
             var farms = farmManager.GetFarmShapes();
             game.GameObjects.AddRange(farms);
-            DebugLogger.PrintMeta($"Farms initialized with {farms.Count} objects.");
+            DebugLogger.PrintObject($"Farms initialized with {farms.Count} objects.");
         }
     }
 }

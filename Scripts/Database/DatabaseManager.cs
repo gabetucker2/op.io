@@ -10,15 +10,15 @@ namespace op.io
 
         public static SQLiteConnection OpenConnection()
         {
-            DebugLogger.PrintMeta("Opening database connection...");
+            DebugLogger.PrintDatabase("Opening database connection...");
 
             var connection = new SQLiteConnection(ConnectionString);
 
             try
             {
                 connection.Open();
-                DebugLogger.PrintMeta("Database connection opened successfully.");
-                DebugLogger.PrintMeta("Database connection is ready for use.");
+                DebugLogger.PrintDatabase("Database connection opened successfully.");
+                DebugLogger.PrintDatabase("Database connection is ready for use.");
             }
             catch (Exception ex)
             {
@@ -38,7 +38,7 @@ namespace op.io
             {
                 connection.Close();
                 connection.Dispose();
-                DebugLogger.PrintMeta("Database connection closed successfully.");
+                DebugLogger.PrintDatabase("Database connection closed successfully.");
             }
             catch (Exception ex)
             {
@@ -51,7 +51,7 @@ namespace op.io
             SQLiteConnection.ClearAllPools();
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            DebugLogger.PrintMeta("Connection pool cleared.");
+            DebugLogger.PrintDatabase("Connection pool cleared.");
         }
 
         public static T GetSetting<T>(string table, string column, string whereColumn, string whereValue, T defaultValue)
@@ -70,7 +70,7 @@ namespace op.io
                         object result = command.ExecuteScalar();
                         if (result != null && result != DBNull.Value)
                         {
-                            DebugLogger.PrintMeta($"Successfully retrieved setting '{whereValue}' from '{table}'.");
+                            DebugLogger.PrintDatabase($"Successfully retrieved setting '{whereValue}' from '{table}'.");
                             return (T)Convert.ChangeType(result, typeof(T));
                         }
                         else
@@ -110,7 +110,7 @@ namespace op.io
 
                         if (rowsAffected > 0)
                         {
-                            DebugLogger.PrintMeta($"Successfully updated setting '{whereValue}' in table '{table}'.");
+                            DebugLogger.PrintDatabase($"Successfully updated setting '{whereValue}' in table '{table}'.");
                             return true;
                         }
                         else

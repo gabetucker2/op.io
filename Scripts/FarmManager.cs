@@ -15,7 +15,7 @@ namespace op.io
 
         public FarmManager(int viewportWidth, int viewportHeight)
         {
-            DebugLogger.PrintMeta("Initializing FarmManager...");
+            DebugLogger.PrintObject("Initializing FarmManager...");
 
             if (viewportWidth <= 0 || viewportHeight <= 0)
             {
@@ -36,7 +36,7 @@ namespace op.io
         {
             _farmObjects.Clear();
 
-            DebugLogger.PrintDebug("Loading farm objects from database...");
+            DebugLogger.PrintObject("Loading farm objects from database...");
             var prototypes = GameObjectLoader.LoadGameObjects("FarmData");
 
             if (prototypes.Count == 0)
@@ -45,23 +45,23 @@ namespace op.io
                 return;
             }
 
-            DebugLogger.PrintMeta($"Loaded {prototypes.Count} prototype entries from FarmData.");
+            DebugLogger.PrintObject($"Loaded {prototypes.Count} prototype entries from FarmData.");
 
             foreach (var prototype in prototypes)
             {
                 int count = Math.Max(1, prototype.Count); // fallback to 1
 
-                DebugLogger.PrintDebug($"Generating {count} instances of type {prototype.Shape?.Type ?? "Unknown"}");
+                DebugLogger.PrintObject($"Generating {count} instances of type {prototype.Shape?.Type ?? "Unknown"}");
 
                 for (int i = 0; i < count; i++)
                 {
                     var clone = CloneWithRandomViewportPosition(prototype);
                     _farmObjects.Add(clone);
-                    DebugLogger.PrintDebug($"Spawned instance {i + 1}/{count} at {clone.Position} with rotation {clone.Rotation:F2} radians");
+                    DebugLogger.PrintObject($"Spawned instance {i + 1}/{count} at {clone.Position} with rotation {clone.Rotation:F2} radians");
                 }
             }
 
-            DebugLogger.PrintMeta($"Final farm object count: {_farmObjects.Count}");
+            DebugLogger.PrintObject($"Final farm object count: {_farmObjects.Count}");
         }
 
         /// <summary>
