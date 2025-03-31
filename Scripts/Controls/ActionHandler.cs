@@ -1,13 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
+using System.Windows.Forms;
 
 namespace op.io
 {
     public static class ActionHandler
     {
-        public static void CheckActions(Core game)
+        public static void CheckActions()
         {
             if (InputManager.IsInputActive("Exit"))
-                game.Exit();
+                Core.Instance.Exit();
 
             // Debug Mode Handling (Toggle based on current state)
             bool currentDebugModeState = ControlStateManager.GetSwitchState("DebugMode");
@@ -36,8 +37,20 @@ namespace op.io
                 Player.Instance.IsCrouching = ControlStateManager.GetSwitchState("Crouch");
                 DebugLogger.PrintUI($"Crouch state updated to {Player.Instance.IsCrouching}");
             }
-        }
 
+            // ReturnCursorToPlayer Handling
+            if (InputManager.IsInputActive("ReturnCursorToPlayer"))
+            {
+                // Get player's position
+                var playerPosition = Player.Instance.Position; // Assuming Position is a Vector2 or Point
+
+                // Move cursor to player's position
+                Cursor.Position = BaseFunctions.Vector2ToPoint(BaseFunctions.GetPlayerGlobalScreenPosition());
+
+                DebugLogger.PrintUI("Cursor returned to player position.");
+            }
+        }
+        
         public static void Move(GameObject gameObject, Vector2 direction, float speed)
         {
             if (gameObject == null)

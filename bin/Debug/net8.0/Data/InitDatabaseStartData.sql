@@ -31,7 +31,7 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveTowardsCur
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'LeftShift', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Hold');
+INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('DebugMode', 'B', 'Switch'); -- Start is set to DebugEnabled value and updates that value rather than having its own
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0);
@@ -88,7 +88,7 @@ INSERT INTO FarmData (
 ('Triangle', 'Polygon', 300, 300, 30, 3, 60, 60, 5, 15,
  255, 150, 150, 255,
  128, 75, 75, 255, 2,
- 1, 1, 0, 2, 0),
+ 1, 1, 0, 1, 0),
 ('Square', 'Polygon', 350, 350, 40, 4, 70, 70, 8, 10,
  255, 255, 100, 255,
  128, 128, 50, 255, 3,

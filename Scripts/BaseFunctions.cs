@@ -4,11 +4,17 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using SDL2;
 
 namespace op.io
 {
     public static class BaseFunctions
     {
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
         public static T GetValue<T>(
             string tableName,
             string column,
@@ -76,5 +82,79 @@ namespace op.io
                 return Color.White; // Default fallback
             }
         }
+
+        public static Vector2 GetPlayerLocalScreenPosition()
+        {
+            var player = Player.Instance;
+
+            if (player == null)
+            {
+                DebugLogger.PrintError("Player instance is null. Make sure the player is properly initialized.");
+                return new Vector2(0,0);
+            }
+
+            // Assuming Player's position is stored as a Vector2
+            Vector2 playerPosition = new(player.Position.X, player.Position.Y);
+
+            // Convert player's position to screen coordinates
+            Vector2 screenPosition = new((int)playerPosition.X, (int)playerPosition.Y);
+
+            DebugLogger.PrintUI($"Player screen position calculated: {screenPosition}");
+
+            return screenPosition;
+        }
+
+        public static Vector2 GetPlayerGlobalScreenPosition()
+        {
+            var player = Player.Instance;
+
+            if (player == null)
+            {
+                DebugLogger.PrintError("Player instance is null. Make sure the player is properly initialized.");
+                return new Vector2(0, 0);
+            }
+
+            // Get the local screen position of the player
+            Vector2 localScreenPosition = GetPlayerLocalScreenPosition();
+            DebugLogger.PrintUI($"Local screen position of player: {localScreenPosition}");
+
+            IntPtr windowHandle = Core.Instance?.Window?.Handle ?? IntPtr.Zero;
+
+            if (windowHandle == IntPtr.Zero)
+            {
+                DebugLogger.PrintError("Failed to retrieve valid game window handle.");
+                return localScreenPosition;
+            }
+
+            DebugLogger.PrintUI($"Window Handle Retrieved: {windowHandle}");
+
+            // SDL requires window handle from SDL2 functions
+            int windowX = 0, windowY = 0;
+            SDL.SDL_GetWindowPosition(windowHandle, out windowX, out windowY);
+
+            if (windowX == 0 && windowY == 0)
+            {
+                DebugLogger.PrintError("Failed to retrieve SDL window position. Ensure SDL2 is correctly integrated.");
+                return localScreenPosition;
+            }
+
+            DebugLogger.PrintUI($"SDL Window Position Retrieved: X={windowX}, Y={windowY}");
+
+            // Calculate global screen position
+            Vector2 globalScreenPosition = new(
+                localScreenPosition.X + windowX,
+                localScreenPosition.Y + windowY
+            );
+
+            DebugLogger.PrintUI($"Player global screen position calculated: {globalScreenPosition}");
+
+            return globalScreenPosition;
+        }
+
+        public static System.Drawing.Point Vector2ToPoint(Vector2 vector)
+        {
+            return new System.Drawing.Point((int)vector.X, (int)vector.Y);
+        }
+
     }
 }

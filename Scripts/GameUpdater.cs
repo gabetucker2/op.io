@@ -13,7 +13,7 @@ namespace op.io
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
             // Process Actions
-            ActionHandler.CheckActions(Core.Instance);
+            ActionHandler.CheckActions();
 
             // Update all GameObjects
             foreach (var gameObject in Core.Instance.GameObjects)
