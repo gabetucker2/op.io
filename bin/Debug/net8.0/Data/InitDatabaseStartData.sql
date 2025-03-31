@@ -33,11 +33,13 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'Left
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('DebugMode', 'B', 'Switch'); -- Auto-set by C# code
+INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('DebugMode', 'B', 'Switch'); -- Start is set to DebugEnabled value and updates that value rather than having its own
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0);
 
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SprintSpeedMultiplier', '1.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CrouchSpeedMultiplier', '0.5');
+INSERT INTO ControlSettings (SettingKey, Value) VALUES ('TriggerCooldown', '0.5');
+INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.5');
 
 -- Insert default player
 INSERT INTO Players (

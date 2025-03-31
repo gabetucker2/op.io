@@ -42,7 +42,7 @@ namespace op.io
 
             bool isCurrentlyPressed = currentState.IsKeyDown(key);
             bool wasPreviouslyPressed = _previousKeyboardState.IsKeyDown(key);
-            bool isCooldownPassed = (Core.gameTime - _lastKeyTriggerTime[key]) >= InputManager.TriggerCooldown;
+            bool isCooldownPassed = (Core.gameTime - _lastKeyTriggerTime[key]) >= Player.TriggerCooldown;
 
             if (isCurrentlyPressed && !wasPreviouslyPressed && isCooldownPassed)
             {
@@ -66,7 +66,7 @@ namespace op.io
                 _lastMouseTriggerTime[mouseKey] = 0;
 
             bool isTriggered = false;
-            bool isCooldownPassed = (Core.gameTime - _lastMouseTriggerTime[mouseKey]) >= InputManager.TriggerCooldown;
+            bool isCooldownPassed = (Core.gameTime - _lastMouseTriggerTime[mouseKey]) >= Player.TriggerCooldown;
 
             if (mouseKey == "LeftClick" &&
                 currentMouseState.LeftButton == ButtonState.Pressed &&
@@ -102,7 +102,7 @@ namespace op.io
             if (mouseKey == "LeftClick" &&
                 currentMouseState.LeftButton == ButtonState.Pressed &&
                 _previousMouseState.LeftButton == ButtonState.Released &&
-                (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= InputManager.SwitchCooldown))
+                (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= Player.SwitchCooldown))
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
                 _lastMouseSwitchTime[mouseKey] = Core.gameTime;
@@ -110,7 +110,7 @@ namespace op.io
             else if (mouseKey == "RightClick" &&
                      currentMouseState.RightButton == ButtonState.Pressed &&
                      _previousMouseState.RightButton == ButtonState.Released &&
-                     (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= InputManager.SwitchCooldown))
+                     (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= Player.SwitchCooldown))
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
                 _lastMouseSwitchTime[mouseKey] = Core.gameTime;
@@ -134,7 +134,7 @@ namespace op.io
 
 
             if (currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key) &&
-                (Core.gameTime - _lastKeySwitchTime[key] >= InputManager.SwitchCooldown))
+                (Core.gameTime - _lastKeySwitchTime[key] >= Player.SwitchCooldown))
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
                 _lastKeySwitchTime[key] = Core.gameTime;

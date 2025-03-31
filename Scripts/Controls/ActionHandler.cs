@@ -6,19 +6,35 @@ namespace op.io
     {
         public static void CheckActions(Core game)
         {
-
             if (InputManager.IsInputActive("Exit"))
                 game.Exit();
 
-            //if (!(DebugModeHandler.DebugMode == 2) && ((DebugModeHandler.DebugMode == 1) != InputManager.IsInputActive("DebugMode")))
-            //{
-            //    DebugModeHandler.SetDebugMode(InputManager.IsInputActive("DebugMode"));
-            //}
+            // Debug Mode Handling (Toggle based on current state)
+            bool currentDebugModeState = ControlStateManager.GetSwitchState("DebugMode");
 
-            if (BlockManager.DockingModeEnabled != InputManager.IsInputActive("DockingMode"))
+            if (currentDebugModeState != DebugModeHandler.DEBUGMODE)
             {
-                BlockManager.DockingModeEnabled = InputManager.IsInputActive("DockingMode");
+                // Toggle DEBUGMODE to the opposite state
+                DebugModeHandler.SetDebugMode(!DebugModeHandler.DEBUGMODE);
+
+                // Update the switch state in ControlStateManager to match the toggled value
+                ControlStateManager.SetSwitchState("DebugMode", DebugModeHandler.DEBUGMODE);
+
+                DebugLogger.PrintUI($"Debug mode toggled to {DebugModeHandler.DEBUGMODE}");
+            }
+
+            // Docking Mode Handling
+            if (ControlStateManager.GetSwitchState("DockingMode") != BlockManager.DockingModeEnabled)
+            {
+                BlockManager.DockingModeEnabled = ControlStateManager.GetSwitchState("DockingMode");
                 DebugLogger.PrintUI($"Docking mode updated to {BlockManager.DockingModeEnabled}");
+            }
+
+            // Crouch Handling
+            if (ControlStateManager.GetSwitchState("Crouch") != Player.Instance.IsCrouching)
+            {
+                Player.Instance.IsCrouching = ControlStateManager.GetSwitchState("Crouch");
+                DebugLogger.PrintUI($"Crouch state updated to {Player.Instance.IsCrouching}");
             }
         }
 

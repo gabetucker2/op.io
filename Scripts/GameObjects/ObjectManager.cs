@@ -27,16 +27,16 @@ namespace op.io
             try
             {
                 int playerId = BaseFunctions.GetValue<int>("Players", "ID", "Name", "Player1");
-                Player.player = GameObjectLoader.LoadGameObject("Players", playerId) as Player;
+                Player.Instance = GameObjectLoader.LoadGameObject("Players", playerId) as Player;
 
-                if (Player.player == null)
+                if (Player.Instance == null)
                 {
                     DebugLogger.PrintError("Failed to initialize Player. Check database configuration.");
                     return;
                 }
 
-                game.GameObjects.Add(Player.player);
-                DebugLogger.PrintObject($"Player initialized at: {Player.player.Position}, Shape: {Player.player.Shape?.Type ?? "None"}");
+                game.GameObjects.Add(Player.Instance);
+                DebugLogger.PrintObject($"Player initialized at: {Player.Instance.Position}, Shape: {Player.Instance.Shape?.Type ?? "None"}");
             }
             catch (Exception ex)
             {

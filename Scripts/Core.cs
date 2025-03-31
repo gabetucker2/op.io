@@ -6,7 +6,7 @@ namespace op.io
 {
     public class Core : Game
     {
-        public static bool ForceDebugMode { get; set; } = true;
+        public static bool ForceDebugMode { get; set; } = false;
 
         public static Core Instance { get; set; }
 

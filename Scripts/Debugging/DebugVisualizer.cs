@@ -24,7 +24,7 @@ namespace op.io
             {
                 // Create a 1x1 white texture for lines
                 _lineTexture = new Texture2D(graphicsDevice, 1, 1);
-                _lineTexture.SetData(new[] { Color.White });
+                _lineTexture.SetData([Color.White]);
 
                 // Retrieve debug settings from the database
                 Color debugColor = GetDebugColor();

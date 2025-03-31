@@ -71,7 +71,7 @@ namespace op.io
         }
 
         // Method to update a setting in the DebugSettings table
-        public static void UpdateSetting(string tableName, string columnName, string settingKey, string group, int newValue)
+        public static void UpdateSetting(string tableName, string columnName, string settingKey, int newValue)
         {
             try
             {
@@ -84,12 +84,13 @@ namespace op.io
 
                     ConfigureDatabase(connection); // Ensure PRAGMA settings are applied
 
-                    string query = $"UPDATE {tableName} SET {columnName} = @newValue WHERE Setting = @settingKey AND Group = @group;";
+                    // Corrected query to match your table structure (No 'Group' column)
+                    string query = $"UPDATE {tableName} SET {columnName} = @newValue WHERE Setting = @settingKey;";
+
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@newValue", newValue);
                         command.Parameters.AddWithValue("@settingKey", settingKey);
-                        command.Parameters.AddWithValue("@group", group);
 
                         int rowsAffected = command.ExecuteNonQuery();
 
@@ -159,9 +160,9 @@ namespace op.io
 
         public static void ToggleDebugMode(int newState)
         {
-            DebugLogger.PrintDatabase("Attempting to toggle debug mode...");
-            UpdateSetting("DebugSettings", "Enabled", "General", "General", newState);
-            DebugLogger.PrintDatabase($"Toggled debug mode to: {newState}");
+            DebugLogger.PrintDebug("Attempting to toggle debug mode...");
+            UpdateSetting("DebugSettings", "Enabled", "General", newState);
+            DebugLogger.PrintDebug($"Toggled debug mode to: {newState}");
         }
     }
 }

@@ -4,55 +4,72 @@ namespace op.io
 {
     public static class DebugModeHandler
     {
-        public static int DebugMode { get; set; } = 2; // 0: Disabled, 1: Enabled, 2: Unknown, needs fresh check
+        private static bool _debugMode = false; // True = Enabled, False = Disabled
+        private static bool _needsFreshCheck = true; // True when a database check is needed, False otherwise
+
+        public static bool DEBUGMODE
+        {
+            get => _debugMode;
+            set
+            {
+                _debugMode = value;
+                _needsFreshCheck = false; // Reset fresh check flag once the mode is manually set
+            }
+        }
+
+        public static bool NeedsFreshCheck
+        {
+            get => _needsFreshCheck;
+            set => _needsFreshCheck = value;
+        }
 
         public static bool IsDebugEnabled()
         {
-            if (DebugMode == 2)
+            if (_needsFreshCheck)
             {
-                DebugMode = 0; // set to 0 by default; subsequent lines in the block will change to 1 if necessary
+                _needsFreshCheck = false; // Reset flag after performing a check
+
+                // Default state: Disabled
+                _debugMode = false;
 
                 if (Core.ForceDebugMode)
                 {
-                    DebugMode = 1;
+                    _debugMode = true;
                     DebugLogger.PrintDebug("Debug mode force-enabled by hardcoded flag.");
                 }
-
-                DebugLogger.PrintDebug("Checking database for debug mode it should use in case the hardcoded flag is set to false...");
-                int databaseDebugMode = DatabaseConfig.LoadDebugSettings() == 1 ? 1 : 0;
-
-                switch (databaseDebugMode == 1)
+                else
                 {
-                    case true:
+                    DebugLogger.PrintDebug("Checking database for debug mode in case the hardcoded flag is not set...");
+                    int databaseDebugMode = DatabaseConfig.LoadDebugSettings();
+
+                    _debugMode = databaseDebugMode == 1;
+
+                    if (_debugMode)
                         DebugLogger.PrintDebug("Debug mode is enabled in the database.");
-                        DebugMode = 1;
-                        break;
-                    case false:
+                    else
                         DebugLogger.PrintDebug("Debug mode is not enabled in the database.");
-                        break;
                 }
 
-                DebugLogger.PrintDebug($"Final cached debug mode: {DebugMode}");
-
+                DebugLogger.PrintDebug($"Final cached debug mode: {_debugMode}");
             }
 
-            return DebugMode == 1;
+            return _debugMode;
         }
 
         public static void SetDebugMode(bool newState)
         {
             if (Core.ForceDebugMode)
             {
-                // Use PrintError for logging error when trying to toggle with forceDebugMode enabled
-                DebugLogger.PrintError("Cannot toggle debug mode while forceDebugMode is enabled.");
+                DebugLogger.PrintWarning("Cannot toggle debug mode while ForceDebugMode is enabled.");
                 return;
             }
 
-            int newStateInt = newState ? 1 : 0;
-            DebugLogger.PrintDebug($"Setting debug mode to: {newStateInt}");
-            DebugMode = newStateInt;
-            DatabaseConfig.ToggleDebugMode(newStateInt);
+            DebugLogger.PrintDebug($"Setting debug mode to: {newState}");
+            _debugMode = newState;
+            _needsFreshCheck = false;
 
+            int newStateInt = newState ? 1 : 0;
+            DatabaseConfig.ToggleDebugMode(newStateInt); // Persist change to the database
         }
     }
 }

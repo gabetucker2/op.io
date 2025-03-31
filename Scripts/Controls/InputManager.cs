@@ -7,9 +7,6 @@ namespace op.io
 {
     public static class InputManager
     {
-        public static float TriggerCooldown = 0.5f; // Half a second cooldown
-        public static float SwitchCooldown = 0.5f; // Half a second cooldown
-
         // Supports both keyboard keys and mouse clicks
         private static readonly Dictionary<string, (object key, InputType inputType)> _ControlKey =
             new Dictionary<string, (object, InputType)>();
@@ -51,7 +48,7 @@ namespace op.io
             // Mouse-follow dominant, can't also have WASD movement since that's too wonky
             if (!(IsInputActive("MoveTowardsCursor") && IsInputActive("MoveAwayFromCursor")) && (IsInputActive("MoveTowardsCursor") || IsInputActive("MoveAwayFromCursor")))
             {
-                float rotation = Player.player.Rotation;
+                float rotation = Player.Instance.Rotation;
                 if (IsInputActive("MoveTowardsCursor"))
                 {
                     direction.X += MathF.Cos(rotation);

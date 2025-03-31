@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace op.io
 {
@@ -11,8 +12,10 @@ namespace op.io
 
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
+            // Process Actions
             ActionHandler.CheckActions(Core.Instance);
 
+            // Update all GameObjects
             foreach (var gameObject in Core.Instance.GameObjects)
             {
                 gameObject.Update();
@@ -23,6 +26,7 @@ namespace op.io
                 DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
 
+            // Resolve collisions
             Core.Instance.PhysicsManager.ResolveCollisions(Core.Instance.GameObjects, false);
         }
     }
