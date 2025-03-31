@@ -8,14 +8,15 @@ namespace op.io
     public class GameObject
     {
         // Properties
-        [JsonInclude] public Vector2 Position { get; set; }
-        [JsonInclude] public float Rotation { get; set; }
-        [JsonInclude] public float Mass { get; set; }
-        [JsonInclude] public bool IsPlayer { get; set; }
-        [JsonInclude] public bool IsDestructible { get; set; }
-        [JsonInclude] public bool IsCollidable { get; set; }
-        [JsonInclude] public bool StaticPhysics { get; set; }
-        [JsonInclude] public Shape Shape { get; set; }
+        public GameObject InstanceGO { get; set; }
+        public Vector2 Position { get; set; }
+        public float Rotation { get; set; }
+        public float Mass { get; set; }
+        public bool IsPlayer { get; set; }
+        public bool IsDestructible { get; set; }
+        public bool IsCollidable { get; set; }
+        public bool StaticPhysics { get; set; }
+        public Shape Shape { get; set; }
         public int Count { get; set; } = 1;
 
         // Computed property
@@ -25,7 +26,10 @@ namespace op.io
                 : 0f;
 
         // Parameterless Constructor
-        public GameObject() { }
+        public GameObject()
+        {
+            InstanceGO = this;
+        }
 
         // Main Constructor
         public GameObject(Vector2 initialPosition, float initialRotation, float mass, bool isPlayer, bool isDestructible, bool isCollidable, bool staticPhysics, Shape shape)

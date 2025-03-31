@@ -48,7 +48,7 @@ namespace op.io
             // Mouse-follow dominant, can't also have WASD movement since that's too wonky
             if (!(IsInputActive("MoveTowardsCursor") && IsInputActive("MoveAwayFromCursor")) && (IsInputActive("MoveTowardsCursor") || IsInputActive("MoveAwayFromCursor")))
             {
-                float rotation = Player.Instance.Rotation;
+                float rotation = Player.InstancePlayer.Rotation;
                 if (IsInputActive("MoveTowardsCursor"))
                 {
                     direction.X += MathF.Cos(rotation);

@@ -7,35 +7,35 @@ namespace op.io
     {
         public static void LoadGraphics()
         {
-            if (Core.Instance == null)
+            if (Core.InstanceCore == null)
             {
-                DebugLogger.PrintError("LoadGraphics failed: Core.Instance is null.");
+                DebugLogger.PrintError("LoadGraphics failed: Core.InstanceCore is null.");
                 return;
             }
 
-            if (Core.Instance.GraphicsDevice == null)
+            if (Core.InstanceCore.GraphicsDevice == null)
             {
                 DebugLogger.PrintError("LoadGraphics failed: GraphicsDevice is null.");
                 return;
             }
 
-            if (Core.Instance.SpriteBatch == null)
+            if (Core.InstanceCore.SpriteBatch == null)
             {
-                Core.Instance.SpriteBatch = new SpriteBatch(Core.Instance.GraphicsDevice);
+                Core.InstanceCore.SpriteBatch = new SpriteBatch(Core.InstanceCore.GraphicsDevice);
                 DebugLogger.Print("SpriteBatch initialized successfully.");
             }
 
-            DebugVisualizer.Initialize(Core.Instance.GraphicsDevice);
+            DebugVisualizer.Initialize(Core.InstanceCore.GraphicsDevice);
 
-            if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
+            if (Core.InstanceCore.GameObjects == null || Core.InstanceCore.GameObjects.Count == 0)
             {
                 DebugLogger.PrintWarning("No GameObjects to load content for.");
                 return;
             }
 
-            foreach (var obj in Core.Instance.GameObjects)
+            foreach (var obj in Core.InstanceCore.GameObjects)
             {
-                obj.LoadContent(Core.Instance.GraphicsDevice);
+                obj.LoadContent(Core.InstanceCore.GraphicsDevice);
             }
 
             DebugLogger.Print("GameRenderer: Graphics and GameObjects loaded successfully.");
@@ -43,24 +43,24 @@ namespace op.io
 
         public static void Draw()
         {
-            Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
-            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            Core.InstanceCore.GraphicsDevice.Clear(Core.InstanceCore.BackgroundColor);
+            Core.InstanceCore.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-            foreach (var gameObject in Core.Instance.GameObjects)
+            foreach (var gameObject in Core.InstanceCore.GameObjects)
             {
-                gameObject.Draw(Core.Instance.SpriteBatch);
+                gameObject.Draw(Core.InstanceCore.SpriteBatch);
             }
 
             // Render debug direction line last to ensure visibility
             if (DebugModeHandler.IsDebugEnabled())
             {
-                foreach (var gameObject in Core.Instance.GameObjects)
+                foreach (var gameObject in Core.InstanceCore.GameObjects)
                 {
-                    DebugVisualizer.DrawDebugCircle(Core.Instance.SpriteBatch, gameObject);
+                    DebugVisualizer.DrawDebugCircle(Core.InstanceCore.SpriteBatch, gameObject);
                 }
             }
 
-            Core.Instance.SpriteBatch.End();
+            Core.InstanceCore.SpriteBatch.End();
         }
     }
 }

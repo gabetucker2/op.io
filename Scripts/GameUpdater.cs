@@ -16,18 +16,18 @@ namespace op.io
             ActionHandler.CheckActions();
 
             // Update all GameObjects
-            foreach (var gameObject in Core.Instance.GameObjects)
+            foreach (var gameObject in Core.InstanceCore.GameObjects)
             {
                 gameObject.Update();
             }
 
-            if (Core.Instance.GameObjects.Count == 0)
+            if (Core.InstanceCore.GameObjects.Count == 0)
             {
                 DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
 
             // Resolve collisions
-            Core.Instance.PhysicsManager.ResolveCollisions(Core.Instance.GameObjects, false);
+            Core.InstanceCore.PhysicsManager.ResolveCollisions(Core.InstanceCore.GameObjects, false);
         }
     }
 }

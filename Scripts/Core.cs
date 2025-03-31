@@ -9,7 +9,7 @@ namespace op.io
     {
         public static bool ForceDebugMode { get; set; } = false;
 
-        public static Core Instance { get; set; }
+        public static Core InstanceCore { get; set; }
 
         public GraphicsDeviceManager Graphics { get; set; }
         public SpriteBatch SpriteBatch { get; set; }
@@ -31,7 +31,7 @@ namespace op.io
 
         public Core()
         {
-            Instance = this;
+            InstanceCore = this;
             Graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
         }

@@ -83,9 +83,9 @@ namespace op.io
             }
         }
 
-        public static Vector2 GetPlayerLocalScreenPosition()
+        public static Vector2 GetGOLocalScreenPosition(GameObject gameObject)
         {
-            var player = Player.Instance;
+            var player = Player.InstancePlayer;
 
             if (player == null)
             {
@@ -104,9 +104,9 @@ namespace op.io
             return screenPosition;
         }
 
-        public static Vector2 GetPlayerGlobalScreenPosition()
+        public static Vector2 GetGOGlobalScreenPosition(GameObject gameObject)
         {
-            var player = Player.Instance;
+            var player = Player.InstancePlayer;
 
             if (player == null)
             {
@@ -115,10 +115,10 @@ namespace op.io
             }
 
             // Get the local screen position of the player
-            Vector2 localScreenPosition = GetPlayerLocalScreenPosition();
+            Vector2 localScreenPosition = GetGOLocalScreenPosition(gameObject);
             DebugLogger.PrintUI($"Local screen position of player: {localScreenPosition}");
 
-            IntPtr windowHandle = Core.Instance?.Window?.Handle ?? IntPtr.Zero;
+            IntPtr windowHandle = Core.InstanceCore?.Window?.Handle ?? IntPtr.Zero;
 
             if (windowHandle == IntPtr.Zero)
             {

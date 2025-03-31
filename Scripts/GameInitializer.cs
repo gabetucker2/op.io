@@ -11,10 +11,10 @@ namespace op.io
         {
             DebugLogger.Print("Initializing game...");
 
-            // Ensure Core.Instance exists
-            if (Core.Instance == null)
+            // Ensure Core.InstanceCore exists
+            if (Core.InstanceCore == null)
             {
-                DebugLogger.PrintError("Core.Instance is null. Make sure the Core constructor has been called before initialization.");
+                DebugLogger.PrintError("Core.InstanceCore is null. Make sure the Core constructor has been called before initialization.");
                 return;
             }
 
@@ -30,34 +30,34 @@ namespace op.io
             LoadControlSwitchStates(); // Load control switch states from the database
 
             // Setting instance variables in Core.cs
-            Core.Instance.IsMouseVisible = true;
-            Core.Instance.PhysicsManager = new PhysicsManager();
+            Core.InstanceCore.IsMouseVisible = true;
+            Core.InstanceCore.PhysicsManager = new PhysicsManager();
 
             // If the settings are not loaded via SQL, these defaults will be applied
-            if (Core.Instance.TargetFrameRate <= 0)
-                Core.Instance.TargetFrameRate = 240;
+            if (Core.InstanceCore.TargetFrameRate <= 0)
+                Core.InstanceCore.TargetFrameRate = 240;
 
-            if (Core.Instance.WindowMode == 0)
-                Core.Instance.WindowMode = WindowMode.BorderedWindowed;
+            if (Core.InstanceCore.WindowMode == 0)
+                Core.InstanceCore.WindowMode = WindowMode.BorderedWindowed;
 
-            if (Core.Instance.Graphics == null)
+            if (Core.InstanceCore.Graphics == null)
             {
-                DebugLogger.PrintError("GraphicsDeviceManager is null. Ensure Core.Instance.Graphics is initialized properly.");
+                DebugLogger.PrintError("GraphicsDeviceManager is null. Ensure Core.InstanceCore.Graphics is initialized properly.");
                 return;
             }
 
-            BlockManager.ApplyWindowMode(Core.Instance);
+            BlockManager.ApplyWindowMode(Core.InstanceCore);
 
-            Core.Instance.Graphics.SynchronizeWithVerticalRetrace = Core.Instance.VSyncEnabled;
-            Core.Instance.IsFixedTimeStep = Core.Instance.UseFixedTimeStep;
+            Core.InstanceCore.Graphics.SynchronizeWithVerticalRetrace = Core.InstanceCore.VSyncEnabled;
+            Core.InstanceCore.IsFixedTimeStep = Core.InstanceCore.UseFixedTimeStep;
 
-            int safeFps = Math.Clamp(Core.Instance.TargetFrameRate, 10, 1000);
-            Core.Instance.TargetElapsedTime = TimeSpan.FromSeconds(1.0 / safeFps);
+            int safeFps = Math.Clamp(Core.InstanceCore.TargetFrameRate, 10, 1000);
+            Core.InstanceCore.TargetElapsedTime = TimeSpan.FromSeconds(1.0 / safeFps);
 
-            Core.Instance.Graphics.ApplyChanges();
+            Core.InstanceCore.Graphics.ApplyChanges();
 
             // Initialize gameobjects AFTER general settings are loaded
-            ObjectManager.InitializeObjects(Core.Instance);
+            ObjectManager.InitializeObjects(Core.InstanceCore);
 
             DebugLogger.Print("Game initialization complete.");
         }
@@ -72,29 +72,29 @@ namespace op.io
                 int g = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G");
                 int b = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B");
                 int a = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A");
-                Core.Instance.BackgroundColor = new Microsoft.Xna.Framework.Color(r, g, b, a);
+                Core.InstanceCore.BackgroundColor = new Microsoft.Xna.Framework.Color(r, g, b, a);
 
                 string modeStr = BaseFunctions.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode");
                 if (!Enum.TryParse(modeStr, true, out WindowMode mode))
                 {
                     DebugLogger.PrintError($"Unrecognized WindowMode '{modeStr}'.");
                 }
-                Core.Instance.WindowMode = mode;
+                Core.InstanceCore.WindowMode = mode;
 
-                Core.Instance.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth");
-                Core.Instance.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight");
+                Core.InstanceCore.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth");
+                Core.InstanceCore.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight");
 
-                Core.Instance.VSyncEnabled = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync");
-                Core.Instance.UseFixedTimeStep = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep");
-                Core.Instance.TargetFrameRate = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate");
+                Core.InstanceCore.VSyncEnabled = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync");
+                Core.InstanceCore.UseFixedTimeStep = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep");
+                Core.InstanceCore.TargetFrameRate = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate");
 
-                Core.Instance.Graphics.PreferredBackBufferWidth = Core.Instance.ViewportWidth;
-                Core.Instance.Graphics.PreferredBackBufferHeight = Core.Instance.ViewportHeight;
+                Core.InstanceCore.Graphics.PreferredBackBufferWidth = Core.InstanceCore.ViewportWidth;
+                Core.InstanceCore.Graphics.PreferredBackBufferHeight = Core.InstanceCore.ViewportHeight;
 
-                Core.Instance.Graphics.ApplyChanges();
+                Core.InstanceCore.Graphics.ApplyChanges();
 
                 DebugLogger.PrintDatabase(
-                    $"Loaded general settings: BackgroundColor={Core.Instance.BackgroundColor}, Viewport={Core.Instance.ViewportWidth}x{Core.Instance.ViewportHeight}, Mode={Core.Instance.WindowMode}, VSync={Core.Instance.VSyncEnabled}, FixedTimeStep={Core.Instance.UseFixedTimeStep}, FPS={Core.Instance.TargetFrameRate}"
+                    $"Loaded general settings: BackgroundColor={Core.InstanceCore.BackgroundColor}, Viewport={Core.InstanceCore.ViewportWidth}x{Core.InstanceCore.ViewportHeight}, Mode={Core.InstanceCore.WindowMode}, VSync={Core.InstanceCore.VSyncEnabled}, FixedTimeStep={Core.InstanceCore.UseFixedTimeStep}, FPS={Core.InstanceCore.TargetFrameRate}"
                 );
             }
             catch (Exception ex)

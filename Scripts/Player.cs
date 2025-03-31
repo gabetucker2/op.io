@@ -6,7 +6,7 @@ namespace op.io
     public class Player : GameObject
     {
         public float Speed { get; private set; }
-        public static Player Instance { get; set; }
+        public static Player InstancePlayer { get; set; }
 
         private const int _pointerLength = 50;
         private static Texture2D _pointerTexture;
@@ -43,7 +43,7 @@ namespace op.io
             if (outlineWidth < 0)
                 DebugLogger.PrintWarning($"Outline width should not be negative (received {outlineWidth})");
 
-            Instance = this;
+            InstancePlayer = this;
             Speed = speed;
             Position = position;
             DebugLogger.PrintPlayer($"Player created at {position} with radius {radius}, speed {speed}");

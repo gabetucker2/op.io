@@ -11,12 +11,8 @@
       "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdatabasestructure.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\enums\\inputtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:enums\\inputtype.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\enums\\windowmode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:enums\\windowmode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\data\\structs\\rect.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\structs\\rect.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -26,11 +22,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Rect.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\Structs\\Rect.cs",
+              "RelativeDocumentMoniker": "Data\\Structs\\Rect.cs",
+              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\Structs\\Rect.cs",
+              "RelativeToolTip": "Data\\Structs\\Rect.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-31T03:56:16.391Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -53,34 +62,10 @@
               "RelativeDocumentMoniker": "Data\\InitDatabaseStartData.sql",
               "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDatabaseStartData.sql",
               "RelativeToolTip": "Data\\InitDatabaseStartData.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACMAAAC1AAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAmwCEAAAA3AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-03-30T03:20:18.545Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "WindowMode.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\WindowMode.cs",
-              "RelativeDocumentMoniker": "Enums\\WindowMode.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\WindowMode.cs",
-              "RelativeToolTip": "Enums\\WindowMode.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T02:36:27.465Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "InputType.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\InputType.cs",
-              "RelativeDocumentMoniker": "Enums\\InputType.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Enums\\InputType.cs",
-              "RelativeToolTip": "Enums\\InputType.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-30T05:08:06.249Z"
             }
           ]
         }

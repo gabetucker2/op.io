@@ -8,7 +8,7 @@ namespace op.io
         public static void CheckActions()
         {
             if (InputManager.IsInputActive("Exit"))
-                Core.Instance.Exit();
+                Core.InstanceCore.Exit();
 
             // Debug Mode Handling (Toggle based on current state)
             bool currentDebugModeState = ControlStateManager.GetSwitchState("DebugMode");
@@ -32,20 +32,20 @@ namespace op.io
             }
 
             // Crouch Handling
-            if (ControlStateManager.GetSwitchState("Crouch") != Player.Instance.IsCrouching)
+            if (ControlStateManager.GetSwitchState("Crouch") != Player.InstancePlayer.IsCrouching)
             {
-                Player.Instance.IsCrouching = ControlStateManager.GetSwitchState("Crouch");
-                DebugLogger.PrintUI($"Crouch state updated to {Player.Instance.IsCrouching}");
+                Player.InstancePlayer.IsCrouching = ControlStateManager.GetSwitchState("Crouch");
+                DebugLogger.PrintUI($"Crouch state updated to {Player.InstancePlayer.IsCrouching}");
             }
 
             // ReturnCursorToPlayer Handling
             if (InputManager.IsInputActive("ReturnCursorToPlayer"))
             {
                 // Get player's position
-                var playerPosition = Player.Instance.Position; // Assuming Position is a Vector2 or Point
+                var playerPosition = Player.InstancePlayer.Position; // Assuming Position is a Vector2 or Point
 
                 // Move cursor to player's position
-                Cursor.Position = BaseFunctions.Vector2ToPoint(BaseFunctions.GetPlayerGlobalScreenPosition());
+                Cursor.Position = BaseFunctions.Vector2ToPoint(BaseFunctions.GetGOGlobalScreenPosition(Player.InstancePlayer.InstanceGO));
 
                 DebugLogger.PrintUI("Cursor returned to player position.");
             }

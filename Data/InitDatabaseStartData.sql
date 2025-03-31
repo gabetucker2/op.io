@@ -29,7 +29,7 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveLeft', 'A'
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveRight', 'D', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveTowardsCursor', 'LeftClick', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'LeftShift', 'Hold');
+INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'LeftShift', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
