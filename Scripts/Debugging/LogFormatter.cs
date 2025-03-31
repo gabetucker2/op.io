@@ -11,12 +11,19 @@ namespace op.io
 
         static LogFormatter()
         {
-            maxMessageRepeats = DatabaseConfig.GetSetting<int>("DebugSettings", "MaxRepeats", "General", 5);
+            LoadMaxRepeats(); // Load max repeats from the database during initialization
+        }
+
+        // Dynamically loads the MaxRepeats setting from the database
+        public static void LoadMaxRepeats()
+        {
+            maxMessageRepeats = DatabaseConfig.GetSetting<int>("DebugSettings", "MaxRepeats", "General");
+            DebugLogger.PrintDatabase($"Loaded MaxRepeats: {maxMessageRepeats}");
         }
 
         public static string FormatLogMessage(string rawMessage, string level, bool includeTrace, int stackTraceNBack)
         {
-            // Use StackTrace(3, true) to go back to the original caller of the logging function
+            // Use StackTrace(stackTraceNBack, true) to go back to the original caller of the logging function
             StackTrace stackTrace = new(stackTraceNBack, true);
             StackFrame frame = stackTrace.GetFrame(0); // Get the relevant frame (caller)
             string callerFile = frame?.GetFileName();
@@ -70,7 +77,7 @@ namespace op.io
         }
 
         // Check if a message should be suppressed based on the repeat count
-        public static int SuppressMessageBehavior(string logMessage) // 0 = print normally; 1 = print suppresssion message; 2 = suppress and don't print suppression message
+        public static int SuppressMessageBehavior(string logMessage) // 0 = print normally; 1 = print suppression message; 2 = suppress and don't print suppression message
         {
             if (messageCount.ContainsKey(logMessage))
             {
@@ -87,7 +94,7 @@ namespace op.io
                     return 0;
                 }
             }
-            
+
             return 2;
         }
 

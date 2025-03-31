@@ -117,5 +117,67 @@ namespace op.io
             return _switchStates.ContainsKey(settingKey);
         }
 
+        public static void LoadControlSwitchStates()
+        {
+            DebugLogger.PrintDatabase("Loading control switch states...");
+
+            try
+            {
+                // Fetch all control keys with SwitchStartState from the database
+                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
+
+                if (result.Count == 0)
+                {
+                    DebugLogger.PrintWarning("No switch control states found in the database.");
+                    return;
+                }
+
+                foreach (var row in result)
+                {
+                    if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
+                    {
+                        string settingKey = row["SettingKey"].ToString();
+                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
+                        bool switchStateBool = switchState == 1;
+
+                        // Skip overriding DebugMode if it was already set by SyncDebugModeSwitchState()
+                        if (settingKey == "DebugMode")
+                        {
+                            if (ControlStateManager.ContainsSwitchState("DebugMode")) // Check if DebugMode is already set
+                            {
+                                DebugLogger.PrintDatabase($"DebugMode switch state already set by SyncDebugModeSwitchState(). Skipping overwrite.");
+                                continue;
+                            }
+                        }
+
+                        // Store this information in ControlStateManager
+                        ControlStateManager.SetSwitchState(settingKey, switchStateBool);
+                        DebugLogger.PrintDatabase($"Loaded switch state: {settingKey} = {(switchStateBool ? "ON" : "OFF")}");
+                    }
+                    else
+                    {
+                        DebugLogger.PrintWarning("Invalid row format when loading control switch states.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load control switch states: {ex.Message}");
+            }
+        }
+
+        public static void SyncDebugModeSwitchState()
+        {
+            DebugLogger.PrintDatabase("Syncing DebugMode switch state with database value...");
+
+            // Get the current value from the DebugSettings table
+            int databaseDebugMode = DatabaseConfig.LoadDebugSettings();
+            bool isDebugEnabled = databaseDebugMode == 1;
+
+            // Update ControlStateManager to match the loaded value
+            ControlStateManager.SetSwitchState("DebugMode", isDebugEnabled);
+            DebugLogger.PrintDatabase($"Set DebugMode switch state to: {isDebugEnabled}");
+        }
+
     }
 }

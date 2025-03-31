@@ -7,144 +7,13 @@ namespace op.io
 {
     public static class InputTypeManager
     {
+
         private static KeyboardState _previousKeyboardState;
         private static MouseState _previousMouseState;
-        private static readonly Dictionary<Keys, bool> _triggerStates = [];
-        private static readonly Dictionary<string, bool> _mouseSwitchStates = [];
-        private static readonly Dictionary<Keys, bool> _keySwitchStates = [];
-        private static readonly Dictionary<string, float> _lastMouseSwitchTime = [];
-        private static readonly Dictionary<Keys, float> _lastKeySwitchTime = [];
-        private static readonly Dictionary<Keys, double> _lastKeyTriggerTime = [];
-        private static readonly Dictionary<string, double> _lastMouseTriggerTime = [];
 
-        public static bool IsKeyHeld(Keys key)
-        {
-            return Keyboard.GetState().IsKeyDown(key);
-        }
-
-        public static bool IsMouseButtonHeld(string mouseKey)
-        {
-            MouseState currentMouseState = Mouse.GetState();
-
-            return (mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Pressed) ||
-                   (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Pressed);
-        }
-
-        public static bool IsKeyTriggered(Keys key)
-        {
-            KeyboardState currentState = Keyboard.GetState();
-
-            if (!_triggerStates.ContainsKey(key))
-                _triggerStates[key] = false;
-
-            if (!_lastKeyTriggerTime.ContainsKey(key))
-                _lastKeyTriggerTime[key] = 0;
-
-            bool isCurrentlyPressed = currentState.IsKeyDown(key);
-            bool wasPreviouslyPressed = _previousKeyboardState.IsKeyDown(key);
-            bool isCooldownPassed = (Core.gameTime - _lastKeyTriggerTime[key]) >= Player.TriggerCooldown;
-
-            if (isCurrentlyPressed && !wasPreviouslyPressed && isCooldownPassed)
-            {
-                _triggerStates[key] = true;
-                _lastKeyTriggerTime[key] = Core.gameTime; // Update the last trigger time
-                return true;
-            }
-            else
-            {
-                _triggerStates[key] = false;
-            }
-
-            return false;
-        }
-
-        public static bool IsMouseButtonTriggered(string mouseKey)
-        {
-            MouseState currentMouseState = Mouse.GetState();
-
-            if (!_lastMouseTriggerTime.ContainsKey(mouseKey))
-                _lastMouseTriggerTime[mouseKey] = 0;
-
-            bool isTriggered = false;
-            bool isCooldownPassed = (Core.gameTime - _lastMouseTriggerTime[mouseKey]) >= Player.TriggerCooldown;
-
-            if (mouseKey == "LeftClick" &&
-                currentMouseState.LeftButton == ButtonState.Pressed &&
-                _previousMouseState.LeftButton == ButtonState.Released &&
-                isCooldownPassed)
-            {
-                isTriggered = true;
-                _lastMouseTriggerTime[mouseKey] = Core.gameTime; // Update the last trigger time
-            }
-            else if (mouseKey == "RightClick" &&
-                     currentMouseState.RightButton == ButtonState.Pressed &&
-                     _previousMouseState.RightButton == ButtonState.Released &&
-                     isCooldownPassed)
-            {
-                isTriggered = true;
-                _lastMouseTriggerTime[mouseKey] = Core.gameTime; // Update the last trigger time
-            }
-
-            return isTriggered;
-        }
-
-        public static bool IsMouseButtonSwitch(string mouseKey)
-        {
-            MouseState currentMouseState = Mouse.GetState();
-
-            if (!_mouseSwitchStates.ContainsKey(mouseKey))
-                _mouseSwitchStates[mouseKey] = false;
-
-            if (!_lastMouseSwitchTime.ContainsKey(mouseKey))
-                _lastMouseSwitchTime[mouseKey] = 0;
-
-
-            if (mouseKey == "LeftClick" &&
-                currentMouseState.LeftButton == ButtonState.Pressed &&
-                _previousMouseState.LeftButton == ButtonState.Released &&
-                (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= Player.SwitchCooldown))
-            {
-                _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
-                _lastMouseSwitchTime[mouseKey] = Core.gameTime;
-            }
-            else if (mouseKey == "RightClick" &&
-                     currentMouseState.RightButton == ButtonState.Pressed &&
-                     _previousMouseState.RightButton == ButtonState.Released &&
-                     (Core.gameTime - _lastMouseSwitchTime[mouseKey] >= Player.SwitchCooldown))
-            {
-                _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
-                _lastMouseSwitchTime[mouseKey] = Core.gameTime;
-            }
-
-            //if (toggled)
-            //    DebugLogger.PrintDebug($"{mouseKey} switched to: {_mouseSwitchStates[mouseKey]}");
-
-            return _mouseSwitchStates[mouseKey];
-        }
-
-        public static bool IsKeySwitch(Keys key)
-        {
-            KeyboardState currentState = Keyboard.GetState();
-
-            if (!_keySwitchStates.ContainsKey(key))
-                _keySwitchStates[key] = false;
-
-            if (!_lastKeySwitchTime.ContainsKey(key))
-                _lastKeySwitchTime[key] = 0;
-
-
-            if (currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key) &&
-                (Core.gameTime - _lastKeySwitchTime[key] >= Player.SwitchCooldown))
-            {
-                _keySwitchStates[key] = !_keySwitchStates[key];
-                _lastKeySwitchTime[key] = Core.gameTime;
-            }
-
-            //if (toggled)
-            //    DebugLogger.PrintDebug($"Key {key} switched to: {_keySwitchStates[key]}");
-
-            return _keySwitchStates[key];
-        }
+        private static readonly Dictionary<string, bool> _switchStates = new();
+        private static readonly Dictionary<string, double> _lastTriggerTime = new();
+        private static readonly Dictionary<string, double> _lastSwitchTime = new();
 
         public static void Update()
         {
@@ -152,5 +21,130 @@ namespace op.io
             _previousMouseState = Mouse.GetState();
         }
 
+        public static bool IsInputActive(string settingKey)
+        {
+            if (InputManager._ControlKey.TryGetValue(settingKey, out var control))
+            {
+                string inputKey = control.inputKey;
+                InputType inputType = control.inputType;
+
+                return inputType switch
+                {
+                    InputType.Hold => IsHeld(inputKey),
+                    InputType.Trigger => IsTriggered(inputKey),
+                    InputType.Switch => IsSwitch(inputKey),
+                    _ => false
+                };
+            }
+
+            return false;
+        }
+
+        public static bool IsHeld(string inputKey)
+        {
+            var (_, parsedInput) = ParseInputKey(inputKey);
+            return IsPressed(parsedInput);
+        }
+
+        public static bool IsTriggered(string inputKey)
+        {
+            var (keyType, parsedInput) = ParseInputKey(inputKey);
+
+            if (!_lastTriggerTime.ContainsKey(inputKey))
+                _lastTriggerTime[inputKey] = 0;
+
+            bool isCooldownPassed = (Core.gameTime - _lastTriggerTime[inputKey]) >= Player.TriggerCooldown;
+
+            bool isPressedNow = IsPressed(parsedInput);
+            bool wasPressedBefore = WasPressed(parsedInput);
+
+            if (isPressedNow && !wasPressedBefore && isCooldownPassed)
+            {
+                _lastTriggerTime[inputKey] = Core.gameTime;
+                DebugLogger.PrintPlayer($"[TRIGGER] {inputKey} triggered.");
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsSwitch(string inputKey)
+        {
+            var (keyType, parsedInput) = ParseInputKey(inputKey);
+
+            if (!_switchStates.ContainsKey(inputKey))
+                _switchStates[inputKey] = false;
+
+            if (!_lastSwitchTime.ContainsKey(inputKey))
+                _lastSwitchTime[inputKey] = 0;
+
+            bool isCooldownPassed = (Core.gameTime - _lastSwitchTime[inputKey]) >= Player.SwitchCooldown;
+
+            bool isPressedNow = IsPressed(parsedInput);
+            bool wasPressedBefore = WasPressed(parsedInput);
+
+            if (isPressedNow && !wasPressedBefore && isCooldownPassed)
+            {
+                _switchStates[inputKey] = !_switchStates[inputKey];
+                _lastSwitchTime[inputKey] = Core.gameTime;
+                DebugLogger.PrintPlayer($"[SWITCH] {inputKey} switched to: {_switchStates[inputKey]}");
+            }
+
+            return _switchStates[inputKey];
+        }
+
+        // Unified press detection function (reused)
+        private static bool IsPressed(object parsedInput) => parsedInput switch
+        {
+            Keys key => Keyboard.GetState().IsKeyDown(key),
+            MouseButton button => IsMouseButtonDown(button),
+            _ => false
+        };
+
+        // Unified previous press detection function (reused)
+        private static bool WasPressed(object parsedInput) => parsedInput switch
+        {
+            Keys key => _previousKeyboardState.IsKeyDown(key),
+            MouseButton button => IsMouseButtonPreviouslyDown(button),
+            _ => false
+        };
+
+
+        private static (InputKeyType, object) ParseInputKey(string inputKey)
+        {
+            if (Enum.TryParse(inputKey, true, out Keys parsedKey))
+                return (InputKeyType.Keyboard, parsedKey);
+
+            return inputKey switch
+            {
+                "LeftClick" => (InputKeyType.Mouse, MouseButton.LeftClick),
+                "RightClick" => (InputKeyType.Mouse, MouseButton.RightClick),
+                _ => (InputKeyType.None, null)
+            };
+        }
+
+        private static bool IsMouseButtonDown(MouseButton button)
+        {
+            var currentState = Mouse.GetState();
+
+            return button switch
+            {
+                MouseButton.LeftClick => currentState.LeftButton == ButtonState.Pressed,
+                MouseButton.RightClick => currentState.RightButton == ButtonState.Pressed,
+                _ => false
+            };
+        }
+
+        private static bool IsMouseButtonPreviouslyDown(MouseButton button)
+        {
+            var previousState = _previousMouseState;
+
+            return button switch
+            {
+                MouseButton.LeftClick => previousState.LeftButton == ButtonState.Pressed,
+                MouseButton.RightClick => previousState.RightButton == ButtonState.Pressed,
+                _ => false
+            };
+        }
     }
 }

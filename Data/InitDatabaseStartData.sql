@@ -17,7 +17,7 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '25
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_A', '255');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1400');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1400');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderlessWindowed');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderedWindowed');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false'); -- G-Sync will override this
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('FixedTimeStep', 'false');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '240');
@@ -29,11 +29,11 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveLeft', 'A'
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveRight', 'D', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveTowardsCursor', 'LeftClick', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'LeftShift', 'Trigger');
+INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'LeftShift', 'Hold');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('DebugMode', 'B', 'Switch'); -- Start is set to DebugEnabled value and updates that value rather than having its own
+INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('DebugMode', 'B', 'Switch'); -- Autoset to DebugEnabled on start
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0);
 
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SprintSpeedMultiplier', '1.5');

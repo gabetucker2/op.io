@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 
@@ -33,7 +34,7 @@ namespace op.io
         }
 
         // Method to read a setting from the DebugSettings table
-        public static T GetSetting<T>(string tableName, string columnName, string settingKey, T defaultValue)
+        public static T GetSetting<T>(string tableName, string columnName, string settingKey)
         {
             try
             {
@@ -55,8 +56,8 @@ namespace op.io
 
                         if (result == DBNull.Value || result == null)
                         {
-                            DebugLogger.PrintWarning($"No result found for {columnName} in {tableName} where Setting = '{settingKey}'. Returning default value: {defaultValue}");
-                            return defaultValue;
+                            DebugLogger.PrintWarning($"No result found for {columnName} in {tableName} where Setting = '{settingKey}'.");
+                            throw new KeyNotFoundException($"Setting '{settingKey}' not found in {tableName}.");
                         }
 
                         return (T)Convert.ChangeType(result, typeof(T));
@@ -66,7 +67,7 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to retrieve setting '{settingKey}' from {tableName}: {ex.Message}");
-                return defaultValue;
+                throw; // Rethrow the exception to indicate a failure to retrieve the setting
             }
         }
 
@@ -153,7 +154,7 @@ namespace op.io
         public static int LoadDebugSettings()
         {
             DebugLogger.PrintDatabase("Attempting to load DebugSettings...");
-            int result = GetSetting<int>("DebugSettings", "Enabled", "General", 0);
+            int result = GetSetting<int>("DebugSettings", "Enabled", "General");
             DebugLogger.PrintDatabase($"Loaded DebugSettings value: {result}");
             return result;
         }
