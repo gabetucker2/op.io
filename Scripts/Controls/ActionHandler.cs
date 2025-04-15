@@ -7,50 +7,73 @@ namespace op.io
     {
         public static void CheckActions()
         {
+            // Exit Action
             if (InputManager.IsInputActive("Exit"))
-                Core.InstanceCore.Exit();
+            {
+                DebugLogger.PrintUI("Exit action triggered.");
+                Core.Instance.Exit();
+            }
 
-            // Debug Mode Handling (Toggle based on current state)
+            // Debug Mode Handling
             bool currentDebugModeState = ControlStateManager.GetSwitchState("DebugMode");
-
             if (currentDebugModeState != DebugModeHandler.DEBUGMODE)
             {
-                // Toggle DEBUGMODE to the opposite state
+                DebugLogger.PrintUI($"Debug mode state change detected: {currentDebugModeState} -> {!DebugModeHandler.DEBUGMODE}");
                 DebugModeHandler.SetDebugMode(!DebugModeHandler.DEBUGMODE);
-
-                // Update the switch state in ControlStateManager to match the toggled value
                 ControlStateManager.SetSwitchState("DebugMode", DebugModeHandler.DEBUGMODE);
-
                 DebugLogger.PrintUI($"Debug mode toggled to {DebugModeHandler.DEBUGMODE}");
+            }
+            else
+            {
+                DebugLogger.PrintUI("Debug mode state unchanged.");
             }
 
             // Docking Mode Handling
-            if (ControlStateManager.GetSwitchState("DockingMode") != BlockManager.DockingModeEnabled)
+            bool dockingModeState = ControlStateManager.GetSwitchState("DockingMode");
+            if (dockingModeState != BlockManager.DockingModeEnabled)
             {
-                BlockManager.DockingModeEnabled = ControlStateManager.GetSwitchState("DockingMode");
+                DebugLogger.PrintUI($"Docking mode state change detected: {BlockManager.DockingModeEnabled} -> {dockingModeState}");
+                BlockManager.DockingModeEnabled = dockingModeState;
                 DebugLogger.PrintUI($"Docking mode updated to {BlockManager.DockingModeEnabled}");
+            }
+            else
+            {
+                DebugLogger.PrintUI("Docking mode state unchanged.");
             }
 
             // Crouch Handling
-            if (ControlStateManager.GetSwitchState("Crouch") != Player.InstancePlayer.IsCrouching)
+            if (Core.Instance.Player is Agent player)
             {
-                Player.InstancePlayer.IsCrouching = ControlStateManager.GetSwitchState("Crouch");
-                DebugLogger.PrintUI($"Crouch state updated to {Player.InstancePlayer.IsCrouching}");
+                bool crouchState = ControlStateManager.GetSwitchState("Crouch");
+                if (crouchState != player.IsCrouching)
+                {
+                    DebugLogger.PrintUI($"Crouch state change detected: {player.IsCrouching} -> {crouchState}");
+                    player.IsCrouching = crouchState;
+                    DebugLogger.PrintUI($"Crouch state updated to {player.IsCrouching}");
+                }
+                else
+                {
+                    DebugLogger.PrintUI("Crouch state unchanged.");
+                }
+            }
+            else
+            {
+                DebugLogger.PrintError("Core.Instance.Player is null. Cannot update crouch state.");
             }
 
             // ReturnCursorToPlayer Handling
             if (InputManager.IsInputActive("ReturnCursorToPlayer"))
             {
-                // Get player's position
-                var playerPosition = Player.InstancePlayer.Position; // Assuming Position is a Vector2 or Point
-
-                // Move cursor to player's position
-                Cursor.Position = BaseFunctions.Vector2ToPoint(BaseFunctions.GetGOGlobalScreenPosition(Player.InstancePlayer.InstanceGO));
-
-                DebugLogger.PrintUI("Cursor returned to player position.");
+                Vector2 playerPosition = BaseFunctions.GetGOGlobalScreenPosition(Core.Instance.Player);
+                Cursor.Position = BaseFunctions.Vector2ToPoint(playerPosition);
+                DebugLogger.PrintUI($"Cursor returned to player position: {playerPosition}");
+            }
+            else
+            {
+                DebugLogger.PrintUI("ReturnCursorToPlayer input not active.");
             }
         }
-        
+
         public static void Move(GameObject gameObject, Vector2 direction, float speed)
         {
             if (gameObject == null)
@@ -67,7 +90,7 @@ namespace op.io
 
             if (direction == Vector2.Zero)
             {
-                //DebugLogger.Print("Move skipped: Direction vector is zero.");
+                DebugLogger.PrintWarning("Move aborted: Direction is zero.");
                 return;
             }
 
@@ -77,16 +100,18 @@ namespace op.io
                 return;
             }
 
-            if (Core.deltaTime <= 0)
+            if (Core.DELTATIME <= 0)
             {
-                DebugLogger.PrintWarning($"Move skipped: DeltaTime must be positive (received {Core.deltaTime})");
+                DebugLogger.PrintWarning($"Move skipped: DeltaTime must be positive (received {Core.DELTATIME})");
                 return;
             }
 
-            Vector2 force = direction * speed;
-            gameObject.ApplyForce(force);
+            // Normalize direction and apply speed for frame rate independence
+            Vector2 normalizedDirection = Vector2.Normalize(direction);
+            Vector2 velocity = normalizedDirection * speed * Core.DELTATIME;  // Using deltaTime for consistent speed
 
-            //DebugLogger.Print($"Applied force {force} with deltaTime {deltaTime} to {gameObject.Shape?.Type ?? "UnknownObject"} at {gameObject.Position}");
+            gameObject.Position += velocity;  // Update position based on velocity
+            //DebugLogger.PrintUI($"Moved GameObject (ID={gameObject.ID}) by {velocity}, new position: {gameObject.Position}");
         }
     }
 }

@@ -8,6 +8,8 @@ namespace op.io
 {
     public static class DebugLogger
     {
+        public static bool IsLoggingInternally { get; set; }
+
         // This list holds all queued logs until the console is initialized
         private static readonly List<Tuple<string, ConsoleColor, int>> queuedLogs = new();
 
@@ -32,10 +34,10 @@ namespace op.io
             [CallerMemberName] string callerMethod = "",
             [CallerLineNumber] int callerLine = 0)
         {
-            if (DebugManager.IsLoggingInternally)
+            if (IsLoggingInternally)
                 return;
 
-            DebugManager.IsLoggingInternally = true;
+            IsLoggingInternally = true;
 
             StackTrace stackTrace = new(stackTraceNBack, true); // +1 to skip this Log() method itself
             StackFrame frame = stackTrace.GetFrame(0);
@@ -58,6 +60,7 @@ namespace op.io
                 }
                 else
                 {
+                    PrintError("Failed to retrieve source trace information.");
                     sourceMessage = "UnknownSource";
                 }
             }
@@ -76,12 +79,12 @@ namespace op.io
             if (!ConsoleManager.ConsoleInitialized)
             {
                 QueueLog(completeMessage, color, suppressionBehavior);
-                DebugManager.IsLoggingInternally = false;
+                IsLoggingInternally = false;
                 return;
             }
 
             PrintToConsole(completeMessage, color, suppressionBehavior);
-            DebugManager.IsLoggingInternally = false;
+            IsLoggingInternally = false;
         }
 
         public static void PrintToConsole(string formattedMessage, ConsoleColor color, int suppressionBehavior)
@@ -117,13 +120,15 @@ namespace op.io
         // Public-facing logging methods for different log levels
         private const int defaultNBack = 3;
         public static void Print(string message, int stackTraceNBack = defaultNBack) => Log(message, "GENERAL", ConsoleColor.White, stackTraceNBack);
+        public static void PrintSystem(string message, int stackTraceNBack = defaultNBack) => Log(message, "SYSTEM", ConsoleColor.White, stackTraceNBack);
         public static void PrintTemporary(string message, int stackTraceNBack = defaultNBack) => Log(message, "TEMPORARY", ConsoleColor.Green, stackTraceNBack);
         public static void PrintError(string message, int stackTraceNBack = defaultNBack) => Log(message, "ERROR", ConsoleColor.Red, stackTraceNBack);
         public static void PrintWarning(string message, int stackTraceNBack = defaultNBack) => Log(message, "WARNING", ConsoleColor.DarkYellow, stackTraceNBack);
         public static void PrintDatabase(string message, int stackTraceNBack = defaultNBack) => Log(message, "DATABASE", ConsoleColor.Blue, stackTraceNBack);
         public static void PrintDebug(string message, int stackTraceNBack = defaultNBack) => Log(message, "DEBUG", ConsoleColor.DarkGray, stackTraceNBack);
         public static void PrintUI(string message, int stackTraceNBack = defaultNBack) => Log(message, "UI", ConsoleColor.DarkGray, stackTraceNBack);
-        public static void PrintObject(string message, int stackTraceNBack = defaultNBack) => Log(message, "OBJECT", ConsoleColor.DarkGreen, stackTraceNBack);
+        public static void PrintGO(string message, int stackTraceNBack = defaultNBack) => Log(message, "GAMEOBJECT", ConsoleColor.DarkGreen, stackTraceNBack);
         public static void PrintPlayer(string message, int stackTraceNBack = defaultNBack) => Log(message, "PLAYER", ConsoleColor.Cyan, stackTraceNBack);
+        public static void PrintPhysics(string message, int stackTraceNBack = defaultNBack) => Log(message, "PHYSICS", ConsoleColor.Blue, stackTraceNBack);
     }
 }

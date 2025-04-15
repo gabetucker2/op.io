@@ -1,130 +1,45 @@
-﻿using System;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework;
 
 namespace op.io
 {
+    /// <summary>
+    /// Centralized physics system coordinator.
+    /// Delegates collision resolution and force logic.
+    /// </summary>
     public class PhysicsManager
     {
-        public void ResolveCollisions(List<GameObject> gameObjects, bool destroyOnCollision)
+        private static bool _initialized = false;
+
+        /// <summary>
+        /// Initializes core physics modules. Call once from GameInitializer.
+        /// </summary>
+        public static void Initialize()
+        {
+            if (_initialized)
+            {
+                DebugLogger.PrintWarning("PhysicsManager already initialized. Skipping.");
+                return;
+            }
+
+            DebugLogger.PrintPhysics("Initializing PhysicsManager...");
+            // No explicit submodule init required yet.
+            DebugLogger.PrintPhysics("PhysicsManager initialization complete.");
+            _initialized = true;
+        }
+
+        /// <summary>
+        /// Applies full physics simulation for the current frame.
+        /// </summary>
+        public static void Update(List<GameObject> gameObjects)
         {
             if (gameObjects == null)
             {
-                DebugLogger.PrintError("PhysicsManager.ResolveCollisions failed: GameObjects list is null.");
+                DebugLogger.PrintError("PhysicsManager.Update failed: GameObjects list is null.");
                 return;
             }
 
-            for (int i = 0; i < gameObjects.Count; i++)
-            {
-                var objA = gameObjects[i];
-
-                for (int j = i + 1; j < gameObjects.Count; j++)
-                {
-                    var objB = gameObjects[j];
-
-                    if (!objA.IsCollidable || !objB.IsCollidable)
-                        continue;
-
-                    if (CollisionManager.CheckCollision(objA, objB))
-                    {
-                        if (!(objA.StaticPhysics && objB.StaticPhysics))
-                            HandlePhysicsCollision(objA, objB);
-
-                        if (destroyOnCollision)
-                        {
-                            if (objA.IsDestructible)
-                            {
-                                gameObjects.RemoveAt(i);
-                                i--;
-                                break;
-                            }
-                            if (objB.IsDestructible)
-                            {
-                                gameObjects.RemoveAt(j);
-                                j--;
-                            }
-                        }
-                    }
-                }
-            }
+            CollisionResolver.ResolveCollisions(gameObjects);
+            // Future: ForcesManager, Gravity, Friction, etc.
         }
-
-        private void HandlePhysicsCollision(GameObject objA, GameObject objB)
-        {
-            // First, ensure there's a collision
-            if (!CollisionManager.CheckCollision(objA, objB))
-                return;
-
-            // Get collision normal vector
-            Vector2 collisionNormal = GetCollisionNormal(objA, objB);
-
-            if (collisionNormal == Vector2.Zero)
-                return;
-
-            // Define whether each object is static
-            bool objAStatic = objA.StaticPhysics;
-            bool objBStatic = objB.StaticPhysics;
-
-            float massA = objAStatic ? float.PositiveInfinity : objA.Mass;
-            float massB = objBStatic ? float.PositiveInfinity : objB.Mass;
-
-            // Resolve based on static/dynamic status
-            if (!objAStatic && !objBStatic)
-            {
-                float totalMass = massA + massB;
-                objA.Position -= collisionNormal * (massB / totalMass);
-                objB.Position += collisionNormal * (massA / totalMass);
-            }
-            else if (objAStatic && !objBStatic)
-            {
-                objB.Position += collisionNormal;
-            }
-            else if (!objAStatic && objBStatic)
-            {
-                objA.Position -= collisionNormal;
-            }
-            // both static objects don't move
-        }
-
-        private Vector2 GetCollisionNormal(GameObject objA, GameObject objB)
-        {
-            // Rectangle vs Circle special handling
-            if (objA.Shape.Type == "Rectangle" && objB.Shape.Type == "Circle")
-            {
-                return RectangleCircleCollisionNormal(objA, objB);
-            }
-            else if (objA.Shape.Type == "Circle" && objB.Shape.Type == "Rectangle")
-            {
-                // Invert direction for Circle vs Rectangle
-                return -RectangleCircleCollisionNormal(objB, objA);
-            }
-            else
-            {
-                // Default fallback: simple center-to-center (less accurate)
-                Vector2 direction = objB.Position - objA.Position;
-                if (direction != Vector2.Zero)
-                    direction.Normalize();
-                return direction;
-            }
-        }
-
-        private Vector2 RectangleCircleCollisionNormal(GameObject rect, GameObject circle)
-        {
-            Vector2 rectHalfSize = new Vector2(rect.Shape.Width / 2f, rect.Shape.Height / 2f);
-            Vector2 rectCenter = rect.Position;
-            Vector2 circleCenter = circle.Position;
-
-            Vector2 delta = circleCenter - rectCenter;
-            Vector2 clamped = Vector2.Clamp(delta, -rectHalfSize, rectHalfSize);
-            Vector2 closest = rectCenter + clamped;
-
-            Vector2 normal = circleCenter - closest;
-
-            if (normal != Vector2.Zero)
-                normal.Normalize();
-
-            return normal;
-        }
-
     }
 }

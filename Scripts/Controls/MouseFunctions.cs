@@ -18,7 +18,6 @@ namespace op.io
             Vector2 direction = mousePosition - playerPosition;
 
             // Automatically return 0 if player is within 1 unit of the mouse position
-            float distance = direction.Length();
             if (direction == Vector2.Zero)
             {
                 //DebugLogger.PrintWarning("Player is already at mouse position. Defaulting angle to 0.");

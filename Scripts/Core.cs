@@ -7,9 +7,21 @@ namespace op.io
 {
     public class Core : Game
     {
-        public static bool ForceDebugMode { get; set; } = false;
+        // Manual settings
+        public static bool ForceDebugMode { get; set; } = true;
 
-        public static Core InstanceCore { get; set; }
+        // Auto settings
+        // Make it reflect DebugModeHandler.DEBUGMODE no matter what; this only exists for ease of reference
+        public static bool DEBUGMODE
+        {
+            get => DebugModeHandler.DEBUGMODE;
+            set
+            {
+                DebugModeHandler.DEBUGMODE = value;
+            }
+        }
+
+        public static Core Instance { get; set; }
 
         public GraphicsDeviceManager Graphics { get; set; }
         public SpriteBatch SpriteBatch { get; set; }
@@ -26,12 +38,52 @@ namespace op.io
         public List<GameObject> StaticObjects { get; set; } = [];
         public PhysicsManager PhysicsManager { get; set; }
 
-        public static float gameTime { get; set; } = 0f;
-        public static float deltaTime { get; set; } = 0.00001f;
+        private Agent _player { get; set; }
+        public Agent Player
+        {
+            get
+            {
+                if (_player == null)
+                {
+                    DebugLogger.PrintError("Player is null. Ensure that the player is initialized before accessing it.");
+                    return null;
+                }
+                else
+                {
+                    return _player;
+                }
+            }
+            set
+            {
+                if (value == null)
+                {
+                    DebugLogger.PrintWarning("Setting Player to null.");
+                }
+                _player = value;
+            }
+        }
+
+        public static float GAMETIME { get; set; } = 0f;
+
+        private static float _deltaTime = 0f;
+        public static float DELTATIME {
+            get { return _deltaTime;  }
+            set
+            {
+                if (value < 0.0001f)
+                {
+                    _deltaTime = 0.0001f;
+                }
+                else
+                {
+                    _deltaTime = value;
+                }
+            }
+        }
 
         public Core()
         {
-            InstanceCore = this;
+            Instance = this;
             Graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
         }

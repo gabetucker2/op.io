@@ -1,18 +1,39 @@
 using System;
 using System.Data.SQLite;
 using System.Collections.Generic;
+using System.IO;
 
 namespace op.io
 {
     public static class DatabaseManager
     {
-        private static readonly string ConnectionString = DatabaseConfig.ConnectionString;
+        private static readonly string DatabasePath = DatabaseConfig.DatabaseFilePath;
 
         public static SQLiteConnection OpenConnection()
         {
-            DebugLogger.PrintDatabase("Opening database connection...");
+            // Check if the database path is valid
+            if (string.IsNullOrEmpty(DatabasePath))
+            {
+                DebugLogger.PrintError("Database path is null or empty.");
+                return null;
+            }
 
-            var connection = new SQLiteConnection(ConnectionString);
+            // Log the database path and check if the file exists
+            DebugLogger.PrintDatabase($"Attempting to open database connection... Using Database Path: {DatabasePath}");
+
+            if (!File.Exists(DatabasePath))
+            {
+                DebugLogger.PrintError($"Database file does not exist at path: {DatabasePath}");
+                return null;
+            }
+
+            // Construct the connection string using the validated path
+            var connectionString = $"Data Source={DatabasePath};Version=3;";
+
+            // Log the connection string
+            DebugLogger.PrintDatabase($"Connection String being used: {connectionString}");
+
+            var connection = new SQLiteConnection(connectionString);
 
             try
             {
@@ -63,6 +84,8 @@ namespace op.io
                 try
                 {
                     string query = $"SELECT {column} FROM {table} WHERE {whereColumn} = @whereValue LIMIT 1;";
+                    DebugLogger.PrintDatabase($"Executing query: {query} with whereValue: {whereValue}");
+
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@whereValue", whereValue);
@@ -75,12 +98,18 @@ namespace op.io
                         }
                         else
                         {
-                            DebugLogger.PrintWarning($"No result found for query: {query}");
+                            DebugLogger.PrintWarning($"No result found for query: {query}. Check if the data exists in the database.");
                         }
                     }
                 }
+                catch (SQLiteException sqlEx)
+                {
+                    // Log any SQL specific errors
+                    DebugLogger.PrintError($"SQLite error while executing query on table '{table}': {sqlEx.Message}");
+                }
                 catch (Exception ex)
                 {
+                    // Log any other general exceptions
                     DebugLogger.PrintError($"Failed to retrieve setting from table '{table}': {ex.Message}");
                 }
                 finally
@@ -101,6 +130,8 @@ namespace op.io
                 try
                 {
                     string query = $"UPDATE {table} SET {column} = @newValue WHERE {whereColumn} = @whereValue;";
+                    DebugLogger.PrintDatabase($"Executing query: {query} with parameters: @newValue = {newValue}, @whereValue = {whereValue}");
+
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@newValue", newValue);
@@ -119,8 +150,14 @@ namespace op.io
                         }
                     }
                 }
+                catch (SQLiteException sqlEx)
+                {
+                    // Log any SQL specific errors
+                    DebugLogger.PrintError($"SQLite error while updating table '{table}': {sqlEx.Message}");
+                }
                 catch (Exception ex)
                 {
+                    // Log any other general exceptions
                     DebugLogger.PrintError($"Failed to update setting in table '{table}': {ex.Message}");
                 }
                 finally

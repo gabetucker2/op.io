@@ -8,7 +8,7 @@ namespace op.io
         private static Dictionary<string, bool> _switchStates = new Dictionary<string, bool>();
 
         /// <summary>
-        /// Loads switch states from the database.
+        /// Loads switch states from the database and caches them.
         /// </summary>
         public static void LoadSwitchStates()
         {
@@ -16,6 +16,7 @@ namespace op.io
 
             try
             {
+                // Fetch all switch states from the database
                 var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
 
                 if (result.Count == 0)
@@ -24,6 +25,7 @@ namespace op.io
                     return;
                 }
 
+                // Process each row and store it in memory
                 foreach (var row in result)
                 {
                     if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
@@ -32,7 +34,8 @@ namespace op.io
                         int switchState = Convert.ToInt32(row["SwitchStartState"]);
                         bool isOn = switchState == 1;
 
-                        _switchStates[settingKey] = isOn; // Store state in memory
+                        // Cache the switch state in memory
+                        _switchStates[settingKey] = isOn;
                         DebugLogger.PrintDatabase($"Loaded switch state: {settingKey} = {(isOn ? "ON" : "OFF")}");
                     }
                     else
@@ -76,7 +79,7 @@ namespace op.io
             if (!_switchStates.ContainsKey(settingKey))
             {
                 DebugLogger.PrintWarning($"Switch state for '{settingKey}' not found. Adding with default state: OFF.");
-                _switchStates[settingKey] = false;
+                _switchStates[settingKey] = false; // Default state
             }
 
             _switchStates[settingKey] = !_switchStates[settingKey]; // Toggle state
@@ -90,7 +93,7 @@ namespace op.io
         {
             try
             {
-                int switchState = isOn ? 1 : 0;
+                int switchState = isOn ? 1 : 0; // Convert boolean to integer for DB
                 string query = @"
                     UPDATE ControlKey 
                     SET SwitchStartState = @switchState 
@@ -117,5 +120,21 @@ namespace op.io
             return _switchStates.ContainsKey(settingKey);
         }
 
+        /// <summary>
+        /// Updates the switch state based on user input or game logic.
+        /// </summary>
+        public static void UpdateSwitchState(string settingKey, bool newState)
+        {
+            if (_switchStates.ContainsKey(settingKey))
+            {
+                _switchStates[settingKey] = newState;
+                DebugLogger.PrintDatabase($"Updated switch state: {settingKey} = {(newState ? "ON" : "OFF")}");
+            }
+            else
+            {
+                DebugLogger.PrintWarning($"Switch state for '{settingKey}' not found. Adding with state: {newState}");
+                _switchStates[settingKey] = newState;
+            }
+        }
     }
 }

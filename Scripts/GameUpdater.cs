@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
 
 namespace op.io
 {
@@ -7,27 +6,35 @@ namespace op.io
     {
         public static void Update(GameTime gameTime)
         {
-            Core.gameTime = (float)gameTime.TotalGameTime.TotalSeconds;
-            Core.deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Core.GAMETIME = (float)gameTime.TotalGameTime.TotalSeconds;
+            Core.DELTATIME = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
-            // Process Actions
+            // Process general actions (toggles, switches, etc.)
             ActionHandler.CheckActions();
 
+            // Handle player transform
+            Vector2 direction = InputManager.GetMoveVector();
+            if (direction != Vector2.Zero)
+            {
+                ActionHandler.Move(Core.Instance.Player, direction, Core.Instance.Player.Speed);
+            }
+            Core.Instance.Player.Rotation = MouseFunctions.GetAngleToMouse(Core.Instance.Player.Position);
+
             // Update all GameObjects
-            foreach (var gameObject in Core.InstanceCore.GameObjects)
+            foreach (var gameObject in Core.Instance.GameObjects)
             {
                 gameObject.Update();
             }
 
-            if (Core.InstanceCore.GameObjects.Count == 0)
+            if (Core.Instance.GameObjects.Count == 0)
             {
                 DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
 
-            // Resolve collisions
-            Core.InstanceCore.PhysicsManager.ResolveCollisions(Core.InstanceCore.GameObjects, false);
+            // Apply physics step
+            PhysicsManager.Update(Core.Instance.GameObjects);
         }
     }
 }

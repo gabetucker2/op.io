@@ -5,6 +5,7 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>false</UseWPF>
+    <NoWarn>IDE0130</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

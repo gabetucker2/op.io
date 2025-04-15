@@ -6,7 +6,7 @@ namespace op.io
 {
     public static class SQLScriptExecutor
     {
-        public static bool RunSQLScript(SQLiteConnection connection, string scriptPath)
+        public static bool RunSQLScript(SQLiteConnection connection, string scriptPath, SQLiteTransaction transaction = null)
         {
             if (!File.Exists(scriptPath))
             {
@@ -23,18 +23,36 @@ namespace op.io
 
             try
             {
-                using (var transaction = connection.BeginTransaction())
-                using (var command = new SQLiteCommand(script, connection, transaction))
+                if (transaction == null)
                 {
+                    // If no transaction is provided, create one for this script execution
+                    using var localTransaction = connection.BeginTransaction();
+                    using var command = new SQLiteCommand(script, connection, localTransaction);
                     command.ExecuteNonQuery();
-                    transaction.Commit();
+                    localTransaction.Commit();
                 }
+                else
+                {
+                    // Execute within the provided transaction
+                    using (var command = new SQLiteCommand(script, connection, transaction))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+
                 DebugLogger.PrintDatabase($"Executed successfully: {Path.GetFileName(scriptPath)}");
                 return true;
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed executing {Path.GetFileName(scriptPath)}: {ex.Message}");
+
+                if (transaction != null)
+                {
+                    DebugLogger.PrintWarning($"Rolling back transaction due to error in {Path.GetFileName(scriptPath)}.");
+                    transaction.Rollback();
+                }
+
                 return false;
             }
         }

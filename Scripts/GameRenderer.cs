@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace op.io
@@ -7,35 +8,41 @@ namespace op.io
     {
         public static void LoadGraphics()
         {
-            if (Core.InstanceCore == null)
+            if (Core.Instance == null)
             {
-                DebugLogger.PrintError("LoadGraphics failed: Core.InstanceCore is null.");
+                DebugLogger.PrintError("LoadGraphics failed: Core.Instance is null.");
                 return;
             }
 
-            if (Core.InstanceCore.GraphicsDevice == null)
+            if (Core.Instance.GraphicsDevice == null)
             {
                 DebugLogger.PrintError("LoadGraphics failed: GraphicsDevice is null.");
                 return;
             }
 
-            if (Core.InstanceCore.SpriteBatch == null)
+            if (Core.Instance.SpriteBatch == null)
             {
-                Core.InstanceCore.SpriteBatch = new SpriteBatch(Core.InstanceCore.GraphicsDevice);
+                Core.Instance.SpriteBatch = new SpriteBatch(Core.Instance.GraphicsDevice);
                 DebugLogger.Print("SpriteBatch initialized successfully.");
             }
 
-            DebugVisualizer.Initialize(Core.InstanceCore.GraphicsDevice);
+            DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
 
-            if (Core.InstanceCore.GameObjects == null || Core.InstanceCore.GameObjects.Count == 0)
+            if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
             {
                 DebugLogger.PrintWarning("No GameObjects to load content for.");
                 return;
             }
 
-            foreach (var obj in Core.InstanceCore.GameObjects)
+            HashSet<Shape> loadedShapes = [];
+
+            foreach (GameObject obj in Core.Instance.GameObjects)
             {
-                obj.LoadContent(Core.InstanceCore.GraphicsDevice);
+                if (obj.Shape != null && !loadedShapes.Contains(obj.Shape))
+                {
+                    obj.Shape.LoadContent(Core.Instance.GraphicsDevice);
+                    loadedShapes.Add(obj.Shape);
+                }
             }
 
             DebugLogger.Print("GameRenderer: Graphics and GameObjects loaded successfully.");
@@ -43,24 +50,24 @@ namespace op.io
 
         public static void Draw()
         {
-            Core.InstanceCore.GraphicsDevice.Clear(Core.InstanceCore.BackgroundColor);
-            Core.InstanceCore.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-            foreach (var gameObject in Core.InstanceCore.GameObjects)
+            foreach (GameObject gameObject in Core.Instance.GameObjects)
             {
-                gameObject.Draw(Core.InstanceCore.SpriteBatch);
+                ShapeManager.Instance.DrawShapes(Core.Instance.SpriteBatch);
             }
 
             // Render debug direction line last to ensure visibility
             if (DebugModeHandler.IsDebugEnabled())
             {
-                foreach (var gameObject in Core.InstanceCore.GameObjects)
+                foreach (GameObject gameObject in Core.Instance.GameObjects)
                 {
-                    DebugVisualizer.DrawDebugCircle(Core.InstanceCore.SpriteBatch, gameObject);
+                    DebugRenderer.DrawDebugCircle(Core.Instance.SpriteBatch, gameObject);
                 }
             }
 
-            Core.InstanceCore.SpriteBatch.End();
+            Core.Instance.SpriteBatch.End();
         }
     }
 }

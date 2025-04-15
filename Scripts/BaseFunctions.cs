@@ -7,6 +7,8 @@ using Microsoft.Xna.Framework.Input;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using SDL2;
+using System.Data.SQLite;
+using System.Linq;
 
 namespace op.io
 {
@@ -30,12 +32,67 @@ namespace op.io
                 return (T)Convert.ChangeType(result[0][column], typeof(T));
             }
 
-            if (!suppressLog)
-                DebugLogger.PrintError($"No data collected in {column} from {tableName}");
+            DebugLogger.PrintError($"No data collected in {column} from {tableName}");
 
             return default;
         }
 
+        /// <summary>
+        /// Executes a SQL query and returns a single value of the specified type.
+        /// </summary>
+        public static T GetSingleValue<T>(string query, params (string, object)[] parameters)
+        {
+            // Open a connection to the database
+            using (var connection = DatabaseManager.OpenConnection())
+            {
+                if (connection == null)
+                {
+                    DebugLogger.PrintError("Database connection failed. Returning default value.");
+                    return default; // Return default if the connection could not be opened
+                }
+
+                try
+                {
+                    // Construct the SQLite command with the provided query and parameters
+                    using (var command = new SQLiteCommand(query, connection))
+                    {
+                        // Add parameters to the command
+                        foreach (var (key, value) in parameters)
+                        {
+                            command.Parameters.AddWithValue(key, value);
+                        }
+
+                        // Execute the query and get the result
+                        object result = command.ExecuteScalar();
+
+                        // Check if the result is valid and return it
+                        if (result != null && result != DBNull.Value)
+                        {
+                            DebugLogger.PrintDatabase($"Successfully retrieved value: {result} for query: {query}");
+                            return (T)Convert.ChangeType(result, typeof(T));
+                        }
+                        else
+                        {
+                            // If result is null or DBNull, log a warning and return the default value
+                            DebugLogger.PrintWarning($"No result found for query: {query} with parameters: {string.Join(", ", parameters.Select(p => $"{p.Item1}: {p.Item2}"))}");
+                            return default; // Return default value if no result is found
+                        }
+                    }
+                }
+                catch (SQLiteException sqlEx)
+                {
+                    // Log any specific SQLite errors
+                    DebugLogger.PrintError($"SQLite error while executing query: {query} - {sqlEx.Message}");
+                }
+                catch (Exception ex)
+                {
+                    // Catch any other exceptions
+                    DebugLogger.PrintError($"Failed to execute query: {query} - {ex.Message}");
+                }
+            }
+
+            return default; // Return default if an error occurred
+        }
 
         /// <summary>
         /// Retrieves a color value from the database.
@@ -85,7 +142,7 @@ namespace op.io
 
         public static Vector2 GetGOLocalScreenPosition(GameObject gameObject)
         {
-            var player = Player.InstancePlayer;
+            var player = Core.Instance.Player;
 
             if (player == null)
             {
@@ -106,7 +163,7 @@ namespace op.io
 
         public static Vector2 GetGOGlobalScreenPosition(GameObject gameObject)
         {
-            var player = Player.InstancePlayer;
+            var player = Core.Instance.Player;
 
             if (player == null)
             {
@@ -118,7 +175,7 @@ namespace op.io
             Vector2 localScreenPosition = GetGOLocalScreenPosition(gameObject);
             DebugLogger.PrintUI($"Local screen position of player: {localScreenPosition}");
 
-            IntPtr windowHandle = Core.InstanceCore?.Window?.Handle ?? IntPtr.Zero;
+            IntPtr windowHandle = Core.Instance?.Window?.Handle ?? IntPtr.Zero;
 
             if (windowHandle == IntPtr.Zero)
             {

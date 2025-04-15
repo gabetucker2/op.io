@@ -11,10 +11,10 @@ namespace op.io
             [CallerMemberName] string callerMethod = "",
             [CallerLineNumber] int callerLine = 0)
         {
-            if (Core.deltaTime <= 0f && Core.gameTime != 0f)
+            if (Core.DELTATIME <= 0f && Core.GAMETIME != 0f)
             {
                 string sourceTrace = GenerateSourceTrace(callerFilePath, callerMethod, callerLine);
-                DebugLogger.PrintWarning($"DeltaTime is {Core.deltaTime}. This may cause unexpected behavior.", 4);
+                DebugLogger.PrintWarning($"DeltaTime is {Core.DELTATIME}. This may cause unexpected behavior.", 4);
             }
         }
 
