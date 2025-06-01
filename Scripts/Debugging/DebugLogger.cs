@@ -29,6 +29,7 @@ namespace op.io
             string rawMessage,
             string level,
             ConsoleColor color,
+            int depth,
             int stackTraceNBack,
             [CallerFilePath] string callerFilePath = "",
             [CallerMemberName] string callerMethod = "",
@@ -66,7 +67,7 @@ namespace op.io
             }
 
             // Format the log message
-            string formattedMessage = LogFormatter.FormatLogMessage(rawMessage, level, !sourceTraceProvidedExternally, stackTraceNBack);
+            string formattedMessage = LogFormatter.FormatLogMessage(rawMessage, level, !sourceTraceProvidedExternally, stackTraceNBack, depth);
             LogFormatter.IncrementMessageCount(formattedMessage);
 
             int suppressionBehavior = LogFormatter.SuppressMessageBehavior(formattedMessage);
@@ -119,16 +120,17 @@ namespace op.io
 
         // Public-facing logging methods for different log levels
         private const int defaultNBack = 3;
-        public static void Print(string message, int stackTraceNBack = defaultNBack) => Log(message, "GENERAL", ConsoleColor.White, stackTraceNBack);
-        public static void PrintSystem(string message, int stackTraceNBack = defaultNBack) => Log(message, "SYSTEM", ConsoleColor.White, stackTraceNBack);
-        public static void PrintTemporary(string message, int stackTraceNBack = defaultNBack) => Log(message, "TEMPORARY", ConsoleColor.Green, stackTraceNBack);
-        public static void PrintError(string message, int stackTraceNBack = defaultNBack) => Log(message, "ERROR", ConsoleColor.Red, stackTraceNBack);
-        public static void PrintWarning(string message, int stackTraceNBack = defaultNBack) => Log(message, "WARNING", ConsoleColor.DarkYellow, stackTraceNBack);
-        public static void PrintDatabase(string message, int stackTraceNBack = defaultNBack) => Log(message, "DATABASE", ConsoleColor.Blue, stackTraceNBack);
-        public static void PrintDebug(string message, int stackTraceNBack = defaultNBack) => Log(message, "DEBUG", ConsoleColor.DarkGray, stackTraceNBack);
-        public static void PrintUI(string message, int stackTraceNBack = defaultNBack) => Log(message, "UI", ConsoleColor.DarkGray, stackTraceNBack);
-        public static void PrintGO(string message, int stackTraceNBack = defaultNBack) => Log(message, "GAMEOBJECT", ConsoleColor.DarkGreen, stackTraceNBack);
-        public static void PrintPlayer(string message, int stackTraceNBack = defaultNBack) => Log(message, "PLAYER", ConsoleColor.Cyan, stackTraceNBack);
-        public static void PrintPhysics(string message, int stackTraceNBack = defaultNBack) => Log(message, "PHYSICS", ConsoleColor.Blue, stackTraceNBack);
+        private const int defaultDepth = 0;
+        public static void Print(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "GENERAL", ConsoleColor.White, depth, stackTraceNBack);
+        public static void PrintSystem(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "SYSTEM", ConsoleColor.White, depth, stackTraceNBack);
+        public static void PrintTemporary(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "TEMPORARY", ConsoleColor.Green, depth, stackTraceNBack);
+        public static void PrintError(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "ERROR", ConsoleColor.Red, depth, stackTraceNBack);
+        public static void PrintWarning(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "WARNING", ConsoleColor.DarkYellow, depth, stackTraceNBack);
+        public static void PrintDatabase(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "DATABASE", ConsoleColor.Blue, depth, stackTraceNBack);
+        public static void PrintDebug(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "DEBUG", ConsoleColor.DarkGray, depth, stackTraceNBack);
+        public static void PrintUI(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "UI", ConsoleColor.DarkGray, depth, stackTraceNBack);
+        public static void PrintGO(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "GAMEOBJECT", ConsoleColor.DarkGreen, depth, stackTraceNBack);
+        public static void PrintPlayer(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "PLAYER", ConsoleColor.Cyan, depth, stackTraceNBack);
+        public static void PrintPhysics(string message, int depth = defaultDepth, int stackTraceNBack = defaultNBack) => Log(message, "PHYSICS", ConsoleColor.Blue, depth, stackTraceNBack);
     }
 }

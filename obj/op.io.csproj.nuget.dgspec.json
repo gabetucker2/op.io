@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\gabeq\\source\\repos\\op.io\\op.io.csproj": {}
+    "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\op.io.csproj": {}
   },
   "projects": {
-    "C:\\Users\\gabeq\\source\\repos\\op.io\\op.io.csproj": {
+    "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\op.io.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\gabeq\\source\\repos\\op.io\\op.io.csproj",
+        "projectUniqueName": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\op.io.csproj",
         "projectName": "op.io",
-        "projectPath": "C:\\Users\\gabeq\\source\\repos\\op.io\\op.io.csproj",
+        "projectPath": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\op.io.csproj",
         "packagesPath": "C:\\Users\\gabeq\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\gabeq\\source\\repos\\op.io\\obj\\",
+        "outputPath": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

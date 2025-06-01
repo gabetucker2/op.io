@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "7fJ7Ha0eTsI=",
+  "dgSpecHash": "1uZUYXpAyzU=",
   "success": true,
-  "projectFilePath": "C:\\Users\\gabeq\\source\\repos\\op.io\\op.io.csproj",
+  "projectFilePath": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\op.io.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\gabeq\\.nuget\\packages\\entityframework\\6.4.4\\entityframework.6.4.4.nupkg.sha512",
     "C:\\Users\\gabeq\\.nuget\\packages\\microsoft.csharp\\4.7.0\\microsoft.csharp.4.7.0.nupkg.sha512",

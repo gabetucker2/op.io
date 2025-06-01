@@ -14,7 +14,7 @@ namespace op.io
             maxMessageRepeats = DatabaseConfig.GetSetting<int>("DebugSettings", "MaxRepeats", "General", 5);
         }
 
-        public static string FormatLogMessage(string rawMessage, string level, bool includeTrace, int stackTraceNBack)
+        public static string FormatLogMessage(string rawMessage, string level, bool includeTrace, int stackTraceNBack, int depth)
         {
             // Use StackTrace(3, true) to go back to the original caller of the logging function
             StackTrace stackTrace = new(stackTraceNBack, true);
@@ -47,14 +47,21 @@ namespace op.io
                 }
             }
 
+            // Add depth
+            string workingMessage = $"[{level}] {sanitizedMessage}";
+            for (int i = 0; i < depth; i++)
+            {
+                workingMessage = $"   |{workingMessage}";
+            }
+
             // Return the formatted log message
             if (includeTrace)
             {
-                return $"[{level}] {sanitizedMessage} | {callerLocation}";
+                return $"{workingMessage} | {callerLocation}";
             }
             else
             {
-                return $"[{level}] {sanitizedMessage}";
+                return $"{workingMessage}";
             }
         }
 

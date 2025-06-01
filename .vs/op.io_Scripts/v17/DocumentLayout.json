@@ -1,26 +1,42 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\gabeq\\source\\repos\\op.io\\",
+  "WorkspaceRootPath": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\controls\\actionhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\gameinitializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameinitializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\core.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\debugging\\debuglogger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\debugging\\debuglogger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\debugging\\logformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\debugging\\logformatter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\controls\\actionhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\controls\\actionhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\controls\\controlstatemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\controls\\controlstatemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\controls\\inputtypemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\controls\\inputtypemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameobjects\\gotypes\\agent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\gameobjects\\gotypes\\agent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameobjects\\gotypes\\agent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\scripts\\gameinitializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\gameinitializer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\data\\initdb_structure_settings.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:data\\initdb_structure_settings.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\controls\\controlstatemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\controls\\controlstatemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\scripts\\controls\\inputtypemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D7D2220-2BA5-4FB1-A84C-353E433C8FB0}|op.io.csproj|solutionrelative:scripts\\controls\\inputtypemanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -40,28 +56,80 @@
         },
         {
           "DockedHeight": 155,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
+              "Title": "Core.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Core.cs",
+              "RelativeDocumentMoniker": "Scripts\\Core.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Core.cs",
+              "RelativeToolTip": "Scripts\\Core.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC8AAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-01T03:27:44.071Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "LogFormatter.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Debugging\\LogFormatter.cs",
+              "RelativeDocumentMoniker": "Scripts\\Debugging\\LogFormatter.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Debugging\\LogFormatter.cs",
+              "RelativeToolTip": "Scripts\\Debugging\\LogFormatter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwDEAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-01T02:26:54.803Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "DebugLogger.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Debugging\\DebugLogger.cs",
+              "RelativeDocumentMoniker": "Scripts\\Debugging\\DebugLogger.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Debugging\\DebugLogger.cs",
+              "RelativeToolTip": "Scripts\\Debugging\\DebugLogger.cs",
+              "ViewState": "AgIAAE4AAADAmq8ki2wwwHsAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-01T02:25:42.313Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "InitDB_Structure_Settings.sql",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_Structure_Settings.sql",
+              "RelativeDocumentMoniker": "Data\\InitDB_Structure_Settings.sql",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_Structure_Settings.sql",
+              "RelativeToolTip": "Data\\InitDB_Structure_Settings.sql",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
+              "WhenOpened": "2025-06-01T02:13:28.977Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "ActionHandler.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Controls\\ActionHandler.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Controls\\ActionHandler.cs",
               "RelativeDocumentMoniker": "Scripts\\Controls\\ActionHandler.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Controls\\ActionHandler.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Controls\\ActionHandler.cs",
               "RelativeToolTip": "Scripts\\Controls\\ActionHandler.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAAlAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEAAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-15T07:52:29.123Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "Agent.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GOTypes\\Agent.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\GameObjects\\GOTypes\\Agent.cs",
               "RelativeDocumentMoniker": "Scripts\\GameObjects\\GOTypes\\Agent.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameObjects\\GOTypes\\Agent.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\GameObjects\\GOTypes\\Agent.cs",
               "RelativeToolTip": "Scripts\\GameObjects\\GOTypes\\Agent.cs",
               "ViewState": "AgIAAD0AAAAAAAAAAAAcwJQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -70,42 +138,40 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 7,
               "Title": "ControlStateManager.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Controls\\ControlStateManager.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Controls\\ControlStateManager.cs",
               "RelativeDocumentMoniker": "Scripts\\Controls\\ControlStateManager.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Controls\\ControlStateManager.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Controls\\ControlStateManager.cs",
               "RelativeToolTip": "Scripts\\Controls\\ControlStateManager.cs",
               "ViewState": "AgIAADoAAAAAAAAAAAAmwEMAAABGAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-15T06:18:33.63Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-15T06:18:33.63Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 0,
               "Title": "GameInitializer.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameInitializer.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\GameInitializer.cs",
               "RelativeDocumentMoniker": "Scripts\\GameInitializer.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\GameInitializer.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\GameInitializer.cs",
               "RelativeToolTip": "Scripts\\GameInitializer.cs",
-              "ViewState": "AgIAAGIAAAAAAAAAAAAwwKYAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAABIAAAAAAAAAAAAowEUAAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-15T07:23:21.627Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 8,
               "Title": "InputTypeManager.cs",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Controls\\InputTypeManager.cs",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Controls\\InputTypeManager.cs",
               "RelativeDocumentMoniker": "Scripts\\Controls\\InputTypeManager.cs",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Scripts\\Controls\\InputTypeManager.cs",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Scripts\\Controls\\InputTypeManager.cs",
               "RelativeToolTip": "Scripts\\Controls\\InputTypeManager.cs",
               "ViewState": "AgIAAJwAAAAAAAAAAAAcwPYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-15T07:28:59.341Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-15T07:28:59.341Z"
             }
           ]
         }
