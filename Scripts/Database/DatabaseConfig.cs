@@ -149,20 +149,5 @@ namespace op.io
                 DebugLogger.PrintError($"Failed to configure database with PRAGMA settings: {ex.Message}");
             }
         }
-
-        public static int LoadDebugSettings()
-        {
-            DebugLogger.PrintDatabase("Attempting to load DebugSettings...");
-            int result = GetSetting<int>("DebugSettings", "Enabled", "General", 0);
-            DebugLogger.PrintDatabase($"Loaded DebugSettings value: {result}");
-            return result;
-        }
-
-        public static void ToggleDebugMode(int newState)
-        {
-            DebugLogger.PrintDebug("Attempting to toggle debug mode...");
-            UpdateSetting("DebugSettings", "Enabled", "General", newState);
-            DebugLogger.PrintDebug($"Toggled debug mode to: {newState}");
-        }
     }
 }

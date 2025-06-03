@@ -6,13 +6,7 @@ namespace op.io
 {
     public static class LogFormatter
     {
-        private static Dictionary<string, int> messageCount = new Dictionary<string, int>();
-        private static int maxMessageRepeats;
-
-        static LogFormatter()
-        {
-            maxMessageRepeats = DatabaseConfig.GetSetting<int>("DebugSettings", "MaxRepeats", "General", 5);
-        }
+        private static Dictionary<string, int> messageCount = [];
 
         public static string FormatLogMessage(string rawMessage, string level, bool includeTrace, int stackTraceNBack, int depth)
         {
@@ -81,11 +75,11 @@ namespace op.io
         {
             if (messageCount.ContainsKey(logMessage))
             {
-                if (messageCount[logMessage] == maxMessageRepeats)
+                if (messageCount[logMessage] == DebugModeHandler.MAXMSGREPEATS)
                 {
                     return 1;
                 }
-                else if (messageCount[logMessage] > maxMessageRepeats)
+                else if (messageCount[logMessage] > DebugModeHandler.MAXMSGREPEATS)
                 {
                     return 2;
                 }
@@ -96,18 +90,6 @@ namespace op.io
             }
             
             return 2;
-        }
-
-        // Get the maximum message repeats (from Database or Default)
-        public static int GetMaxMessageRepeats()
-        {
-            return maxMessageRepeats;
-        }
-
-        // Reset all message counts (only call this when you want to reset the counters)
-        public static void ResetMessageCount()
-        {
-            messageCount.Clear();
         }
     }
 }

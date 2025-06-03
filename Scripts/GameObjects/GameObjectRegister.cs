@@ -67,7 +67,7 @@ namespace op.io
 
                 gameObject.Shape.Draw(spriteBatch, gameObject);
 
-                if (Core.DEBUGMODE && gameObject == Core.Instance.Player)
+                if (DebugModeHandler.DEBUGENABLED && gameObject == Core.Instance.Player)
                 {
                     // DebugRenderer.DrawRotationPointer(spriteBatch, (Agent)gameObject);
                 }

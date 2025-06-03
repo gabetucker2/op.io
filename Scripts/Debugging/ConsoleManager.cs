@@ -15,16 +15,16 @@ namespace op.io
             // Use Print to indicate the attempt to initialize the console
             DebugLogger.PrintDebug("Initializing console...");
 
-            if (ConsoleManager.ConsoleInitialized)
+            if (ConsoleInitialized)
             {
                 // If console already initialized, log with Print
                 DebugLogger.PrintDebug("Console already initialized. Returning early.");
                 return;
             }
 
-            if (DebugModeHandler.IsDebugEnabled())
+            if (DebugModeHandler.DEBUGENABLED)
             {
-                ConsoleManager.InitializeConsole();
+                InitializeConsole();
 
                 DebugLogger.PrintDebug("Console opened due to debug mode being enabled.");
             }

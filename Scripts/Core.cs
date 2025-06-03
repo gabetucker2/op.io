@@ -8,19 +8,9 @@ namespace op.io
     public class Core : Game
     {
         // Manual settings
-        public static bool ForceDebugMode { get; set; } = true;
+        public static bool ForceDebugMode { get; set; } = false;
 
         // Auto settings
-        // Make it reflect DebugModeHandler.DEBUGMODE no matter what; this only exists for ease of reference
-        public static bool DEBUGMODE
-        {
-            get => DebugModeHandler.DEBUGMODE;
-            set
-            {
-                DebugModeHandler.DEBUGMODE = value;
-            }
-        }
-
         public static Core Instance { get; set; }
 
         public GraphicsDeviceManager Graphics { get; set; }

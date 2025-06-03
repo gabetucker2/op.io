@@ -15,13 +15,12 @@ namespace op.io
             }
 
             // Debug Mode Handling
-            bool currentDebugModeState = ControlStateManager.GetSwitchState("DebugMode");
-            if (currentDebugModeState != DebugModeHandler.DEBUGMODE)
+            bool currentDebugSwitchState = ControlStateManager.GetSwitchState("DebugMode");
+            if (currentDebugSwitchState != DebugModeHandler.DEBUGENABLED)
             {
-                DebugLogger.PrintUI($"Debug mode state change detected: {currentDebugModeState} -> {!DebugModeHandler.DEBUGMODE}");
-                DebugModeHandler.SetDebugMode(!DebugModeHandler.DEBUGMODE);
-                ControlStateManager.SetSwitchState("DebugMode", DebugModeHandler.DEBUGMODE);
-                DebugLogger.PrintUI($"Debug mode toggled to {DebugModeHandler.DEBUGMODE}");
+                DebugModeHandler.DEBUGENABLED = currentDebugSwitchState;
+                ControlStateManager.SetSwitchState("DebugMode", DebugModeHandler.DEBUGENABLED);
+                DebugLogger.PrintUI($"Due to switch state value, debug mode toggled to {DebugModeHandler.DEBUGENABLED}");
             }
             else
             {

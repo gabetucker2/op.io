@@ -100,7 +100,7 @@ namespace op.io
 
                 case 1:
                     Console.ForegroundColor = ConsoleColor.Magenta;
-                    Console.Write($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {LogFormatter.GetMaxMessageRepeats()} MAX REPEATS] ");
+                    Console.Write($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {DebugModeHandler.MAXMSGREPEATS} MAX REPEATS] ");
                     Console.ResetColor();
 
                     Console.ForegroundColor = color;

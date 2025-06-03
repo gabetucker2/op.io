@@ -43,8 +43,6 @@ namespace op.io
             // Insert Data
             LoadStartData(connection);
 
-            VerifyDebugSettingsTable(connection);
-
             DebugLogger.PrintDatabase("Database initialization complete.");
             DatabaseManager.CloseConnection(connection);
         }
@@ -123,29 +121,6 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to create database file at {fullPath}: {ex.Message}");
-            }
-        }
-
-        private static void VerifyDebugSettingsTable(SQLiteConnection connection)
-        {
-            try
-            {
-                var query = "SELECT Setting, Enabled, MaxRepeats FROM DebugSettings;";
-                using var command = new SQLiteCommand(query, connection);
-                using var reader = command.ExecuteReader();
-
-                while (reader.Read())
-                {
-                    string setting = reader.GetString(0);
-                    bool enabled = reader.GetBoolean(1);
-                    int maxRepeats = reader.GetInt32(2);
-
-                    DebugLogger.PrintDatabase($"DebugSettings Entry -> Setting: {setting}, Enabled: {enabled}, MaxRepeats: {maxRepeats}");
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintError($"Failed to verify DebugSettings table: {ex.Message}");
             }
         }
     }

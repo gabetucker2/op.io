@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS DebugSettings (
     Setting TEXT PRIMARY KEY,
-    Enabled INTEGER NOT NULL,
+    ForceEnabled INTEGER NOT NULL,
     MaxRepeats INTEGER NOT NULL
 );
 

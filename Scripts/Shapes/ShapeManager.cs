@@ -34,7 +34,7 @@ namespace op.io
 
                 gameObject.Shape.Draw(spriteBatch, gameObject);
 
-                if (Core.DEBUGMODE && gameObject == Core.Instance.Player)
+                if (DebugModeHandler.DEBUGENABLED && gameObject == Core.Instance.Player)
                 {
                     // DebugLogger.PrintDebug($"Drawing rotation pointer for Player ID={gameObject.ID} at Pos={gameObject.Position}");
                     DebugRenderer.DrawRotationPointer(spriteBatch, (Agent)gameObject);

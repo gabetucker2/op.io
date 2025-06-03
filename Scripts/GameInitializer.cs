@@ -21,13 +21,12 @@ namespace op.io
             // Ensure the database is initialized before loading settings
             DatabaseInitializer.InitializeDatabase();
 
-            SyncDebugModeSwitchState();
-
-            ConsoleManager.InitializeConsoleIfEnabled();
-
             // Load general settings BEFORE initializing anything else
             LoadGeneralSettings();
             LoadControlSwitchStates(); // Load control switch states from the database
+
+            // Initialize the console after loading in switch states (which, importantly, contain DebugMode)
+            ConsoleManager.InitializeConsoleIfEnabled();
 
             // Setting instance variables in Core.cs
             Core.Instance.IsMouseVisible = true;
@@ -148,19 +147,6 @@ namespace op.io
             {
                 DebugLogger.PrintError($"Failed to load control switch states: {ex.Message}");
             }
-        }
-
-        private static void SyncDebugModeSwitchState()
-        {
-            DebugLogger.PrintDatabase("Syncing DebugMode switch state with database value...");
-
-            // Get the current value from the DebugSettings table
-            int databaseDebugMode = DatabaseConfig.LoadDebugSettings();
-            bool isDebugEnabled = databaseDebugMode == 1;
-
-            // Update ControlStateManager to match the loaded value
-            ControlStateManager.SetSwitchState("DebugMode", isDebugEnabled);
-            DebugLogger.PrintDatabase($"Set DebugMode switch state to: {isDebugEnabled}");
         }
     }
 }

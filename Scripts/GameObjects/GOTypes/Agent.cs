@@ -8,8 +8,49 @@ namespace op.io
         // Agent-specific properties
         public float TriggerCooldown { get; set; }
         public float SwitchCooldown { get; set; }
-        public bool IsCrouching { get; set; }
-        public bool IsSprinting { get; set; }
+
+        private int GetMode(int _mode, string modeSettingName)
+        {
+            if (_mode == -1)
+            {
+                if (ControlStateManager.ContainsSwitchState(modeSettingName)) // If it exists as a switch state
+                {
+                    _crouchMode = BaseFunctions.BoolToInt(ControlStateManager.GetSwitchState(modeSettingName));
+                }
+                else // Else it's probably Hold, just default it to 0
+                {
+                    _crouchMode = 0;
+                }
+            }
+
+            return _mode;
+        }
+
+        private int _crouchMode = -1; // -1 = Not initialized, 0 = False, 1 = True
+        public bool IsCrouching {
+            get
+            {
+                return BaseFunctions.IntToBool(GetMode(_crouchMode, "Crouch"));
+            }
+            set
+            {
+                _crouchMode = BaseFunctions.BoolToInt(value);
+            }
+        }
+
+        private int _sprintMode = -1; // -1 = Not initialized, 0 = False, 1 = True
+        public bool IsSprinting
+        {
+            get
+            {
+                return BaseFunctions.IntToBool(GetMode(_sprintMode, "Sprint"));
+            }
+            set
+            {
+                _sprintMode = BaseFunctions.BoolToInt(value);
+            }
+        }
+
         public bool IsPlayer { get; private set; }
 
         private float _baseSpeed;
@@ -69,22 +110,6 @@ namespace op.io
 
             // Log agent creation without loading cooldowns
             DebugLogger.PrintPlayer($"Agent created with TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");
-
-            // Initialize state from control switch start values
-            InitializeControlStates();
-        }
-
-        // Initialize control states for the agent (e.g., Crouch, Sprint)
-        private void InitializeControlStates()
-        {
-            // Initialize IsCrouching based on its switch state
-            IsCrouching = ControlStateManager.GetSwitchState("Crouch");
-
-            // Initialize IsSprinting based on its switch state
-            IsSprinting = ControlStateManager.GetSwitchState("Sprint");
-
-            // Log initialized states
-            DebugLogger.PrintPlayer($"Initialized IsCrouching: {IsCrouching}, IsSprinting: {IsSprinting}");
         }
 
         // Load TriggerCooldown value from the database or cache it

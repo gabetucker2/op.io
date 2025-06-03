@@ -59,7 +59,7 @@ namespace op.io
             }
 
             // Render debug direction line last to ensure visibility
-            if (DebugModeHandler.IsDebugEnabled())
+            if (DebugModeHandler.DEBUGENABLED)
             {
                 foreach (GameObject gameObject in Core.Instance.GameObjects)
                 {
