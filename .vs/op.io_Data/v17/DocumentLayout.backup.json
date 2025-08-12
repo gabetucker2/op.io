@@ -1,18 +1,18 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\gabeq\\source\\repos\\op.io\\",
+  "WorkspaceRootPath": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\data\\initdb_startdata_settings.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\data\\initdb_startdata_settings.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdb_startdata_settings.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\data\\initdb_startdata_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
-      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdb_startdata_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
+      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\data\\initdb_structure_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdb_structure_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\source\\repos\\op.io\\data\\initdb_structure_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
-      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdb_structure_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
+      "AbsoluteMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|c:\\users\\gabeq\\onedrive\\desktop\\standalonescripts\\op.io\\data\\initdb_startdata_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{980532EC-6280-49BD-8BDA-81F84D009270}|op.io.csproj|solutionrelative:data\\initdb_startdata_gos.sql||{3B902123-F8A7-4915-9F01-361F908088D0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -32,38 +32,40 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "InitDB_StartData_Settings.sql",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDB_StartData_Settings.sql",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_StartData_Settings.sql",
               "RelativeDocumentMoniker": "Data\\InitDB_StartData_Settings.sql",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDB_StartData_Settings.sql",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_StartData_Settings.sql",
               "RelativeToolTip": "Data\\InitDB_StartData_Settings.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACYAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAACAAAAB3AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-04-15T07:26:09.682Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "InitDB_Structure_GOs.sql",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDB_Structure_GOs.sql",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_Structure_GOs.sql",
               "RelativeDocumentMoniker": "Data\\InitDB_Structure_GOs.sql",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDB_Structure_GOs.sql",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_Structure_GOs.sql",
               "RelativeToolTip": "Data\\InitDB_Structure_GOs.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAEAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-03-31T20:57:34.688Z"
+              "WhenOpened": "2025-03-31T20:57:34.688Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "InitDB_StartData_GOs.sql",
-              "DocumentMoniker": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDB_StartData_GOs.sql",
+              "DocumentMoniker": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_StartData_GOs.sql",
               "RelativeDocumentMoniker": "Data\\InitDB_StartData_GOs.sql",
-              "ToolTip": "C:\\Users\\gabeq\\source\\repos\\op.io\\Data\\InitDB_StartData_GOs.sql",
+              "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_StartData_GOs.sql",
               "RelativeToolTip": "Data\\InitDB_StartData_GOs.sql",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-04-04T05:14:51.481Z"
+              "WhenOpened": "2025-04-04T05:14:51.481Z",
+              "EditorCaption": ""
             }
           ]
         }

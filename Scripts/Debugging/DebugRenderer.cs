@@ -28,13 +28,13 @@ namespace op.io
             _pointerTexture.SetData([Color.Red]);
 
             _debugColor = new Color(
-                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_R"),
-                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_G"),
-                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_B"),
-                BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_A")
+                DatabaseFetch.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_R"),
+                DatabaseFetch.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_G"),
+                DatabaseFetch.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_B"),
+                DatabaseFetch.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleColor_A")
             );
 
-            _debugRadius = BaseFunctions.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleRadius");
+            _debugRadius = DatabaseFetch.GetValue<int>("DebugVisuals", "Value", "SettingKey", "DebugCircleRadius");
 
             if (_debugRadius > 0)
             {

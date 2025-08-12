@@ -46,7 +46,7 @@ namespace op.io
 
                     ConfigureDatabase(connection); // Ensure PRAGMA settings are applied
 
-                    string query = $"SELECT {columnName} FROM {tableName} WHERE Setting = @settingKey;";
+                    string query = $"SELECT {columnName} FROM {tableName} WHERE SettingKey = @settingKey;";
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@settingKey", settingKey);
@@ -55,7 +55,7 @@ namespace op.io
 
                         if (result == DBNull.Value || result == null)
                         {
-                            DebugLogger.PrintWarning($"No result found for {columnName} in {tableName} where Setting = '{settingKey}'. Returning default value: {defaultValue}");
+                            DebugLogger.PrintWarning($"No result found for {columnName} in {tableName} where SettingKey = '{settingKey}'. Returning default value: {defaultValue}");
                             return defaultValue;
                         }
 
@@ -85,7 +85,7 @@ namespace op.io
                     ConfigureDatabase(connection); // Ensure PRAGMA settings are applied
 
                     // Corrected query to match your table structure (No 'Group' column)
-                    string query = $"UPDATE {tableName} SET {columnName} = @newValue WHERE Setting = @settingKey;";
+                    string query = $"UPDATE {tableName} SET {columnName} = @newValue WHERE SettingKey = @settingKey;";
 
                     using (var command = new SQLiteCommand(query, connection))
                     {

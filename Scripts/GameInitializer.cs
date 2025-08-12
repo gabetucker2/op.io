@@ -75,25 +75,25 @@ namespace op.io
 
             try
             {
-                int r = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_R");
-                int g = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G");
-                int b = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B");
-                int a = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A");
+                int r = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_R");
+                int g = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G");
+                int b = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B");
+                int a = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A");
                 Core.Instance.BackgroundColor = new Microsoft.Xna.Framework.Color(r, g, b, a);
 
-                string modeStr = BaseFunctions.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode");
+                string modeStr = DatabaseFetch.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode");
                 if (!Enum.TryParse(modeStr, true, out WindowMode mode))
                 {
                     DebugLogger.PrintError($"Unrecognized WindowMode '{modeStr}'");
                 }
                 Core.Instance.WindowMode = mode;
 
-                Core.Instance.ViewportWidth = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth");
-                Core.Instance.ViewportHeight = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight");
+                Core.Instance.ViewportWidth = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportWidth");
+                Core.Instance.ViewportHeight = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "ViewportHeight");
 
-                Core.Instance.VSyncEnabled = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync");
-                Core.Instance.UseFixedTimeStep = BaseFunctions.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep");
-                Core.Instance.TargetFrameRate = BaseFunctions.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate");
+                Core.Instance.VSyncEnabled = DatabaseFetch.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync");
+                Core.Instance.UseFixedTimeStep = DatabaseFetch.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep");
+                Core.Instance.TargetFrameRate = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate");
 
                 Core.Instance.Graphics.PreferredBackBufferWidth = Core.Instance.ViewportWidth;
                 Core.Instance.Graphics.PreferredBackBufferHeight = Core.Instance.ViewportHeight;
@@ -131,7 +131,7 @@ namespace op.io
                     {
                         string settingKey = row["SettingKey"].ToString();
                         int switchState = Convert.ToInt32(row["SwitchStartState"]);
-                        bool switchStateBool = switchState == 1;
+                        bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
 
                         // Store this information in ControlStateManager
                         ControlStateManager.SetSwitchState(settingKey, switchStateBool);

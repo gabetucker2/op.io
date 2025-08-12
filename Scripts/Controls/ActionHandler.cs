@@ -1,11 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
+using System.Collections.Generic;
+using System;
 using System.Windows.Forms;
 
 namespace op.io
 {
     public static class ActionHandler
     {
-        public static void CheckActions()
+        public static void Tickwise_CheckActions()
         {
             // Exit Action
             if (InputManager.IsInputActive("Exit"))
@@ -14,62 +16,56 @@ namespace op.io
                 Core.Instance.Exit();
             }
 
-            // Debug Mode Handling
-            bool currentDebugSwitchState = ControlStateManager.GetSwitchState("DebugMode");
-            if (currentDebugSwitchState != DebugModeHandler.DEBUGENABLED)
-            {
-                DebugModeHandler.DEBUGENABLED = currentDebugSwitchState;
-                ControlStateManager.SetSwitchState("DebugMode", DebugModeHandler.DEBUGENABLED);
-                DebugLogger.PrintUI($"Due to switch state value, debug mode toggled to {DebugModeHandler.DEBUGENABLED}");
-            }
-            else
-            {
-                DebugLogger.PrintUI("Debug mode state unchanged.");
-            }
-
-            // Docking Mode Handling
-            bool dockingModeState = ControlStateManager.GetSwitchState("DockingMode");
-            if (dockingModeState != BlockManager.DockingModeEnabled)
-            {
-                DebugLogger.PrintUI($"Docking mode state change detected: {BlockManager.DockingModeEnabled} -> {dockingModeState}");
-                BlockManager.DockingModeEnabled = dockingModeState;
-                DebugLogger.PrintUI($"Docking mode updated to {BlockManager.DockingModeEnabled}");
-            }
-            else
-            {
-                DebugLogger.PrintUI("Docking mode state unchanged.");
-            }
-
-            // Crouch Handling
-            if (Core.Instance.Player is Agent player)
-            {
-                bool crouchState = ControlStateManager.GetSwitchState("Crouch");
-                if (crouchState != player.IsCrouching)
-                {
-                    DebugLogger.PrintUI($"Crouch state change detected: {player.IsCrouching} -> {crouchState}");
-                    player.IsCrouching = crouchState;
-                    DebugLogger.PrintUI($"Crouch state updated to {player.IsCrouching}");
-                }
-                else
-                {
-                    DebugLogger.PrintUI("Crouch state unchanged.");
-                }
-            }
-            else
-            {
-                DebugLogger.PrintError("Core.Instance.Player is null. Cannot update crouch state.");
-            }
+            // Update switches
+            SwitchUpdate();
 
             // ReturnCursorToPlayer Handling
             if (InputManager.IsInputActive("ReturnCursorToPlayer"))
             {
-                Vector2 playerPosition = BaseFunctions.GetGOGlobalScreenPosition(Core.Instance.Player);
-                Cursor.Position = BaseFunctions.Vector2ToPoint(playerPosition);
+                Vector2 playerPosition = GameObjectFunctions.GetGOGlobalScreenPosition(Core.Instance.Player);
+                Cursor.Position = TypeConversionFunctions.Vector2ToPoint(playerPosition);
                 DebugLogger.PrintUI($"Cursor returned to player position: {playerPosition}");
             }
             else
             {
                 DebugLogger.PrintUI("ReturnCursorToPlayer input not active.");
+            }
+        }
+
+        public static void SwitchUpdate() // Remove this function entirely because a lot of it is automatically managed?  Probably should make modehandlers somewhere more easily accessible and make this process more procedural rather than manually defined.  but prevState should work so first maybe check out whether it works now in the old iteration with the comparison i'm trying to replicate.  maybe i could even just use the trigger manager to do shit instead of this, using the new prevtickswitchstate function in the process.
+        {
+            if (Core.Instance.Player is Agent player)
+            {
+                var modeHandlers = new List<(string key, Action<bool> setCurrent)>
+                {
+                    ("DebugMode",   val => DebugModeHandler.DEBUGENABLED = val),
+                    ("DockingMode", val => BlockManager.DockingModeEnabled = val),
+                    ("Crouch",      val => player.IsCrouching = val)
+                };
+
+                foreach (var (key, setCurrent) in modeHandlers)
+                {
+                    bool prevState = ControlStateManager.GetPrevTickSwitchState(key);
+                    bool newState = ControlStateManager.GetSwitchState(key);
+
+                    if (prevState != newState) // !!!!! TODO: This is the crux of the problem, this is always false, ensure you fix it.
+                    {
+                        if (TriggerManager.GetTrigger(key))
+                        {
+                            setCurrent(newState);
+                            ControlStateManager.SetSwitchState(key, newState);
+                            DebugLogger.PrintUI($"{key} updated from {!newState} to {newState}");
+                        }
+                        else
+                        {
+                            DebugLogger.PrintUI($"{key} state unchanged.");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                DebugLogger.PrintError($"CRITICAL: Switch error - no Player initialized");
             }
         }
 

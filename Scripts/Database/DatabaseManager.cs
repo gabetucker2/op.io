@@ -75,52 +75,6 @@ namespace op.io
             DebugLogger.PrintDatabase("Connection pool cleared.");
         }
 
-        public static T GetSetting<T>(string table, string column, string whereColumn, string whereValue, T defaultValue)
-        {
-            using (var connection = OpenConnection())
-            {
-                if (connection == null) return defaultValue;
-
-                try
-                {
-                    string query = $"SELECT {column} FROM {table} WHERE {whereColumn} = @whereValue LIMIT 1;";
-                    DebugLogger.PrintDatabase($"Executing query: {query} with whereValue: {whereValue}");
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@whereValue", whereValue);
-
-                        object result = command.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
-                        {
-                            DebugLogger.PrintDatabase($"Successfully retrieved setting '{whereValue}' from '{table}'.");
-                            return (T)Convert.ChangeType(result, typeof(T));
-                        }
-                        else
-                        {
-                            DebugLogger.PrintWarning($"No result found for query: {query}. Check if the data exists in the database.");
-                        }
-                    }
-                }
-                catch (SQLiteException sqlEx)
-                {
-                    // Log any SQL specific errors
-                    DebugLogger.PrintError($"SQLite error while executing query on table '{table}': {sqlEx.Message}");
-                }
-                catch (Exception ex)
-                {
-                    // Log any other general exceptions
-                    DebugLogger.PrintError($"Failed to retrieve setting from table '{table}': {ex.Message}");
-                }
-                finally
-                {
-                    CloseConnection(connection);
-                }
-            }
-
-            return defaultValue;
-        }
-
         public static bool UpdateSetting(string table, string column, string whereColumn, string whereValue, object newValue)
         {
             using (var connection = OpenConnection())

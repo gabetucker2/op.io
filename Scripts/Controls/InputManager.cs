@@ -8,8 +8,8 @@ namespace op.io
     public static class InputManager
     {
         // Dictionary to store control key mappings (keyboard and mouse)
-        private static readonly Dictionary<string, (object key, InputType inputType)> _controlKey = new();
-        private static readonly Dictionary<string, float> _cachedSpeedMultipliers = new();
+        private static readonly Dictionary<string, (object key, InputType inputType)> _controlKey = [];
+        private static readonly Dictionary<string, float> _cachedSpeedMultipliers = [];
         private static bool _isControlKeyLoaded = false;
 
         // This will be set during initialization to avoid unnecessary database calls.
@@ -54,7 +54,7 @@ namespace op.io
                 return _cachedSpeedMultipliers[settingKey];
             }
 
-            float multiplier = BaseFunctions.GetValue<float>("ControlSettings", "Value", "SettingKey", databaseKey);
+            float multiplier = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", databaseKey);
             _cachedSpeedMultipliers[settingKey] = multiplier;
             return multiplier;
         }

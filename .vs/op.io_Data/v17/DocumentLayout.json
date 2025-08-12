@@ -36,7 +36,7 @@
               "RelativeDocumentMoniker": "Data\\InitDB_StartData_Settings.sql",
               "ToolTip": "C:\\Users\\gabeq\\OneDrive\\Desktop\\StandaloneScripts\\op.io\\Data\\InitDB_StartData_Settings.sql",
               "RelativeToolTip": "Data\\InitDB_StartData_Settings.sql",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAAACAAAAB3AAAAAAAAAA==",
+              "ViewState": "AgIAABAAAAAAAAAAAAAAAC4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
               "WhenOpened": "2025-04-15T07:26:09.682Z",
               "EditorCaption": ""
@@ -51,8 +51,7 @@
               "RelativeToolTip": "Data\\InitDB_Structure_GOs.sql",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-03-31T20:57:34.688Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-03-31T20:57:34.688Z"
             },
             {
               "$type": "Document",
@@ -64,8 +63,7 @@
               "RelativeToolTip": "Data\\InitDB_StartData_GOs.sql",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
-              "WhenOpened": "2025-04-04T05:14:51.481Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-04T05:14:51.481Z"
             }
           ]
         }

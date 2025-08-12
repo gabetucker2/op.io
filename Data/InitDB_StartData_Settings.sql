@@ -44,6 +44,6 @@ INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CrouchSpeedMultiplier',
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('TriggerCooldown', '0.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.5');
 
-INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '3');
+INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '10');
 
 ---------------------------------------------------------------------------------------------------------------------------

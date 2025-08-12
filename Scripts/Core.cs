@@ -8,7 +8,7 @@ namespace op.io
     public class Core : Game
     {
         // Manual settings
-        public static bool ForceDebugMode { get; set; } = false;
+        public static bool ForceDebugMode { get; set; } = true;
 
         // Auto settings
         public static Core Instance { get; set; }
@@ -57,7 +57,10 @@ namespace op.io
 
         private static float _deltaTime = 0f;
         public static float DELTATIME {
-            get { return _deltaTime;  }
+            get
+            {
+                return _deltaTime;
+            }
             set
             {
                 if (value < 0.0001f)

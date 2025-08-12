@@ -12,7 +12,7 @@ namespace op.io
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
             // Process general actions (toggles, switches, etc.)
-            ActionHandler.CheckActions();
+            ActionHandler.Tickwise_CheckActions();
 
             // Handle player transform
             Vector2 direction = InputManager.GetMoveVector();
@@ -35,6 +35,12 @@ namespace op.io
 
             // Apply physics step
             PhysicsManager.Update(Core.Instance.GameObjects);
+
+            // Reset triggers
+            TriggerManager.Tickwise_TriggerReset();
+
+            // Assess "prev" switch state management mechanism
+            ControlStateManager.Tickwise_PrevSwitchTrackUpdate();
         }
     }
 }

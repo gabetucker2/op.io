@@ -15,7 +15,7 @@ namespace op.io
             {
                 if (ControlStateManager.ContainsSwitchState(modeSettingName)) // If it exists as a switch state
                 {
-                    _crouchMode = BaseFunctions.BoolToInt(ControlStateManager.GetSwitchState(modeSettingName));
+                    _crouchMode = TypeConversionFunctions.BoolToInt(ControlStateManager.GetSwitchState(modeSettingName));
                 }
                 else // Else it's probably Hold, just default it to 0
                 {
@@ -27,14 +27,15 @@ namespace op.io
         }
 
         private int _crouchMode = -1; // -1 = Not initialized, 0 = False, 1 = True
-        public bool IsCrouching {
+        public bool IsCrouching
+        {
             get
             {
-                return BaseFunctions.IntToBool(GetMode(_crouchMode, "Crouch"));
+                return TypeConversionFunctions.IntToBool(GetMode(_crouchMode, "Crouch"));
             }
             set
             {
-                _crouchMode = BaseFunctions.BoolToInt(value);
+                _crouchMode = TypeConversionFunctions.BoolToInt(value);
             }
         }
 
@@ -43,11 +44,11 @@ namespace op.io
         {
             get
             {
-                return BaseFunctions.IntToBool(GetMode(_sprintMode, "Sprint"));
+                return TypeConversionFunctions.IntToBool(GetMode(_sprintMode, "Sprint"));
             }
             set
             {
-                _sprintMode = BaseFunctions.BoolToInt(value);
+                _sprintMode = TypeConversionFunctions.BoolToInt(value);
             }
         }
 
@@ -117,7 +118,7 @@ namespace op.io
         {
             if (!cachedTriggerCooldown.HasValue)
             {
-                TriggerCooldown = BaseFunctions.GetValue<float>("ControlSettings", "Value", "SettingKey", "TriggerCooldown");
+                TriggerCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "TriggerCooldown");
                 if (TriggerCooldown == 0)
                 {
                     DebugLogger.PrintError("TriggerCooldown is 0 after loading from the database.");
@@ -137,7 +138,7 @@ namespace op.io
         {
             if (!cachedSwitchCooldown.HasValue)
             {
-                SwitchCooldown = BaseFunctions.GetValue<float>("ControlSettings", "Value", "SettingKey", "SwitchCooldown");
+                SwitchCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "SwitchCooldown");
                 if (SwitchCooldown == 0)
                 {
                     DebugLogger.PrintError("SwitchCooldown is 0 after loading from the database.");

@@ -20,11 +20,11 @@ namespace op.io
 
                 if (_debugMode == -1) // If not initialized before getting value, default to switch value, which pulled from the DB in GameInitializer
                 {
-                    _debugMode = BaseFunctions.BoolToInt(ControlStateManager.GetSwitchState("DebugMode"));
+                    _debugMode = TypeConversionFunctions.BoolToInt(ControlStateManager.GetSwitchState("DebugMode"));
                     DebugLogger.PrintDatabase($"Setting starting debug mode to switch value: {_debugMode}");
                 }
 
-                return BaseFunctions.IntToBool(_debugMode);
+                return TypeConversionFunctions.IntToBool(_debugMode);
             }
             set
             {
@@ -35,7 +35,7 @@ namespace op.io
                 else
                 {
                     DebugLogger.PrintDebug($"Setting debug mode to: {value}");
-                    _debugMode = BaseFunctions.BoolToInt(value);
+                    _debugMode = TypeConversionFunctions.BoolToInt(value);
 
                     // Update switch state upon set, which will then automatically encode new value into DB
                     ControlStateManager.SetSwitchState("DebugMode", value);

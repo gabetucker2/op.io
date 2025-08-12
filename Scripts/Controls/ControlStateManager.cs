@@ -6,6 +6,21 @@ namespace op.io
     public static class ControlStateManager
     {
         private static Dictionary<string, bool> _switchStates = [];
+        private static Dictionary<string, bool> _switchStateBuffer = [];
+        private static Dictionary<string, bool> _prevSwitchStates = [];
+
+        public static void Tickwise_PrevSwitchTrackUpdate()
+        {
+            foreach (var kvp in _switchStateBuffer)
+            {
+                _prevSwitchStates[kvp.Key] = kvp.Value;
+            }
+
+            foreach (var kvp in _switchStates)
+            {
+                _switchStateBuffer[kvp.Key] = kvp.Value;
+            }
+        }
 
         /// <summary>
         /// Retrieves the current state of a switch.
@@ -13,10 +28,27 @@ namespace op.io
         public static bool GetSwitchState(string settingKey)
         {
             if (_switchStates.ContainsKey(settingKey))
+            {
                 return _switchStates[settingKey];
+            }
+            else
+            {
+                DebugLogger.PrintWarning($"Switch state for '{settingKey}' not found. Returning default: OFF.");
+                return false;
+            }
+        }
 
-            DebugLogger.PrintWarning($"Switch state for '{settingKey}' not found. Returning default: OFF.");
-            return false; // Default state if not found
+        public static bool GetPrevTickSwitchState(string settingKey)
+        {
+            if (_prevSwitchStates.ContainsKey(settingKey))
+            {
+                return _prevSwitchStates[settingKey];
+            }
+            else
+            {
+                DebugLogger.PrintWarning($"Prev switch state for '{settingKey}' not found. Returning default: OFF.");
+                return false;
+            }
         }
 
         /// <summary>
@@ -24,17 +56,22 @@ namespace op.io
         /// </summary>
         public static void SetSwitchState(string settingKey, bool state)
         {
-            if (!_switchStates.ContainsKey(settingKey))
+            if (!ContainsSwitchState(settingKey))
             {
-                DebugLogger.PrintWarning($"Switch state for '{settingKey}' not found. Adding with default state: OFF.");
-                _switchStates[settingKey] = false; // Default state
+                int newState = DatabaseConfig.GetSetting("ControlKey", "SwitchStartState", settingKey, -1);
+                DebugLogger.Print($"Initializing {settingKey} switch with default state from database: {newState}");
+                _switchStates[settingKey] = TypeConversionFunctions.IntToBool(newState); // State from DB
             }
             else
             {
-                _switchStates[settingKey] = state;
+                if (_switchStates[settingKey] != state)
+                {
+                    _switchStates[settingKey] = state;
+                    DebugLogger.PrintDatabase($"Updated and saved {settingKey} to {state} from {!state}");  //  NEVER CALLS
+                    SaveSwitchState(settingKey, _switchStates[settingKey]);
+                }
             }
-            SaveSwitchState(settingKey, _switchStates[settingKey]);
-            DebugLogger.PrintDatabase($"Set switch state: {settingKey} = {(state ? "ON" : "OFF")}");
+            TriggerManager.PrimeTriggerIfTrue(settingKey, state);
         }
 
         /// <summary>
@@ -50,29 +87,7 @@ namespace op.io
         /// </summary>
         private static void SaveSwitchState(string settingKey, bool isOn)
         {
-            try
-            {
-                DebugLogger.Print("SAVING SWITCH STATE");
-                int switchState = isOn ? 1 : 0; // Convert boolean to integer for DB
-                string query = @"
-                    UPDATE ControlKey 
-                    SET SwitchStartState = @switchState 
-                    WHERE SettingKey = @settingKey AND InputType = 'Switch';
-                ";
-
-                var parameters = new Dictionary<string, object>
-                {
-                    { "@switchState", switchState },
-                    { "@settingKey", settingKey }
-                };
-
-                DatabaseQuery.ExecuteNonQuery(query, parameters);
-                DebugLogger.PrintDatabase($"Saved switch state: {settingKey} = {(isOn ? "ON" : "OFF")}");
-            }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintError($"Failed to save switch state for '{settingKey}': {ex.Message}");
-            }
+            DatabaseConfig.UpdateSetting("ControlKey", "SwitchStartState", settingKey, TypeConversionFunctions.BoolToInt(isOn));
         }
 
         public static bool ContainsSwitchState(string settingKey)
