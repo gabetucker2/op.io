@@ -111,5 +111,44 @@ namespace op.io
                 _switchStates[settingKey] = newState;
             }
         }
+
+        public static void LoadControlSwitchStates()
+        {
+            DebugLogger.PrintDatabase("Loading control switch states...");
+
+            try
+            {
+                // Fetch all control keys with SwitchStartState from the database
+                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
+
+                if (result.Count == 0)
+                {
+                    DebugLogger.PrintWarning("No switch control states found in the database.");
+                    return;
+                }
+
+                foreach (var row in result)
+                {
+                    if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
+                    {
+                        string settingKey = row["SettingKey"].ToString();
+                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
+                        bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
+
+                        // Store this information in ControlStateManager
+                        SetSwitchState(settingKey, switchStateBool);
+                        DebugLogger.PrintDatabase($"Loaded switch state: {settingKey} = {(switchStateBool ? "ON" : "OFF")}");
+                    }
+                    else
+                    {
+                        DebugLogger.PrintWarning("Invalid row format when loading control switch states.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load control switch states: {ex.Message}");
+            }
+        }
     }
 }

@@ -134,7 +134,7 @@ namespace op.io // TODO: Migrate this script elsewhere
         /// <summary>
         /// Retrieves a color value from the database.
         /// </summary>
-        public static Color GetColor(string tableName, string conditionColumn, object conditionValue, Color defaultColor)
+        public static Color GetColor(string tableName, string conditionColumn, object conditionValue)
         {
             try
             {
@@ -150,7 +150,7 @@ namespace op.io // TODO: Migrate this script elsewhere
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to retrieve color from {tableName}: {ex.Message}");
-                return defaultColor;
+                return Core.DefaultColor;
             }
         }
 

@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
-using SDL2;
 
 namespace op.io
 {
@@ -9,6 +8,7 @@ namespace op.io
     {
         // Manual settings
         public static bool ForceDebugMode { get; set; } = true;
+        public static Color DefaultColor = Color.HotPink;
 
         // Auto settings
         public static Core Instance { get; set; }
@@ -92,16 +92,16 @@ namespace op.io
             GameRenderer.LoadGraphics();
         }
 
-        protected override void Update(GameTime gameTime)
-        {
-            GameUpdater.Update(gameTime);
-            base.Update(gameTime);
-        }
-
         protected override void Draw(GameTime gameTime)
         {
             GameRenderer.Draw();
             base.Draw(gameTime);
+        }
+
+        protected override void Update(GameTime gameTime)
+        {
+            GameUpdater.Update(gameTime);
+            base.Update(gameTime);
         }
     }
 }

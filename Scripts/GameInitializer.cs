@@ -1,7 +1,4 @@
-﻿using Microsoft.Xna.Framework;
-using System;
-using System.Drawing;
-using System.Collections.Generic;
+﻿using System;
 
 namespace op.io
 {
@@ -23,7 +20,9 @@ namespace op.io
 
             // Load general settings BEFORE initializing anything else
             LoadGeneralSettings();
-            LoadControlSwitchStates(); // Load control switch states from the database
+
+            // Load control switch states from the database
+            ControlStateManager.LoadControlSwitchStates();
 
             // Initialize the console after loading in switch states (which, importantly, contain DebugMode)
             ConsoleManager.InitializeConsoleIfEnabled();
@@ -32,7 +31,7 @@ namespace op.io
             Core.Instance.IsMouseVisible = true;
             Core.Instance.PhysicsManager = new PhysicsManager();
 
-            // If the settings are not loaded via SQL, these defaults will be applied
+            // If the settings are not loaded via SQL, these defaults will be applied so that debugging is possible when there's a low-level issue with loading settings
             if (Core.Instance.TargetFrameRate <= 0)
                 Core.Instance.TargetFrameRate = 240;
 
@@ -75,11 +74,7 @@ namespace op.io
 
             try
             {
-                int r = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_R");
-                int g = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_G");
-                int b = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_B");
-                int a = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "BackgroundColor_A");
-                Core.Instance.BackgroundColor = new Microsoft.Xna.Framework.Color(r, g, b, a);
+                Core.Instance.BackgroundColor = DatabaseFetch.GetColor("GeneralSettings", "SettingKey", "BackgroundColor");
 
                 string modeStr = DatabaseFetch.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode");
                 if (!Enum.TryParse(modeStr, true, out WindowMode mode))
@@ -107,45 +102,6 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to load general settings: {ex.Message}");
-            }
-        }
-
-        private static void LoadControlSwitchStates()
-        {
-            DebugLogger.PrintDatabase("Loading control switch states...");
-
-            try
-            {
-                // Fetch all control keys with SwitchStartState from the database
-                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
-
-                if (result.Count == 0)
-                {
-                    DebugLogger.PrintWarning("No switch control states found in the database.");
-                    return;
-                }
-
-                foreach (var row in result)
-                {
-                    if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
-                    {
-                        string settingKey = row["SettingKey"].ToString();
-                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
-                        bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
-
-                        // Store this information in ControlStateManager
-                        ControlStateManager.SetSwitchState(settingKey, switchStateBool);
-                        DebugLogger.PrintDatabase($"Loaded switch state: {settingKey} = {(switchStateBool ? "ON" : "OFF")}");
-                    }
-                    else
-                    {
-                        DebugLogger.PrintWarning("Invalid row format when loading control switch states.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintError($"Failed to load control switch states: {ex.Message}");
             }
         }
     }
