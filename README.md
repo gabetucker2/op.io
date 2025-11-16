@@ -11,3 +11,6 @@
   > .read C:\...\Data\InitDatabase.sql
 * Download sqlitebrowser from https://sqlitebrowser.org/dl/ to visualize the tables
 * Launch DB Browser for SQLite then `Open Database` and select Data/GameData.db
+
+# To run
+`dotnet run`
