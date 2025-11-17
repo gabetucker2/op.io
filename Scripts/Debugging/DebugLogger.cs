@@ -93,19 +93,12 @@ namespace op.io
             switch (suppressionBehavior)
             {
                 case 0:
-                    Console.ForegroundColor = color;
-                    Console.WriteLine(formattedMessage);
-                    Console.ResetColor();
+                    WriteConsoleAndFile(formattedMessage, color);
                     break;
 
                 case 1:
-                    Console.ForegroundColor = ConsoleColor.Magenta;
-                    Console.Write($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {DebugModeHandler.MAXMSGREPEATS} MAX REPEATS] ");
-                    Console.ResetColor();
-
-                    Console.ForegroundColor = color;
-                    Console.WriteLine(formattedMessage);
-                    Console.ResetColor();
+                    WriteConsoleAndFile($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {DebugModeHandler.MAXMSGREPEATS} MAX REPEATS] ", ConsoleColor.Magenta, appendNewLine: false);
+                    WriteConsoleAndFile(formattedMessage, color);
                     break;
 
                 case 2:
@@ -116,6 +109,22 @@ namespace op.io
                     PrintError("Unknown suppression behavior int (not 0, 1, or 2).");
                     break;
             }
+        }
+
+        private static void WriteConsoleAndFile(string message, ConsoleColor color, bool appendNewLine = true)
+        {
+            Console.ForegroundColor = color;
+            if (appendNewLine)
+            {
+                Console.WriteLine(message);
+            }
+            else
+            {
+                Console.Write(message);
+            }
+            Console.ResetColor();
+
+            LogFileHandler.AppendLog(message, appendNewLine);
         }
 
         // Public-facing logging methods for different log levels

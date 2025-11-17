@@ -92,6 +92,12 @@ namespace op.io
                 Core.Instance.VSyncEnabled = DatabaseFetch.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "VSync");
                 Core.Instance.UseFixedTimeStep = DatabaseFetch.GetValue<bool>("GeneralSettings", "Value", "SettingKey", "FixedTimeStep");
                 Core.Instance.TargetFrameRate = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "TargetFrameRate");
+                int configuredLogFiles = DatabaseFetch.GetValue<int>("GeneralSettings", "Value", "SettingKey", "NumLogFiles");
+                if (configuredLogFiles <= 0)
+                {
+                    configuredLogFiles = LogFileHandler.DefaultMaxLogFiles;
+                }
+                LogFileHandler.ConfigureMaxLogFiles(configuredLogFiles);
 
                 Core.Instance.Graphics.PreferredBackBufferWidth = Core.Instance.ViewportWidth;
                 Core.Instance.Graphics.PreferredBackBufferHeight = Core.Instance.ViewportHeight;

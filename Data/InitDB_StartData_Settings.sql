@@ -20,6 +20,7 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderedW
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false'); -- G-Sync will override this
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('FixedTimeStep', 'false');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '240');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('NumLogFiles', '5');
 
 ---------------------------------------------------------------------------------------------------------------------------
 

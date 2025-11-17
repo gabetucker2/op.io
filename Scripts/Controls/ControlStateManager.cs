@@ -95,6 +95,11 @@ namespace op.io
             return _switchStates.ContainsKey(settingKey);
         }
 
+        public static IReadOnlyDictionary<string, bool> GetCachedSwitchStatesSnapshot()
+        {
+            return new Dictionary<string, bool>(_switchStates);
+        }
+
         /// <summary>
         /// Updates the switch state based on user input or game logic.
         /// </summary>

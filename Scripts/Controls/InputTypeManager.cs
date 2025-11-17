@@ -10,12 +10,12 @@ namespace op.io
         private static KeyboardState _previousKeyboardState;
         private static MouseState _previousMouseState;
 
-        private static readonly Dictionary<Keys, bool> _triggerStates = new();
-        private static readonly Dictionary<string, bool> _mouseSwitchStates = new();
-        private static readonly Dictionary<Keys, bool> _keySwitchStates = new();
+        private static readonly Dictionary<Keys, bool> _triggerStates = [];
+        private static readonly Dictionary<string, bool> _mouseSwitchStates = [];
+        private static readonly Dictionary<Keys, bool> _keySwitchStates = [];
         private static readonly Dictionary<string, bool> _switchStateCache = [];
         private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
-        private static readonly string[] _criticalSwitchSettings = new[] { "Crouch", "DockingMode", "DebugMode" };
+        private static readonly string[] _criticalSwitchSettings = ["Crouch", "DockingMode", "DebugMode"];
         private static bool _switchStatesInitialized;
 
         private static readonly Dictionary<string, float> _lastMouseSwitchTime = new();
