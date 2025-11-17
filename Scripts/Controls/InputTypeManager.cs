@@ -1,7 +1,7 @@
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace op.io
 {
@@ -13,6 +13,10 @@ namespace op.io
         private static readonly Dictionary<Keys, bool> _triggerStates = new();
         private static readonly Dictionary<string, bool> _mouseSwitchStates = new();
         private static readonly Dictionary<Keys, bool> _keySwitchStates = new();
+        private static readonly Dictionary<string, bool> _switchStateCache = [];
+        private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
+        private static readonly string[] _criticalSwitchSettings = new[] { "Crouch", "DockingMode", "DebugMode" };
+        private static bool _switchStatesInitialized;
 
         private static readonly Dictionary<string, float> _lastMouseSwitchTime = new();
         private static readonly Dictionary<Keys, float> _lastKeySwitchTime = new();
@@ -25,30 +29,54 @@ namespace op.io
 
         public static void InitializeControlStates()
         {
+            if (_switchStatesInitialized)
+            {
+                EnsureCriticalSwitchStates();
+                return;
+            }
+
             try
             {
-                // Fetch all control keys with SwitchStartState from the database
-                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, SwitchStartState, InputType FROM ControlKey WHERE InputType = 'Switch';");
+                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
 
                 if (result.Count == 0)
                 {
                     DebugLogger.PrintWarning("No switch control states found in the database.");
+                    EnsureCriticalSwitchStates();
                     return;
                 }
 
                 foreach (var row in result)
                 {
-                    if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
+                    if (row.ContainsKey("SettingKey") && row.ContainsKey("InputKey") && row.ContainsKey("SwitchStartState"))
                     {
-                        string settingKey = row["SettingKey"].ToString();
-                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
-                        bool isOn = switchState == 1;
+                        string settingKey = row["SettingKey"]?.ToString();
+                        string inputKey = row["InputKey"]?.ToString();
 
-                        // Initialize switch states only for Switch type controls
-                        if (row["InputType"].ToString() == "Switch")
+                        if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
                         {
-                            _mouseSwitchStates[settingKey] = isOn;  // Store in _mouseSwitchStates or appropriate dictionary
-                            DebugLogger.PrintDatabase($"Initialized switch state for '{settingKey}' to: {isOn}");
+                            DebugLogger.PrintWarning("Encountered a switch control with missing SettingKey or InputKey.");
+                            continue;
+                        }
+
+                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
+                        bool isOn = TypeConversionFunctions.IntToBool(switchState);
+
+                        _switchStateCache[settingKey] = isOn;
+                        _settingKeyToInputKey[settingKey] = inputKey;
+
+                        bool mapped = TrySeedSwitchState(inputKey, isOn);
+
+                        if (DebugModeHandler.DEBUGENABLED)
+                        {
+                            if (mapped)
+                            {
+                                DebugLogger.PrintDebug($"Initialized switch state for '{settingKey}' ({inputKey}) to {(isOn ? "ON" : "OFF")}.");
+                            }
+                            else
+                            {
+                                DebugLogger.PrintDebug($"Switch '{settingKey}' could not map input key '{inputKey}' into the runtime cache.");
+                            }
                         }
                     }
                     else
@@ -56,6 +84,9 @@ namespace op.io
                         DebugLogger.PrintWarning("Invalid row format when loading control switch states.");
                     }
                 }
+
+                _switchStatesInitialized = true;
+                EnsureCriticalSwitchStates();
             }
             catch (Exception ex)
             {
@@ -216,6 +247,103 @@ namespace op.io
             }
 
             return _keySwitchStates[key];
+        }
+
+        private static void EnsureCriticalSwitchStates()
+        {
+            foreach (string settingKey in _criticalSwitchSettings)
+            {
+                if (_switchStateCache.ContainsKey(settingKey))
+                {
+                    continue;
+                }
+
+                bool loaded = LoadSwitchStateForSetting(settingKey);
+
+                if (!loaded && DebugModeHandler.DEBUGENABLED)
+                {
+                    DebugLogger.PrintDebug($"Critical switch '{settingKey}' missing from ControlKey. Defaulting to OFF.");
+                }
+            }
+
+            if (!DebugModeHandler.DEBUGENABLED)
+            {
+                return;
+            }
+
+            foreach (string settingKey in _criticalSwitchSettings)
+            {
+                if (_switchStateCache.TryGetValue(settingKey, out bool cachedState))
+                {
+                    DebugLogger.PrintDebug($"Critical switch '{settingKey}' cached verification -> {(cachedState ? "ON" : "OFF")}.");
+                }
+                else
+                {
+                    DebugLogger.PrintDebug($"Critical switch '{settingKey}' unavailable even after fallback checks.");
+                }
+            }
+        }
+
+        private static bool LoadSwitchStateForSetting(string settingKey)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "@settingKey", settingKey }
+            };
+
+            var rows = DatabaseQuery.ExecuteQuery("SELECT InputKey, SwitchStartState FROM ControlKey WHERE SettingKey = @settingKey LIMIT 1;", parameters);
+
+            if (rows.Count == 0)
+            {
+                return false;
+            }
+
+            var row = rows[0];
+
+            if (!row.ContainsKey("InputKey") || !row.ContainsKey("SwitchStartState"))
+            {
+                return false;
+            }
+
+            string inputKey = row["InputKey"]?.ToString();
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return false;
+            }
+
+            bool state = TypeConversionFunctions.IntToBool(Convert.ToInt32(row["SwitchStartState"]));
+            _switchStateCache[settingKey] = state;
+            _settingKeyToInputKey[settingKey] = inputKey;
+            TrySeedSwitchState(inputKey, state);
+            return true;
+        }
+
+        private static bool TrySeedSwitchState(string inputKey, bool state)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return false;
+            }
+
+            if (IsMouseInput(inputKey))
+            {
+                _mouseSwitchStates[inputKey] = state;
+                return true;
+            }
+
+            if (Enum.TryParse(inputKey, true, out Keys parsedKey))
+            {
+                _keySwitchStates[parsedKey] = state;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsMouseInput(string inputKey)
+        {
+            return string.Equals(inputKey, "LeftClick", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputKey, "RightClick", StringComparison.OrdinalIgnoreCase);
         }
 
         // Lazy load cooldown values from the Agent instance or database if not cached

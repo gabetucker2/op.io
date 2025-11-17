@@ -24,6 +24,9 @@ namespace op.io
             // Load control switch states from the database
             ControlStateManager.LoadControlSwitchStates();
 
+            // Hydrate the input switch cache so runtime toggles honor persisted values
+            InputTypeManager.InitializeControlStates();
+
             // Initialize the console after loading in switch states (which, importantly, contain DebugMode)
             ConsoleManager.InitializeConsoleIfEnabled();
 
