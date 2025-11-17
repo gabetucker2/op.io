@@ -7,7 +7,7 @@ namespace op.io
     public class Core : Game
     {
         // Manual settings
-        public static bool ForceDebugMode { get; set; } = true;
+        public static bool ForceDebugMode { get; set; } = false;
         public static Color DefaultColor = Color.HotPink;
 
         // Auto settings
