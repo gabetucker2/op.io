@@ -164,4 +164,5 @@ C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\obj\Debug\net8.0-windows
 C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\obj\Debug\net8.0-windows\op.io.pdb
 C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\obj\Debug\net8.0-windows\op.io.genruntimeconfig.cache
 C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\obj\Debug\net8.0-windows\ref\op.io.dll
-C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Content\Fonts\Minimal.xnb
+C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Content\Fonts\Bebas.xnb
+C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Content\Fonts\Futura.xnb

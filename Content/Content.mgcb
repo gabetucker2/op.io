@@ -12,9 +12,15 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin Fonts/Minimal.spritefont
+#begin Fonts/Bebas.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
-/build:Fonts/Minimal.spritefont
+/build:Fonts/Bebas.spritefont
+#begin Fonts/Futura.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Fonts/Futura.spritefont

@@ -1,2 +1,3 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
-"C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Minimal.spritefont","C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/bin/DesktopGL/Content/Fonts/Minimal.xnb","FontDescriptionProcessor","SpriteFontContent",456,37919,0.2124775
+"C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Bebas.spritefont","C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/bin/DesktopGL/Content/Fonts/Bebas.xnb","FontDescriptionProcessor","SpriteFontContent",469,37919,0.1318885
+"C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Futura.spritefont","C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/bin/DesktopGL/Content/Fonts/Futura.xnb","FontDescriptionProcessor","SpriteFontContent",465,70687,0.015748

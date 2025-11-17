@@ -4,9 +4,11 @@
   <Platform>DesktopGL</Platform>
   <Config />
   <SourceFiles>
-    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Minimal.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Bebas.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Futura.spritefont</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
   </DestFiles>
 </SourceFileCollection>
