@@ -15,6 +15,7 @@ namespace op.io
         private static readonly Dictionary<Keys, bool> _keySwitchStates = [];
         private static readonly Dictionary<string, bool> _switchStateCache = [];
         private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
+        private static readonly Dictionary<string, List<string>> _inputKeyToSettingKeys = new(StringComparer.OrdinalIgnoreCase);
         private static readonly string[] _criticalSwitchSettings = ["Crouch", "DockingMode", "DebugMode"];
         private static bool _switchStatesInitialized;
 
@@ -64,6 +65,7 @@ namespace op.io
 
                         _switchStateCache[settingKey] = isOn;
                         _settingKeyToInputKey[settingKey] = inputKey;
+                        RegisterInputKeyForSetting(settingKey, inputKey);
 
                         bool mapped = TrySeedSwitchState(inputKey, isOn);
 
@@ -212,6 +214,7 @@ namespace op.io
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
                 _lastMouseSwitchTime[mouseKey] = Core.GAMETIME; // Reset switch cooldown to the max cooldown value
+                NotifySwitchStateFromInput(mouseKey, _mouseSwitchStates[mouseKey]);
             }
 
             return _mouseSwitchStates[mouseKey];
@@ -244,9 +247,28 @@ namespace op.io
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
                 _lastKeySwitchTime[key] = Core.GAMETIME; // Reset switch cooldown to the max cooldown value
+                NotifySwitchStateFromInput(key.ToString(), _keySwitchStates[key]);
             }
 
             return _keySwitchStates[key];
+        }
+
+        private static void NotifySwitchStateFromInput(string inputKey, bool state)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return;
+            }
+
+            if (!_inputKeyToSettingKeys.TryGetValue(inputKey, out var settingKeys))
+            {
+                return;
+            }
+
+            foreach (string settingKey in settingKeys)
+            {
+                ControlStateManager.SetSwitchState(settingKey, state);
+            }
         }
 
         private static void EnsureCriticalSwitchStates()
@@ -314,6 +336,7 @@ namespace op.io
             bool state = TypeConversionFunctions.IntToBool(Convert.ToInt32(row["SwitchStartState"]));
             _switchStateCache[settingKey] = state;
             _settingKeyToInputKey[settingKey] = inputKey;
+            RegisterInputKeyForSetting(settingKey, inputKey);
             TrySeedSwitchState(inputKey, state);
             return true;
         }
@@ -338,6 +361,30 @@ namespace op.io
             }
 
             return false;
+        }
+
+        private static void RegisterInputKeyForSetting(string settingKey, string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
+            {
+                return;
+            }
+
+            if (!_inputKeyToSettingKeys.TryGetValue(inputKey, out var settingList))
+            {
+                settingList = [];
+                _inputKeyToSettingKeys[inputKey] = settingList;
+            }
+
+            if (!settingList.Contains(settingKey))
+            {
+                settingList.Add(settingKey);
+            }
+        }
+
+        public static IReadOnlyCollection<string> GetRegisteredSwitchKeys()
+        {
+            return _switchStateCache.Keys;
         }
 
         private static bool IsMouseInput(string inputKey)

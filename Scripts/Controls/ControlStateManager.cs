@@ -69,6 +69,7 @@ namespace op.io
                     _switchStates[settingKey] = state;
                     DebugLogger.PrintDatabase($"Updated and saved {settingKey} to {state} from {!state}");  //  NEVER CALLS
                     SaveSwitchState(settingKey, _switchStates[settingKey]);
+                    DispatchSwitchChange(settingKey, state);
                 }
             }
             TriggerManager.PrimeTriggerIfTrue(settingKey, state);
@@ -109,12 +110,18 @@ namespace op.io
             {
                 _switchStates[settingKey] = newState;
                 DebugLogger.PrintDatabase($"Updated switch state: {settingKey} = {(newState ? "ON" : "OFF")}");
+                DispatchSwitchChange(settingKey, newState);
             }
             else
             {
                 DebugLogger.PrintWarning($"Switch state for '{settingKey}' not found. Adding with state: {newState}");
                 _switchStates[settingKey] = newState;
             }
+        }
+
+        private static void DispatchSwitchChange(string settingKey, bool state)
+        {
+            SwitchRegistry.NotifyConsumers(settingKey, state);
         }
 
         public static void LoadControlSwitchStates()

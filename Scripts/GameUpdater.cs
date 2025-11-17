@@ -11,6 +11,9 @@ namespace op.io
 
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
+            // Centralized switch polling
+            SwitchStateScanner.Tick();
+
             // Process general actions (toggles, switches, etc.)
             ActionHandler.Tickwise_CheckActions();
 

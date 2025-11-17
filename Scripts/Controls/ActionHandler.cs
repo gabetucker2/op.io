@@ -16,9 +16,6 @@ namespace op.io
                 Exit.CloseGame();
             }
 
-            // Update switches
-            SwitchUpdate();
-
             // ReturnCursorToPlayer Handling
             if (InputManager.IsInputActive("ReturnCursorToPlayer"))
             {
@@ -29,60 +26,6 @@ namespace op.io
             else
             {
                 DebugLogger.PrintUI("ReturnCursorToPlayer input not active.");
-            }
-        }
-
-        public static void SwitchUpdate()
-        {
-            if (Core.Instance.Player is not Agent player)
-            {
-                DebugLogger.PrintError("CRITICAL: Switch error - no Player initialized");
-                return;
-            }
-
-            var modeHandlers = new List<(string key, Action<bool> applyState, bool selfPersists)>
-            {
-                ("DebugMode",   val =>
-                {
-                    if (DebugModeHandler.DEBUGENABLED != val)
-                    {
-                        DebugModeHandler.DEBUGENABLED = val;
-                    }
-                }, true),
-                ("DockingMode", val => BlockManager.DockingModeEnabled = val, false),
-                ("Crouch",      val => player.IsCrouching = val, false)
-            };
-
-            foreach (var (key, applyState, selfPersists) in modeHandlers)
-            {
-                bool liveState = InputManager.IsInputActive(key);
-                bool cachedState;
-
-                if (ControlStateManager.ContainsSwitchState(key))
-                {
-                    cachedState = ControlStateManager.GetSwitchState(key);
-                }
-                else
-                {
-                    cachedState = liveState;
-                    ControlStateManager.UpdateSwitchState(key, liveState);
-                }
-
-                bool targetState = cachedState;
-
-                if (liveState != cachedState)
-                {
-                    targetState = liveState;
-
-                    if (!selfPersists)
-                    {
-                        ControlStateManager.SetSwitchState(key, liveState);
-                    }
-
-                    DebugLogger.PrintUI($"{key} switch updated from {cachedState} to {liveState}");
-                }
-
-                applyState(targetState);
             }
         }
 

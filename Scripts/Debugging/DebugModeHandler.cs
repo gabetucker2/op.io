@@ -34,13 +34,16 @@ namespace op.io
                 }
                 else
                 {
-                    DebugLogger.PrintDebug($"Setting debug mode to: {value}");
-                    _debugMode = TypeConversionFunctions.BoolToInt(value);
-
-                    // Update switch state upon set, which will then automatically encode new value into DB
+                    ApplySwitchState(value);
                     ControlStateManager.SetSwitchState("DebugMode", value);
                 }
             }
+        }
+
+        public static void ApplySwitchState(bool value)
+        {
+            DebugLogger.PrintDebug($"Setting debug mode to: {value}");
+            _debugMode = TypeConversionFunctions.BoolToInt(value);
         }
 
         public static int MAXMSGREPEATS

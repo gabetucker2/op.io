@@ -26,6 +26,7 @@ namespace op.io
 
             // Hydrate the input switch cache so runtime toggles honor persisted values
             InputTypeManager.InitializeControlStates();
+            SwitchStateScanner.Initialize();
 
             // Initialize the console after loading in switch states (which, importantly, contain DebugMode)
             ConsoleManager.InitializeConsoleIfEnabled();
@@ -59,6 +60,7 @@ namespace op.io
 
             // Initialize gameobjects AFTER general settings are loaded
             GameObjectInitializer.Initialize();
+            SwitchConsumerBootstrapper.RegisterDefaultConsumers();
 
             foreach (GameObject obj in Core.Instance.GameObjects)
             {
