@@ -1,4 +1,4 @@
-Log created at 2025-11-17T17:05:37.3883585-05:00
+Log created at 2025-11-17T17:33:29.5391068-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 9
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] RestartDB disabled and database already exists. Skipping database reset. | DatabaseInitializer.cs::InitializeDatabase @ Line 28
@@ -193,6 +193,7 @@ Log created at 2025-11-17T17:05:37.3883585-05:00
 [DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE]   @value: DebugCircleRadius | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [DEBUG] DebugRenderer initialized with color {R:255 G:0 B:0 A:255} and radius 3 | DebugRenderer.cs::Initialize @ Line 42
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
 [GENERAL] GameRenderer: Graphics and GameObjects loaded successfully. | GameRenderer.cs::LoadGraphics @ Line 49
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType FROM ControlKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
@@ -204,21 +205,41 @@ Log created at 2025-11-17T17:05:37.3883585-05:00
 [DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [PLAYER] SwitchCooldown loaded: 0.5 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
-[DATABASE] Executing query: SELECT SettingKey, InputKey, InputType FROM ControlKey ORDER BY SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Query executed successfully. Retrieved 12 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [ERROR] Failed to load docking UI font: The content file was not found. | BlockManager.cs::EnsureSurfaceResources @ Line 308
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [WARNING] Zero collision normal between ID=2 and ID=1. Skipping resolution. | CollisionResolver.cs::HandlePhysicsCollision @ Line 72
 [UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
