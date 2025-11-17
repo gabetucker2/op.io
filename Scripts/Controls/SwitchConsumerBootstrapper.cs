@@ -11,11 +11,6 @@ namespace op.io
                 DebugModeHandler.ApplySwitchState(value);
             });
 
-            SwitchRegistry.RegisterConsumer("DockingMode", value =>
-            {
-                BlockManager.DockingModeEnabled = value;
-            });
-
             SwitchRegistry.RegisterConsumer("Crouch", value =>
             {
                 if (Core.Instance.Player is Agent agent)

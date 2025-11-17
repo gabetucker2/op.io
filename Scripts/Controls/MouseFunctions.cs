@@ -31,10 +31,8 @@ namespace op.io
         {
             MouseState mouseState = Mouse.GetState();
 
-            int x = Math.Max(0, mouseState.X);
-            int y = Math.Max(0, mouseState.Y);
-
-            return new Vector2(x, y);
+            Point windowPoint = new(Math.Max(0, mouseState.X), Math.Max(0, mouseState.Y));
+            return BlockManager.ToGameSpace(windowPoint);
         }
     }
 }

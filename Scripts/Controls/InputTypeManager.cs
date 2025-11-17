@@ -16,7 +16,7 @@ namespace op.io
         private static readonly Dictionary<string, bool> _switchStateCache = [];
         private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
         private static readonly Dictionary<string, List<string>> _inputKeyToSettingKeys = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly string[] _criticalSwitchSettings = ["Crouch", "DockingMode", "DebugMode"];
+        private static readonly string[] _criticalSwitchSettings = ["Crouch", "DebugMode"];
         private static bool _switchStatesInitialized;
 
         private static readonly Dictionary<string, float> _lastMouseSwitchTime = new();

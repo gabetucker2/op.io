@@ -39,6 +39,8 @@ namespace op.io
             // Apply physics step
             PhysicsManager.Update(Core.Instance.GameObjects);
 
+            BlockManager.Update(gameTime);
+
             // Reset triggers
             TriggerManager.Tickwise_TriggerReset();
 

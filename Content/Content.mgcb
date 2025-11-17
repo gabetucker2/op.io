@@ -12,3 +12,9 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Fonts/Minimal.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Fonts/Minimal.spritefont

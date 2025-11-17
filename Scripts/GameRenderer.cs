@@ -27,6 +27,7 @@ namespace op.io
             }
 
             DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
+            BlockManager.OnGraphicsReady();
 
             if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
             {
@@ -50,6 +51,8 @@ namespace op.io
 
         public static void Draw()
         {
+            bool usingDockedLayout = BlockManager.BeginDockedFrame(Core.Instance.GraphicsDevice);
+
             Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
@@ -68,6 +71,11 @@ namespace op.io
             }
 
             Core.Instance.SpriteBatch.End();
+
+            if (usingDockedLayout)
+            {
+                BlockManager.CompleteDockedFrame(Core.Instance.SpriteBatch);
+            }
         }
     }
 }
