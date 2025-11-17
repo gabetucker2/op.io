@@ -48,7 +48,7 @@ namespace op.io
                 return;
             }
 
-            BlockManager.ApplyWindowMode(Core.Instance);
+            ScreenManager.ApplyWindowMode(Core.Instance);
 
             Core.Instance.Graphics.SynchronizeWithVerticalRetrace = Core.Instance.VSyncEnabled;
             Core.Instance.IsFixedTimeStep = Core.Instance.UseFixedTimeStep;
