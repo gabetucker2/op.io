@@ -17,10 +17,28 @@ namespace op.io
                 return;
             }
 
-            _alreadyInitialized = true;
-
             string fullPath = DatabaseConfig.DatabaseFilePath;
             DebugLogger.PrintDatabase($"Using database file path: {fullPath}");
+
+            bool databaseExists = File.Exists(fullPath);
+            bool shouldReset = Core.RestartDB || !databaseExists;
+
+            if (!shouldReset && databaseExists)
+            {
+                DebugLogger.PrintDatabase("RestartDB disabled and database already exists. Skipping database reset.");
+
+                using var existingConnection = DatabaseManager.OpenConnection();
+                if (existingConnection == null)
+                {
+                    DebugLogger.PrintError("Failed to open database connection while skipping reset.");
+                    return;
+                }
+
+                DatabaseConfig.ConfigureDatabase(existingConnection);
+                DatabaseManager.CloseConnection(existingConnection);
+                _alreadyInitialized = true;
+                return;
+            }
 
             DeleteDatabaseIfExists(fullPath);
             CreateDatabaseIfNotExists(fullPath);
@@ -45,6 +63,7 @@ namespace op.io
 
             DebugLogger.PrintDatabase("Database initialization complete.");
             DatabaseManager.CloseConnection(connection);
+            _alreadyInitialized = true;
         }
 
         private static void LoadStructureScripts(SQLiteConnection connection)
