@@ -220,6 +220,11 @@ namespace op.io
             return _mouseSwitchStates[mouseKey];
         }
 
+        public static bool PeekMouseSwitchState(string mouseKey)
+        {
+            return _mouseSwitchStates.TryGetValue(mouseKey, out bool state) && state;
+        }
+
         public static bool IsKeySwitch(Keys key)
         {
             KeyboardState currentState = Keyboard.GetState();
@@ -251,6 +256,11 @@ namespace op.io
             }
 
             return _keySwitchStates[key];
+        }
+
+        public static bool PeekKeySwitchState(Keys key)
+        {
+            return _keySwitchStates.TryGetValue(key, out bool state) && state;
         }
 
         private static void NotifySwitchStateFromInput(string inputKey, bool state)
@@ -343,18 +353,19 @@ namespace op.io
 
         private static bool TrySeedSwitchState(string inputKey, bool state)
         {
-            if (string.IsNullOrWhiteSpace(inputKey))
+            string primaryToken = GetPrimaryToken(inputKey);
+            if (string.IsNullOrWhiteSpace(primaryToken))
             {
                 return false;
             }
 
-            if (IsMouseInput(inputKey))
+            if (IsMouseInput(primaryToken))
             {
-                _mouseSwitchStates[inputKey] = state;
+                _mouseSwitchStates[primaryToken] = state;
                 return true;
             }
 
-            if (Enum.TryParse(inputKey, true, out Keys parsedKey))
+            if (Enum.TryParse(primaryToken, true, out Keys parsedKey))
             {
                 _keySwitchStates[parsedKey] = state;
                 return true;
@@ -370,10 +381,26 @@ namespace op.io
                 return;
             }
 
-            if (!_inputKeyToSettingKeys.TryGetValue(inputKey, out var settingList))
+            AddInputKeyMapping(inputKey, settingKey);
+
+            string primaryToken = GetPrimaryToken(inputKey);
+            if (!string.IsNullOrWhiteSpace(primaryToken))
+            {
+                AddInputKeyMapping(primaryToken, settingKey);
+            }
+        }
+
+        private static void AddInputKeyMapping(string key, string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            if (!_inputKeyToSettingKeys.TryGetValue(key, out var settingList))
             {
                 settingList = [];
-                _inputKeyToSettingKeys[inputKey] = settingList;
+                _inputKeyToSettingKeys[key] = settingList;
             }
 
             if (!settingList.Contains(settingKey))
@@ -387,10 +414,76 @@ namespace op.io
             return _switchStateCache.Keys;
         }
 
+        public static bool OverrideSwitchState(string settingKey, bool state)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            if (!_switchStatesInitialized)
+            {
+                InitializeControlStates();
+            }
+
+            if (!_settingKeyToInputKey.TryGetValue(settingKey, out string inputKey) || string.IsNullOrWhiteSpace(inputKey))
+            {
+                return false;
+            }
+
+            string primaryToken = GetPrimaryToken(inputKey);
+            if (string.IsNullOrWhiteSpace(primaryToken))
+            {
+                return false;
+            }
+
+            bool updated = false;
+            if (IsMouseInput(primaryToken))
+            {
+                _mouseSwitchStates[primaryToken] = state;
+                updated = true;
+            }
+            else if (Enum.TryParse(primaryToken, true, out Keys parsedKey))
+            {
+                _keySwitchStates[parsedKey] = state;
+                if (!_lastKeySwitchTime.ContainsKey(parsedKey))
+                {
+                    _lastKeySwitchTime[parsedKey] = 0;
+                }
+                _lastKeySwitchTime[parsedKey] = Core.GAMETIME;
+                updated = true;
+            }
+
+            if (!updated)
+            {
+                return false;
+            }
+
+            _switchStateCache[settingKey] = state;
+            ControlStateManager.SetSwitchState(settingKey, state);
+            return true;
+        }
+
         private static bool IsMouseInput(string inputKey)
         {
             return string.Equals(inputKey, "LeftClick", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(inputKey, "RightClick", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetPrimaryToken(string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return string.Empty;
+            }
+
+            string[] tokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0)
+            {
+                return inputKey.Trim();
+            }
+
+            return tokens[^1].Trim();
         }
 
         // Lazy load cooldown values from the Agent instance or database if not cached

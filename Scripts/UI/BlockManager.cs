@@ -37,7 +37,9 @@ namespace op.io
         private static Point _dragOffset;
         private static DockDropPreview? _dropPreview;
         private static bool _overlayMenuVisible;
+        private static bool _panelMenuSwitchState;
         private static Rectangle _overlayBounds;
+        private static Rectangle _overlayDismissBounds;
         private static Rectangle _overlayOpenAllBounds;
         private static Rectangle _overlayCloseAllBounds;
         private static readonly List<OverlayPanelToggle> _overlayToggles = [];
@@ -97,14 +99,20 @@ namespace op.io
             MouseState mouseState = Mouse.GetState();
             _mousePosition = mouseState.Position;
 
-            if (InputManager.IsInputActive(PanelMenuControlKey))
+            _ = InputManager.IsInputActive(PanelMenuControlKey);
+            bool panelMenuState = GetPanelMenuState();
+            if (panelMenuState != _panelMenuSwitchState)
             {
-                _overlayMenuVisible = !_overlayMenuVisible;
+                _panelMenuSwitchState = panelMenuState;
+                _overlayMenuVisible = panelMenuState;
             }
 
             if (!_overlayMenuVisible)
             {
                 _overlayBounds = Rectangle.Empty;
+                _overlayDismissBounds = Rectangle.Empty;
+                _overlayOpenAllBounds = Rectangle.Empty;
+                _overlayCloseAllBounds = Rectangle.Empty;
                 _overlayToggles.Clear();
             }
 
@@ -746,6 +754,7 @@ namespace op.io
             Vector2 headerSize = headerFont.MeasureString(header);
             Vector2 headerPosition = new(_overlayBounds.X + (_overlayBounds.Width - headerSize.X) / 2f, _overlayBounds.Y + 12);
             headerFont.DrawString(spriteBatch, header, headerPosition, UIStyle.TextColor);
+            DrawOverlayDismissButton(spriteBatch);
 
             int rowY = _overlayBounds.Y + 52;
             foreach (OverlayPanelToggle toggle in _overlayToggles)
@@ -777,12 +786,44 @@ namespace op.io
             buttonFont.DrawString(spriteBatch, label, textPosition, UIStyle.TextColor);
         }
 
+        private static void DrawOverlayDismissButton(SpriteBatch spriteBatch)
+        {
+            if (_overlayDismissBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            Color background = new(64, 24, 24, 240);
+            Color border = new(150, 40, 40);
+            DrawRect(spriteBatch, _overlayDismissBounds, background);
+            DrawRectOutline(spriteBatch, _overlayDismissBounds, border, UIStyle.PanelBorderThickness);
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable)
+            {
+                return;
+            }
+
+            const string glyph = "X";
+            Vector2 glyphSize = glyphFont.MeasureString(glyph);
+            Vector2 glyphPosition = new(
+                _overlayDismissBounds.X + (_overlayDismissBounds.Width - glyphSize.X) / 2f,
+                _overlayDismissBounds.Y + (_overlayDismissBounds.Height - glyphSize.Y) / 2f - 1f);
+            glyphFont.DrawString(spriteBatch, glyph, glyphPosition, Color.OrangeRed);
+        }
+
         private static void UpdateOverlayInteractions(bool leftClickStarted)
         {
             BuildOverlayLayout();
 
             if (!leftClickStarted)
             {
+                return;
+            }
+
+            if (_overlayDismissBounds.Contains(_mousePosition))
+            {
+                CloseOverlayMenuFromUi();
                 return;
             }
 
@@ -806,12 +847,41 @@ namespace op.io
             }
         }
 
+        private static void CloseOverlayMenuFromUi()
+        {
+            _overlayMenuVisible = false;
+            bool overrideApplied = InputTypeManager.OverrideSwitchState(PanelMenuControlKey, false);
+            if (!overrideApplied && ControlStateManager.ContainsSwitchState(PanelMenuControlKey))
+            {
+                ControlStateManager.SetSwitchState(PanelMenuControlKey, false);
+            }
+            _panelMenuSwitchState = false;
+
+            _overlayBounds = Rectangle.Empty;
+            _overlayDismissBounds = Rectangle.Empty;
+            _overlayOpenAllBounds = Rectangle.Empty;
+            _overlayCloseAllBounds = Rectangle.Empty;
+            _overlayToggles.Clear();
+        }
+
+        private static bool GetPanelMenuState()
+        {
+            if (ControlStateManager.ContainsSwitchState(PanelMenuControlKey))
+            {
+                return ControlStateManager.GetSwitchState(PanelMenuControlKey);
+            }
+
+            return InputManager.IsInputActive(PanelMenuControlKey);
+        }
+
         private static void BuildOverlayLayout()
         {
             Rectangle viewport = Core.Instance?.GraphicsDevice?.Viewport.Bounds ?? new Rectangle(0, 0, 1280, 720);
             int width = 360;
             int height = 120 + (_orderedPanels.Count * 32);
             _overlayBounds = new Rectangle(viewport.X + (viewport.Width - width) / 2, viewport.Y + (viewport.Height - height) / 2, width, height);
+            int closeButtonSize = 24;
+            _overlayDismissBounds = new Rectangle(_overlayBounds.Right - closeButtonSize - 12, _overlayBounds.Y + 12, closeButtonSize, closeButtonSize);
 
             _overlayToggles.Clear();
             int rowY = _overlayBounds.Y + 52;

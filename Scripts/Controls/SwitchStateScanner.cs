@@ -16,7 +16,15 @@ namespace op.io
         public static void RefreshSwitchKeys()
         {
             _switchKeys.Clear();
-            _switchKeys.AddRange(InputTypeManager.GetRegisteredSwitchKeys());
+            foreach (string key in InputTypeManager.GetRegisteredSwitchKeys())
+            {
+                if (!ControlKeyRules.ShouldScannerTrackSwitch(key))
+                {
+                    continue;
+                }
+
+                _switchKeys.Add(key);
+            }
         }
 
         public static void Tick()

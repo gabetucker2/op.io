@@ -34,7 +34,7 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'Left
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('PanelMenu', 'Shift + X', 'Trigger');
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('PanelMenu', 'Shift + X', 'Switch', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0);
 
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DebugMode', 'B', 'Switch', 1);
@@ -44,7 +44,7 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUE
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SprintSpeedMultiplier', '1.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CrouchSpeedMultiplier', '0.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('TriggerCooldown', '0.5');
-INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.5');
+INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.2');
 
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '10');
 

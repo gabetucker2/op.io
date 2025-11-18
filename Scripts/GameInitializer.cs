@@ -17,6 +17,7 @@ namespace op.io
 
             // Ensure the database is initialized before loading settings
             DatabaseInitializer.InitializeDatabase();
+            ControlKeyMigrations.EnsureApplied();
 
             // Load general settings BEFORE initializing anything else
             LoadGeneralSettings();

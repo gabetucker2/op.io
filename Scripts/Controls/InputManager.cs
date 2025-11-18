@@ -30,12 +30,19 @@ namespace op.io
         {
             if (_isControlKeyLoaded) return;
 
+            ControlKeyMigrations.EnsureApplied();
+
             var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType FROM ControlKey;");
             foreach (var control in controls)
             {
                 string settingKey = control["SettingKey"].ToString();
                 string inputKey = control["InputKey"].ToString();
                 InputType inputType = Enum.Parse<InputType>(control["InputType"].ToString());
+
+                if (ControlKeyRules.RequiresSwitchSemantics(settingKey) && inputType != InputType.Switch)
+                {
+                    inputType = InputType.Switch;
+                }
 
                 if (TryCreateBinding(settingKey, inputKey, inputType, out ControlBinding binding))
                 {
@@ -49,7 +56,7 @@ namespace op.io
 
             if (!_controlBindings.ContainsKey("PanelMenu"))
             {
-                if (TryCreateBinding("PanelMenu", "Shift + X", InputType.Trigger, out ControlBinding defaultBinding))
+                if (TryCreateBinding("PanelMenu", "Shift + X", InputType.Switch, out ControlBinding defaultBinding))
                 {
                     _controlBindings["PanelMenu"] = defaultBinding;
                 }
@@ -255,11 +262,19 @@ namespace op.io
                     return false;
                 }
 
-                for (int i = 0; i < Tokens.Count - 1; i++)
+                bool modifiersHeld = true;
+                int modifierCount = Math.Max(0, Tokens.Count - 1);
+
+                for (int i = 0; i < modifierCount; i++)
                 {
                     if (!Tokens[i].IsHeld())
                     {
-                        return false;
+                        modifiersHeld = false;
+                        if (InputType != InputType.Switch)
+                        {
+                            return false;
+                        }
+                        break;
                     }
                 }
 
@@ -267,11 +282,32 @@ namespace op.io
 
                 return InputType switch
                 {
-                    InputType.Hold => primary.IsHeld(),
-                    InputType.Trigger => primary.IsTriggered(),
-                    InputType.Switch => primary.IsSwitch(),
+                    InputType.Hold => modifiersHeld && primary.IsHeld(),
+                    InputType.Trigger => modifiersHeld && primary.IsTriggered(),
+                    InputType.Switch => EvaluateSwitchState(primary, modifiersHeld),
                     _ => false
                 };
+            }
+
+            private bool EvaluateSwitchState(InputBindingToken primary, bool modifiersHeld)
+            {
+                if (modifiersHeld)
+                {
+                    return primary.IsSwitch();
+                }
+
+                bool peekState = primary.PeekSwitchState();
+                if (peekState)
+                {
+                    return true;
+                }
+
+                if (ControlStateManager.ContainsSwitchState(SettingKey))
+                {
+                    return ControlStateManager.GetSwitchState(SettingKey);
+                }
+
+                return false;
             }
         }
 
@@ -369,6 +405,24 @@ namespace op.io
                 }
 
                 return mouseButton;
+            }
+
+            public bool PeekSwitchState()
+            {
+                if (IsMouse)
+                {
+                    return InputTypeManager.PeekMouseSwitchState(MouseButton);
+                }
+
+                foreach (Keys key in Keys)
+                {
+                    if (InputTypeManager.PeekKeySwitchState(key))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
     }
