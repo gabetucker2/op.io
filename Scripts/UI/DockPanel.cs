@@ -8,6 +8,7 @@ namespace op.io
         Game,
         Blank,
         Controls,
+        Notes,
         Backend
     }
 

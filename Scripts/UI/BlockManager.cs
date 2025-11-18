@@ -13,6 +13,7 @@ namespace op.io
         private const string GamePanelKey = "game";
         private const string BlankPanelKey = "blank";
         private const string ControlsPanelKey = "controls";
+        private const string NotesPanelKey = "notes";
         private const string BackendPanelKey = "backend";
         private const string PanelMenuControlKey = "PanelMenu";
 
@@ -50,6 +51,7 @@ namespace op.io
         private static readonly List<CornerHandle> _cornerHandles = [];
         private static CornerHandle? _hoveredCornerHandle;
         private static CornerHandle? _activeCornerHandle;
+        private static string _focusedPanelId;
 
         public static bool DockingModeEnabled
         {
@@ -92,6 +94,7 @@ namespace op.io
             }
 
             EnsurePanels();
+            EnsureFocusedPanelValid();
             UpdateLayoutCache();
             EnsureSurfaceResources(Core.Instance.GraphicsDevice);
 
@@ -147,6 +150,7 @@ namespace op.io
                 }
             }
 
+            UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState);
             _previousMouseState = mouseState;
         }
 
@@ -239,11 +243,13 @@ namespace op.io
             DockPanel blank = CreatePanel(BlankPanelKey, "Blank Panel", DockPanelKind.Blank);
             DockPanel game = CreatePanel(GamePanelKey, "Game", DockPanelKind.Game);
             DockPanel controls = CreatePanel(ControlsPanelKey, "Controls", DockPanelKind.Controls);
+            DockPanel notes = CreatePanel(NotesPanelKey, "Notes", DockPanelKind.Notes);
             DockPanel backend = CreatePanel(BackendPanelKey, "Backend", DockPanelKind.Backend);
 
             PanelNode blankNode = _panelNodes[blank.Id];
             PanelNode gameNode = _panelNodes[game.Id];
             PanelNode controlsNode = _panelNodes[controls.Id];
+            PanelNode notesNode = _panelNodes[notes.Id];
             PanelNode backendNode = _panelNodes[backend.Id];
 
             SplitNode leftColumn = new(DockSplitOrientation.Horizontal)
@@ -253,10 +259,17 @@ namespace op.io
                 Second = gameNode
             };
 
+            SplitNode controlsAndNotes = new(DockSplitOrientation.Horizontal)
+            {
+                SplitRatio = 0.5f,
+                First = controlsNode,
+                Second = notesNode
+            };
+
             SplitNode rightColumn = new(DockSplitOrientation.Horizontal)
             {
-                SplitRatio = 0.6f,
-                First = controlsNode,
+                SplitRatio = 0.72f,
+                First = controlsAndNotes,
                 Second = backendNode
             };
 
@@ -403,9 +416,19 @@ namespace op.io
                 return;
             }
 
+            DockPanel headerHit = null;
+            if (leftClickStarted)
+            {
+                headerHit = HitTestHeader(_mousePosition);
+                if (headerHit != null)
+                {
+                    SetFocusedPanel(headerHit);
+                }
+            }
+
             if (_draggingPanel == null && leftClickStarted)
             {
-                DockPanel panel = HitTestHeader(_mousePosition);
+                DockPanel panel = headerHit ?? HitTestHeader(_mousePosition);
                 if (panel != null)
                 {
                     _draggingPanel = panel;
@@ -763,9 +786,37 @@ namespace op.io
                 case DockPanelKind.Controls:
                     ControlsBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockPanelKind.Notes:
+                    NotesBlock.Draw(spriteBatch, contentBounds);
+                    break;
                 case DockPanelKind.Backend:
                     BackendBlock.Draw(spriteBatch, contentBounds);
                     break;
+            }
+        }
+
+        private static void UpdateInteractiveBlocks(GameTime gameTime, MouseState mouseState, MouseState previousMouseState)
+        {
+            if (gameTime == null || _orderedPanels.Count == 0)
+            {
+                return;
+            }
+
+            int headerHeight = GetActiveHeaderHeight();
+            foreach (DockPanel panel in _orderedPanels)
+            {
+                if (panel == null || !panel.IsVisible)
+                {
+                    continue;
+                }
+
+                Rectangle contentBounds = panel.GetContentBounds(headerHeight, UIStyle.PanelPadding);
+                switch (panel.Kind)
+                {
+                    case DockPanelKind.Notes:
+                        NotesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
+                }
             }
         }
 
@@ -1280,21 +1331,98 @@ namespace op.io
             return false;
         }
 
+        public static bool TryFocusPanel(DockPanelKind kind)
+        {
+            if (!TryGetPanelByKind(kind, out DockPanel panel))
+            {
+                return false;
+            }
+
+            SetFocusedPanel(panel);
+            return true;
+        }
+
+        public static bool PanelHasFocus(DockPanelKind kind)
+        {
+            if (!TryGetPanelByKind(kind, out DockPanel panel))
+            {
+                return false;
+            }
+
+            return PanelHasFocus(panel?.Id);
+        }
+
+        public static bool PanelHasFocus(string panelId)
+        {
+            if (string.IsNullOrWhiteSpace(panelId) || string.IsNullOrWhiteSpace(_focusedPanelId))
+            {
+                return false;
+            }
+
+            return string.Equals(_focusedPanelId, panelId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static void ClearPanelFocus()
+        {
+            _focusedPanelId = null;
+        }
+
+        public static DockPanelKind? GetFocusedPanelKind()
+        {
+            if (string.IsNullOrWhiteSpace(_focusedPanelId))
+            {
+                return null;
+            }
+
+            if (!_panels.TryGetValue(_focusedPanelId, out DockPanel panel))
+            {
+                return null;
+            }
+
+            return panel.Kind;
+        }
+
+        private static void SetFocusedPanel(DockPanel panel)
+        {
+            if (panel == null || !panel.IsVisible)
+            {
+                return;
+            }
+
+            _focusedPanelId = panel.Id;
+        }
+
+        private static void EnsureFocusedPanelValid()
+        {
+            if (string.IsNullOrWhiteSpace(_focusedPanelId))
+            {
+                return;
+            }
+
+            if (!_panels.TryGetValue(_focusedPanelId, out DockPanel panel) || panel == null || !panel.IsVisible)
+            {
+                _focusedPanelId = null;
+            }
+        }
+
+        private static bool TryGetPanelByKind(DockPanelKind kind, out DockPanel panel)
+        {
+            panel = _orderedPanels.FirstOrDefault(p => p.Kind == kind);
+            return panel != null;
+        }
+
         public static Vector2 ToGameSpace(Point windowPosition)
         {
-            int x = Math.Max(0, windowPosition.X);
-            int y = Math.Max(0, windowPosition.Y);
+            float x = windowPosition.X;
+            float y = windowPosition.Y;
 
             if (_worldRenderTarget == null || _gameContentBounds.Width <= 0 || _gameContentBounds.Height <= 0)
             {
                 return new Vector2(x, y);
             }
 
-            float relativeX = (x - _gameContentBounds.X) / (float)_gameContentBounds.Width;
-            float relativeY = (y - _gameContentBounds.Y) / (float)_gameContentBounds.Height;
-
-            relativeX = MathHelper.Clamp(relativeX, 0f, 1f);
-            relativeY = MathHelper.Clamp(relativeY, 0f, 1f);
+            float relativeX = (x - _gameContentBounds.X) / _gameContentBounds.Width;
+            float relativeY = (y - _gameContentBounds.Y) / _gameContentBounds.Height;
 
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
         }

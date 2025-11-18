@@ -31,7 +31,7 @@ namespace op.io
         {
             MouseState mouseState = Mouse.GetState();
 
-            Point windowPoint = new(Math.Max(0, mouseState.X), Math.Max(0, mouseState.Y));
+            Point windowPoint = new(mouseState.X, mouseState.Y);
             return BlockManager.ToGameSpace(windowPoint);
         }
     }
