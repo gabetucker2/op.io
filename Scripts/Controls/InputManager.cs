@@ -342,10 +342,13 @@ namespace op.io
         {
             if (Core.Instance == null)
             {
+                GameTracker.FreezeGameInputs = false;
                 return false;
             }
 
-            return !BlockManager.IsCursorWithinGamePanel();
+            bool shouldFreeze = !BlockManager.IsCursorWithinGamePanel();
+            GameTracker.FreezeGameInputs = shouldFreeze;
+            return shouldFreeze;
         }
 
         private readonly struct InputBindingToken
