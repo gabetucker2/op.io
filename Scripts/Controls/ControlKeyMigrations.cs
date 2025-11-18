@@ -47,6 +47,7 @@ WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'PanelMenu');";
                 DatabaseQuery.ExecuteNonQuery(ensurePanelMenuStateSql);
                 DatabaseQuery.ExecuteNonQuery(exitResetSql);
                 DatabaseQuery.ExecuteNonQuery(ensurePanelMenuRowSql);
+                EnsureMetaControlColumn();
 
                 _applied = true;
             }
@@ -54,6 +55,36 @@ WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'PanelMenu');";
             {
                 DebugLogger.PrintError($"Failed to apply ControlKey migrations: {ex.Message}");
             }
+        }
+
+        private static void EnsureMetaControlColumn()
+        {
+            const string columnName = "MetaControl";
+            if (!DoesControlKeyColumnExist(columnName))
+            {
+                DatabaseQuery.ExecuteNonQuery($"ALTER TABLE ControlKey ADD COLUMN {columnName} INTEGER NOT NULL DEFAULT 0;");
+            }
+
+            const string syncMetaControls = @"
+UPDATE ControlKey
+SET MetaControl = CASE WHEN SettingKey IN ('Exit','PanelMenu','DockingMode','DebugMode') THEN 1 ELSE 0 END;";
+            DatabaseQuery.ExecuteNonQuery(syncMetaControls);
+        }
+
+        private static bool DoesControlKeyColumnExist(string columnName)
+        {
+            const string columnInfoSql = "PRAGMA table_info(ControlKey);";
+            var columns = DatabaseQuery.ExecuteQuery(columnInfoSql);
+            foreach (var column in columns)
+            {
+                if (column.TryGetValue("name", out object nameValue) &&
+                    string.Equals(Convert.ToString(nameValue), columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 

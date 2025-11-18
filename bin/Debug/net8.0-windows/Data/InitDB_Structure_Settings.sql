@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS ControlKey (
     SettingKey TEXT PRIMARY KEY,
     InputKey TEXT NOT NULL,
     InputType TEXT NOT NULL,
-    SwitchStartState BOOLEAN DEFAULT 0
+    SwitchStartState BOOLEAN DEFAULT 0,
+    MetaControl INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS ControlSettings (

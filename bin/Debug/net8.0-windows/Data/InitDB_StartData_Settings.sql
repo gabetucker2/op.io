@@ -24,20 +24,20 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('NumLogFiles', '5');
 
 ---------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveUp', 'W', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveDown', 'S', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveLeft', 'A', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveRight', 'D', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveTowardsCursor', 'LeftClick', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'LeftShift', 'Hold');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('PanelMenu', 'Shift + X', 'Switch', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveUp', 'W', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveDown', 'S', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveLeft', 'A', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveRight', 'D', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveTowardsCursor', 'LeftClick', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('Sprint', 'LeftShift', 'Hold', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('Crouch', 'LeftControl', 'Switch', 0, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('Exit', 'Escape', 'Trigger', 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('PanelMenu', 'Shift + X', 'Switch', 0, 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('DockingMode', 'V', 'Switch', 0, 1);
 
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DebugMode', 'B', 'Switch', 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('DebugMode', 'B', 'Switch', 1, 1);
 
 ---------------------------------------------------------------------------------------------------------------------------
 

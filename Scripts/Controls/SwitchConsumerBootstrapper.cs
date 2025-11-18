@@ -6,6 +6,11 @@ namespace op.io
         {
             SwitchRegistry.ClearConsumers();
 
+            SwitchRegistry.RegisterConsumer("DockingMode", value =>
+            {
+                BlockManager.DockingModeEnabled = value;
+            });
+
             SwitchRegistry.RegisterConsumer("DebugMode", value =>
             {
                 DebugModeHandler.ApplySwitchState(value);

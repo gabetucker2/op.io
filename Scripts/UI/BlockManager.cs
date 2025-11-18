@@ -63,9 +63,7 @@ namespace op.io
                 _dockingModeEnabled = value;
                 if (!_dockingModeEnabled)
                 {
-                    _overlayMenuVisible = false;
-                    _draggingPanel = null;
-                    _dropPreview = null;
+                    CollapseInteractions();
                     ClearSplitHandles();
                     MarkLayoutDirty();
                 }
@@ -86,7 +84,7 @@ namespace op.io
 
         public static void Update(GameTime gameTime)
         {
-            if (!DockingModeEnabled || Core.Instance?.GraphicsDevice == null)
+            if (Core.Instance?.GraphicsDevice == null)
             {
                 _previousMouseState = Mouse.GetState();
                 return;
@@ -99,6 +97,13 @@ namespace op.io
             MouseState mouseState = Mouse.GetState();
             _mousePosition = mouseState.Position;
 
+            if (!DockingModeEnabled)
+            {
+                CollapseInteractions();
+                _previousMouseState = mouseState;
+                return;
+            }
+
             _ = InputManager.IsInputActive(PanelMenuControlKey);
             bool panelMenuState = GetPanelMenuState();
             if (panelMenuState != _panelMenuSwitchState)
@@ -109,11 +114,7 @@ namespace op.io
 
             if (!_overlayMenuVisible)
             {
-                _overlayBounds = Rectangle.Empty;
-                _overlayDismissBounds = Rectangle.Empty;
-                _overlayOpenAllBounds = Rectangle.Empty;
-                _overlayCloseAllBounds = Rectangle.Empty;
-                _overlayToggles.Clear();
+                ResetOverlayLayout();
             }
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
@@ -150,7 +151,7 @@ namespace op.io
 
         public static bool BeginDockedFrame(GraphicsDevice graphicsDevice)
         {
-            if (!DockingModeEnabled)
+            if (graphicsDevice == null)
             {
                 _renderingDockedFrame = false;
                 return false;
@@ -186,7 +187,7 @@ namespace op.io
 
         public static void CompleteDockedFrame(SpriteBatch spriteBatch)
         {
-            if (!DockingModeEnabled || Core.Instance?.GraphicsDevice == null)
+            if (Core.Instance?.GraphicsDevice == null)
             {
                 return;
             }
@@ -421,6 +422,12 @@ namespace op.io
 
         private static DockPanel HitTestHeader(Point position)
         {
+            int headerHeight = GetActiveHeaderHeight();
+            if (headerHeight <= 0)
+            {
+                return null;
+            }
+
             foreach (DockPanel panel in _orderedPanels)
             {
                 if (!panel.IsVisible)
@@ -428,7 +435,7 @@ namespace op.io
                     continue;
                 }
 
-                Rectangle headerRect = panel.GetHeaderBounds(UIStyle.HeaderHeight);
+                Rectangle headerRect = panel.GetHeaderBounds(headerHeight);
                 if (headerRect.Contains(position))
                 {
                     return panel;
@@ -610,6 +617,9 @@ namespace op.io
 
         private static void DrawPanels(SpriteBatch spriteBatch)
         {
+            int headerHeight = GetActiveHeaderHeight();
+            bool showDockingChrome = DockingModeEnabled;
+
             foreach (DockPanel panel in _orderedPanels)
             {
                 if (!panel.IsVisible)
@@ -617,12 +627,15 @@ namespace op.io
                     continue;
                 }
 
-                DrawPanelBackground(spriteBatch, panel);
-                DrawPanelContent(spriteBatch, panel);
+                DrawPanelBackground(spriteBatch, panel, headerHeight);
+                DrawPanelContent(spriteBatch, panel, headerHeight);
             }
 
-            DrawSplitHandles(spriteBatch);
-            DrawCornerHandles(spriteBatch);
+            if (showDockingChrome)
+            {
+                DrawSplitHandles(spriteBatch);
+                DrawCornerHandles(spriteBatch);
+            }
 
             if (_draggingPanel != null)
             {
@@ -674,19 +687,30 @@ namespace op.io
             }
         }
 
-        private static void DrawPanelBackground(SpriteBatch spriteBatch, DockPanel panel)
+        private static void DrawPanelBackground(SpriteBatch spriteBatch, DockPanel panel, int headerHeight)
         {
             DrawRect(spriteBatch, panel.Bounds, UIStyle.PanelBackground);
             DrawRectOutline(spriteBatch, panel.Bounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
-            Rectangle header = panel.GetHeaderBounds(UIStyle.HeaderHeight);
+
+            if (headerHeight <= 0)
+            {
+                return;
+            }
+
+            Rectangle header = panel.GetHeaderBounds(headerHeight);
+            if (header.Height <= 0)
+            {
+                return;
+            }
+
             DrawRect(spriteBatch, header, UIStyle.HeaderBackground);
 
             UIStyle.UIFont headerFont = UIStyle.FontH2;
             if (headerFont.IsAvailable)
             {
                 Vector2 textSize = headerFont.MeasureString(panel.Title);
-                float textY = header.Y + (header.Height - textSize.Y) / 2f;
-                Vector2 textPosition = new(header.X + 12, textY);
+                float textY = header.Bottom - textSize.Y + 3f;
+                Vector2 textPosition = new Vector2(header.X + 12, textY);
                 headerFont.DrawString(spriteBatch, panel.Title, textPosition, UIStyle.TextColor);
             }
         }
@@ -714,9 +738,9 @@ namespace op.io
             }
         }
 
-        private static void DrawPanelContent(SpriteBatch spriteBatch, DockPanel panel)
+        private static void DrawPanelContent(SpriteBatch spriteBatch, DockPanel panel, int headerHeight)
         {
-            Rectangle contentBounds = panel.GetContentBounds(UIStyle.HeaderHeight, UIStyle.PanelPadding);
+            Rectangle contentBounds = panel.GetContentBounds(headerHeight, UIStyle.PanelPadding);
 
             switch (panel.Kind)
             {
@@ -768,6 +792,28 @@ namespace op.io
 
             DrawButton(spriteBatch, _overlayOpenAllBounds, "Open all", UIStyle.AccentColor);
             DrawButton(spriteBatch, _overlayCloseAllBounds, "Close all", UIStyle.PanelBorder);
+        }
+
+        private static void CollapseInteractions()
+        {
+            _overlayMenuVisible = false;
+            _panelMenuSwitchState = false;
+            _draggingPanel = null;
+            _dropPreview = null;
+            _hoveredSplitHandle = null;
+            _activeSplitHandle = null;
+            _hoveredCornerHandle = null;
+            _activeCornerHandle = null;
+            ResetOverlayLayout();
+        }
+
+        private static void ResetOverlayLayout()
+        {
+            _overlayBounds = Rectangle.Empty;
+            _overlayDismissBounds = Rectangle.Empty;
+            _overlayOpenAllBounds = Rectangle.Empty;
+            _overlayCloseAllBounds = Rectangle.Empty;
+            _overlayToggles.Clear();
         }
 
         private static void DrawButton(SpriteBatch spriteBatch, Rectangle bounds, string label, Color border)
@@ -899,7 +945,7 @@ namespace op.io
 
         private static void DrawEmptyState(SpriteBatch spriteBatch, Rectangle viewport)
         {
-            UIStyle.UIFont font = UIStyle.FontH3;
+            UIStyle.UIFont font = UIStyle.FontHBody;
             if (!font.IsAvailable)
             {
                 return;
@@ -921,7 +967,40 @@ namespace op.io
                 Math.Max(0, viewport.Height - (UIStyle.LayoutPadding * 2)));
         }
 
+        private static int GetActiveHeaderHeight()
+        {
+            return DockingModeEnabled ? UIStyle.HeaderHeight : 0;
+        }
+
         private static bool AnyPanelVisible() => _orderedPanels.Any(panel => panel.IsVisible);
+
+        public static bool IsCursorWithinGamePanel()
+        {
+            if (Core.Instance == null)
+            {
+                return true;
+            }
+
+            if (!Core.Instance.IsActive)
+            {
+                return false;
+            }
+
+            Rectangle bounds = GetCurrentGameContentBounds();
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                GraphicsDevice graphicsDevice = Core.Instance.GraphicsDevice;
+                if (graphicsDevice == null)
+                {
+                    return true;
+                }
+
+                bounds = graphicsDevice.Viewport.Bounds;
+            }
+
+            Point cursor = Mouse.GetState().Position;
+            return bounds.Contains(cursor);
+        }
 
         private static string GetPanelHotkeyLabel()
         {
@@ -946,12 +1025,6 @@ namespace op.io
 
         private static void UpdateLayoutCache()
         {
-            if (!DockingModeEnabled)
-            {
-                ClearSplitHandles();
-                return;
-            }
-
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
             if (graphicsDevice == null)
             {
@@ -968,17 +1041,31 @@ namespace op.io
 
             if (!_layoutDirty)
             {
+                if (!DockingModeEnabled)
+                {
+                    ClearSplitHandles();
+                }
+
                 return;
             }
 
             _layoutBounds = GetLayoutBounds(viewport);
             _rootNode?.Arrange(_layoutBounds, UIStyle.MinPanelSize);
-            RebuildSplitHandles();
+
+            if (DockingModeEnabled)
+            {
+                RebuildSplitHandles();
+            }
+            else
+            {
+                ClearSplitHandles();
+            }
 
             _gameContentBounds = Rectangle.Empty;
+            int headerHeight = GetActiveHeaderHeight();
             if (TryGetGamePanel(out DockPanel gamePanel) && gamePanel.IsVisible)
             {
-                _gameContentBounds = gamePanel.GetContentBounds(UIStyle.HeaderHeight, UIStyle.PanelPadding);
+                _gameContentBounds = gamePanel.GetContentBounds(headerHeight, UIStyle.PanelPadding);
             }
 
             _layoutDirty = false;
@@ -1185,7 +1272,7 @@ namespace op.io
             int x = Math.Max(0, windowPosition.X);
             int y = Math.Max(0, windowPosition.Y);
 
-            if (!DockingModeEnabled || _worldRenderTarget == null || _gameContentBounds.Width <= 0 || _gameContentBounds.Height <= 0)
+            if (_worldRenderTarget == null || _gameContentBounds.Width <= 0 || _gameContentBounds.Height <= 0)
             {
                 return new Vector2(x, y);
             }
@@ -1199,12 +1286,22 @@ namespace op.io
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
         }
 
+        private static Rectangle GetCurrentGameContentBounds()
+        {
+            if (_gameContentBounds.Width > 0 && _gameContentBounds.Height > 0)
+            {
+                return _gameContentBounds;
+            }
+
+            GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
+            return graphicsDevice?.Viewport.Bounds ?? Rectangle.Empty;
+        }
+
         public static bool TryProjectGameToWindow(Vector2 gamePosition, out Vector2 windowPosition)
         {
             windowPosition = gamePosition;
 
-            if (!DockingModeEnabled ||
-                _worldRenderTarget == null ||
+            if (_worldRenderTarget == null ||
                 _worldRenderTarget.Width <= 0 ||
                 _worldRenderTarget.Height <= 0 ||
                 _gameContentBounds.Width <= 0 ||

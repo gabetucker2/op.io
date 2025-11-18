@@ -32,19 +32,31 @@ namespace op.io
 
             ControlKeyMigrations.EnsureApplied();
 
-            var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType FROM ControlKey;");
+            var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, MetaControl FROM ControlKey;");
             foreach (var control in controls)
             {
                 string settingKey = control["SettingKey"].ToString();
                 string inputKey = control["InputKey"].ToString();
                 InputType inputType = Enum.Parse<InputType>(control["InputType"].ToString());
+                bool isMetaControl = false;
+                if (control.TryGetValue("MetaControl", out object metaValue) && metaValue != null && metaValue != DBNull.Value)
+                {
+                    try
+                    {
+                        isMetaControl = Convert.ToInt32(metaValue) != 0;
+                    }
+                    catch
+                    {
+                        isMetaControl = false;
+                    }
+                }
 
                 if (ControlKeyRules.RequiresSwitchSemantics(settingKey) && inputType != InputType.Switch)
                 {
                     inputType = InputType.Switch;
                 }
 
-                if (TryCreateBinding(settingKey, inputKey, inputType, out ControlBinding binding))
+                if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, out ControlBinding binding))
                 {
                     _controlBindings[settingKey] = binding;
                 }
@@ -54,12 +66,10 @@ namespace op.io
                 }
             }
 
-            if (!_controlBindings.ContainsKey("PanelMenu"))
+            if (!_controlBindings.ContainsKey("PanelMenu") &&
+                TryCreateBinding("PanelMenu", "Shift + X", InputType.Switch, true, out ControlBinding defaultBinding))
             {
-                if (TryCreateBinding("PanelMenu", "Shift + X", InputType.Switch, out ControlBinding defaultBinding))
-                {
-                    _controlBindings["PanelMenu"] = defaultBinding;
-                }
+                _controlBindings["PanelMenu"] = defaultBinding;
             }
 
             _isControlKeyLoaded = true;
@@ -145,7 +155,7 @@ namespace op.io
             return string.Empty;
         }
 
-        private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, out ControlBinding binding)
+        private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, out ControlBinding binding)
         {
             binding = null;
             if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
@@ -187,7 +197,7 @@ namespace op.io
             }
 
             string displayLabel = string.Join(" + ", tokens.Select(t => t.DisplayName));
-            binding = new ControlBinding(settingKey, inputType, tokens, displayLabel);
+            binding = new ControlBinding(settingKey, inputType, tokens, displayLabel, isMetaControl);
             return true;
         }
 
@@ -242,22 +252,29 @@ namespace op.io
 
         private sealed class ControlBinding
         {
-            public ControlBinding(string settingKey, InputType inputType, IReadOnlyList<InputBindingToken> tokens, string displayLabel)
+            public ControlBinding(string settingKey, InputType inputType, IReadOnlyList<InputBindingToken> tokens, string displayLabel, bool isMetaControl)
             {
                 SettingKey = settingKey;
                 InputType = inputType;
                 Tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
                 DisplayLabel = string.IsNullOrWhiteSpace(displayLabel) ? string.Join(" + ", tokens) : displayLabel;
+                IsMetaControl = isMetaControl;
             }
 
             public string SettingKey { get; }
             public InputType InputType { get; }
             public IReadOnlyList<InputBindingToken> Tokens { get; }
             public string DisplayLabel { get; }
+            public bool IsMetaControl { get; }
 
             public bool IsActive()
             {
                 if (Tokens == null || Tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                if (!ShouldAllowBinding(IsMetaControl))
                 {
                     return false;
                 }
@@ -309,6 +326,26 @@ namespace op.io
 
                 return false;
             }
+        }
+
+        private static bool ShouldAllowBinding(bool isMetaControl)
+        {
+            if (isMetaControl)
+            {
+                return true;
+            }
+
+            return !ShouldSuppressNonMetaControls();
+        }
+
+        private static bool ShouldSuppressNonMetaControls()
+        {
+            if (Core.Instance == null)
+            {
+                return false;
+            }
+
+            return !BlockManager.IsCursorWithinGamePanel();
         }
 
         private readonly struct InputBindingToken

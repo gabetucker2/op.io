@@ -24,12 +24,12 @@
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Color
 /build:Fonts/Futura.spritefont
-#begin Fonts/Alpaca.spritefont
+#begin Fonts/MontHeavy.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Color
-/build:Fonts/Alpaca.spritefont
+/build:Fonts/MontHeavy.spritefont
 #begin Fonts/MonaspaceXenon.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor

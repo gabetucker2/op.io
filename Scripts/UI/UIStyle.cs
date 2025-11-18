@@ -19,8 +19,7 @@ namespace op.io
         public const int DragOutlineThickness = 2;
 
         private const string BebasFontAsset = "Fonts/Bebas";
-        private const string FuturaFontAsset = "Fonts/Futura";
-        private const string AlpacaFontAsset = "Fonts/Alpaca";
+        private const string MontHeavyFontAsset = "Fonts/MontHeavy";
         private const string MonaspaceXenonFontAsset = "Fonts/MonaspaceXenon";
         private const string MonaspaceXenonBoldFontAsset = "Fonts/MonaspaceXenonBold";
         private const string MonaspaceXenonItalicFontAsset = "Fonts/MonaspaceXenonItalic";
@@ -29,9 +28,9 @@ namespace op.io
         private const string MonaspaceNeonItalicFontAsset = "Fonts/MonaspaceNeonItalic";
 
         private const float FontH1Size = 42f;
-        private const float FontH2Size = 30f;
-        private const float FontH3Size = 24f;
-        private const float FontH4Size = 20f;
+        private const float FontH2Size = 25f;
+        private const float FontHBodySize = 24f;
+        private const float FontHTechSize = 20f;
         private const float FontBodySize = 20f;
         private const float FontTechSize = 18f;
 
@@ -52,14 +51,13 @@ namespace op.io
 
         public static UIFont FontH1 { get; private set; }
         public static UIFont FontH2 { get; private set; }
-        public static UIFont FontH3 { get; private set; }
-        public static UIFont FontH4 { get; private set; }
+        public static UIFont FontHBody { get; private set; }
+        public static UIFont FontHTech { get; private set; }
         public static UIFont FontBody { get; private set; }
         public static UIFont FontTech { get; private set; }
 
         private static SpriteFont _fontBebas;
-        private static SpriteFont _fontFutura;
-        private static SpriteFont _fontAlpaca;
+        private static SpriteFont _fontMont;
         private static SpriteFont _fontMonospaceXenon;
         private static SpriteFont _fontMonospaceXenonBold;
         private static SpriteFont _fontMonospaceXenonItalic;
@@ -99,20 +97,11 @@ namespace op.io
 
             try
             {
-                _fontFutura = content.Load<SpriteFont>(FuturaFontAsset);
+                _fontMont = content.Load<SpriteFont>(MontHeavyFontAsset);
             }
             catch (ContentLoadException ex)
             {
-                DebugLogger.PrintError($"Failed to load Futura font asset '{FuturaFontAsset}': {ex.Message}");
-            }
-
-            try
-            {
-                _fontAlpaca = content.Load<SpriteFont>(AlpacaFontAsset);
-            }
-            catch (ContentLoadException ex)
-            {
-                DebugLogger.PrintError($"Failed to load Alpaca font asset '{AlpacaFontAsset}': {ex.Message}");
+                DebugLogger.PrintError($"Failed to load Mont Heavy font asset '{MontHeavyFontAsset}': {ex.Message}");
             }
 
             try
@@ -169,12 +158,12 @@ namespace op.io
                 DebugLogger.PrintError($"Failed to load Monaspace Neon italic font asset '{MonaspaceNeonItalicFontAsset}': {ex.Message}");
             }
 
-            SpriteFont fallback = _fontFutura ?? _fontBebas ?? _fontAlpaca ?? _fontMonospaceXenon ?? _fontMonospaceNeon;
+            SpriteFont fallback = _fontMont ?? _fontBebas ?? _fontMonospaceXenon ?? _fontMonospaceNeon;
 
             FontH1 = CreateFontStyle(_fontBebas, FontH1Size);
-            FontH2 = CreateFontStyle(_fontAlpaca, FontH2Size);
-            FontH3 = CreateFontStyle(fallback, FontH3Size);
-            FontH4 = CreateFontStyle(fallback, FontH4Size);
+            FontH2 = CreateFontStyle(_fontMont, FontH2Size);
+            FontHBody = CreateFontStyle(_fontMonospaceNeonBold, FontHBodySize);
+            FontHTech = CreateFontStyle(_fontMonospaceXenonBold, FontHTechSize);
             FontBody = CreateFontStyle(_fontMonospaceNeon, FontBodySize);
             FontTech = CreateFontStyle(_fontMonospaceXenon, FontTechSize);
             RegisterFontVariants(_fontMonospaceXenon, fallback);
