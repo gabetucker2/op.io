@@ -33,11 +33,12 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('M
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('Sprint', 'LeftShift', 'Hold', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('Crouch', 'LeftControl', 'Switch', 0, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger', 0);
+
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('Exit', 'Escape', 'Trigger', 1);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('PanelMenu', 'Shift + X', 'Switch', 0, 1);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('DockingMode', 'V', 'Switch', 0, 1);
-
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('DebugMode', 'B', 'Switch', 1, 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('AllowGameInputFreeze', 'Shift + C', 'Switch', 1, 1);
 
 ---------------------------------------------------------------------------------------------------------------------------
 

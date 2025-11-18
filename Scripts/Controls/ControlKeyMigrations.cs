@@ -1,11 +1,13 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace op.io
 {
     internal static class ControlKeyMigrations
     {
         private static bool _applied;
+        private static readonly string[] MetaControlKeys = ["Exit", "PanelMenu", "DockingMode", "DebugMode", "AllowGameInputFreeze"];
 
         public static void EnsureApplied()
         {
@@ -21,46 +23,10 @@ namespace op.io
 
             try
             {
-                const string panelMenuSql = @"
-UPDATE ControlKey
-SET InputType = 'Switch',
-    SwitchStartState = COALESCE(SwitchStartState, 0)
-WHERE SettingKey = 'PanelMenu' AND InputType <> 'Switch';";
-
-                const string ensurePanelMenuStateSql = @"
-UPDATE ControlKey
-SET SwitchStartState = COALESCE(SwitchStartState, 0)
-WHERE SettingKey = 'PanelMenu';";
-
-                const string exitResetSql = @"
-UPDATE ControlKey
-SET InputType = 'Trigger',
-    SwitchStartState = NULL
-WHERE SettingKey = 'Exit';";
-
-                const string ensurePanelMenuRowSql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState)
-SELECT 'PanelMenu', 'Shift + X', 'Switch', 0
-WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'PanelMenu');";
-
-                const string ensureAllowFreezeSwitchSql = @"
-UPDATE ControlKey
-SET InputType = 'Switch',
-    SwitchStartState = COALESCE(SwitchStartState, 1)
-WHERE SettingKey = 'AllowGameInputFreeze';";
-
-                const string ensureAllowFreezeRowSql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState)
-SELECT 'AllowGameInputFreeze', 'Shift + C', 'Switch', 1
-WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'AllowGameInputFreeze');";
-
-                DatabaseQuery.ExecuteNonQuery(panelMenuSql);
-                DatabaseQuery.ExecuteNonQuery(ensurePanelMenuStateSql);
-                DatabaseQuery.ExecuteNonQuery(exitResetSql);
-                DatabaseQuery.ExecuteNonQuery(ensurePanelMenuRowSql);
-                DatabaseQuery.ExecuteNonQuery(ensureAllowFreezeSwitchSql);
-                DatabaseQuery.ExecuteNonQuery(ensureAllowFreezeRowSql);
+                EnsurePanelMenuControl();
+                EnsureExitControl();
                 EnsureMetaControlColumn();
+                ControlKeyData.ApplyMetaControlFlags(MetaControlKeys);
 
                 _applied = true;
             }
@@ -73,31 +39,31 @@ WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'AllowGameInputFre
         private static void EnsureMetaControlColumn()
         {
             const string columnName = "MetaControl";
-            if (!DoesControlKeyColumnExist(columnName))
+            if (!ControlKeyData.ColumnExists(columnName))
             {
-                DatabaseQuery.ExecuteNonQuery($"ALTER TABLE ControlKey ADD COLUMN {columnName} INTEGER NOT NULL DEFAULT 0;");
+                ControlKeyData.AddColumn(columnName, "INTEGER NOT NULL DEFAULT 0");
             }
-
-            const string syncMetaControls = @"
-UPDATE ControlKey
-SET MetaControl = CASE WHEN SettingKey IN ('Exit','PanelMenu','DockingMode','DebugMode','AllowGameInputFreeze') THEN 1 ELSE 0 END;";
-            DatabaseQuery.ExecuteNonQuery(syncMetaControls);
         }
 
-        private static bool DoesControlKeyColumnExist(string columnName)
+        private static void EnsurePanelMenuControl()
         {
-            const string columnInfoSql = "PRAGMA table_info(ControlKey);";
-            var columns = DatabaseQuery.ExecuteQuery(columnInfoSql);
-            foreach (var column in columns)
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
             {
-                if (column.TryGetValue("name", out object nameValue) &&
-                    string.Equals(Convert.ToString(nameValue), columnName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
+                SettingKey = "PanelMenu",
+                InputKey = "Shift + X",
+                InputType = "Switch",
+                SwitchStartState = 0,
+                MetaControl = true
+            });
 
-            return false;
+            ControlKeyData.SetInputType("PanelMenu", "Switch");
+            ControlKeyData.EnsureSwitchStartState("PanelMenu", 0);
+        }
+
+        private static void EnsureExitControl()
+        {
+            ControlKeyData.SetInputType("Exit", "Trigger");
+            ControlKeyData.ClearSwitchStartState("Exit");
         }
     }
 
