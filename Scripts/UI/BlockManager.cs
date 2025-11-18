@@ -13,6 +13,7 @@ namespace op.io
         private const string GamePanelKey = "game";
         private const string BlankPanelKey = "blank";
         private const string SettingsPanelKey = "settings";
+        private const string PanelMenuControlKey = "PanelMenu";
 
         private static bool _dockingModeEnabled = true;
         private static bool _panelDefinitionsReady;
@@ -29,7 +30,6 @@ namespace op.io
         private static bool _viewportPushed;
         private static RenderTarget2D _worldRenderTarget;
         private static Texture2D _pixelTexture;
-        private static KeyboardState _previousKeyboardState;
         private static MouseState _previousMouseState;
         private static Point _mousePosition;
         private static DockPanel _draggingPanel;
@@ -86,7 +86,6 @@ namespace op.io
         {
             if (!DockingModeEnabled || Core.Instance?.GraphicsDevice == null)
             {
-                _previousKeyboardState = Keyboard.GetState();
                 _previousMouseState = Mouse.GetState();
                 return;
             }
@@ -95,14 +94,10 @@ namespace op.io
             UpdateLayoutCache();
             EnsureSurfaceResources(Core.Instance.GraphicsDevice);
 
-            KeyboardState keyboardState = Keyboard.GetState();
             MouseState mouseState = Mouse.GetState();
             _mousePosition = mouseState.Position;
 
-            bool comboPressed = IsShiftDown(keyboardState) && keyboardState.IsKeyDown(Keys.X);
-            bool comboPreviouslyPressed = IsShiftDown(_previousKeyboardState) && _previousKeyboardState.IsKeyDown(Keys.X);
-
-            if (comboPressed && !comboPreviouslyPressed)
+            if (InputManager.IsInputActive(PanelMenuControlKey))
             {
                 _overlayMenuVisible = !_overlayMenuVisible;
             }
@@ -142,7 +137,6 @@ namespace op.io
                 }
             }
 
-            _previousKeyboardState = keyboardState;
             _previousMouseState = mouseState;
         }
 
@@ -841,7 +835,8 @@ namespace op.io
                 return;
             }
 
-            string message = $"Press {UIStyle.PanelHotkeyLabel} to open panels";
+            string label = GetPanelHotkeyLabel();
+            string message = $"Press {label} to open panels";
             Vector2 size = font.MeasureString(message);
             Vector2 position = new(viewport.X + (viewport.Width - size.X) / 2f, viewport.Y + (viewport.Height - size.Y) / 2f);
             font.DrawString(spriteBatch, message, position, UIStyle.MutedTextColor);
@@ -857,6 +852,17 @@ namespace op.io
         }
 
         private static bool AnyPanelVisible() => _orderedPanels.Any(panel => panel.IsVisible);
+
+        private static string GetPanelHotkeyLabel()
+        {
+            string label = InputManager.GetBindingDisplayLabel(PanelMenuControlKey);
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                label = "Shift + X";
+            }
+
+            return label;
+        }
 
         private static void SetAllPanelsVisibility(bool value)
         {
@@ -1122,9 +1128,6 @@ namespace op.io
 
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
         }
-
-        private static bool IsShiftDown(KeyboardState state) =>
-            state.IsKeyDown(Keys.LeftShift) || state.IsKeyDown(Keys.RightShift);
 
         private static void DrawRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)
         {

@@ -34,6 +34,7 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Sprint', 'Left
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('Exit', 'Escape', 'Trigger');
+INSERT INTO ControlKey (SettingKey, InputKey, InputType) VALUES ('PanelMenu', 'Shift + X', 'Trigger');
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0);
 
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState) VALUES ('DebugMode', 'B', 'Switch', 1);

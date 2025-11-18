@@ -9,7 +9,6 @@ namespace op.io
 {
     public static class UIStyle
     {
-        public const string PanelHotkeyLabel = "Shift + X";
         public const int LayoutPadding = 24;
         public const int PanelPadding = 12;
         public const int HeaderHeight = 32;
