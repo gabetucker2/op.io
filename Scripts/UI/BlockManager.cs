@@ -44,6 +44,9 @@ namespace op.io
         private static readonly List<SplitHandle> _splitHandles = [];
         private static SplitHandle? _hoveredSplitHandle;
         private static SplitHandle? _activeSplitHandle;
+        private static readonly List<CornerHandle> _cornerHandles = [];
+        private static CornerHandle? _hoveredCornerHandle;
+        private static CornerHandle? _activeCornerHandle;
 
         public static bool DockingModeEnabled
         {
@@ -121,10 +124,13 @@ namespace op.io
                 _dropPreview = null;
                 _hoveredSplitHandle = null;
                 _activeSplitHandle = null;
+                _hoveredCornerHandle = null;
+                _activeCornerHandle = null;
             }
             else
             {
-                bool resizingPanels = UpdateSplitResizeState(leftClickStarted, leftClickHeld, leftClickReleased);
+                bool resizingPanels = UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
+                    UpdateSplitResizeState(leftClickStarted, leftClickHeld, leftClickReleased);
                 if (!resizingPanels)
                 {
                     UpdateDragState(leftClickStarted, leftClickReleased);
@@ -337,6 +343,44 @@ namespace op.io
             return false;
         }
 
+        private static bool UpdateCornerResizeState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
+        {
+            if (!AnyPanelVisible() || _cornerHandles.Count == 0)
+            {
+                _hoveredCornerHandle = null;
+                if (!leftClickHeld)
+                {
+                    _activeCornerHandle = null;
+                }
+
+                return false;
+            }
+
+            if (_activeCornerHandle.HasValue)
+            {
+                if (!leftClickHeld || leftClickReleased)
+                {
+                    _activeCornerHandle = null;
+                    return false;
+                }
+
+                ApplyCornerHandleDrag(_activeCornerHandle.Value, _mousePosition);
+                return true;
+            }
+
+            CornerHandle? hovered = HitTestCornerHandle(_mousePosition);
+            _hoveredCornerHandle = hovered;
+
+            if (hovered.HasValue && leftClickStarted)
+            {
+                _activeCornerHandle = hovered;
+                ApplyCornerHandleDrag(hovered.Value, _mousePosition);
+                return true;
+            }
+
+            return false;
+        }
+
         private static void UpdateDragState(bool leftClickStarted, bool leftClickReleased)
         {
             if (!AnyPanelVisible())
@@ -450,6 +494,21 @@ namespace op.io
             return preview;
         }
 
+        private static CornerHandle? HitTestCornerHandle(Point position)
+        {
+            foreach (CornerHandle corner in _cornerHandles)
+            {
+                Rectangle hitBounds = corner.Bounds;
+                hitBounds.Inflate(2, 2);
+                if (hitBounds.Contains(position))
+                {
+                    return corner;
+                }
+            }
+
+            return null;
+        }
+
         private static SplitHandle? HitTestSplitHandle(Point position)
         {
             foreach (SplitHandle handle in _splitHandles)
@@ -504,6 +563,12 @@ namespace op.io
             }
         }
 
+        private static void ApplyCornerHandleDrag(CornerHandle corner, Point position)
+        {
+            ApplySplitHandleDrag(corner.VerticalHandle, position);
+            ApplySplitHandleDrag(corner.HorizontalHandle, position);
+        }
+
         private static float ClampSplitRatio(int relativePosition, int spanLength)
         {
             if (spanLength <= 0)
@@ -555,6 +620,7 @@ namespace op.io
             }
 
             DrawSplitHandles(spriteBatch);
+            DrawCornerHandles(spriteBatch);
 
             if (_draggingPanel != null)
             {
@@ -580,11 +646,24 @@ namespace op.io
             foreach (SplitHandle handle in _splitHandles)
             {
                 Color color = UIStyle.SplitHandleColor;
-                if (_activeSplitHandle.HasValue && ReferenceEquals(handle.Node, _activeSplitHandle.Value.Node))
+                bool isActive = _activeSplitHandle.HasValue && ReferenceEquals(handle.Node, _activeSplitHandle.Value.Node);
+                bool isHovered = _hoveredSplitHandle.HasValue && ReferenceEquals(handle.Node, _hoveredSplitHandle.Value.Node);
+
+                if (!isActive && _activeCornerHandle.HasValue && CornerContainsHandle(_activeCornerHandle.Value, handle))
+                {
+                    isActive = true;
+                }
+
+                if (!isHovered && _hoveredCornerHandle.HasValue && CornerContainsHandle(_hoveredCornerHandle.Value, handle))
+                {
+                    isHovered = true;
+                }
+
+                if (isActive)
                 {
                     color = UIStyle.SplitHandleActiveColor;
                 }
-                else if (_hoveredSplitHandle.HasValue && ReferenceEquals(handle.Node, _hoveredSplitHandle.Value.Node))
+                else if (isHovered)
                 {
                     color = UIStyle.SplitHandleHoverColor;
                 }
@@ -607,6 +686,29 @@ namespace op.io
                 float textY = header.Y + (header.Height - textSize.Y) / 2f;
                 Vector2 textPosition = new(header.X + 12, textY);
                 headerFont.DrawString(spriteBatch, panel.Title, textPosition, UIStyle.TextColor);
+            }
+        }
+
+        private static void DrawCornerHandles(SpriteBatch spriteBatch)
+        {
+            if (_cornerHandles.Count == 0)
+            {
+                return;
+            }
+
+            foreach (CornerHandle corner in _cornerHandles)
+            {
+                Color color = UIStyle.SplitHandleColor;
+                if (_activeCornerHandle.HasValue && corner.Equals(_activeCornerHandle.Value))
+                {
+                    color = UIStyle.SplitHandleActiveColor;
+                }
+                else if (_hoveredCornerHandle.HasValue && corner.Equals(_hoveredCornerHandle.Value))
+                {
+                    color = UIStyle.SplitHandleHoverColor;
+                }
+
+                DrawRect(spriteBatch, corner.Bounds, color);
             }
         }
 
@@ -821,6 +923,7 @@ namespace op.io
 
             _splitHandles.Clear();
             CollectSplitHandles(_rootNode);
+            RebuildCornerHandles();
 
             if (_hoveredSplitHandle.HasValue)
             {
@@ -830,6 +933,16 @@ namespace op.io
             if (_activeSplitHandle.HasValue)
             {
                 _activeSplitHandle = FindHandleForNode(_activeSplitHandle.Value.Node);
+            }
+
+            if (_hoveredCornerHandle.HasValue)
+            {
+                _hoveredCornerHandle = FindCornerHandle(_hoveredCornerHandle.Value);
+            }
+
+            if (_activeCornerHandle.HasValue)
+            {
+                _activeCornerHandle = FindCornerHandle(_activeCornerHandle.Value);
             }
         }
 
@@ -860,6 +973,43 @@ namespace op.io
             if (split.Second != null)
             {
                 CollectSplitHandles(split.Second);
+            }
+        }
+
+        private static void RebuildCornerHandles()
+        {
+            _cornerHandles.Clear();
+            if (_splitHandles.Count == 0)
+            {
+                return;
+            }
+
+            int inflate = Math.Max(2, UIStyle.SplitHandleThickness / 2);
+
+            foreach (SplitHandle vertical in _splitHandles)
+            {
+                if (vertical.Orientation != DockSplitOrientation.Vertical)
+                {
+                    continue;
+                }
+
+                foreach (SplitHandle horizontal in _splitHandles)
+                {
+                    if (horizontal.Orientation != DockSplitOrientation.Horizontal)
+                    {
+                        continue;
+                    }
+
+                    Rectangle overlap = Rectangle.Intersect(vertical.Bounds, horizontal.Bounds);
+                    if (overlap.Width <= 0 || overlap.Height <= 0)
+                    {
+                        continue;
+                    }
+
+                    Rectangle bounds = overlap;
+                    bounds.Inflate(inflate, inflate);
+                    _cornerHandles.Add(new CornerHandle(vertical, horizontal, bounds));
+                }
             }
         }
 
@@ -913,11 +1063,34 @@ namespace op.io
             return null;
         }
 
+        private static CornerHandle? FindCornerHandle(CornerHandle corner)
+        {
+            foreach (CornerHandle handle in _cornerHandles)
+            {
+                if (ReferenceEquals(handle.VerticalHandle.Node, corner.VerticalHandle.Node) &&
+                    ReferenceEquals(handle.HorizontalHandle.Node, corner.HorizontalHandle.Node))
+                {
+                    return handle;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool CornerContainsHandle(CornerHandle corner, SplitHandle handle)
+        {
+            return ReferenceEquals(corner.VerticalHandle.Node, handle.Node) ||
+                   ReferenceEquals(corner.HorizontalHandle.Node, handle.Node);
+        }
+
         private static void ClearSplitHandles()
         {
             _splitHandles.Clear();
             _hoveredSplitHandle = null;
             _activeSplitHandle = null;
+            _cornerHandles.Clear();
+            _hoveredCornerHandle = null;
+            _activeCornerHandle = null;
         }
 
         private static bool TryGetGamePanel(out DockPanel panel)
@@ -1004,6 +1177,20 @@ namespace op.io
 
             public SplitNode Node { get; }
             public DockSplitOrientation Orientation { get; }
+            public Rectangle Bounds { get; }
+        }
+
+        private readonly struct CornerHandle
+        {
+            public CornerHandle(SplitHandle verticalHandle, SplitHandle horizontalHandle, Rectangle bounds)
+            {
+                VerticalHandle = verticalHandle;
+                HorizontalHandle = horizontalHandle;
+                Bounds = bounds;
+            }
+
+            public SplitHandle VerticalHandle { get; }
+            public SplitHandle HorizontalHandle { get; }
             public Rectangle Bounds { get; }
         }
 
