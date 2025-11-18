@@ -8,6 +8,8 @@ namespace op.io
 {
     public static class InputManager
     {
+        private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
+
         // Dictionary to store control key mappings (keyboard and mouse, including combos)
         private static readonly Dictionary<string, ControlBinding> _controlBindings = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, float> _cachedSpeedMultipliers = [];
@@ -346,9 +348,25 @@ namespace op.io
                 return false;
             }
 
+            if (!IsGameInputFreezeAllowed())
+            {
+                GameTracker.FreezeGameInputs = false;
+                return false;
+            }
+
             bool shouldFreeze = !BlockManager.IsCursorWithinGamePanel();
             GameTracker.FreezeGameInputs = shouldFreeze;
             return shouldFreeze;
+        }
+
+        private static bool IsGameInputFreezeAllowed()
+        {
+            if (ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
+            {
+                return ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
+            }
+
+            return true;
         }
 
         private readonly struct InputBindingToken

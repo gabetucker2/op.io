@@ -12,7 +12,8 @@ namespace op.io
     {
         private const string GamePanelKey = "game";
         private const string BlankPanelKey = "blank";
-        private const string SettingsPanelKey = "settings";
+        private const string ControlsPanelKey = "controls";
+        private const string BackendPanelKey = "backend";
         private const string PanelMenuControlKey = "PanelMenu";
 
         private static bool _dockingModeEnabled = true;
@@ -237,11 +238,13 @@ namespace op.io
 
             DockPanel blank = CreatePanel(BlankPanelKey, "Blank Panel", DockPanelKind.Blank);
             DockPanel game = CreatePanel(GamePanelKey, "Game", DockPanelKind.Game);
-            DockPanel settings = CreatePanel(SettingsPanelKey, "Keybind Settings", DockPanelKind.Settings);
+            DockPanel controls = CreatePanel(ControlsPanelKey, "Controls", DockPanelKind.Controls);
+            DockPanel backend = CreatePanel(BackendPanelKey, "Backend", DockPanelKind.Backend);
 
             PanelNode blankNode = _panelNodes[blank.Id];
             PanelNode gameNode = _panelNodes[game.Id];
-            PanelNode settingsNode = _panelNodes[settings.Id];
+            PanelNode controlsNode = _panelNodes[controls.Id];
+            PanelNode backendNode = _panelNodes[backend.Id];
 
             SplitNode leftColumn = new(DockSplitOrientation.Horizontal)
             {
@@ -250,11 +253,18 @@ namespace op.io
                 Second = gameNode
             };
 
+            SplitNode rightColumn = new(DockSplitOrientation.Horizontal)
+            {
+                SplitRatio = 0.6f,
+                First = controlsNode,
+                Second = backendNode
+            };
+
             _rootNode = new SplitNode(DockSplitOrientation.Vertical)
             {
                 SplitRatio = 0.67f,
                 First = leftColumn,
-                Second = settingsNode
+                Second = rightColumn
             };
 
             _panelDefinitionsReady = true;
@@ -750,8 +760,11 @@ namespace op.io
                 case DockPanelKind.Blank:
                     BlankBlock.Draw(spriteBatch, contentBounds);
                     break;
-                case DockPanelKind.Settings:
-                    SettingsBlock.Draw(spriteBatch, contentBounds);
+                case DockPanelKind.Controls:
+                    ControlsBlock.Draw(spriteBatch, contentBounds);
+                    break;
+                case DockPanelKind.Backend:
+                    BackendBlock.Draw(spriteBatch, contentBounds);
                     break;
             }
         }

@@ -7,7 +7,8 @@ namespace op.io
     {
         Game,
         Blank,
-        Settings
+        Controls,
+        Backend
     }
 
     public sealed class DockPanel

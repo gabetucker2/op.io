@@ -11,6 +11,14 @@ namespace op.io
                 BlockManager.DockingModeEnabled = value;
             });
 
+            SwitchRegistry.RegisterConsumer("AllowGameInputFreeze", value =>
+            {
+                if (!value)
+                {
+                    GameTracker.FreezeGameInputs = false;
+                }
+            });
+
             SwitchRegistry.RegisterConsumer("DebugMode", value =>
             {
                 DebugModeHandler.ApplySwitchState(value);

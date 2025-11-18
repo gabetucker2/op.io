@@ -43,10 +43,23 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState)
 SELECT 'PanelMenu', 'Shift + X', 'Switch', 0
 WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'PanelMenu');";
 
+                const string ensureAllowFreezeSwitchSql = @"
+UPDATE ControlKey
+SET InputType = 'Switch',
+    SwitchStartState = COALESCE(SwitchStartState, 1)
+WHERE SettingKey = 'AllowGameInputFreeze';";
+
+                const string ensureAllowFreezeRowSql = @"
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState)
+SELECT 'AllowGameInputFreeze', 'Shift + C', 'Switch', 1
+WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'AllowGameInputFreeze');";
+
                 DatabaseQuery.ExecuteNonQuery(panelMenuSql);
                 DatabaseQuery.ExecuteNonQuery(ensurePanelMenuStateSql);
                 DatabaseQuery.ExecuteNonQuery(exitResetSql);
                 DatabaseQuery.ExecuteNonQuery(ensurePanelMenuRowSql);
+                DatabaseQuery.ExecuteNonQuery(ensureAllowFreezeSwitchSql);
+                DatabaseQuery.ExecuteNonQuery(ensureAllowFreezeRowSql);
                 EnsureMetaControlColumn();
 
                 _applied = true;
@@ -67,7 +80,7 @@ WHERE NOT EXISTS (SELECT 1 FROM ControlKey WHERE SettingKey = 'PanelMenu');";
 
             const string syncMetaControls = @"
 UPDATE ControlKey
-SET MetaControl = CASE WHEN SettingKey IN ('Exit','PanelMenu','DockingMode','DebugMode') THEN 1 ELSE 0 END;";
+SET MetaControl = CASE WHEN SettingKey IN ('Exit','PanelMenu','DockingMode','DebugMode','AllowGameInputFreeze') THEN 1 ELSE 0 END;";
             DatabaseQuery.ExecuteNonQuery(syncMetaControls);
         }
 
