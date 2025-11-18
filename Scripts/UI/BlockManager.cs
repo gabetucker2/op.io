@@ -1199,6 +1199,33 @@ namespace op.io
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
         }
 
+        public static bool TryProjectGameToWindow(Vector2 gamePosition, out Vector2 windowPosition)
+        {
+            windowPosition = gamePosition;
+
+            if (!DockingModeEnabled ||
+                _worldRenderTarget == null ||
+                _worldRenderTarget.Width <= 0 ||
+                _worldRenderTarget.Height <= 0 ||
+                _gameContentBounds.Width <= 0 ||
+                _gameContentBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            float normalizedX = gamePosition.X / _worldRenderTarget.Width;
+            float normalizedY = gamePosition.Y / _worldRenderTarget.Height;
+
+            normalizedX = MathHelper.Clamp(normalizedX, 0f, 1f);
+            normalizedY = MathHelper.Clamp(normalizedY, 0f, 1f);
+
+            float projectedX = _gameContentBounds.X + (normalizedX * _gameContentBounds.Width);
+            float projectedY = _gameContentBounds.Y + (normalizedY * _gameContentBounds.Height);
+
+            windowPosition = new Vector2(projectedX, projectedY);
+            return true;
+        }
+
         private static void DrawRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)
         {
             if (_pixelTexture == null || bounds.Width <= 0 || bounds.Height <= 0)

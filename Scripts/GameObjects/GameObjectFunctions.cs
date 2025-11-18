@@ -39,6 +39,12 @@ namespace op.io
 
             // Get the local screen position of the player
             Vector2 localScreenPosition = GetGOLocalScreenPosition(gameObject);
+
+            if (BlockManager.TryProjectGameToWindow(localScreenPosition, out Vector2 projectedPosition))
+            {
+                localScreenPosition = projectedPosition;
+            }
+
             DebugLogger.PrintUI($"Local screen position of player: {localScreenPosition}");
 
             IntPtr windowHandle = Core.Instance?.Window?.Handle ?? IntPtr.Zero;
