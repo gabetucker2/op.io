@@ -1,4 +1,4 @@
-Log created at 2025-11-18T16:09:29.5221228-05:00
+Log created at 2025-11-18T17:14:47.0679872-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 9
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -20,6 +20,13 @@ Log created at 2025-11-18T16:09:29.5221228-05:00
 [DEFERRED OUTPUT] [DATABASE] Executed successfully: InitDB_StartData_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
 [DEFERRED OUTPUT] [DATABASE] Database initialization complete. | DatabaseInitializer.cs::InitializeDatabase @ Line 64
 [DEFERRED OUTPUT] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DEFERRED OUTPUT] [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @settingKey: PanelMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [DEFERRED OUTPUT] [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
@@ -80,21 +87,16 @@ Log created at 2025-11-18T16:09:29.5221228-05:00
 [DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
 [DEFERRED OUTPUT] [DATABASE]   @value: VSync | DatabaseQuery.cs::ExecuteQuery @ Line 22
-[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
-[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
-[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
-[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
-[DEFERRED OUTPUT] [DATABASE]   @value: FixedTimeStep | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
 [DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
-[DEFERRED OUTPUT] [DATABASE]   @value: TargetFrameRate | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE]   @value: FixedTimeStep | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE]   @value: TargetFrameRate | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [DEFERRED OUTPUT] [DATABASE]   @value: NumLogFiles | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [DEFERRED OUTPUT] [DATABASE] Loaded general settings: BackgroundColor={R:20 G:20 B:25 A:255}, Viewport=1400x1400, Mode=BorderedWindowed, VSync=False, FixedTimeStep=False, FPS=240 | GameInitializer.cs::LoadGeneralSettings @ Line 110
 [DEFERRED OUTPUT] [DATABASE] Loading control switch states... | ControlStateManager.cs::LoadControlSwitchStates @ Line 129
@@ -233,15 +235,9 @@ Log created at 2025-11-18T16:09:29.5221228-05:00
 [DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [PLAYER] SwitchCooldown loaded: 0.2 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=18 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=18 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType FROM ControlKey ORDER BY SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
@@ -254,41 +250,72 @@ Log created at 2025-11-18T16:09:29.5221228-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
 [DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE]   @value: SprintSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
 [DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99

@@ -1,4 +1,4 @@
-Log created at 2025-11-18T16:21:54.2884070-05:00
+Log created at 2025-11-18T17:34:57.9953678-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 9
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -235,10 +235,6 @@ Log created at 2025-11-18T16:21:54.2884070-05:00
 [DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [PLAYER] SwitchCooldown loaded: 0.2 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=17 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=17 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType FROM ControlKey ORDER BY SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
@@ -266,36 +262,155 @@ Log created at 2025-11-18T16:21:54.2884070-05:00
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[PHYSICS] Destroying GameObject ID=19 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=19 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
-[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[UI] Player screen position calculated: {X:600 Y:332} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:636 Y:886} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1216 Y:986} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1216 Y:986} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:540 Y:326} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:576 Y:880} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1156 Y:980} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1156 Y:980} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:583 Y:370} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:619 Y:924} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1199 Y:1024} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1199 Y:1024} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:643 Y:432} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:679 Y:986} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1259 Y:1086} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1259 Y:1086} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[UI] Player screen position calculated: {X:634 Y:449} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:670 Y:1003} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1250 Y:1103} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1250 Y:1103} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:726 Y:593} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:762 Y:1147} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1342 Y:1247} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1342 Y:1247} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:364 Y:618} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:400 Y:1172} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:980 Y:1272} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:980 Y:1272} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:279 Y:514} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:315 Y:1068} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:895 Y:1168} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:895 Y:1168} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:407 Y:391} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:443 Y:945} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1023 Y:1045} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1023 Y:1045} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:569 Y:350} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:605 Y:904} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [UI] Window Handle Retrieved: 2289229168896 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
+[UI] Player global screen position calculated: {X:1185 Y:1004} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1185 Y:1004} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:748 Y:533} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:784 Y:1087} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Player global screen position calculated: {X:1364 Y:1187} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1364 Y:1187} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:500 Y:228} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:536 Y:782} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Player global screen position calculated: {X:1116 Y:882} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:1116 Y:882} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] Player screen position calculated: {X:341 Y:166} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:377 Y:720} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Player global screen position calculated: {X:957 Y:820} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:957 Y:820} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[UI] Player screen position calculated: {X:373 Y:206} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
+[UI] Local screen position of player: {X:409 Y:760} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
+[UI] Player global screen position calculated: {X:989 Y:860} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
+[UI] Cursor returned to player position: {X:989 Y:860} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
+[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
 [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99

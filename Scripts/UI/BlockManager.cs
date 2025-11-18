@@ -100,15 +100,12 @@ namespace op.io
 
             MouseState mouseState = Mouse.GetState();
             _mousePosition = mouseState.Position;
-
-            if (!DockingModeEnabled)
+            bool dockingEnabled = DockingModeEnabled;
+            if (!dockingEnabled)
             {
-                CollapseInteractions();
-                _previousMouseState = mouseState;
-                return;
+                ClearDockingInteractions();
             }
 
-            _ = InputManager.IsInputActive(PanelMenuControlKey);
             bool panelMenuState = GetPanelMenuState();
             if (panelMenuState != _panelMenuSwitchState)
             {
@@ -128,14 +125,9 @@ namespace op.io
             if (_overlayMenuVisible)
             {
                 UpdateOverlayInteractions(leftClickStarted);
-                _draggingPanel = null;
-                _dropPreview = null;
-                _hoveredSplitHandle = null;
-                _activeSplitHandle = null;
-                _hoveredCornerHandle = null;
-                _activeCornerHandle = null;
+                ClearDockingInteractions();
             }
-            else
+            else if (dockingEnabled)
             {
                 bool resizingPanels = UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
                     UpdateSplitResizeState(leftClickStarted, leftClickHeld, leftClickReleased);
@@ -148,6 +140,10 @@ namespace op.io
                     _draggingPanel = null;
                     _dropPreview = null;
                 }
+            }
+            else
+            {
+                ClearDockingInteractions();
             }
 
             UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState);
@@ -416,6 +412,22 @@ namespace op.io
                 return;
             }
 
+            if (leftClickStarted)
+            {
+                DockPanel closeHit = HitTestCloseButton(_mousePosition);
+                if (closeHit != null)
+                {
+                    if (PanelHasFocus(closeHit.Id))
+                    {
+                        ClearPanelFocus();
+                    }
+
+                    closeHit.IsVisible = false;
+                    MarkLayoutDirty();
+                    return;
+                }
+            }
+
             DockPanel headerHit = null;
             if (leftClickStarted)
             {
@@ -476,6 +488,56 @@ namespace op.io
             }
 
             return null;
+        }
+
+        private static DockPanel HitTestCloseButton(Point position)
+        {
+            int headerHeight = GetActiveHeaderHeight();
+            if (headerHeight <= 0)
+            {
+                return null;
+            }
+
+            foreach (DockPanel panel in _orderedPanels)
+            {
+                if (!panel.IsVisible)
+                {
+                    continue;
+                }
+
+                Rectangle closeBounds = GetCloseButtonBounds(panel, headerHeight);
+                if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
+                {
+                    return panel;
+                }
+            }
+
+            return null;
+        }
+
+        private static Rectangle GetCloseButtonBounds(DockPanel panel, int headerHeight)
+        {
+            Rectangle headerRect = panel.GetHeaderBounds(headerHeight);
+            return GetCloseButtonBounds(headerRect);
+        }
+
+        private static Rectangle GetCloseButtonBounds(Rectangle headerRect)
+        {
+            if (headerRect.Width <= 0 || headerRect.Height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            const int horizontalPadding = 8;
+            int buttonSize = Math.Clamp(headerRect.Height - 10, 14, 24);
+            if (buttonSize <= 0 || headerRect.Width <= (horizontalPadding * 2) + buttonSize)
+            {
+                return Rectangle.Empty;
+            }
+
+            int x = headerRect.Right - horizontalPadding - buttonSize;
+            int y = headerRect.Y + (headerRect.Height - buttonSize) / 2;
+            return new Rectangle(x, y, buttonSize, buttonSize);
         }
 
         private static DockDropPreview? BuildDropPreview(Point position)
@@ -737,6 +799,7 @@ namespace op.io
             }
 
             DrawRect(spriteBatch, header, UIStyle.HeaderBackground);
+            Rectangle closeButtonBounds = GetCloseButtonBounds(header);
 
             UIStyle.UIFont headerFont = UIStyle.FontH2;
             if (headerFont.IsAvailable)
@@ -746,6 +809,34 @@ namespace op.io
                 Vector2 textPosition = new Vector2(header.X + 12, textY);
                 headerFont.DrawString(spriteBatch, panel.Title, textPosition, UIStyle.TextColor);
             }
+
+            if (closeButtonBounds != Rectangle.Empty)
+            {
+                bool hovered = closeButtonBounds.Contains(_mousePosition);
+                DrawPanelCloseButton(spriteBatch, closeButtonBounds, hovered);
+            }
+        }
+
+        private static void DrawPanelCloseButton(SpriteBatch spriteBatch, Rectangle bounds, bool hovered)
+        {
+            Color background = hovered ? new Color(140, 32, 32, 240) : new Color(80, 20, 20, 220);
+            Color border = hovered ? new Color(220, 72, 72) : new Color(160, 40, 40);
+            DrawRect(spriteBatch, bounds, background);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable)
+            {
+                return;
+            }
+
+            const string glyph = "X";
+            Vector2 glyphSize = glyphFont.MeasureString(glyph);
+            Vector2 glyphPosition = new(
+                bounds.X + (bounds.Width - glyphSize.X) / 2f,
+                bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
+            Color glyphColor = hovered ? Color.White : Color.OrangeRed;
+            glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
         }
 
         private static void DrawCornerHandles(SpriteBatch spriteBatch)
@@ -862,13 +953,18 @@ namespace op.io
         {
             _overlayMenuVisible = false;
             _panelMenuSwitchState = false;
+            ClearDockingInteractions();
+            ResetOverlayLayout();
+        }
+
+        private static void ClearDockingInteractions()
+        {
             _draggingPanel = null;
             _dropPreview = null;
             _hoveredSplitHandle = null;
             _activeSplitHandle = null;
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
-            ResetOverlayLayout();
         }
 
         private static void ResetOverlayLayout()
@@ -976,12 +1072,14 @@ namespace op.io
 
         private static bool GetPanelMenuState()
         {
+            bool liveState = InputManager.IsInputActive(PanelMenuControlKey);
             if (ControlStateManager.ContainsSwitchState(PanelMenuControlKey))
             {
-                return ControlStateManager.GetSwitchState(PanelMenuControlKey);
+                bool cachedState = ControlStateManager.GetSwitchState(PanelMenuControlKey);
+                return liveState || cachedState;
             }
 
-            return InputManager.IsInputActive(PanelMenuControlKey);
+            return liveState;
         }
 
         private static void BuildOverlayLayout()
