@@ -6,8 +6,22 @@
   <SourceFiles>
     <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Bebas.spritefont</File>
     <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Futura.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/Alpaca.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/MonaspaceXenon.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/MonaspaceXenonBold.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/MonaspaceXenonItalic.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/MonaspaceNeon.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/MonaspaceNeonBold.spritefont</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/StandaloneScripts/op.io/Content/Fonts/MonaspaceNeonItalic.spritefont</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />
   </DestFiles>

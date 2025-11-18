@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using op.io.UI.Blocks;
 
 namespace op.io
 {
@@ -29,8 +29,6 @@ namespace op.io
         private static bool _viewportPushed;
         private static RenderTarget2D _worldRenderTarget;
         private static Texture2D _pixelTexture;
-        private static readonly List<KeybindDisplayRow> _keybindCache = [];
-        private static bool _keybindCacheLoaded;
         private static KeyboardState _previousKeyboardState;
         private static MouseState _previousMouseState;
         private static Point _mousePosition;
@@ -43,7 +41,9 @@ namespace op.io
         private static Rectangle _overlayOpenAllBounds;
         private static Rectangle _overlayCloseAllBounds;
         private static readonly List<OverlayPanelToggle> _overlayToggles = [];
-        private static readonly StringBuilder _stringBuilder = new();
+        private static readonly List<SplitHandle> _splitHandles = [];
+        private static SplitHandle? _hoveredSplitHandle;
+        private static SplitHandle? _activeSplitHandle;
 
         public static bool DockingModeEnabled
         {
@@ -61,6 +61,7 @@ namespace op.io
                     _overlayMenuVisible = false;
                     _draggingPanel = null;
                     _dropPreview = null;
+                    ClearSplitHandles();
                     MarkLayoutDirty();
                 }
                 else
@@ -111,16 +112,28 @@ namespace op.io
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
+            bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
 
             if (_overlayMenuVisible)
             {
                 UpdateOverlayInteractions(leftClickStarted);
                 _draggingPanel = null;
                 _dropPreview = null;
+                _hoveredSplitHandle = null;
+                _activeSplitHandle = null;
             }
             else
             {
-                UpdateDragState(leftClickStarted, leftClickReleased);
+                bool resizingPanels = UpdateSplitResizeState(leftClickStarted, leftClickHeld, leftClickReleased);
+                if (!resizingPanels)
+                {
+                    UpdateDragState(leftClickStarted, leftClickReleased);
+                }
+                else
+                {
+                    _draggingPanel = null;
+                    _dropPreview = null;
+                }
             }
 
             _previousKeyboardState = keyboardState;
@@ -286,6 +299,44 @@ namespace op.io
             UIStyle.EnsureFontsLoaded(Core.Instance?.Content);
         }
 
+        private static bool UpdateSplitResizeState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
+        {
+            if (!AnyPanelVisible() || _splitHandles.Count == 0)
+            {
+                _hoveredSplitHandle = null;
+                if (!leftClickHeld)
+                {
+                    _activeSplitHandle = null;
+                }
+
+                return false;
+            }
+
+            if (_activeSplitHandle.HasValue)
+            {
+                if (!leftClickHeld || leftClickReleased)
+                {
+                    _activeSplitHandle = null;
+                    return false;
+                }
+
+                ApplySplitHandleDrag(_activeSplitHandle.Value, _mousePosition);
+                return true;
+            }
+
+            SplitHandle? hovered = HitTestSplitHandle(_mousePosition);
+            _hoveredSplitHandle = hovered;
+
+            if (hovered.HasValue && leftClickStarted)
+            {
+                _activeSplitHandle = hovered;
+                ApplySplitHandleDrag(hovered.Value, _mousePosition);
+                return true;
+            }
+
+            return false;
+        }
+
         private static void UpdateDragState(bool leftClickStarted, bool leftClickReleased)
         {
             if (!AnyPanelVisible())
@@ -399,6 +450,73 @@ namespace op.io
             return preview;
         }
 
+        private static SplitHandle? HitTestSplitHandle(Point position)
+        {
+            foreach (SplitHandle handle in _splitHandles)
+            {
+                Rectangle hitBounds = handle.Bounds;
+                hitBounds.Inflate(2, 2);
+                if (hitBounds.Contains(position))
+                {
+                    return handle;
+                }
+            }
+
+            return null;
+        }
+
+        private static void ApplySplitHandleDrag(SplitHandle handle, Point position)
+        {
+            if (handle.Node == null)
+            {
+                return;
+            }
+
+            Rectangle bounds = handle.Node.Bounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            float previousRatio = handle.Node.SplitRatio;
+            float newRatio;
+            if (handle.Orientation == DockSplitOrientation.Vertical)
+            {
+                int relative = position.X - bounds.X;
+                newRatio = ClampSplitRatio(relative, bounds.Width);
+            }
+            else
+            {
+                int relative = position.Y - bounds.Y;
+                newRatio = ClampSplitRatio(relative, bounds.Height);
+            }
+
+            if (float.IsNaN(newRatio) || float.IsInfinity(newRatio))
+            {
+                return;
+            }
+
+            newRatio = MathHelper.Clamp(newRatio, 0.001f, 0.999f);
+            if (Math.Abs(newRatio - previousRatio) > 0.0001f)
+            {
+                handle.Node.SplitRatio = newRatio;
+                MarkLayoutDirty();
+            }
+        }
+
+        private static float ClampSplitRatio(int relativePosition, int spanLength)
+        {
+            if (spanLength <= 0)
+            {
+                return 0.5f;
+            }
+
+            int minClamp = Math.Min(UIStyle.MinPanelSize, spanLength / 2);
+            int maxClamp = Math.Max(minClamp, spanLength - minClamp);
+            int clamped = Math.Clamp(relativePosition, minClamp, maxClamp);
+            return clamped / (float)Math.Max(1, spanLength);
+        }
+
         private static void ApplyDrop(DockDropPreview preview)
         {
             if (_draggingPanel == null || preview.TargetPanel == null)
@@ -436,6 +554,8 @@ namespace op.io
                 DrawPanelContent(spriteBatch, panel);
             }
 
+            DrawSplitHandles(spriteBatch);
+
             if (_draggingPanel != null)
             {
                 Rectangle floating = new(_mousePosition.X - _dragOffset.X, _mousePosition.Y - _dragOffset.Y, _draggingStartBounds.Width, _draggingStartBounds.Height);
@@ -450,6 +570,29 @@ namespace op.io
             }
         }
 
+        private static void DrawSplitHandles(SpriteBatch spriteBatch)
+        {
+            if (_splitHandles.Count == 0)
+            {
+                return;
+            }
+
+            foreach (SplitHandle handle in _splitHandles)
+            {
+                Color color = UIStyle.SplitHandleColor;
+                if (_activeSplitHandle.HasValue && ReferenceEquals(handle.Node, _activeSplitHandle.Value.Node))
+                {
+                    color = UIStyle.SplitHandleActiveColor;
+                }
+                else if (_hoveredSplitHandle.HasValue && ReferenceEquals(handle.Node, _hoveredSplitHandle.Value.Node))
+                {
+                    color = UIStyle.SplitHandleHoverColor;
+                }
+
+                DrawRect(spriteBatch, handle.Bounds, color);
+            }
+        }
+
         private static void DrawPanelBackground(SpriteBatch spriteBatch, DockPanel panel)
         {
             DrawRect(spriteBatch, panel.Bounds, UIStyle.PanelBackground);
@@ -457,13 +600,13 @@ namespace op.io
             Rectangle header = panel.GetHeaderBounds(UIStyle.HeaderHeight);
             DrawRect(spriteBatch, header, UIStyle.HeaderBackground);
 
-            SpriteFont headerFont = UIStyle.FontH2 ?? UIStyle.FontBody;
-            if (headerFont != null)
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            if (headerFont.IsAvailable)
             {
                 Vector2 textSize = headerFont.MeasureString(panel.Title);
                 float textY = header.Y + (header.Height - textSize.Y) / 2f;
                 Vector2 textPosition = new(header.X + 12, textY);
-                spriteBatch.DrawString(headerFont, panel.Title, textPosition, UIStyle.TextColor);
+                headerFont.DrawString(spriteBatch, panel.Title, textPosition, UIStyle.TextColor);
             }
         }
 
@@ -474,72 +617,23 @@ namespace op.io
             switch (panel.Kind)
             {
                 case DockPanelKind.Game:
-                    if (_worldRenderTarget != null)
-                    {
-                        spriteBatch.Draw(_worldRenderTarget, contentBounds, Color.White);
-                    }
+                    GameBlock.Draw(spriteBatch, contentBounds, _worldRenderTarget);
                     break;
                 case DockPanelKind.Blank:
-                    DrawBlankPanel(spriteBatch, contentBounds);
+                    BlankBlock.Draw(spriteBatch, contentBounds);
                     break;
                 case DockPanelKind.Settings:
-                    DrawSettingsPanel(spriteBatch, contentBounds);
+                    SettingsBlock.Draw(spriteBatch, contentBounds);
                     break;
-            }
-        }
-
-        private static void DrawBlankPanel(SpriteBatch spriteBatch, Rectangle contentBounds)
-        {
-            SpriteFont font = UIStyle.FontH1 ?? UIStyle.FontH2 ?? UIStyle.FontBody;
-            if (font == null)
-            {
-                return;
-            }
-
-            const string label = "Empty block";
-            Vector2 size = font.MeasureString(label);
-            Vector2 position = new(contentBounds.X + (contentBounds.Width - size.X) / 2f, contentBounds.Y + (contentBounds.Height - size.Y) / 2f);
-            spriteBatch.DrawString(font, label, position, UIStyle.MutedTextColor);
-        }
-
-        private static void DrawSettingsPanel(SpriteBatch spriteBatch, Rectangle contentBounds)
-        {
-            SpriteFont font = UIStyle.FontBody ?? UIStyle.FontH4;
-            if (font == null)
-            {
-                return;
-            }
-
-            EnsureKeybindCache();
-
-            float lineHeight = font.LineSpacing + 2f;
-            float y = contentBounds.Y;
-            foreach (KeybindDisplayRow row in _keybindCache)
-            {
-                if (y + lineHeight > contentBounds.Bottom)
-                {
-                    break;
-                }
-
-                _stringBuilder.Clear();
-                _stringBuilder.Append(row.Action);
-                _stringBuilder.Append(": ");
-                _stringBuilder.Append(row.Input);
-                _stringBuilder.Append(" [");
-                _stringBuilder.Append(row.Type);
-                _stringBuilder.Append(']');
-
-                spriteBatch.DrawString(font, _stringBuilder, new Vector2(contentBounds.X, y), UIStyle.TextColor);
-                y += lineHeight;
             }
         }
 
         private static void DrawOverlayMenu(SpriteBatch spriteBatch)
         {
-            SpriteFont headerFont = UIStyle.FontH1 ?? UIStyle.FontH2;
-            SpriteFont bodyFont = UIStyle.FontBody ?? UIStyle.FontH3;
+            UIStyle.UIFont headerFont = UIStyle.FontH1;
+            UIStyle.UIFont bodyFont = UIStyle.FontTech;
 
-            if (!_overlayMenuVisible || headerFont == null || bodyFont == null)
+            if (!_overlayMenuVisible || !headerFont.IsAvailable || !bodyFont.IsAvailable)
             {
                 return;
             }
@@ -555,13 +649,13 @@ namespace op.io
             string header = "Panel visibility";
             Vector2 headerSize = headerFont.MeasureString(header);
             Vector2 headerPosition = new(_overlayBounds.X + (_overlayBounds.Width - headerSize.X) / 2f, _overlayBounds.Y + 12);
-            spriteBatch.DrawString(headerFont, header, headerPosition, UIStyle.TextColor);
+            headerFont.DrawString(spriteBatch, header, headerPosition, UIStyle.TextColor);
 
             int rowY = _overlayBounds.Y + 52;
             foreach (OverlayPanelToggle toggle in _overlayToggles)
             {
                 string label = toggle.Panel.Title;
-                spriteBatch.DrawString(bodyFont, label, new Vector2(_overlayBounds.X + 20, rowY), UIStyle.TextColor);
+                bodyFont.DrawString(spriteBatch, label, new Vector2(_overlayBounds.X + 20, rowY), UIStyle.TextColor);
                 string state = toggle.Panel.IsVisible ? "Hide" : "Show";
                 DrawButton(spriteBatch, toggle.Bounds, state, toggle.Panel.IsVisible ? UIStyle.AccentColor : UIStyle.PanelBorder);
                 rowY += 32;
@@ -573,8 +667,8 @@ namespace op.io
 
         private static void DrawButton(SpriteBatch spriteBatch, Rectangle bounds, string label, Color border)
         {
-            SpriteFont buttonFont = UIStyle.FontBody ?? UIStyle.FontH4;
-            if (buttonFont == null)
+            UIStyle.UIFont buttonFont = UIStyle.FontBody;
+            if (!buttonFont.IsAvailable)
             {
                 return;
             }
@@ -584,7 +678,7 @@ namespace op.io
 
             Vector2 textSize = buttonFont.MeasureString(label);
             Vector2 textPosition = new(bounds.X + (bounds.Width - textSize.X) / 2f, bounds.Y + (bounds.Height - textSize.Y) / 2f);
-            spriteBatch.DrawString(buttonFont, label, textPosition, UIStyle.TextColor);
+            buttonFont.DrawString(spriteBatch, label, textPosition, UIStyle.TextColor);
         }
 
         private static void UpdateOverlayInteractions(bool leftClickStarted)
@@ -639,8 +733,8 @@ namespace op.io
 
         private static void DrawEmptyState(SpriteBatch spriteBatch, Rectangle viewport)
         {
-            SpriteFont font = UIStyle.FontH3 ?? UIStyle.FontBody;
-            if (font == null)
+            UIStyle.UIFont font = UIStyle.FontH3;
+            if (!font.IsAvailable)
             {
                 return;
             }
@@ -648,7 +742,7 @@ namespace op.io
             string message = $"Press {UIStyle.PanelHotkeyLabel} to open panels";
             Vector2 size = font.MeasureString(message);
             Vector2 position = new(viewport.X + (viewport.Width - size.X) / 2f, viewport.Y + (viewport.Height - size.Y) / 2f);
-            spriteBatch.DrawString(font, message, position, UIStyle.MutedTextColor);
+            font.DrawString(spriteBatch, message, position, UIStyle.MutedTextColor);
         }
 
         private static Rectangle GetLayoutBounds(Rectangle viewport)
@@ -676,12 +770,14 @@ namespace op.io
         {
             if (!DockingModeEnabled)
             {
+                ClearSplitHandles();
                 return;
             }
 
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
             if (graphicsDevice == null)
             {
+                ClearSplitHandles();
                 return;
             }
 
@@ -699,6 +795,7 @@ namespace op.io
 
             _layoutBounds = GetLayoutBounds(viewport);
             _rootNode?.Arrange(_layoutBounds, UIStyle.MinPanelSize);
+            RebuildSplitHandles();
 
             _gameContentBounds = Rectangle.Empty;
             if (TryGetGamePanel(out DockPanel gamePanel) && gamePanel.IsVisible)
@@ -712,6 +809,115 @@ namespace op.io
         private static void MarkLayoutDirty()
         {
             _layoutDirty = true;
+        }
+
+        private static void RebuildSplitHandles()
+        {
+            if (_rootNode == null || !AnyPanelVisible())
+            {
+                ClearSplitHandles();
+                return;
+            }
+
+            _splitHandles.Clear();
+            CollectSplitHandles(_rootNode);
+
+            if (_hoveredSplitHandle.HasValue)
+            {
+                _hoveredSplitHandle = FindHandleForNode(_hoveredSplitHandle.Value.Node);
+            }
+
+            if (_activeSplitHandle.HasValue)
+            {
+                _activeSplitHandle = FindHandleForNode(_activeSplitHandle.Value.Node);
+            }
+        }
+
+        private static void CollectSplitHandles(DockNode node)
+        {
+            if (node is not SplitNode split)
+            {
+                return;
+            }
+
+            bool firstVisible = split.First?.HasVisibleContent ?? false;
+            bool secondVisible = split.Second?.HasVisibleContent ?? false;
+
+            if (firstVisible && secondVisible)
+            {
+                Rectangle handleBounds = GetSplitHandleBounds(split);
+                if (handleBounds.Width > 0 && handleBounds.Height > 0)
+                {
+                    _splitHandles.Add(new SplitHandle(split, split.Orientation, handleBounds));
+                }
+            }
+
+            if (split.First != null)
+            {
+                CollectSplitHandles(split.First);
+            }
+
+            if (split.Second != null)
+            {
+                CollectSplitHandles(split.Second);
+            }
+        }
+
+        private static Rectangle GetSplitHandleBounds(SplitNode split)
+        {
+            if (split == null)
+            {
+                return Rectangle.Empty;
+            }
+
+            Rectangle bounds = split.Bounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0 || split.First == null || split.Second == null)
+            {
+                return Rectangle.Empty;
+            }
+
+            int thickness = Math.Max(2, UIStyle.SplitHandleThickness);
+            if (split.Orientation == DockSplitOrientation.Vertical)
+            {
+                int centerX = split.First.Bounds.Right;
+                int minX = bounds.X;
+                int maxX = Math.Max(bounds.X, bounds.Right - thickness);
+                int x = Math.Clamp(centerX - thickness / 2, minX, maxX);
+                return new Rectangle(x, bounds.Y, thickness, bounds.Height);
+            }
+            else
+            {
+                int centerY = split.First.Bounds.Bottom;
+                int minY = bounds.Y;
+                int maxY = Math.Max(bounds.Y, bounds.Bottom - thickness);
+                int y = Math.Clamp(centerY - thickness / 2, minY, maxY);
+                return new Rectangle(bounds.X, y, bounds.Width, thickness);
+            }
+        }
+
+        private static SplitHandle? FindHandleForNode(SplitNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            foreach (SplitHandle handle in _splitHandles)
+            {
+                if (ReferenceEquals(handle.Node, node))
+                {
+                    return handle;
+                }
+            }
+
+            return null;
+        }
+
+        private static void ClearSplitHandles()
+        {
+            _splitHandles.Clear();
+            _hoveredSplitHandle = null;
+            _activeSplitHandle = null;
         }
 
         private static bool TryGetGamePanel(out DockPanel panel)
@@ -742,37 +948,6 @@ namespace op.io
             relativeY = MathHelper.Clamp(relativeY, 0f, 1f);
 
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
-        }
-
-        private static void EnsureKeybindCache()
-        {
-            if (_keybindCacheLoaded)
-            {
-                return;
-            }
-
-            try
-            {
-                _keybindCache.Clear();
-                var rows = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType FROM ControlKey ORDER BY SettingKey;");
-                foreach (var row in rows)
-                {
-                    _keybindCache.Add(new KeybindDisplayRow
-                    {
-                        Action = row.TryGetValue("SettingKey", out object action) ? action?.ToString() ?? "Action" : "Action",
-                        Input = row.TryGetValue("InputKey", out object key) ? key?.ToString() ?? "Key" : "Key",
-                        Type = row.TryGetValue("InputType", out object type) ? type?.ToString() ?? string.Empty : string.Empty
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintError($"Failed to load keybinds for settings panel: {ex.Message}");
-            }
-            finally
-            {
-                _keybindCacheLoaded = true;
-            }
         }
 
         private static bool IsShiftDown(KeyboardState state) =>
@@ -806,13 +981,6 @@ namespace op.io
             spriteBatch.Draw(_pixelTexture, right, color);
         }
 
-        private struct KeybindDisplayRow
-        {
-            public string Action;
-            public string Input;
-            public string Type;
-        }
-
         private readonly struct OverlayPanelToggle
         {
             public OverlayPanelToggle(DockPanel panel, Rectangle bounds)
@@ -822,6 +990,20 @@ namespace op.io
             }
 
             public DockPanel Panel { get; }
+            public Rectangle Bounds { get; }
+        }
+
+        private readonly struct SplitHandle
+        {
+            public SplitHandle(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
+            {
+                Node = node;
+                Orientation = orientation;
+                Bounds = bounds;
+            }
+
+            public SplitNode Node { get; }
+            public DockSplitOrientation Orientation { get; }
             public Rectangle Bounds { get; }
         }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<XnaContent xmlns:ns="Microsoft.Xna.Framework.Content.Pipeline.Graphics">
+  <Asset Type="ns:FontDescription">
+    <FontName>MonaspaceXenon-Bold.otf</FontName>
+    <Size>22</Size>
+    <Spacing>1</Spacing>
+    <UseKerning>false</UseKerning>
+    <Style>Regular</Style>
+    <CharacterRegions>
+      <CharacterRegion>
+        <Start> </Start>
+        <End>~</End>
+      </CharacterRegion>
+    </CharacterRegions>
+  </Asset>
+</XnaContent>
