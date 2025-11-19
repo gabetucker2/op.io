@@ -1,0 +1,50 @@
+            Rectangle top = new(bounds.X, bounds.Y, bounds.Width, thickness);
+            Rectangle bottom = new(bounds.X, bounds.Bottom - thickness, bounds.Width, thickness);
+            Rectangle left = new(bounds.X, bounds.Y, thickness, bounds.Height);
+            Rectangle right = new(bounds.Right - thickness, bounds.Y, thickness, bounds.Height);
+
+            spriteBatch.Draw(_pixelTexture, top, color);
+            spriteBatch.Draw(_pixelTexture, bottom, color);
+            spriteBatch.Draw(_pixelTexture, left, color);
+            spriteBatch.Draw(_pixelTexture, right, color);
+        }
+
+        private readonly struct OverlayPanelToggle
+        {
+            public OverlayPanelToggle(DockPanel panel, Rectangle bounds)
+            {
+                Panel = panel;
+                Bounds = bounds;
+            }
+
+            public DockPanel Panel { get; }
+            public Rectangle Bounds { get; }
+        }
+
+        private readonly struct SplitHandle
+        {
+            public SplitHandle(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
+            {
+                Node = node;
+                Orientation = orientation;
+                Bounds = bounds;
+            }
+
+            public SplitNode Node { get; }
+            public DockSplitOrientation Orientation { get; }
+            public Rectangle Bounds { get; }
+        }
+
+        private readonly struct CornerHandle
+        {
+            public CornerHandle(SplitHandle verticalHandle, SplitHandle horizontalHandle, Rectangle bounds)
+            {
+                VerticalHandle = verticalHandle;
+                HorizontalHandle = horizontalHandle;
+                Bounds = bounds;
+            }
+
+            public SplitHandle VerticalHandle { get; }
+            public SplitHandle HorizontalHandle { get; }
+            public Rectangle Bounds { get; }
+        }

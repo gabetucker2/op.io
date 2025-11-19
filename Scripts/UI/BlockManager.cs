@@ -20,6 +20,7 @@ namespace op.io
         private static bool _dockingModeEnabled = true;
         private static bool _panelDefinitionsReady;
         private static bool _renderingDockedFrame;
+        private const int CornerSnapDistance = 16;
         private static readonly Dictionary<string, DockPanel> _panels = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, PanelNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
         private static readonly List<DockPanel> _orderedPanels = [];
@@ -48,9 +49,16 @@ namespace op.io
         private static readonly List<SplitHandle> _splitHandles = [];
         private static SplitHandle? _hoveredSplitHandle;
         private static SplitHandle? _activeSplitHandle;
+        private static SplitHandle? _activeSplitSnapTarget;
+        private static int? _activeSplitSnapCoordinate;
         private static readonly List<CornerHandle> _cornerHandles = [];
         private static CornerHandle? _hoveredCornerHandle;
         private static CornerHandle? _activeCornerHandle;
+        private static CornerHandle? _activeCornerSnapTarget;
+        private static Point? _activeCornerSnapPosition;
+        private static Point? _activeCornerSnapAnchor;
+        private static bool _activeCornerSnapLockX;
+        private static bool _activeCornerSnapLockY;
         private static string _focusedPanelId;
 
         public static bool DockingModeEnabled
@@ -335,6 +343,7 @@ namespace op.io
                 if (!leftClickHeld)
                 {
                     _activeSplitHandle = null;
+                    ClearSplitSnap();
                 }
 
                 return false;
@@ -345,6 +354,7 @@ namespace op.io
                 if (!leftClickHeld || leftClickReleased)
                 {
                     _activeSplitHandle = null;
+                    ClearSplitSnap();
                     return false;
                 }
 
@@ -358,6 +368,7 @@ namespace op.io
             if (hovered.HasValue && leftClickStarted)
             {
                 _activeSplitHandle = hovered;
+                ClearSplitSnap();
                 ApplySplitHandleDrag(hovered.Value, _mousePosition);
                 return true;
             }
@@ -373,6 +384,7 @@ namespace op.io
                 if (!leftClickHeld)
                 {
                     _activeCornerHandle = null;
+                    ClearCornerSnap();
                 }
 
                 return false;
@@ -383,6 +395,7 @@ namespace op.io
                 if (!leftClickHeld || leftClickReleased)
                 {
                     _activeCornerHandle = null;
+                    ClearCornerSnap();
                     return false;
                 }
 
@@ -396,6 +409,7 @@ namespace op.io
             if (hovered.HasValue && leftClickStarted)
             {
                 _activeCornerHandle = hovered;
+                ClearCornerSnap();
                 ApplyCornerHandleDrag(hovered.Value, _mousePosition);
                 return true;
             }
@@ -635,6 +649,8 @@ namespace op.io
                 return;
             }
 
+            position = GetSplitDragPosition(handle, position);
+
             Rectangle bounds = handle.Node.Bounds;
             if (bounds.Width <= 0 || bounds.Height <= 0)
             {
@@ -669,8 +685,249 @@ namespace op.io
 
         private static void ApplyCornerHandleDrag(CornerHandle corner, Point position)
         {
-            ApplySplitHandleDrag(corner.VerticalHandle, position);
-            ApplySplitHandleDrag(corner.HorizontalHandle, position);
+            Point snapped = GetCornerDragPosition(corner, position);
+            ApplySplitHandleDrag(corner.VerticalHandle, snapped);
+            ApplySplitHandleDrag(corner.HorizontalHandle, snapped);
+        }
+
+        private static Point GetSplitDragPosition(SplitHandle handle, Point position)
+        {
+            if (!_activeSplitHandle.HasValue || !SplitHandlesEqual(handle, _activeSplitHandle.Value))
+            {
+                return position;
+            }
+
+            int? snapCoordinate = GetSplitSnapCoordinate(handle, position);
+            if (!snapCoordinate.HasValue)
+            {
+                return position;
+            }
+
+            if (handle.Orientation == DockSplitOrientation.Vertical)
+            {
+                return new Point(snapCoordinate.Value, position.Y);
+            }
+
+            return new Point(position.X, snapCoordinate.Value);
+        }
+
+        private static int? GetSplitSnapCoordinate(SplitHandle handle, Point position)
+        {
+            int axisPosition = handle.Orientation == DockSplitOrientation.Vertical ? position.X : position.Y;
+            SplitHandle? candidate = FindSplitSnapTarget(handle, axisPosition, CornerSnapDistance);
+
+            if (candidate.HasValue)
+            {
+                int targetCoordinate = GetSplitHandleAxisCenter(candidate.Value);
+                _activeSplitSnapTarget = candidate.Value;
+                _activeSplitSnapCoordinate = targetCoordinate;
+                return targetCoordinate;
+            }
+
+            if (_activeSplitSnapCoordinate.HasValue)
+            {
+                int releaseDistance = GetSplitReleaseDistance();
+                int distance = Math.Abs(axisPosition - _activeSplitSnapCoordinate.Value);
+                if (distance <= releaseDistance)
+                {
+                    return _activeSplitSnapCoordinate.Value;
+                }
+
+                ClearSplitSnap();
+            }
+
+            return null;
+        }
+
+        private static SplitHandle? FindSplitSnapTarget(SplitHandle handle, int axisPosition, int threshold)
+        {
+            if (_splitHandles.Count <= 1 || threshold <= 0)
+            {
+                return null;
+            }
+
+            int snapDistance = Math.Max(1, threshold);
+            int bestDistance = snapDistance;
+            SplitHandle? bestHandle = null;
+
+            foreach (SplitHandle other in _splitHandles)
+            {
+                if (SplitHandlesEqual(other, handle) || other.Orientation != handle.Orientation)
+                {
+                    continue;
+                }
+
+                int otherCoordinate = GetSplitHandleAxisCenter(other);
+                int distance = Math.Abs(otherCoordinate - axisPosition);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestHandle = other;
+                }
+            }
+
+            return bestHandle;
+        }
+
+        private static int GetSplitHandleAxisCenter(SplitHandle handle)
+        {
+            return handle.Orientation == DockSplitOrientation.Vertical
+                ? handle.Bounds.Center.X
+                : handle.Bounds.Center.Y;
+        }
+
+        private static int GetSplitReleaseDistance()
+        {
+            int baseDistance = Math.Max(CornerSnapDistance * 2, CornerSnapDistance + 12);
+            return Math.Max(baseDistance, 1);
+        }
+
+        private static CornerSnapResult? FindCornerSnapTarget(CornerHandle corner, Point position, int threshold)
+        {
+            if (_cornerHandles.Count <= 1 || threshold <= 0)
+            {
+                return null;
+            }
+
+            int snapDistance = Math.Max(1, threshold);
+            int snapDistanceSq = snapDistance * snapDistance;
+            int bestDistanceSq = snapDistanceSq;
+            CornerSnapResult? bestResult = null;
+
+            foreach (CornerHandle other in _cornerHandles)
+            {
+                if (CornerEquals(other, corner))
+                {
+                    continue;
+                }
+
+                Point otherIntersection = GetCornerIntersection(other);
+                int distanceSq = DistanceSquared(position, otherIntersection);
+                if (distanceSq >= bestDistanceSq)
+                {
+                    continue;
+                }
+
+                bool shareVertical = ReferenceEquals(other.VerticalHandle.Node, corner.VerticalHandle.Node);
+                bool shareHorizontal = ReferenceEquals(other.HorizontalHandle.Node, corner.HorizontalHandle.Node);
+
+                bool lockX;
+                bool lockY;
+                if (shareVertical && shareHorizontal)
+                {
+                    continue;
+                }
+                else if (shareVertical)
+                {
+                    lockX = false;
+                    lockY = true;
+                }
+                else if (shareHorizontal)
+                {
+                    lockX = true;
+                    lockY = false;
+                }
+                else
+                {
+                    lockX = true;
+                    lockY = true;
+                }
+
+                if (!lockX && !lockY)
+                {
+                    continue;
+                }
+
+                bestDistanceSq = distanceSq;
+                bestResult = new CornerSnapResult(other, otherIntersection, lockX, lockY);
+            }
+
+            return bestResult;
+        }
+
+        private static int GetCornerReleaseDistanceSquared()
+        {
+            int releaseDistance = Math.Max(CornerSnapDistance * 2, CornerSnapDistance + 12);
+            releaseDistance = Math.Max(releaseDistance, 1);
+            return releaseDistance * releaseDistance;
+        }
+
+        private static bool IsWithinCornerSnapRange(Point position)
+        {
+            if (!_activeCornerSnapAnchor.HasValue)
+            {
+                return false;
+            }
+
+            int thresholdSq = GetCornerReleaseDistanceSquared();
+            Point anchor = _activeCornerSnapAnchor.Value;
+            int distanceSq = 0;
+
+            if (_activeCornerSnapLockX)
+            {
+                int dx = position.X - anchor.X;
+                distanceSq += dx * dx;
+            }
+
+            if (_activeCornerSnapLockY)
+            {
+                int dy = position.Y - anchor.Y;
+                distanceSq += dy * dy;
+            }
+
+            return distanceSq <= thresholdSq;
+        }
+
+        private static int DistanceSquared(Point a, Point b)
+        {
+            int dx = a.X - b.X;
+            int dy = a.Y - b.Y;
+            return (dx * dx) + (dy * dy);
+        }
+
+        private static Point GetCornerDragPosition(CornerHandle corner, Point position)
+        {
+            if (!_activeCornerHandle.HasValue || !CornerEquals(_activeCornerHandle.Value, corner))
+            {
+                ClearCornerSnap();
+                return position;
+            }
+
+            CornerSnapResult? snapResult = FindCornerSnapTarget(corner, position, CornerSnapDistance);
+            if (snapResult.HasValue)
+            {
+                CornerSnapResult result = snapResult.Value;
+                Point lockedPosition = new(
+                    result.LockX ? result.SnapPoint.X : position.X,
+                    result.LockY ? result.SnapPoint.Y : position.Y);
+                Point anchor = new(
+                    result.LockX ? result.SnapPoint.X : position.X,
+                    result.LockY ? result.SnapPoint.Y : position.Y);
+
+                _activeCornerSnapTarget = result.Target;
+                _activeCornerSnapPosition = lockedPosition;
+                _activeCornerSnapAnchor = anchor;
+                _activeCornerSnapLockX = result.LockX;
+                _activeCornerSnapLockY = result.LockY;
+                return lockedPosition;
+            }
+
+            if (_activeCornerSnapPosition.HasValue && _activeCornerSnapAnchor.HasValue && (_activeCornerSnapLockX || _activeCornerSnapLockY))
+            {
+                if (IsWithinCornerSnapRange(position))
+                {
+                    Point snapPoint = _activeCornerSnapPosition.Value;
+                    Point clamped = new(
+                        _activeCornerSnapLockX ? snapPoint.X : position.X,
+                        _activeCornerSnapLockY ? snapPoint.Y : position.Y);
+                    _activeCornerSnapPosition = clamped;
+                    return clamped;
+                }
+
+                ClearCornerSnap();
+            }
+
+            return position;
         }
 
         private static float ClampSplitRatio(int relativePosition, int spanLength)
@@ -839,6 +1096,15 @@ namespace op.io
             glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
         }
 
+        private static Rectangle CenterRectangle(Rectangle reference, Point center)
+        {
+            int width = reference.Width;
+            int height = reference.Height;
+            int x = center.X - (width / 2);
+            int y = center.Y - (height / 2);
+            return new Rectangle(x, y, width, height);
+        }
+
         private static void DrawCornerHandles(SpriteBatch spriteBatch)
         {
             if (_cornerHandles.Count == 0)
@@ -849,16 +1115,24 @@ namespace op.io
             foreach (CornerHandle corner in _cornerHandles)
             {
                 Color color = UIStyle.SplitHandleColor;
-                if (_activeCornerHandle.HasValue && corner.Equals(_activeCornerHandle.Value))
+                Rectangle bounds = corner.Bounds;
+
+                bool isActiveCorner = _activeCornerHandle.HasValue && CornerEquals(corner, _activeCornerHandle.Value);
+                if (isActiveCorner)
                 {
                     color = UIStyle.SplitHandleActiveColor;
+
+                    if (_activeCornerSnapPosition.HasValue)
+                    {
+                        bounds = CenterRectangle(bounds, _activeCornerSnapPosition.Value);
+                    }
                 }
-                else if (_hoveredCornerHandle.HasValue && corner.Equals(_hoveredCornerHandle.Value))
+                else if (_hoveredCornerHandle.HasValue && CornerEquals(corner, _hoveredCornerHandle.Value))
                 {
                     color = UIStyle.SplitHandleHoverColor;
                 }
 
-                DrawRect(spriteBatch, corner.Bounds, color);
+                DrawRect(spriteBatch, bounds, color);
             }
         }
 
@@ -963,8 +1237,10 @@ namespace op.io
             _dropPreview = null;
             _hoveredSplitHandle = null;
             _activeSplitHandle = null;
+            ClearSplitSnap();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
+            ClearCornerSnap();
         }
 
         private static void ResetOverlayLayout()
@@ -974,6 +1250,21 @@ namespace op.io
             _overlayOpenAllBounds = Rectangle.Empty;
             _overlayCloseAllBounds = Rectangle.Empty;
             _overlayToggles.Clear();
+        }
+
+        private static void ClearCornerSnap()
+        {
+            _activeCornerSnapTarget = null;
+            _activeCornerSnapPosition = null;
+            _activeCornerSnapAnchor = null;
+            _activeCornerSnapLockX = false;
+            _activeCornerSnapLockY = false;
+        }
+
+        private static void ClearSplitSnap()
+        {
+            _activeSplitSnapTarget = null;
+            _activeSplitSnapCoordinate = null;
         }
 
         private static void DrawButton(SpriteBatch spriteBatch, Rectangle bounds, string label, Color border)
@@ -1260,6 +1551,20 @@ namespace op.io
                 _activeSplitHandle = FindHandleForNode(_activeSplitHandle.Value.Node);
             }
 
+            if (_activeSplitSnapTarget.HasValue)
+            {
+                SplitHandle? refreshed = FindHandleForNode(_activeSplitSnapTarget.Value.Node);
+                if (refreshed.HasValue && refreshed.Value.Orientation == _activeSplitSnapTarget.Value.Orientation)
+                {
+                    _activeSplitSnapTarget = refreshed;
+                    _activeSplitSnapCoordinate = GetSplitHandleAxisCenter(refreshed.Value);
+                }
+                else
+                {
+                    ClearSplitSnap();
+                }
+            }
+
             if (_hoveredCornerHandle.HasValue)
             {
                 _hoveredCornerHandle = FindCornerHandle(_hoveredCornerHandle.Value);
@@ -1268,6 +1573,51 @@ namespace op.io
             if (_activeCornerHandle.HasValue)
             {
                 _activeCornerHandle = FindCornerHandle(_activeCornerHandle.Value);
+            }
+
+            if (_activeCornerSnapTarget.HasValue)
+            {
+                CornerHandle? refreshed = FindCornerHandle(_activeCornerSnapTarget.Value);
+                if (refreshed.HasValue)
+                {
+                    _activeCornerSnapTarget = refreshed;
+                    Point snapPoint = GetCornerIntersection(refreshed.Value);
+                    if (_activeCornerSnapPosition.HasValue)
+                    {
+                        Point stored = _activeCornerSnapPosition.Value;
+                        if (_activeCornerSnapLockX)
+                        {
+                            stored.X = snapPoint.X;
+                        }
+
+                        if (_activeCornerSnapLockY)
+                        {
+                            stored.Y = snapPoint.Y;
+                        }
+
+                        _activeCornerSnapPosition = stored;
+                    }
+
+                    if (_activeCornerSnapAnchor.HasValue)
+                    {
+                        Point anchor = _activeCornerSnapAnchor.Value;
+                        if (_activeCornerSnapLockX)
+                        {
+                            anchor.X = snapPoint.X;
+                        }
+
+                        if (_activeCornerSnapLockY)
+                        {
+                            anchor.Y = snapPoint.Y;
+                        }
+
+                        _activeCornerSnapAnchor = anchor;
+                    }
+                }
+                else
+                {
+                    ClearCornerSnap();
+                }
             }
         }
 
@@ -1392,8 +1742,7 @@ namespace op.io
         {
             foreach (CornerHandle handle in _cornerHandles)
             {
-                if (ReferenceEquals(handle.VerticalHandle.Node, corner.VerticalHandle.Node) &&
-                    ReferenceEquals(handle.HorizontalHandle.Node, corner.HorizontalHandle.Node))
+                if (CornerEquals(handle, corner))
                 {
                     return handle;
                 }
@@ -1402,10 +1751,28 @@ namespace op.io
             return null;
         }
 
+        private static bool CornerEquals(CornerHandle a, CornerHandle b)
+        {
+            return ReferenceEquals(a.VerticalHandle.Node, b.VerticalHandle.Node) &&
+                   ReferenceEquals(a.HorizontalHandle.Node, b.HorizontalHandle.Node);
+        }
+
+        private static Point GetCornerIntersection(CornerHandle corner)
+        {
+            return new Point(
+                corner.VerticalHandle.Bounds.Center.X,
+                corner.HorizontalHandle.Bounds.Center.Y);
+        }
+
         private static bool CornerContainsHandle(CornerHandle corner, SplitHandle handle)
         {
             return ReferenceEquals(corner.VerticalHandle.Node, handle.Node) ||
                    ReferenceEquals(corner.HorizontalHandle.Node, handle.Node);
+        }
+
+        private static bool SplitHandlesEqual(SplitHandle a, SplitHandle b)
+        {
+            return ReferenceEquals(a.Node, b.Node) && a.Orientation == b.Orientation;
         }
 
         private static void ClearSplitHandles()
@@ -1413,9 +1780,11 @@ namespace op.io
             _splitHandles.Clear();
             _hoveredSplitHandle = null;
             _activeSplitHandle = null;
+            ClearSplitSnap();
             _cornerHandles.Clear();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
+            ClearCornerSnap();
         }
 
         private static bool TryGetGamePanel(out DockPanel panel)
@@ -1635,6 +2004,22 @@ namespace op.io
             public DockPanel TargetPanel;
             public DockEdge Edge;
             public Rectangle HighlightBounds;
+        }
+
+        private readonly struct CornerSnapResult
+        {
+            public CornerSnapResult(CornerHandle target, Point snapPoint, bool lockX, bool lockY)
+            {
+                Target = target;
+                SnapPoint = snapPoint;
+                LockX = lockX;
+                LockY = lockY;
+            }
+
+            public CornerHandle Target { get; }
+            public Point SnapPoint { get; }
+            public bool LockX { get; }
+            public bool LockY { get; }
         }
     }
 }
