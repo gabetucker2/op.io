@@ -24,21 +24,21 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('NumLogFiles', '5');
 
 ---------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveUp', 'W', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveDown', 'S', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveLeft', 'A', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveRight', 'D', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveTowardsCursor', 'LeftClick', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('Sprint', 'LeftShift', 'Hold', 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('Crouch', 'LeftControl', 'Switch', 0, 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger', 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('MoveUp', 'W', 'Hold', 0, 1, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('MoveDown', 'S', 'Hold', 0, 2, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('MoveLeft', 'A', 'Hold', 0, 3, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('MoveRight', 'D', 'Hold', 0, 4, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('MoveTowardsCursor', 'LeftClick', 'Hold', 0, 5, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('MoveAwayFromCursor', 'RightClick', 'Hold', 0, 6, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('Sprint', 'LeftShift', 'Hold', 0, 7, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('Crouch', 'LeftControl', 'Switch', 0, 8, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('ReturnCursorToPlayer', 'Space', 'Trigger', 0, 9, 0);
 
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl) VALUES ('Exit', 'Escape', 'Trigger', 1);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('PanelMenu', 'Shift + X', 'Switch', 0, 1);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('DockingMode', 'V', 'Switch', 0, 1);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('DebugMode', 'B', 'Switch', 1, 1);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl) VALUES ('AllowGameInputFreeze', 'Shift + C', 'Switch', 1, 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('Exit', 'Escape', 'Trigger', 1, 10, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('PanelMenu', 'Shift + X', 'Switch', 0, 11, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('DockingMode', 'V', 'Switch', 0, 12, 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('DebugMode', 'B', 'Switch', 1, 13, 1);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState) VALUES ('AllowGameInputFreeze', 'Shift + C', 'Switch', 1, 14, 1);
 
 ---------------------------------------------------------------------------------------------------------------------------
 

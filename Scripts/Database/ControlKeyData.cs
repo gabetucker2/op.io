@@ -6,6 +6,8 @@ namespace op.io
 {
     internal static class ControlKeyData
     {
+        private const string RenderOrderColumnName = "RenderOrder";
+
         internal sealed class ControlKeyRecord
         {
             public string SettingKey { get; init; }
@@ -13,6 +15,7 @@ namespace op.io
             public string InputType { get; init; }
             public int? SwitchStartState { get; init; }
             public bool MetaControl { get; init; }
+            public int RenderOrder { get; init; }
         }
 
         public static ControlKeyRecord GetControl(string settingKey)
@@ -28,7 +31,7 @@ namespace op.io
             };
 
             const string sql = @"
-SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl
+SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder
 FROM ControlKey
 WHERE SettingKey = @settingKey
 LIMIT 1;";
@@ -46,7 +49,8 @@ LIMIT 1;";
                 InputKey = row["InputKey"]?.ToString(),
                 InputType = row["InputType"]?.ToString(),
                 SwitchStartState = row["SwitchStartState"] == DBNull.Value ? null : Convert.ToInt32(row["SwitchStartState"]),
-                MetaControl = row.TryGetValue("MetaControl", out object metaValue) && Convert.ToInt32(metaValue) != 0
+                MetaControl = row.TryGetValue("MetaControl", out object metaValue) && Convert.ToInt32(metaValue) != 0,
+                RenderOrder = row.TryGetValue("ControlOrder", out object orderValue) ? Convert.ToInt32(orderValue) : 0
             };
         }
 
@@ -62,13 +66,23 @@ LIMIT 1;";
                 ["@settingKey"] = record.SettingKey,
                 ["@inputKey"] = record.InputKey ?? string.Empty,
                 ["@inputType"] = record.InputType ?? "Hold",
-                ["@switchStartState"] = record.SwitchStartState,
-                ["@metaControl"] = record.MetaControl ? 1 : 0
+                ["@metaControl"] = record.MetaControl ? 1 : 0,
+                ["@switchStartState"] = record.SwitchStartState
             };
 
-            const string sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl)
-VALUES (@settingKey, @inputKey, @inputType, @switchStartState, @metaControl);";
+            bool orderColumnAvailable = ColumnExists(RenderOrderColumnName);
+            if (orderColumnAvailable)
+            {
+                parameters["@renderOrder"] = record.RenderOrder > 0 ? record.RenderOrder : GetNextRenderOrderValue();
+            }
+
+            string sql = orderColumnAvailable
+                ? @"
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @renderOrder, @switchStartState);"
+                : @"
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState);";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }
@@ -159,6 +173,86 @@ WHERE SettingKey = @settingKey;";
             }
 
             DatabaseQuery.ExecuteNonQuery($"ALTER TABLE ControlKey ADD COLUMN {columnName} {definition};");
+        }
+
+        public static void NormalizeRenderOrderValues()
+        {
+            if (!ColumnExists(RenderOrderColumnName))
+            {
+                return;
+            }
+
+            const string sql = "SELECT SettingKey FROM ControlKey ORDER BY RenderOrder, SettingKey;";
+            var rows = DatabaseQuery.ExecuteQuery(sql);
+            if (rows.Count == 0)
+            {
+                return;
+            }
+
+            int order = 1;
+            foreach (var row in rows)
+            {
+                if (!row.TryGetValue("SettingKey", out object keyValue))
+                {
+                    continue;
+                }
+
+                string settingKey = keyValue?.ToString();
+                if (string.IsNullOrWhiteSpace(settingKey))
+                {
+                    continue;
+                }
+
+                var parameters = new Dictionary<string, object>
+                {
+                    ["@order"] = order++,
+                    ["@settingKey"] = settingKey
+                };
+
+                DatabaseQuery.ExecuteNonQuery(@"UPDATE ControlKey SET RenderOrder = @order WHERE SettingKey = @settingKey;", parameters);
+            }
+        }
+
+        public static void UpdateRenderOrders(IReadOnlyList<(string SettingKey, int Order)> updates)
+        {
+            if (updates == null || updates.Count == 0 || !ColumnExists(RenderOrderColumnName))
+            {
+                return;
+            }
+
+            foreach ((string settingKey, int order) in updates)
+            {
+                if (string.IsNullOrWhiteSpace(settingKey) || order <= 0)
+                {
+                    continue;
+                }
+
+                var parameters = new Dictionary<string, object>
+                {
+                    ["@order"] = order,
+                    ["@settingKey"] = settingKey
+                };
+
+                DatabaseQuery.ExecuteNonQuery(@"UPDATE ControlKey SET RenderOrder = @order WHERE SettingKey = @settingKey;", parameters);
+            }
+        }
+
+        private static int GetNextRenderOrderValue()
+        {
+            if (!ColumnExists(RenderOrderColumnName))
+            {
+                return 0;
+            }
+
+            const string sql = "SELECT COALESCE(MAX(RenderOrder), 0) AS MaxOrder FROM ControlKey;";
+            var rows = DatabaseQuery.ExecuteQuery(sql);
+            if (rows.Count == 0)
+            {
+                return 1;
+            }
+
+            int max = rows[0].TryGetValue("MaxOrder", out object value) ? Convert.ToInt32(value) : 0;
+            return max + 1;
         }
 
         public static void ApplyMetaControlFlags(IReadOnlyCollection<string> metaControls)

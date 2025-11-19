@@ -23,6 +23,7 @@ namespace op.io
 
             try
             {
+                EnsureRenderOrderColumn();
                 EnsurePanelMenuControl();
                 EnsureExitControl();
                 EnsureMetaControlColumn();
@@ -34,6 +35,17 @@ namespace op.io
             {
                 DebugLogger.PrintError($"Failed to apply ControlKey migrations: {ex.Message}");
             }
+        }
+
+        private static void EnsureRenderOrderColumn()
+        {
+            const string columnName = "RenderOrder";
+            if (!ControlKeyData.ColumnExists(columnName))
+            {
+                ControlKeyData.AddColumn(columnName, "INTEGER NOT NULL DEFAULT 0");
+            }
+
+            ControlKeyData.NormalizeRenderOrderValues();
         }
 
         private static void EnsureMetaControlColumn()

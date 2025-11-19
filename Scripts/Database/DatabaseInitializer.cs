@@ -17,10 +17,10 @@ namespace op.io
                 return;
             }
 
-            string fullPath = DatabaseConfig.DatabaseFilePath;
-            DebugLogger.PrintDatabase($"Using database file path: {fullPath}");
+            string primaryPath = DatabaseConfig.DatabaseFilePath;
+            DebugLogger.PrintDatabase($"Using database file path: {primaryPath}");
 
-            bool databaseExists = File.Exists(fullPath);
+            bool databaseExists = File.Exists(primaryPath);
             bool shouldReset = Core.RestartDB || !databaseExists;
 
             if (!shouldReset && databaseExists)
@@ -40,8 +40,8 @@ namespace op.io
                 return;
             }
 
-            DeleteDatabaseIfExists(fullPath);
-            CreateDatabaseIfNotExists(fullPath);
+            DeleteAllDatabaseCopies();
+            CreateDatabaseIfNotExists(primaryPath);
 
             using var connection = DatabaseManager.OpenConnection();
             if (connection == null)
@@ -128,6 +128,14 @@ namespace op.io
             }
         }
 
+        private static void DeleteAllDatabaseCopies()
+        {
+            foreach (string path in GetDatabasePathsToReset())
+            {
+                DeleteDatabaseIfExists(path);
+            }
+        }
+
         private static void CreateDatabaseIfNotExists(string fullPath)
         {
             if (File.Exists(fullPath)) return;
@@ -140,6 +148,70 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to create database file at {fullPath}: {ex.Message}");
+            }
+        }
+
+        private static IEnumerable<string> GetDatabasePathsToReset()
+        {
+            HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
+
+            void TryAdd(string path)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return;
+                }
+
+                try
+                {
+                    string normalized = Path.GetFullPath(path);
+                    paths.Add(normalized);
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.PrintWarning($"Failed to normalize database path '{path}': {ex.Message}");
+                }
+            }
+
+            TryAdd(DatabaseConfig.DatabaseFilePath);
+            TryAdd(DatabaseConfig.OutputDatabaseFilePath);
+
+            string projectRoot = DatabaseConfig.ProjectRootPath;
+            if (!string.IsNullOrWhiteSpace(projectRoot))
+            {
+                TryAddBuildOutputDatabases(Path.Combine(projectRoot, "bin"));
+                TryAddBuildOutputDatabases(Path.Combine(projectRoot, "obj"));
+            }
+
+            return paths;
+
+            void TryAddBuildOutputDatabases(string rootDirectory)
+            {
+                if (string.IsNullOrWhiteSpace(rootDirectory) || !Directory.Exists(rootDirectory))
+                {
+                    return;
+                }
+
+                try
+                {
+                    foreach (string configDir in Directory.EnumerateDirectories(rootDirectory))
+                    {
+                        foreach (string frameworkDir in Directory.EnumerateDirectories(configDir))
+                        {
+                            string dataDir = Path.Combine(frameworkDir, "Data");
+                            if (!Directory.Exists(dataDir))
+                            {
+                                continue;
+                            }
+
+                            TryAdd(Path.Combine(dataDir, DatabaseConfig.DatabaseFileName));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.PrintWarning($"Failed to enumerate build output databases in '{rootDirectory}': {ex.Message}");
+                }
             }
         }
     }

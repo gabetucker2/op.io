@@ -9,10 +9,14 @@ namespace op.io
         // Ensure consistent path resolution by using AppContext.BaseDirectory
         private static readonly string ProjectRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName; // Ensure we're at the project root
         public static readonly string DatabaseDirectory = Path.Combine(ProjectRoot, "Data");
-        private static readonly string DatabaseFileName = "op.io.db";
+        private static readonly string DatabaseFileNameInternal = "op.io.db";
 
-        public static string DatabaseFilePath => Path.Combine(DatabaseDirectory, DatabaseFileName);
+        public static string DatabaseFilePath => Path.Combine(DatabaseDirectory, DatabaseFileNameInternal);
         public static string ConnectionString => $"Data Source={DatabaseFilePath};Version=3;";
+        public static string DatabaseFileName => DatabaseFileNameInternal;
+        public static string ProjectRootPath => ProjectRoot;
+        public static string OutputDatabaseDirectory => Path.Combine(AppContext.BaseDirectory, "Data");
+        public static string OutputDatabaseFilePath => Path.Combine(OutputDatabaseDirectory, DatabaseFileNameInternal);
 
         // Prevent redundant PRAGMA configuration
         private static bool IsConfigured = false;

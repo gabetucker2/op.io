@@ -1205,6 +1205,9 @@ namespace op.io
                     case DockPanelKind.Notes:
                         NotesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
+                    case DockPanelKind.Controls:
+                        ControlsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
                 }
             }
         }

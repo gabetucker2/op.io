@@ -20,7 +20,7 @@ namespace op.io.UI.Blocks
                 return;
             }
 
-            const string label = "Empty block";
+            const string label = "Blank Block";
             Vector2 size = font.MeasureString(label);
             Vector2 position = new(
                 contentBounds.X + (contentBounds.Width - size.X) / 2f,
