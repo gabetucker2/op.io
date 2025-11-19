@@ -11,10 +11,10 @@ namespace op.io
     {
         public const int LayoutPadding = 24;
         public const int PanelPadding = 12;
-        public const int HeaderHeight = 32;
+        public const int DragBarHeight = 32;
         public const int MinPanelSize = 120;
         public const float DropEdgeThreshold = 0.28f;
-        public const int SplitHandleThickness = 8;
+        public const int ResizeBarThickness = 8;
         public const int PanelBorderThickness = 1;
         public const int DragOutlineThickness = 2;
 
@@ -75,9 +75,10 @@ namespace op.io
         public static readonly Color AccentColor = new(110, 142, 255);
         public static readonly Color AccentMuted = new(110, 142, 255, 70);
         public static readonly Color OverlayBackground = new(24, 24, 24, 230);
-        public static readonly Color SplitHandleColor = new(58, 58, 58, 210);
-        public static readonly Color SplitHandleHoverColor = new(110, 142, 255, 150);
-        public static readonly Color SplitHandleActiveColor = new(110, 142, 255, 220);
+        public static readonly Color ResizeBarColor = new(58, 58, 58, 210);
+        public static readonly Color ResizeBarHoverColor = new(110, 142, 255, 150);
+        public static readonly Color ResizeBarActiveColor = new(110, 142, 255, 220);
+        public static readonly Color DragBarHoverTint = new(26, 26, 26, 120);
 
         public static void EnsureFontsLoaded(ContentManager content)
         {

@@ -11,6 +11,8 @@ namespace op.io.UI.Blocks
 {
     internal static class NotesBlock
     {
+        public const string PanelTitle = "Notes";
+
         private enum OverlayMode
         {
             None,

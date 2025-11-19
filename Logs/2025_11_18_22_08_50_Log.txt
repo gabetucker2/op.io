@@ -1,4 +1,4 @@
-Log created at 2025-11-18T18:59:02.6997847-05:00
+Log created at 2025-11-18T22:08:50.4194554-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 9
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -235,12 +235,8 @@ Log created at 2025-11-18T18:59:02.6997847-05:00
 [DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [PLAYER] SwitchCooldown loaded: 0.2 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
 [GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=18 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=18 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType FROM ControlKey ORDER BY SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
@@ -254,89 +250,34 @@ Log created at 2025-11-18T18:59:02.6997847-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
+[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[UI] Player screen position calculated: {X:676 Y:708} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
-[UI] Local screen position of player: {X:712 Y:744} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
-[UI] Window Handle Retrieved: 2422401007992 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
-[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
-[UI] Player global screen position calculated: {X:1292 Y:844} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
-[UI] Cursor returned to player position: {X:1292 Y:844} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
-[UI] Player screen position calculated: {X:621 Y:890} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 25
-[UI] Local screen position of player: {X:657 Y:926} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 48
-[UI] Window Handle Retrieved: 2422401007992 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 58
-[UI] SDL Window Position Retrieved: X=580, Y=100 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 70
-[UI] Player global screen position calculated: {X:1237 Y:1026} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 78
-[UI] Cursor returned to player position: {X:1237 Y:1026} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
-[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE]   @value: SprintSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
-[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Updated and saved PanelMenu to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 10 MAX REPEATS] [DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
-[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
 [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 83
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99

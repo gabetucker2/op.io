@@ -8,6 +8,8 @@ namespace op.io.UI.Blocks
 {
     internal static class BackendBlock
     {
+        public const string PanelTitle = "Backend";
+
         private static readonly StringBuilder _stringBuilder = new();
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)

@@ -8,6 +8,8 @@ namespace op.io.UI.Blocks
 {
     internal static class ControlsBlock
     {
+        public const string PanelTitle = "Controls";
+
         private static readonly List<KeybindDisplayRow> _keybindCache = new();
         private static bool _keybindCacheLoaded;
         private static readonly StringBuilder _stringBuilder = new();

@@ -1,4 +1,4 @@
-Log created at 2025-11-18T19:07:28.2431806-05:00
+Log created at 2025-11-18T20:52:11.3928205-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 9
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -235,10 +235,8 @@ Log created at 2025-11-18T19:07:28.2431806-05:00
 [DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [PLAYER] SwitchCooldown loaded: 0.2 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType FROM ControlKey ORDER BY SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
@@ -258,14 +256,6 @@ Log created at 2025-11-18T19:07:28.2431806-05:00
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 117
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 99
-[PHYSICS] Destroying GameObject ID=19 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=19 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 78

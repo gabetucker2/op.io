@@ -28,9 +28,9 @@ namespace op.io
         public bool IsVisible { get; set; } = true;
         public Rectangle Bounds { get; set; }
 
-        public Rectangle GetHeaderBounds(int headerHeight)
+        public Rectangle GetDragBarBounds(int dragBarHeight)
         {
-            return new Rectangle(Bounds.X, Bounds.Y, Bounds.Width, Math.Max(0, Math.Min(headerHeight, Bounds.Height)));
+            return new Rectangle(Bounds.X, Bounds.Y, Bounds.Width, Math.Max(0, Math.Min(dragBarHeight, Bounds.Height)));
         }
 
         public Rectangle GetContentBounds(int headerHeight, int padding)

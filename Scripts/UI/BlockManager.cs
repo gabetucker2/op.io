@@ -16,6 +16,7 @@ namespace op.io
         private const string NotesPanelKey = "notes";
         private const string BackendPanelKey = "backend";
         private const string PanelMenuControlKey = "PanelMenu";
+        private const string WideWordSeparator = "    ";
 
         private static bool _dockingModeEnabled = true;
         private static bool _panelDefinitionsReady;
@@ -46,11 +47,11 @@ namespace op.io
         private static Rectangle _overlayOpenAllBounds;
         private static Rectangle _overlayCloseAllBounds;
         private static readonly List<OverlayPanelToggle> _overlayToggles = [];
-        private static readonly List<SplitHandle> _splitHandles = [];
-        private static SplitHandle? _hoveredSplitHandle;
-        private static SplitHandle? _activeSplitHandle;
-        private static SplitHandle? _activeSplitSnapTarget;
-        private static int? _activeSplitSnapCoordinate;
+        private static readonly List<ResizeBar> _resizeBars = [];
+        private static ResizeBar? _hoveredResizeBar;
+        private static ResizeBar? _activeResizeBar;
+        private static ResizeBar? _activeResizeBarSnapTarget;
+        private static int? _activeResizeBarSnapCoordinate;
         private static readonly List<CornerHandle> _cornerHandles = [];
         private static CornerHandle? _hoveredCornerHandle;
         private static CornerHandle? _activeCornerHandle;
@@ -60,6 +61,7 @@ namespace op.io
         private static bool _activeCornerSnapLockX;
         private static bool _activeCornerSnapLockY;
         private static string _focusedPanelId;
+        private static string _hoveredDragBarId;
 
         public static bool DockingModeEnabled
         {
@@ -75,7 +77,7 @@ namespace op.io
                 if (!_dockingModeEnabled)
                 {
                     CollapseInteractions();
-                    ClearSplitHandles();
+                    ClearResizeBars();
                     MarkLayoutDirty();
                 }
                 else
@@ -138,7 +140,7 @@ namespace op.io
             else if (dockingEnabled)
             {
                 bool resizingPanels = UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                    UpdateSplitResizeState(leftClickStarted, leftClickHeld, leftClickReleased);
+                    UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased);
                 if (!resizingPanels)
                 {
                     UpdateDragState(leftClickStarted, leftClickReleased);
@@ -244,11 +246,11 @@ namespace op.io
             _panelNodes.Clear();
             _orderedPanels.Clear();
 
-            DockPanel blank = CreatePanel(BlankPanelKey, "Blank Panel", DockPanelKind.Blank);
-            DockPanel game = CreatePanel(GamePanelKey, "Game", DockPanelKind.Game);
-            DockPanel controls = CreatePanel(ControlsPanelKey, "Controls", DockPanelKind.Controls);
-            DockPanel notes = CreatePanel(NotesPanelKey, "Notes", DockPanelKind.Notes);
-            DockPanel backend = CreatePanel(BackendPanelKey, "Backend", DockPanelKind.Backend);
+            DockPanel blank = CreatePanel(BlankPanelKey, BlankBlock.PanelTitle, DockPanelKind.Blank);
+            DockPanel game = CreatePanel(GamePanelKey, GameBlock.PanelTitle, DockPanelKind.Game);
+            DockPanel controls = CreatePanel(ControlsPanelKey, ControlsBlock.PanelTitle, DockPanelKind.Controls);
+            DockPanel notes = CreatePanel(NotesPanelKey, NotesBlock.PanelTitle, DockPanelKind.Notes);
+            DockPanel backend = CreatePanel(BackendPanelKey, BackendBlock.PanelTitle, DockPanelKind.Backend);
 
             PanelNode blankNode = _panelNodes[blank.Id];
             PanelNode gameNode = _panelNodes[game.Id];
@@ -335,41 +337,41 @@ namespace op.io
             UIStyle.EnsureFontsLoaded(Core.Instance?.Content);
         }
 
-        private static bool UpdateSplitResizeState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
+        private static bool UpdateResizeBarState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
         {
-            if (!AnyPanelVisible() || _splitHandles.Count == 0)
+            if (!AnyPanelVisible() || _resizeBars.Count == 0)
             {
-                _hoveredSplitHandle = null;
+                _hoveredResizeBar = null;
                 if (!leftClickHeld)
                 {
-                    _activeSplitHandle = null;
-                    ClearSplitSnap();
+                    _activeResizeBar = null;
+                    ClearResizeBarSnap();
                 }
 
                 return false;
             }
 
-            if (_activeSplitHandle.HasValue)
+            if (_activeResizeBar.HasValue)
             {
                 if (!leftClickHeld || leftClickReleased)
                 {
-                    _activeSplitHandle = null;
-                    ClearSplitSnap();
+                    _activeResizeBar = null;
+                    ClearResizeBarSnap();
                     return false;
                 }
 
-                ApplySplitHandleDrag(_activeSplitHandle.Value, _mousePosition);
+                ApplyResizeBarDrag(_activeResizeBar.Value, _mousePosition);
                 return true;
             }
 
-            SplitHandle? hovered = HitTestSplitHandle(_mousePosition);
-            _hoveredSplitHandle = hovered;
+            ResizeBar? hovered = HitTestResizeBar(_mousePosition);
+            _hoveredResizeBar = hovered;
 
             if (hovered.HasValue && leftClickStarted)
             {
-                _activeSplitHandle = hovered;
-                ClearSplitSnap();
-                ApplySplitHandleDrag(hovered.Value, _mousePosition);
+                _activeResizeBar = hovered;
+                ClearResizeBarSnap();
+                ApplyResizeBarDrag(hovered.Value, _mousePosition);
                 return true;
             }
 
@@ -419,6 +421,8 @@ namespace op.io
 
         private static void UpdateDragState(bool leftClickStarted, bool leftClickReleased)
         {
+            _hoveredDragBarId = null;
+
             if (!AnyPanelVisible())
             {
                 _draggingPanel = null;
@@ -442,19 +446,22 @@ namespace op.io
                 }
             }
 
-            DockPanel headerHit = null;
+            DockPanel dragBarHover = HitTestDragBarPanel(_mousePosition, excludeCloseButton: true);
+            _hoveredDragBarId = dragBarHover?.Id;
+
+            DockPanel dragBarHit = null;
             if (leftClickStarted)
             {
-                headerHit = HitTestHeader(_mousePosition);
-                if (headerHit != null)
+                dragBarHit = HitTestDragBarPanel(_mousePosition);
+                if (dragBarHit != null)
                 {
-                    SetFocusedPanel(headerHit);
+                    SetFocusedPanel(dragBarHit);
                 }
             }
 
             if (_draggingPanel == null && leftClickStarted)
             {
-                DockPanel panel = headerHit ?? HitTestHeader(_mousePosition);
+                DockPanel panel = dragBarHit ?? HitTestDragBarPanel(_mousePosition);
                 if (panel != null)
                 {
                     _draggingPanel = panel;
@@ -479,10 +486,10 @@ namespace op.io
             }
         }
 
-        private static DockPanel HitTestHeader(Point position)
+        private static DockPanel HitTestDragBarPanel(Point position, bool excludeCloseButton = false)
         {
-            int headerHeight = GetActiveHeaderHeight();
-            if (headerHeight <= 0)
+            int dragBarHeight = GetActiveDragBarHeight();
+            if (dragBarHeight <= 0)
             {
                 return null;
             }
@@ -494,11 +501,22 @@ namespace op.io
                     continue;
                 }
 
-                Rectangle headerRect = panel.GetHeaderBounds(headerHeight);
-                if (headerRect.Contains(position))
+                Rectangle dragBarRect = panel.GetDragBarBounds(dragBarHeight);
+                if (!dragBarRect.Contains(position))
                 {
-                    return panel;
+                    continue;
                 }
+
+                if (excludeCloseButton)
+                {
+                    Rectangle closeBounds = GetCloseButtonBounds(dragBarRect);
+                    if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
+                    {
+                        continue;
+                    }
+                }
+
+                return panel;
             }
 
             return null;
@@ -506,8 +524,8 @@ namespace op.io
 
         private static DockPanel HitTestCloseButton(Point position)
         {
-            int headerHeight = GetActiveHeaderHeight();
-            if (headerHeight <= 0)
+            int dragBarHeight = GetActiveDragBarHeight();
+            if (dragBarHeight <= 0)
             {
                 return null;
             }
@@ -519,7 +537,7 @@ namespace op.io
                     continue;
                 }
 
-                Rectangle closeBounds = GetCloseButtonBounds(panel, headerHeight);
+                Rectangle closeBounds = GetCloseButtonBounds(panel, dragBarHeight);
                 if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
                 {
                     return panel;
@@ -529,28 +547,28 @@ namespace op.io
             return null;
         }
 
-        private static Rectangle GetCloseButtonBounds(DockPanel panel, int headerHeight)
+        private static Rectangle GetCloseButtonBounds(DockPanel panel, int dragBarHeight)
         {
-            Rectangle headerRect = panel.GetHeaderBounds(headerHeight);
-            return GetCloseButtonBounds(headerRect);
+            Rectangle dragBarRect = panel.GetDragBarBounds(dragBarHeight);
+            return GetCloseButtonBounds(dragBarRect);
         }
 
-        private static Rectangle GetCloseButtonBounds(Rectangle headerRect)
+        private static Rectangle GetCloseButtonBounds(Rectangle dragBarRect)
         {
-            if (headerRect.Width <= 0 || headerRect.Height <= 0)
+            if (dragBarRect.Width <= 0 || dragBarRect.Height <= 0)
             {
                 return Rectangle.Empty;
             }
 
             const int horizontalPadding = 8;
-            int buttonSize = Math.Clamp(headerRect.Height - 10, 14, 24);
-            if (buttonSize <= 0 || headerRect.Width <= (horizontalPadding * 2) + buttonSize)
+            int buttonSize = Math.Clamp(dragBarRect.Height - 10, 14, 24);
+            if (buttonSize <= 0 || dragBarRect.Width <= (horizontalPadding * 2) + buttonSize)
             {
                 return Rectangle.Empty;
             }
 
-            int x = headerRect.Right - horizontalPadding - buttonSize;
-            int y = headerRect.Y + (headerRect.Height - buttonSize) / 2;
+            int x = dragBarRect.Right - horizontalPadding - buttonSize;
+            int y = dragBarRect.Y + (dragBarRect.Height - buttonSize) / 2;
             return new Rectangle(x, y, buttonSize, buttonSize);
         }
 
@@ -627,9 +645,9 @@ namespace op.io
             return null;
         }
 
-        private static SplitHandle? HitTestSplitHandle(Point position)
+        private static ResizeBar? HitTestResizeBar(Point position)
         {
-            foreach (SplitHandle handle in _splitHandles)
+            foreach (ResizeBar handle in _resizeBars)
             {
                 Rectangle hitBounds = handle.Bounds;
                 hitBounds.Inflate(2, 2);
@@ -642,14 +660,14 @@ namespace op.io
             return null;
         }
 
-        private static void ApplySplitHandleDrag(SplitHandle handle, Point position)
+        private static void ApplyResizeBarDrag(ResizeBar handle, Point position)
         {
             if (handle.Node == null)
             {
                 return;
             }
 
-            position = GetSplitDragPosition(handle, position);
+            position = GetResizeBarPosition(handle, position);
 
             Rectangle bounds = handle.Node.Bounds;
             if (bounds.Width <= 0 || bounds.Height <= 0)
@@ -686,18 +704,18 @@ namespace op.io
         private static void ApplyCornerHandleDrag(CornerHandle corner, Point position)
         {
             Point snapped = GetCornerDragPosition(corner, position);
-            ApplySplitHandleDrag(corner.VerticalHandle, snapped);
-            ApplySplitHandleDrag(corner.HorizontalHandle, snapped);
+            ApplyResizeBarDrag(corner.VerticalHandle, snapped);
+            ApplyResizeBarDrag(corner.HorizontalHandle, snapped);
         }
 
-        private static Point GetSplitDragPosition(SplitHandle handle, Point position)
+        private static Point GetResizeBarPosition(ResizeBar handle, Point position)
         {
-            if (!_activeSplitHandle.HasValue || !SplitHandlesEqual(handle, _activeSplitHandle.Value))
+            if (!_activeResizeBar.HasValue || !ResizeBarsEqual(handle, _activeResizeBar.Value))
             {
                 return position;
             }
 
-            int? snapCoordinate = GetSplitSnapCoordinate(handle, position);
+            int? snapCoordinate = GetResizeBarSnapCoordinate(handle, position);
             if (!snapCoordinate.HasValue)
             {
                 return position;
@@ -711,53 +729,53 @@ namespace op.io
             return new Point(position.X, snapCoordinate.Value);
         }
 
-        private static int? GetSplitSnapCoordinate(SplitHandle handle, Point position)
+        private static int? GetResizeBarSnapCoordinate(ResizeBar handle, Point position)
         {
             int axisPosition = handle.Orientation == DockSplitOrientation.Vertical ? position.X : position.Y;
-            SplitHandle? candidate = FindSplitSnapTarget(handle, axisPosition, CornerSnapDistance);
+            ResizeBar? candidate = FindResizeBarSnapTarget(handle, axisPosition, CornerSnapDistance);
 
             if (candidate.HasValue)
             {
-                int targetCoordinate = GetSplitHandleAxisCenter(candidate.Value);
-                _activeSplitSnapTarget = candidate.Value;
-                _activeSplitSnapCoordinate = targetCoordinate;
+                int targetCoordinate = GetResizeBarAxisCenter(candidate.Value);
+                _activeResizeBarSnapTarget = candidate.Value;
+                _activeResizeBarSnapCoordinate = targetCoordinate;
                 return targetCoordinate;
             }
 
-            if (_activeSplitSnapCoordinate.HasValue)
+            if (_activeResizeBarSnapCoordinate.HasValue)
             {
-                int releaseDistance = GetSplitReleaseDistance();
-                int distance = Math.Abs(axisPosition - _activeSplitSnapCoordinate.Value);
+                int releaseDistance = GetResizeBarReleaseDistance();
+                int distance = Math.Abs(axisPosition - _activeResizeBarSnapCoordinate.Value);
                 if (distance <= releaseDistance)
                 {
-                    return _activeSplitSnapCoordinate.Value;
+                    return _activeResizeBarSnapCoordinate.Value;
                 }
 
-                ClearSplitSnap();
+                ClearResizeBarSnap();
             }
 
             return null;
         }
 
-        private static SplitHandle? FindSplitSnapTarget(SplitHandle handle, int axisPosition, int threshold)
+        private static ResizeBar? FindResizeBarSnapTarget(ResizeBar handle, int axisPosition, int threshold)
         {
-            if (_splitHandles.Count <= 1 || threshold <= 0)
+            if (_resizeBars.Count <= 1 || threshold <= 0)
             {
                 return null;
             }
 
             int snapDistance = Math.Max(1, threshold);
             int bestDistance = snapDistance;
-            SplitHandle? bestHandle = null;
+            ResizeBar? bestHandle = null;
 
-            foreach (SplitHandle other in _splitHandles)
+            foreach (ResizeBar other in _resizeBars)
             {
-                if (SplitHandlesEqual(other, handle) || other.Orientation != handle.Orientation)
+                if (ResizeBarsEqual(other, handle) || other.Orientation != handle.Orientation)
                 {
                     continue;
                 }
 
-                int otherCoordinate = GetSplitHandleAxisCenter(other);
+                int otherCoordinate = GetResizeBarAxisCenter(other);
                 int distance = Math.Abs(otherCoordinate - axisPosition);
                 if (distance < bestDistance)
                 {
@@ -769,14 +787,14 @@ namespace op.io
             return bestHandle;
         }
 
-        private static int GetSplitHandleAxisCenter(SplitHandle handle)
+        private static int GetResizeBarAxisCenter(ResizeBar handle)
         {
             return handle.Orientation == DockSplitOrientation.Vertical
                 ? handle.Bounds.Center.X
                 : handle.Bounds.Center.Y;
         }
 
-        private static int GetSplitReleaseDistance()
+        private static int GetResizeBarReleaseDistance()
         {
             int baseDistance = Math.Max(CornerSnapDistance * 2, CornerSnapDistance + 12);
             return Math.Max(baseDistance, 1);
@@ -969,7 +987,7 @@ namespace op.io
 
         private static void DrawPanels(SpriteBatch spriteBatch)
         {
-            int headerHeight = GetActiveHeaderHeight();
+            int dragBarHeight = GetActiveDragBarHeight();
             bool showDockingChrome = DockingModeEnabled;
 
             foreach (DockPanel panel in _orderedPanels)
@@ -979,13 +997,13 @@ namespace op.io
                     continue;
                 }
 
-                DrawPanelBackground(spriteBatch, panel, headerHeight);
-                DrawPanelContent(spriteBatch, panel, headerHeight);
+                DrawPanelBackground(spriteBatch, panel, dragBarHeight);
+                DrawPanelContent(spriteBatch, panel, dragBarHeight);
             }
 
             if (showDockingChrome)
             {
-                DrawSplitHandles(spriteBatch);
+                DrawResizeBars(spriteBatch);
                 DrawCornerHandles(spriteBatch);
             }
 
@@ -1003,67 +1021,73 @@ namespace op.io
             }
         }
 
-        private static void DrawSplitHandles(SpriteBatch spriteBatch)
+        private static void DrawResizeBars(SpriteBatch spriteBatch)
         {
-            if (_splitHandles.Count == 0)
+            if (_resizeBars.Count == 0)
             {
                 return;
             }
 
-            foreach (SplitHandle handle in _splitHandles)
+            foreach (ResizeBar handle in _resizeBars)
             {
-                Color color = UIStyle.SplitHandleColor;
-                bool isActive = _activeSplitHandle.HasValue && ReferenceEquals(handle.Node, _activeSplitHandle.Value.Node);
-                bool isHovered = _hoveredSplitHandle.HasValue && ReferenceEquals(handle.Node, _hoveredSplitHandle.Value.Node);
+                Color color = UIStyle.ResizeBarColor;
+                bool isActive = _activeResizeBar.HasValue && ReferenceEquals(handle.Node, _activeResizeBar.Value.Node);
+                bool isHovered = _hoveredResizeBar.HasValue && ReferenceEquals(handle.Node, _hoveredResizeBar.Value.Node);
 
-                if (!isActive && _activeCornerHandle.HasValue && CornerContainsHandle(_activeCornerHandle.Value, handle))
+                if (!isActive && _activeCornerHandle.HasValue && CornerContainsResizeBar(_activeCornerHandle.Value, handle))
                 {
                     isActive = true;
                 }
 
-                if (!isHovered && _hoveredCornerHandle.HasValue && CornerContainsHandle(_hoveredCornerHandle.Value, handle))
+                if (!isHovered && _hoveredCornerHandle.HasValue && CornerContainsResizeBar(_hoveredCornerHandle.Value, handle))
                 {
                     isHovered = true;
                 }
 
                 if (isActive)
                 {
-                    color = UIStyle.SplitHandleActiveColor;
+                    color = UIStyle.ResizeBarActiveColor;
                 }
                 else if (isHovered)
                 {
-                    color = UIStyle.SplitHandleHoverColor;
+                    color = UIStyle.ResizeBarHoverColor;
                 }
 
                 DrawRect(spriteBatch, handle.Bounds, color);
             }
         }
 
-        private static void DrawPanelBackground(SpriteBatch spriteBatch, DockPanel panel, int headerHeight)
+        private static void DrawPanelBackground(SpriteBatch spriteBatch, DockPanel panel, int dragBarHeight)
         {
             DrawRect(spriteBatch, panel.Bounds, UIStyle.PanelBackground);
             DrawRectOutline(spriteBatch, panel.Bounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
 
-            if (headerHeight <= 0)
+            if (dragBarHeight <= 0)
             {
                 return;
             }
 
-            Rectangle header = panel.GetHeaderBounds(headerHeight);
-            if (header.Height <= 0)
+            Rectangle dragBar = panel.GetDragBarBounds(dragBarHeight);
+            if (dragBar.Height <= 0)
             {
                 return;
             }
 
-            DrawRect(spriteBatch, header, UIStyle.HeaderBackground);
-            Rectangle closeButtonBounds = GetCloseButtonBounds(header);
+            DrawRect(spriteBatch, dragBar, UIStyle.HeaderBackground);
+            bool dragBarHovered = string.Equals(_hoveredDragBarId, panel.Id, StringComparison.Ordinal);
+            Rectangle closeButtonBounds = GetCloseButtonBounds(dragBar);
+
+            if (dragBarHovered)
+            {
+                DrawRect(spriteBatch, dragBar, UIStyle.DragBarHoverTint);
+            }
 
             UIStyle.UIFont headerFont = UIStyle.FontH2;
             if (headerFont.IsAvailable)
             {
                 Vector2 textSize = headerFont.MeasureString(panel.Title);
-                float textY = header.Bottom - textSize.Y + 3f;
-                Vector2 textPosition = new Vector2(header.X + 12, textY);
+                float textY = dragBar.Bottom - textSize.Y + 3f;
+                Vector2 textPosition = new Vector2(dragBar.X + 12, textY);
                 headerFont.DrawString(spriteBatch, panel.Title, textPosition, UIStyle.TextColor);
             }
 
@@ -1114,13 +1138,13 @@ namespace op.io
 
             foreach (CornerHandle corner in _cornerHandles)
             {
-                Color color = UIStyle.SplitHandleColor;
+                Color color = UIStyle.ResizeBarColor;
                 Rectangle bounds = corner.Bounds;
 
                 bool isActiveCorner = _activeCornerHandle.HasValue && CornerEquals(corner, _activeCornerHandle.Value);
                 if (isActiveCorner)
                 {
-                    color = UIStyle.SplitHandleActiveColor;
+                    color = UIStyle.ResizeBarActiveColor;
 
                     if (_activeCornerSnapPosition.HasValue)
                     {
@@ -1129,16 +1153,16 @@ namespace op.io
                 }
                 else if (_hoveredCornerHandle.HasValue && CornerEquals(corner, _hoveredCornerHandle.Value))
                 {
-                    color = UIStyle.SplitHandleHoverColor;
+                    color = UIStyle.ResizeBarHoverColor;
                 }
 
                 DrawRect(spriteBatch, bounds, color);
             }
         }
 
-        private static void DrawPanelContent(SpriteBatch spriteBatch, DockPanel panel, int headerHeight)
+        private static void DrawPanelContent(SpriteBatch spriteBatch, DockPanel panel, int dragBarHeight)
         {
-            Rectangle contentBounds = panel.GetContentBounds(headerHeight, UIStyle.PanelPadding);
+            Rectangle contentBounds = panel.GetContentBounds(dragBarHeight, UIStyle.PanelPadding);
 
             switch (panel.Kind)
             {
@@ -1167,7 +1191,7 @@ namespace op.io
                 return;
             }
 
-            int headerHeight = GetActiveHeaderHeight();
+            int dragBarHeight = GetActiveDragBarHeight();
             foreach (DockPanel panel in _orderedPanels)
             {
                 if (panel == null || !panel.IsVisible)
@@ -1175,7 +1199,7 @@ namespace op.io
                     continue;
                 }
 
-                Rectangle contentBounds = panel.GetContentBounds(headerHeight, UIStyle.PanelPadding);
+                Rectangle contentBounds = panel.GetContentBounds(dragBarHeight, UIStyle.PanelPadding);
                 switch (panel.Kind)
                 {
                     case DockPanelKind.Notes:
@@ -1219,8 +1243,10 @@ namespace op.io
                 rowY += 32;
             }
 
-            DrawButton(spriteBatch, _overlayOpenAllBounds, "Open all", UIStyle.AccentColor);
-            DrawButton(spriteBatch, _overlayCloseAllBounds, "Close all", UIStyle.PanelBorder);
+            string openAllLabel = JoinWordsWithWideSpacing("Open", "all");
+            string closeAllLabel = JoinWordsWithWideSpacing("Close", "all");
+            DrawButton(spriteBatch, _overlayOpenAllBounds, openAllLabel, UIStyle.AccentColor);
+            DrawButton(spriteBatch, _overlayCloseAllBounds, closeAllLabel, UIStyle.PanelBorder);
         }
 
         private static void CollapseInteractions()
@@ -1235,9 +1261,10 @@ namespace op.io
         {
             _draggingPanel = null;
             _dropPreview = null;
-            _hoveredSplitHandle = null;
-            _activeSplitHandle = null;
-            ClearSplitSnap();
+            _hoveredDragBarId = null;
+            _hoveredResizeBar = null;
+            _activeResizeBar = null;
+            ClearResizeBarSnap();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
             ClearCornerSnap();
@@ -1261,10 +1288,10 @@ namespace op.io
             _activeCornerSnapLockY = false;
         }
 
-        private static void ClearSplitSnap()
+        private static void ClearResizeBarSnap()
         {
-            _activeSplitSnapTarget = null;
-            _activeSplitSnapCoordinate = null;
+            _activeResizeBarSnapTarget = null;
+            _activeResizeBarSnapCoordinate = null;
         }
 
         private static void DrawButton(SpriteBatch spriteBatch, Rectangle bounds, string label, Color border)
@@ -1405,10 +1432,15 @@ namespace op.io
             }
 
             string label = GetPanelHotkeyLabel();
-            string message = $"Press {label} to open panels";
+            string message = BuildWideSpacedSentence(label);
             Vector2 size = font.MeasureString(message);
             Vector2 position = new(viewport.X + (viewport.Width - size.X) / 2f, viewport.Y + (viewport.Height - size.Y) / 2f);
             font.DrawString(spriteBatch, message, position, UIStyle.MutedTextColor);
+        }
+
+        private static string BuildWideSpacedSentence(string label)
+        {
+            return JoinWordsWithWideSpacing("Press", label, "to", "open", "panels");
         }
 
         private static Rectangle GetLayoutBounds(Rectangle viewport)
@@ -1420,9 +1452,9 @@ namespace op.io
                 Math.Max(0, viewport.Height - (UIStyle.LayoutPadding * 2)));
         }
 
-        private static int GetActiveHeaderHeight()
+        private static int GetActiveDragBarHeight()
         {
-            return DockingModeEnabled ? UIStyle.HeaderHeight : 0;
+            return DockingModeEnabled ? UIStyle.DragBarHeight : 0;
         }
 
         private static bool AnyPanelVisible() => _orderedPanels.Any(panel => panel.IsVisible);
@@ -1466,6 +1498,31 @@ namespace op.io
             return label;
         }
 
+        private static string JoinWordsWithWideSpacing(params string[] parts)
+        {
+            if (parts == null || parts.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            List<string> filtered = new(parts.Length);
+            foreach (string part in parts)
+            {
+                if (string.IsNullOrWhiteSpace(part))
+                {
+                    continue;
+                }
+
+                string trimmed = part.Trim();
+                if (trimmed.Length > 0)
+                {
+                    filtered.Add(trimmed);
+                }
+            }
+
+            return filtered.Count == 0 ? string.Empty : string.Join(WideWordSeparator, filtered);
+        }
+
         private static void SetAllPanelsVisibility(bool value)
         {
             foreach (DockPanel panel in _orderedPanels)
@@ -1481,7 +1538,7 @@ namespace op.io
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
             if (graphicsDevice == null)
             {
-                ClearSplitHandles();
+                ClearResizeBars();
                 return;
             }
 
@@ -1496,7 +1553,7 @@ namespace op.io
             {
                 if (!DockingModeEnabled)
                 {
-                    ClearSplitHandles();
+                    ClearResizeBars();
                 }
 
                 return;
@@ -1507,18 +1564,18 @@ namespace op.io
 
             if (DockingModeEnabled)
             {
-                RebuildSplitHandles();
+                RebuildResizeBars();
             }
             else
             {
-                ClearSplitHandles();
+                ClearResizeBars();
             }
 
             _gameContentBounds = Rectangle.Empty;
-            int headerHeight = GetActiveHeaderHeight();
+            int dragBarHeight = GetActiveDragBarHeight();
             if (TryGetGamePanel(out DockPanel gamePanel) && gamePanel.IsVisible)
             {
-                _gameContentBounds = gamePanel.GetContentBounds(headerHeight, UIStyle.PanelPadding);
+                _gameContentBounds = gamePanel.GetContentBounds(dragBarHeight, UIStyle.PanelPadding);
             }
 
             _layoutDirty = false;
@@ -1529,39 +1586,39 @@ namespace op.io
             _layoutDirty = true;
         }
 
-        private static void RebuildSplitHandles()
+        private static void RebuildResizeBars()
         {
             if (_rootNode == null || !AnyPanelVisible())
             {
-                ClearSplitHandles();
+                ClearResizeBars();
                 return;
             }
 
-            _splitHandles.Clear();
-            CollectSplitHandles(_rootNode);
+            _resizeBars.Clear();
+            CollectResizeBars(_rootNode);
             RebuildCornerHandles();
 
-            if (_hoveredSplitHandle.HasValue)
+            if (_hoveredResizeBar.HasValue)
             {
-                _hoveredSplitHandle = FindHandleForNode(_hoveredSplitHandle.Value.Node);
+                _hoveredResizeBar = FindResizeBarForNode(_hoveredResizeBar.Value.Node);
             }
 
-            if (_activeSplitHandle.HasValue)
+            if (_activeResizeBar.HasValue)
             {
-                _activeSplitHandle = FindHandleForNode(_activeSplitHandle.Value.Node);
+                _activeResizeBar = FindResizeBarForNode(_activeResizeBar.Value.Node);
             }
 
-            if (_activeSplitSnapTarget.HasValue)
+            if (_activeResizeBarSnapTarget.HasValue)
             {
-                SplitHandle? refreshed = FindHandleForNode(_activeSplitSnapTarget.Value.Node);
-                if (refreshed.HasValue && refreshed.Value.Orientation == _activeSplitSnapTarget.Value.Orientation)
+                ResizeBar? refreshed = FindResizeBarForNode(_activeResizeBarSnapTarget.Value.Node);
+                if (refreshed.HasValue && refreshed.Value.Orientation == _activeResizeBarSnapTarget.Value.Orientation)
                 {
-                    _activeSplitSnapTarget = refreshed;
-                    _activeSplitSnapCoordinate = GetSplitHandleAxisCenter(refreshed.Value);
+                    _activeResizeBarSnapTarget = refreshed;
+                    _activeResizeBarSnapCoordinate = GetResizeBarAxisCenter(refreshed.Value);
                 }
                 else
                 {
-                    ClearSplitSnap();
+                    ClearResizeBarSnap();
                 }
             }
 
@@ -1621,7 +1678,7 @@ namespace op.io
             }
         }
 
-        private static void CollectSplitHandles(DockNode node)
+        private static void CollectResizeBars(DockNode node)
         {
             if (node is not SplitNode split)
             {
@@ -1633,42 +1690,42 @@ namespace op.io
 
             if (firstVisible && secondVisible)
             {
-                Rectangle handleBounds = GetSplitHandleBounds(split);
+                Rectangle handleBounds = GetResizeBarBounds(split);
                 if (handleBounds.Width > 0 && handleBounds.Height > 0)
                 {
-                    _splitHandles.Add(new SplitHandle(split, split.Orientation, handleBounds));
+                    _resizeBars.Add(new ResizeBar(split, split.Orientation, handleBounds));
                 }
             }
 
             if (split.First != null)
             {
-                CollectSplitHandles(split.First);
+                CollectResizeBars(split.First);
             }
 
             if (split.Second != null)
             {
-                CollectSplitHandles(split.Second);
+                CollectResizeBars(split.Second);
             }
         }
 
         private static void RebuildCornerHandles()
         {
             _cornerHandles.Clear();
-            if (_splitHandles.Count == 0)
+            if (_resizeBars.Count == 0)
             {
                 return;
             }
 
-            int inflate = Math.Max(2, UIStyle.SplitHandleThickness / 2);
+            int inflate = Math.Max(2, UIStyle.ResizeBarThickness / 2);
 
-            foreach (SplitHandle vertical in _splitHandles)
+            foreach (ResizeBar vertical in _resizeBars)
             {
                 if (vertical.Orientation != DockSplitOrientation.Vertical)
                 {
                     continue;
                 }
 
-                foreach (SplitHandle horizontal in _splitHandles)
+                foreach (ResizeBar horizontal in _resizeBars)
                 {
                     if (horizontal.Orientation != DockSplitOrientation.Horizontal)
                     {
@@ -1688,7 +1745,7 @@ namespace op.io
             }
         }
 
-        private static Rectangle GetSplitHandleBounds(SplitNode split)
+        private static Rectangle GetResizeBarBounds(SplitNode split)
         {
             if (split == null)
             {
@@ -1701,7 +1758,7 @@ namespace op.io
                 return Rectangle.Empty;
             }
 
-            int thickness = Math.Max(2, UIStyle.SplitHandleThickness);
+            int thickness = Math.Max(2, UIStyle.ResizeBarThickness);
             if (split.Orientation == DockSplitOrientation.Vertical)
             {
                 int centerX = split.First.Bounds.Right;
@@ -1720,14 +1777,14 @@ namespace op.io
             }
         }
 
-        private static SplitHandle? FindHandleForNode(SplitNode node)
+        private static ResizeBar? FindResizeBarForNode(SplitNode node)
         {
             if (node == null)
             {
                 return null;
             }
 
-            foreach (SplitHandle handle in _splitHandles)
+            foreach (ResizeBar handle in _resizeBars)
             {
                 if (ReferenceEquals(handle.Node, node))
                 {
@@ -1764,27 +1821,28 @@ namespace op.io
                 corner.HorizontalHandle.Bounds.Center.Y);
         }
 
-        private static bool CornerContainsHandle(CornerHandle corner, SplitHandle handle)
+        private static bool CornerContainsResizeBar(CornerHandle corner, ResizeBar handle)
         {
             return ReferenceEquals(corner.VerticalHandle.Node, handle.Node) ||
                    ReferenceEquals(corner.HorizontalHandle.Node, handle.Node);
         }
 
-        private static bool SplitHandlesEqual(SplitHandle a, SplitHandle b)
+        private static bool ResizeBarsEqual(ResizeBar a, ResizeBar b)
         {
             return ReferenceEquals(a.Node, b.Node) && a.Orientation == b.Orientation;
         }
 
-        private static void ClearSplitHandles()
+        private static void ClearResizeBars()
         {
-            _splitHandles.Clear();
-            _hoveredSplitHandle = null;
-            _activeSplitHandle = null;
-            ClearSplitSnap();
+            _resizeBars.Clear();
+            _hoveredResizeBar = null;
+            _activeResizeBar = null;
+            ClearResizeBarSnap();
             _cornerHandles.Clear();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
             ClearCornerSnap();
+            _hoveredDragBarId = null;
         }
 
         private static bool TryGetGamePanel(out DockPanel panel)
@@ -1971,9 +2029,9 @@ namespace op.io
             public Rectangle Bounds { get; }
         }
 
-        private readonly struct SplitHandle
+        private readonly struct ResizeBar
         {
-            public SplitHandle(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
+            public ResizeBar(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
             {
                 Node = node;
                 Orientation = orientation;
@@ -1987,15 +2045,15 @@ namespace op.io
 
         private readonly struct CornerHandle
         {
-            public CornerHandle(SplitHandle verticalHandle, SplitHandle horizontalHandle, Rectangle bounds)
+            public CornerHandle(ResizeBar verticalHandle, ResizeBar horizontalHandle, Rectangle bounds)
             {
                 VerticalHandle = verticalHandle;
                 HorizontalHandle = horizontalHandle;
                 Bounds = bounds;
             }
 
-            public SplitHandle VerticalHandle { get; }
-            public SplitHandle HorizontalHandle { get; }
+            public ResizeBar VerticalHandle { get; }
+            public ResizeBar HorizontalHandle { get; }
             public Rectangle Bounds { get; }
         }
 
@@ -2023,3 +2081,6 @@ namespace op.io
         }
     }
 }
+
+
+
