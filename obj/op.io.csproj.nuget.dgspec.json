@@ -59,7 +59,7 @@
               "target": "Package",
               "version": "[3.8.2.1105, )"
             },
-            "MonoGame.Framework.DesktopGL": {
+            "MonoGame.Framework.WindowsDX": {
               "target": "Package",
               "version": "[3.8.2.1105, )"
             },
@@ -74,14 +74,6 @@
             "System.Data.SQLite.Core": {
               "target": "Package",
               "version": "[1.0.119, )"
-            },
-            "System.Drawing.Common": {
-              "target": "Package",
-              "version": "[9.0.3, )"
-            },
-            "ppy.SDL2-CS": {
-              "target": "Package",
-              "version": "[1.0.82, )"
             }
           },
           "imports": [

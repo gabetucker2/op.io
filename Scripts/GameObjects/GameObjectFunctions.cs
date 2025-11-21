@@ -1,6 +1,6 @@
 using System;
+using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
-using SDL2;
 
 namespace op.io
 {
@@ -57,17 +57,15 @@ namespace op.io
 
             DebugLogger.PrintUI($"Window Handle Retrieved: {windowHandle}");
 
-            // SDL requires window handle from SDL2 functions
-            int windowX = 0, windowY = 0;
-            SDL.SDL_GetWindowPosition(windowHandle, out windowX, out windowY);
-
-            if (windowX == 0 && windowY == 0)
+            if (!GetWindowRect(windowHandle, out RECT rect))
             {
-                DebugLogger.PrintError("Failed to retrieve SDL window position. Ensure SDL2 is correctly integrated.");
+                DebugLogger.PrintError("Failed to retrieve window rectangle for global screen position.");
                 return localScreenPosition;
             }
 
-            DebugLogger.PrintUI($"SDL Window Position Retrieved: X={windowX}, Y={windowY}");
+            int windowX = rect.Left;
+            int windowY = rect.Top;
+            DebugLogger.PrintUI($"Window rectangle retrieved: X={windowX}, Y={windowY}");
 
             // Calculate global screen position
             Vector2 globalScreenPosition = new(
@@ -80,5 +78,15 @@ namespace op.io
             return globalScreenPosition;
         }
 
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
     }
 }

@@ -218,7 +218,7 @@ namespace op.io
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
             Rectangle viewport = Core.Instance.GraphicsDevice.Viewport.Bounds;
-            DrawRect(spriteBatch, viewport, UIStyle.ScreenBackground);
+            DrawRect(spriteBatch, viewport, Core.TransparentWindowColor);
 
             if (!AnyPanelVisible())
             {

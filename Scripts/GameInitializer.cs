@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.Runtime.InteropServices;
+using Microsoft.Xna.Framework;
 
 namespace op.io
 {
@@ -59,6 +61,31 @@ namespace op.io
 
             Core.Instance.Graphics.ApplyChanges();
 
+            // Make the background to the game be transparent (https://stackoverflow.com/a)
+            var contentManager = Core.Instance.Content;
+            var gameWindow = Core.Instance.Window;
+            if (contentManager == null)
+            {
+                DebugLogger.PrintError("Content is null. Cannot configure window transparency.");
+            }
+            else if (gameWindow == null)
+            {
+                DebugLogger.PrintError("Window is null. Cannot configure window transparency.");
+            }
+            else
+            {
+                contentManager.RootDirectory = "Content";
+                IntPtr hwnd = GetWin32WindowHandle(gameWindow.Handle);
+                if (hwnd == IntPtr.Zero)
+                {
+                    DebugLogger.PrintError("Failed to resolve native window handle; skipping transparency setup.");
+                }
+                else
+                {
+                    ApplyTransparencyKey(hwnd, Core.TransparentWindowColor);
+                }
+            }
+
             // Initialize gameobjects AFTER general settings are loaded
             GameObjectInitializer.Initialize();
             SwitchConsumerBootstrapper.RegisterDefaultConsumers();
@@ -116,5 +143,58 @@ namespace op.io
                 DebugLogger.PrintError($"Failed to load general settings: {ex.Message}");
             }
         }
+
+        private static void ApplyTransparencyKey(IntPtr hwnd, Color xnaColor)
+        {
+            uint colorRef = TypeConversionFunctions.XnaColorToColorRef(xnaColor);
+            long styles = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, styles | WS_EX_LAYERED);
+            int result = SetLayeredWindowAttributes(hwnd, colorRef, 0, LWA_COLORKEY);
+            if (result == 0)
+            {
+                DebugLogger.PrintError("SetLayeredWindowAttributes failed; window transparency key not applied.");
+            }
+        }
+
+        private static IntPtr GetWin32WindowHandle(IntPtr rawHandle)
+        {
+            if (rawHandle == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            // For WindowsDX, the MonoGame GameWindow handle is already an HWND.
+            return rawHandle;
+        }
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_LAYERED = 0x00080000;
+        private const int LWA_COLORKEY = 0x00000001;
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+        private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+        private static extern long GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+        private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        private static long GetWindowLongPtr(IntPtr hWnd, int nIndex)
+        {
+            return IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLong32(hWnd, nIndex);
+        }
+
+        private static long SetWindowLongPtr(IntPtr hWnd, int nIndex, long dwNewLong)
+        {
+            return IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLong32(hWnd, nIndex, unchecked((int)dwNewLong));
+        }
     }
 }
+

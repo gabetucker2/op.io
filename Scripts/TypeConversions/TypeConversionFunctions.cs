@@ -15,6 +15,17 @@ namespace op.io // TODO: Migrate this script elsewhere
             return value == 1;
         }
 
+        public static uint XnaColorToColorRef(Color color)
+        {
+            // COLORREF is 0x00BBGGRR; alpha is ignored when using LWA_COLORKEY.
+            return (uint)((color.B << 16) | (color.G << 8) | color.R);
+        }
+
+        public static System.Drawing.Color XnaColorToDrawingColor(Color color)
+        {
+            return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
+        }
+
         public static int BoolToInt(bool value)
         {
             return value ? 1 : 0;

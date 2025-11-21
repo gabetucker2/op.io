@@ -12,7 +12,8 @@ namespace op.io
         public static bool ForceDebugMode { get; set; } = false;
         public static bool RestartDB { get; set; } = true;
 
-        public static Color DefaultColor = Color.HotPink;
+        public static Color TransparentWindowColor = new(255, 105, 180);
+        public static Color DefaultColor = new(255, 105, 179);
 
         // Auto settings
         public static Core Instance { get; set; }
