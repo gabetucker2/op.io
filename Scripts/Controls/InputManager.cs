@@ -157,6 +157,16 @@ namespace op.io
             return string.Empty;
         }
 
+        public static int GetBindingTokenCount(string settingKey)
+        {
+            if (_controlBindings.TryGetValue(settingKey, out ControlBinding binding))
+            {
+                return binding.TokenCount;
+            }
+
+            return 0;
+        }
+
         private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, out ControlBinding binding)
         {
             binding = null;
@@ -268,6 +278,7 @@ namespace op.io
             public IReadOnlyList<InputBindingToken> Tokens { get; }
             public string DisplayLabel { get; }
             public bool IsMetaControl { get; }
+            public int TokenCount => Tokens?.Count ?? 0;
 
             public bool IsActive()
             {
@@ -325,6 +336,17 @@ namespace op.io
 
                 if (modifiersHeld)
                 {
+                    if (InputType == InputType.Switch && Tokens.Count > 1)
+                    {
+                        bool switched = primary.IsSwitch();
+                        if (switched)
+                        {
+                            InputTypeManager.ConsumeKeys(GetAllKeys(Tokens));
+                        }
+
+                        return switched;
+                    }
+
                     return primary.IsSwitch();
                 }
 
@@ -342,6 +364,26 @@ namespace op.io
                 return false;
             }
 
+            private static IEnumerable<Keys> GetAllKeys(IReadOnlyList<InputBindingToken> tokens)
+            {
+                if (tokens == null)
+                {
+                    yield break;
+                }
+
+                foreach (InputBindingToken token in tokens)
+                {
+                    if (token.Keys == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (Keys key in token.Keys)
+                    {
+                        yield return key;
+                    }
+                }
+            }
         }
 
         private static bool ShouldAllowBinding(bool isMetaControl)

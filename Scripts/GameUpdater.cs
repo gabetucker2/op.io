@@ -46,6 +46,9 @@ namespace op.io
 
             // Assess "prev" switch state management mechanism
             ControlStateManager.Tickwise_PrevSwitchTrackUpdate();
+
+            // Capture current input states for next-frame comparisons (trigger/switch edge detection)
+            InputTypeManager.Update();
         }
     }
 }

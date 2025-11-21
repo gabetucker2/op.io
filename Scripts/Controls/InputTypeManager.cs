@@ -134,7 +134,8 @@ namespace op.io
             bool wasPreviouslyPressed = _previousKeyboardState.IsKeyDown(key);
             bool isCooldownPassed = (Core.GAMETIME - _lastKeyTriggerTime[key]) >= _cachedTriggerCooldown.Value;
 
-            if (isCurrentlyPressed && !wasPreviouslyPressed && isCooldownPassed)
+            // Trigger on key release (was down, now up) after cooldown
+            if (!isCurrentlyPressed && wasPreviouslyPressed && isCooldownPassed)
             {
                 _triggerStates[key] = true;
                 _lastKeyTriggerTime[key] = Core.GAMETIME; // Reset trigger cooldown to the max cooldown value
@@ -170,10 +171,10 @@ namespace op.io
             bool isTriggered = false;
             bool isCooldownPassed = (Core.GAMETIME - _lastMouseTriggerTime[mouseKey]) >= _cachedTriggerCooldown.Value;
 
-            if ((mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Pressed &&
-                 _previousMouseState.LeftButton == ButtonState.Released && isCooldownPassed) ||
-                (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Pressed &&
-                 _previousMouseState.RightButton == ButtonState.Released && isCooldownPassed))
+            if ((mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Released &&
+                 _previousMouseState.LeftButton == ButtonState.Pressed && isCooldownPassed) ||
+                (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Released &&
+                 _previousMouseState.RightButton == ButtonState.Pressed && isCooldownPassed))
             {
                 isTriggered = true;
                 _lastMouseTriggerTime[mouseKey] = Core.GAMETIME; // Reset trigger cooldown to the max cooldown value
@@ -204,11 +205,11 @@ namespace op.io
                 LoadCooldownValues();
             }
 
-            if ((mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Pressed &&
-                 _previousMouseState.LeftButton == ButtonState.Released &&
+            if ((mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Released &&
+                 _previousMouseState.LeftButton == ButtonState.Pressed &&
                  (Core.GAMETIME - _lastMouseSwitchTime[mouseKey] >= _cachedSwitchCooldown.Value)) ||
-                (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Pressed &&
-                 _previousMouseState.RightButton == ButtonState.Released &&
+                (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Released &&
+                 _previousMouseState.RightButton == ButtonState.Pressed &&
                  (Core.GAMETIME - _lastMouseSwitchTime[mouseKey] >= _cachedSwitchCooldown.Value)))
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
@@ -245,7 +246,9 @@ namespace op.io
                 LoadCooldownValues();
             }
 
-            if (currentState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key) &&
+            // Toggle on key release (down -> up) after cooldown if the key wasn't already consumed by a combo.
+            // Toggle on key release (down -> up) after cooldown.
+            if (!currentState.IsKeyDown(key) && _previousKeyboardState.IsKeyDown(key) &&
                 (Core.GAMETIME - _lastKeySwitchTime[key] >= _cachedSwitchCooldown.Value))
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
@@ -260,6 +263,10 @@ namespace op.io
         {
             return _keySwitchStates.TryGetValue(key, out bool state) && state;
         }
+
+        public static void ConsumeKeys(IEnumerable<Keys> keys) { }
+
+        public static void BeginFrame() { }
 
         private static void NotifySwitchStateFromInput(string inputKey, bool state)
         {
