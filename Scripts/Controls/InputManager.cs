@@ -281,12 +281,14 @@ namespace op.io
                     return false;
                 }
 
-                bool modifiersHeld = true;
-                int modifierCount = Math.Max(0, Tokens.Count - 1);
+            bool modifiersHeld = true;
+            bool hasModifiers = Tokens.Count > 1;
+            int modifierCount = Math.Max(0, Tokens.Count - 1);
 
-                for (int i = 0; i < modifierCount; i++)
-                {
-                    if (!Tokens[i].IsHeld())
+
+            for (int i = 0; i < modifierCount; i++)
+            {
+                if (!Tokens[i].IsHeld())
                     {
                         modifiersHeld = false;
                         if (InputType != InputType.Switch)
@@ -303,13 +305,24 @@ namespace op.io
                 {
                     InputType.Hold => modifiersHeld && primary.IsHeld(),
                     InputType.Trigger => modifiersHeld && primary.IsTriggered(),
-                    InputType.Switch => EvaluateSwitchState(primary, modifiersHeld),
+                    InputType.Switch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
                     _ => false
                 };
             }
 
-            private bool EvaluateSwitchState(InputBindingToken primary, bool modifiersHeld)
+            private bool EvaluateSwitchState(InputBindingToken primary, bool modifiersHeld, bool hasModifiers)
             {
+                // If this binding expects modifiers and they aren't held, don't toggle or peek; just return cached state.
+                if (hasModifiers && !modifiersHeld)
+                {
+                    if (ControlStateManager.ContainsSwitchState(SettingKey))
+                    {
+                        return ControlStateManager.GetSwitchState(SettingKey);
+                    }
+
+                    return false;
+                }
+
                 if (modifiersHeld)
                 {
                     return primary.IsSwitch();
@@ -328,6 +341,7 @@ namespace op.io
 
                 return false;
             }
+
         }
 
         private static bool ShouldAllowBinding(bool isMetaControl)
@@ -482,6 +496,8 @@ namespace op.io
 
                 return false;
             }
+
         }
+
     }
 }

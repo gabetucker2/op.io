@@ -135,6 +135,28 @@ WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }
 
+        public static void EnsureInputKey(string settingKey, string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
+            {
+                return;
+            }
+
+            var parameters = new Dictionary<string, object>
+            {
+                ["@settingKey"] = settingKey,
+                ["@inputKey"] = inputKey
+            };
+
+            const string sql = @"
+UPDATE ControlKey
+SET InputKey = @inputKey
+WHERE SettingKey = @settingKey
+  AND (InputKey IS NULL OR TRIM(InputKey) = '');";
+
+            DatabaseQuery.ExecuteNonQuery(sql, parameters);
+        }
+
         public static void ClearSwitchStartState(string settingKey)
         {
             if (string.IsNullOrWhiteSpace(settingKey))

@@ -8,6 +8,7 @@ namespace op.io
     {
         private static bool _applied;
         private static readonly string[] MetaControlKeys = ["Exit", "PanelMenu", "DockingMode", "DebugMode", "AllowGameInputFreeze"];
+        private const string TransparentTabBlockingKey = "TransparentTabBlocking";
 
         public static void EnsureApplied()
         {
@@ -26,6 +27,7 @@ namespace op.io
                 EnsureRenderOrderColumn();
                 EnsurePanelMenuControl();
                 EnsureExitControl();
+                EnsureTransparentTabBlockingControl();
                 EnsureMetaControlColumn();
                 ControlKeyData.ApplyMetaControlFlags(MetaControlKeys);
 
@@ -76,6 +78,23 @@ namespace op.io
         {
             ControlKeyData.SetInputType("Exit", "Trigger");
             ControlKeyData.ClearSwitchStartState("Exit");
+        }
+
+        private static void EnsureTransparentTabBlockingControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = TransparentTabBlockingKey,
+                InputKey = "Shift + V",
+                InputType = "Switch",
+                SwitchStartState = 0,
+                MetaControl = false,
+                RenderOrder = 15
+            });
+
+            ControlKeyData.SetInputType(TransparentTabBlockingKey, "Switch");
+            ControlKeyData.EnsureSwitchStartState(TransparentTabBlockingKey, 0);
+            ControlKeyData.EnsureInputKey(TransparentTabBlockingKey, "Shift + V");
         }
     }
 

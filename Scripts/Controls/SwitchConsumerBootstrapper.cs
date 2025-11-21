@@ -32,6 +32,11 @@ namespace op.io
                 }
             });
 
+            SwitchRegistry.RegisterConsumer("TransparentTabBlocking", value =>
+            {
+                GameInitializer.SetWindowClickThrough(value);
+            });
+
             ApplyInitialStates();
         }
 

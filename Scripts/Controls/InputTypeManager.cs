@@ -117,7 +117,6 @@ namespace op.io
                 return false;
             }
 
-            // Lazy load TriggerCooldown if not cached
             if (!_cachedTriggerCooldown.HasValue)
             {
                 LoadCooldownValues();
@@ -241,7 +240,6 @@ namespace op.io
                 return false;
             }
 
-            // Lazy load SwitchCooldown if not cached
             if (!_cachedSwitchCooldown.HasValue)
             {
                 LoadCooldownValues();
@@ -384,7 +382,9 @@ namespace op.io
             AddInputKeyMapping(inputKey, settingKey);
 
             string primaryToken = GetPrimaryToken(inputKey);
-            if (!string.IsNullOrWhiteSpace(primaryToken))
+            // Only map the primary token for single-key bindings to avoid sharing it across combos.
+            bool isCombo = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+            if (!isCombo && !string.IsNullOrWhiteSpace(primaryToken))
             {
                 AddInputKeyMapping(primaryToken, settingKey);
             }

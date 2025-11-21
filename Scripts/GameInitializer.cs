@@ -9,6 +9,8 @@ namespace op.io
         public static void Initialize()
         {
             DebugLogger.Print("Initializing game...");
+            _transparentWindowHandle = IntPtr.Zero;
+            _clickThroughEnabled = false;
 
             // Ensure Core.Instance exists
             if (Core.Instance == null)
@@ -82,7 +84,9 @@ namespace op.io
                 }
                 else
                 {
+                    _transparentWindowHandle = hwnd;
                     ApplyTransparencyKey(hwnd, Core.TransparentWindowColor);
+                    SetWindowClickThrough(false);
                 }
             }
 
@@ -167,8 +171,46 @@ namespace op.io
             return rawHandle;
         }
 
+        public static void SetWindowClickThrough(bool enable)
+        {
+            if (_transparentWindowHandle == IntPtr.Zero)
+            {
+                DebugLogger.PrintWarning("Cannot toggle click-through: window handle is not available.");
+                return;
+            }
+
+            if (_clickThroughEnabled == enable)
+            {
+                return;
+            }
+
+            long styles = GetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE);
+            if (enable)
+            {
+                styles |= WS_EX_TRANSPARENT;
+            }
+            else
+            {
+                styles &= ~WS_EX_TRANSPARENT;
+            }
+
+            long previous = SetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE, styles);
+            if (previous == 0)
+            {
+                DebugLogger.PrintError("Failed to update window transparency hit-test style.");
+            }
+            else
+            {
+                _clickThroughEnabled = enable;
+            }
+        }
+
+        private static IntPtr _transparentWindowHandle;
+        private static bool _clickThroughEnabled;
+
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x00080000;
+        private const int WS_EX_TRANSPARENT = 0x00000020;
         private const int LWA_COLORKEY = 0x00000001;
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
