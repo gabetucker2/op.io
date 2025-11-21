@@ -6,6 +6,7 @@ namespace op.io
     public enum DockPanelKind
     {
         Game,
+        Transparent,
         Blank,
         Controls,
         Notes,

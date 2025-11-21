@@ -12,6 +12,7 @@ namespace op.io
     {
         private const string GamePanelKey = "game";
         private const string BlankPanelKey = "blank";
+        private const string TransparentPanelKey = "transparent";
         private const string ControlsPanelKey = "controls";
         private const string NotesPanelKey = "notes";
         private const string BackendPanelKey = "backend";
@@ -247,21 +248,30 @@ namespace op.io
             _orderedPanels.Clear();
 
             DockPanel blank = CreatePanel(BlankPanelKey, BlankBlock.PanelTitle, DockPanelKind.Blank);
+            DockPanel transparent = CreatePanel(TransparentPanelKey, TransparentBlock.PanelTitle, DockPanelKind.Transparent);
             DockPanel game = CreatePanel(GamePanelKey, GameBlock.PanelTitle, DockPanelKind.Game);
             DockPanel controls = CreatePanel(ControlsPanelKey, ControlsBlock.PanelTitle, DockPanelKind.Controls);
             DockPanel notes = CreatePanel(NotesPanelKey, NotesBlock.PanelTitle, DockPanelKind.Notes);
             DockPanel backend = CreatePanel(BackendPanelKey, BackendBlock.PanelTitle, DockPanelKind.Backend);
 
             PanelNode blankNode = _panelNodes[blank.Id];
+            PanelNode transparentNode = _panelNodes[transparent.Id];
             PanelNode gameNode = _panelNodes[game.Id];
             PanelNode controlsNode = _panelNodes[controls.Id];
             PanelNode notesNode = _panelNodes[notes.Id];
             PanelNode backendNode = _panelNodes[backend.Id];
 
+            SplitNode blankAndTransparent = new(DockSplitOrientation.Vertical)
+            {
+                SplitRatio = 0.5f,
+                First = transparentNode,
+                Second = blankNode
+            };
+
             SplitNode leftColumn = new(DockSplitOrientation.Horizontal)
             {
                 SplitRatio = 0.36f,
-                First = blankNode,
+                First = blankAndTransparent,
                 Second = gameNode
             };
 
@@ -1059,7 +1069,8 @@ namespace op.io
 
         private static void DrawPanelBackground(SpriteBatch spriteBatch, DockPanel panel, int dragBarHeight)
         {
-            DrawRect(spriteBatch, panel.Bounds, UIStyle.PanelBackground);
+            bool isTransparentPanel = panel.Kind == DockPanelKind.Transparent;
+            DrawRect(spriteBatch, panel.Bounds, isTransparentPanel ? Core.TransparentWindowColor : UIStyle.PanelBackground);
             DrawRectOutline(spriteBatch, panel.Bounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
 
             if (dragBarHeight <= 0)
@@ -1168,6 +1179,9 @@ namespace op.io
             {
                 case DockPanelKind.Game:
                     GameBlock.Draw(spriteBatch, contentBounds, _worldRenderTarget);
+                    break;
+                case DockPanelKind.Transparent:
+                    TransparentBlock.Draw(spriteBatch, contentBounds);
                     break;
                 case DockPanelKind.Blank:
                     BlankBlock.Draw(spriteBatch, contentBounds);
