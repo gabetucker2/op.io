@@ -323,30 +323,14 @@ namespace op.io
 
             private bool EvaluateSwitchState(InputBindingToken primary, bool modifiersHeld, bool hasModifiers)
             {
-                // If this binding expects modifiers and they aren't held, don't toggle or peek; just return cached state.
-                if (hasModifiers && !modifiersHeld)
+                if (hasModifiers)
                 {
-                    if (ControlStateManager.ContainsSwitchState(SettingKey))
-                    {
-                        return ControlStateManager.GetSwitchState(SettingKey);
-                    }
-
-                    return false;
+                    bool allTokensHeld = Tokens.All(t => t.IsHeld());
+                    return InputTypeManager.EvaluateComboSwitch(SettingKey, allTokensHeld, GetAllKeys(Tokens));
                 }
 
                 if (modifiersHeld)
                 {
-                    if (InputType == InputType.Switch && Tokens.Count > 1)
-                    {
-                        bool switched = primary.IsSwitch();
-                        if (switched)
-                        {
-                            InputTypeManager.ConsumeKeys(GetAllKeys(Tokens));
-                        }
-
-                        return switched;
-                    }
-
                     return primary.IsSwitch();
                 }
 

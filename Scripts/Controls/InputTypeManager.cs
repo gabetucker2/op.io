@@ -19,6 +19,11 @@ namespace op.io
         private static readonly string[] _criticalSwitchSettings = ["Crouch", "DebugMode", "AllowGameInputFreeze"];
         private static bool _switchStatesInitialized;
 
+        private static readonly HashSet<Keys> _suppressedSwitchKeys = [];
+        private static readonly Dictionary<string, bool> _bindingSwitchStates = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, float> _bindingLastSwitchTime = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, bool> _bindingChordHeld = new(StringComparer.OrdinalIgnoreCase);
+
         private static readonly Dictionary<string, float> _lastMouseSwitchTime = new();
         private static readonly Dictionary<Keys, float> _lastKeySwitchTime = new();
         private static readonly Dictionary<Keys, double> _lastKeyTriggerTime = new();
@@ -66,6 +71,7 @@ namespace op.io
                         _switchStateCache[settingKey] = isOn;
                         _settingKeyToInputKey[settingKey] = inputKey;
                         RegisterInputKeyForSetting(settingKey, inputKey);
+                        SeedBindingState(settingKey, isOn);
 
                         bool mapped = TrySeedSwitchState(inputKey, isOn);
 
@@ -235,6 +241,8 @@ namespace op.io
             if (!_lastKeySwitchTime.ContainsKey(key))
                 _lastKeySwitchTime[key] = 0;
 
+            bool suppressionActive = _suppressedSwitchKeys.Contains(key);
+
             if (Core.Instance.Player == null)
             {
                 DebugLogger.PrintError("Player instance is null. Cannot check SwitchCooldown.");
@@ -246,10 +254,15 @@ namespace op.io
                 LoadCooldownValues();
             }
 
-            // Toggle on key release (down -> up) after cooldown if the key wasn't already consumed by a combo.
+            bool isReleasedThisFrame = !currentState.IsKeyDown(key) && _previousKeyboardState.IsKeyDown(key);
+            if (isReleasedThisFrame && suppressionActive)
+            {
+                _suppressedSwitchKeys.Remove(key);
+                return _keySwitchStates[key];
+            }
+
             // Toggle on key release (down -> up) after cooldown.
-            if (!currentState.IsKeyDown(key) && _previousKeyboardState.IsKeyDown(key) &&
-                (Core.GAMETIME - _lastKeySwitchTime[key] >= _cachedSwitchCooldown.Value))
+            if (isReleasedThisFrame && (Core.GAMETIME - _lastKeySwitchTime[key] >= _cachedSwitchCooldown.Value))
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
                 _lastKeySwitchTime[key] = Core.GAMETIME; // Reset switch cooldown to the max cooldown value
@@ -264,7 +277,18 @@ namespace op.io
             return _keySwitchStates.TryGetValue(key, out bool state) && state;
         }
 
-        public static void ConsumeKeys(IEnumerable<Keys> keys) { }
+        public static void ConsumeKeys(IEnumerable<Keys> keys)
+        {
+            if (keys == null)
+            {
+                return;
+            }
+
+            foreach (Keys key in keys)
+            {
+                _suppressedSwitchKeys.Add(key);
+            }
+        }
 
         public static void BeginFrame() { }
 
@@ -283,6 +307,7 @@ namespace op.io
             foreach (string settingKey in settingKeys)
             {
                 ControlStateManager.SetSwitchState(settingKey, state);
+                _bindingSwitchStates[settingKey] = state;
             }
         }
 
@@ -468,6 +493,7 @@ namespace op.io
 
             _switchStateCache[settingKey] = state;
             ControlStateManager.SetSwitchState(settingKey, state);
+            SeedBindingState(settingKey, state);
             return true;
         }
 
@@ -516,6 +542,103 @@ namespace op.io
         {
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
+        }
+
+        public static bool EvaluateComboSwitch(string settingKey, bool allTokensHeld, IEnumerable<Keys> chordKeys)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            EnsureBindingTracking(settingKey);
+
+            // Track whether the full chord was held in the last tick to trigger on chord break.
+            bool wasFullyHeld = _bindingChordHeld.TryGetValue(settingKey, out bool held) && held;
+            _bindingChordHeld[settingKey] = allTokensHeld;
+
+            if (allTokensHeld)
+            {
+                return _bindingSwitchStates[settingKey];
+            }
+
+            if (!wasFullyHeld)
+            {
+                return _bindingSwitchStates[settingKey];
+            }
+
+            // The chord was held and is now broken; suppress individual key toggles even if we cannot flip the combo.
+            if (chordKeys != null)
+            {
+                ConsumeKeys(chordKeys);
+            }
+
+            if (Core.Instance.Player == null)
+            {
+                DebugLogger.PrintError("Player instance is null. Cannot check SwitchCooldown.");
+                return _bindingSwitchStates[settingKey];
+            }
+
+            if (!_cachedSwitchCooldown.HasValue)
+            {
+                LoadCooldownValues();
+            }
+
+            float lastSwitch = _bindingLastSwitchTime[settingKey];
+            if ((Core.GAMETIME - lastSwitch) < _cachedSwitchCooldown.Value)
+            {
+                return _bindingSwitchStates[settingKey];
+            }
+
+            _bindingSwitchStates[settingKey] = !_bindingSwitchStates[settingKey];
+            _bindingLastSwitchTime[settingKey] = Core.GAMETIME;
+
+            return _bindingSwitchStates[settingKey];
+        }
+
+        private static void EnsureBindingTracking(string settingKey)
+        {
+            if (!_bindingSwitchStates.ContainsKey(settingKey))
+            {
+                if (ControlStateManager.ContainsSwitchState(settingKey))
+                {
+                    _bindingSwitchStates[settingKey] = ControlStateManager.GetSwitchState(settingKey);
+                }
+                else if (_switchStateCache.TryGetValue(settingKey, out bool cachedState))
+                {
+                    _bindingSwitchStates[settingKey] = cachedState;
+                }
+                else
+                {
+                    _bindingSwitchStates[settingKey] = false;
+                }
+            }
+
+            if (!_bindingLastSwitchTime.ContainsKey(settingKey))
+            {
+                _bindingLastSwitchTime[settingKey] = 0;
+            }
+
+            if (!_bindingChordHeld.ContainsKey(settingKey))
+            {
+                _bindingChordHeld[settingKey] = false;
+            }
+        }
+
+        private static void SeedBindingState(string settingKey, bool state)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            _bindingSwitchStates[settingKey] = state;
+            if (!_bindingLastSwitchTime.ContainsKey(settingKey))
+            {
+                _bindingLastSwitchTime[settingKey] = 0;
+            }
+
+            _bindingChordHeld[settingKey] = false;
         }
     }
 }

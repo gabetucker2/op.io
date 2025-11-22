@@ -40,7 +40,7 @@ namespace op.io
                 return;
             }
 
-            foreach (string key in _switchKeys)
+            foreach (string key in _switchKeys.OrderByDescending(k => InputManager.GetBindingTokenCount(k)))
             {
                 bool liveState = InputManager.IsInputActive(key);
                 ControlStateManager.SetSwitchState(key, liveState);
