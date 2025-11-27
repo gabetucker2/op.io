@@ -216,6 +216,36 @@ namespace op.io
             }
         }
 
+        public static void ApplyWindowCaptionColor(Color xnaColor)
+        {
+            if (_transparentWindowHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            try
+            {
+                uint colorRef = TypeConversionFunctions.XnaColorToColorRef(xnaColor);
+                int hr = DwmSetWindowAttribute(_transparentWindowHandle, DWMWA_CAPTION_COLOR, ref colorRef, sizeof(uint));
+                if (hr != 0)
+                {
+                    DebugLogger.PrintUI($"DwmSetWindowAttribute(DWMWA_CAPTION_COLOR) failed with HRESULT 0x{hr:X}.");
+                }
+            }
+            catch (DllNotFoundException ex)
+            {
+                DebugLogger.PrintUI($"DWM API unavailable; cannot set caption color: {ex.Message}");
+            }
+            catch (EntryPointNotFoundException ex)
+            {
+                DebugLogger.PrintUI($"DWMWA_CAPTION_COLOR not supported on this OS: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintUI($"Failed to set caption color: {ex.Message}");
+            }
+        }
+
         private static void ForceSetWindowClickThrough(bool enable)
         {
             long styles = GetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE);
@@ -238,6 +268,7 @@ namespace op.io
         private const int WS_EX_LAYERED = 0x00080000;
         private const int WS_EX_TRANSPARENT = 0x00000020;
         private const int LWA_COLORKEY = 0x00000001;
+        private const int DWMWA_CAPTION_COLOR = 35;
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
@@ -253,6 +284,9 @@ namespace op.io
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint pvAttribute, uint cbAttribute);
 
         private static long GetWindowLongPtr(IntPtr hWnd, int nIndex)
         {

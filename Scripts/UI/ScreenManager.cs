@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace op.io
@@ -49,6 +50,7 @@ namespace op.io
             }
 
             game.Graphics.ApplyChanges();
+            GameInitializer.ApplyWindowCaptionColor(UIStyle.HeaderBackground);
             GameInitializer.RefreshTransparencyKey();
             DebugLogger.PrintUI($"Applied WindowMode: {game.WindowMode}, Resolution: {game.ViewportWidth}x{game.ViewportHeight}");
         }
