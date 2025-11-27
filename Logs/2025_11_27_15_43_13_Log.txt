@@ -1,4 +1,4 @@
-Log created at 2025-11-27T14:28:23.4070568-05:00
+Log created at 2025-11-27T15:43:13.2076062-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 11
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -195,12 +195,12 @@ Log created at 2025-11-27T14:28:23.4070568-05:00
 [DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DebugMode' (LeftControl + B) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 95
 [DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'AllowGameInputFreeze' (LeftControl + C) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 95
 [DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'TransparentTabBlocking' (LeftControl + V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 95
-[DEFERRED OUTPUT] [DEBUG] Critical switch 'Crouch' cached verification -> OFF. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 377
-[DEFERRED OUTPUT] [DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 377
-[DEFERRED OUTPUT] [DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 377
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'Crouch' cached verification -> OFF. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 373
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 373
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 373
 [DEFERRED OUTPUT] [DEBUG] Initializing console... | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 16
 [DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 29
-[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 43
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 52
 [GAMEOBJECT] Initializing GameObjects... | GameObjectInitializer.cs::Initialize @ Line 12
 [GAMEOBJECT] Initializing MapObjects... | GameObjectInitializer.cs::InitializeMapObjects @ Line 28
 [GAMEOBJECT] Loading map objects from database... | MapObjectLoader.cs::LoadMapObjects @ Line 13
@@ -327,16 +327,14 @@ Log created at 2025-11-27T14:28:23.4070568-05:00
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
 [GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Query executed successfully. Retrieved 15 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
@@ -361,212 +359,102 @@ Log created at 2025-11-27T14:28:23.4070568-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[PHYSICS] Destroying GameObject ID=17 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=17 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: SprintSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DEBUG] [INPUT] Suppressing combo 'LeftControl + V' while binding disallowed; consumed keys. | InputManager.cs::IsActive @ Line 298
 [DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
-[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
-[DATABASE]   @value: CrouchSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
-[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved Crouch to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Updated and saved TransparentTabBlocking to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[PHYSICS] Destroying GameObject ID=17 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=17 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
