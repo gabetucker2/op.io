@@ -69,12 +69,15 @@ namespace op.io
             get => _dockingModeEnabled;
             set
             {
-                if (_dockingModeEnabled == value)
+                bool dockingChanged = _dockingModeEnabled != value;
+                _dockingModeEnabled = value;
+                ScreenManager.ApplyDockingWindowChrome(Core.Instance, _dockingModeEnabled);
+
+                if (!dockingChanged)
                 {
                     return;
                 }
 
-                _dockingModeEnabled = value;
                 if (!_dockingModeEnabled)
                 {
                     CollapseInteractions();

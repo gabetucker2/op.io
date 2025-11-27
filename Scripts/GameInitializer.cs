@@ -105,6 +105,22 @@ namespace op.io
             DebugLogger.Print("Game initialization complete.");
         }
 
+        public static void RefreshTransparencyKey()
+        {
+            if (_transparentWindowHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            ApplyTransparencyKey(_transparentWindowHandle, Core.TransparentWindowColor);
+
+            if (_clickThroughEnabled)
+            {
+                // Reapply click-through so the style persists across window mode changes.
+                ForceSetWindowClickThrough(_clickThroughEnabled);
+            }
+        }
+
         private static void LoadGeneralSettings()
         {
             DebugLogger.PrintDatabase("Loading general settings...");
@@ -179,11 +195,6 @@ namespace op.io
                 return;
             }
 
-            if (_clickThroughEnabled == enable)
-            {
-                return;
-            }
-
             long styles = GetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE);
             if (enable)
             {
@@ -203,6 +214,21 @@ namespace op.io
             {
                 _clickThroughEnabled = enable;
             }
+        }
+
+        private static void ForceSetWindowClickThrough(bool enable)
+        {
+            long styles = GetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE);
+            if (enable)
+            {
+                styles |= WS_EX_TRANSPARENT;
+            }
+            else
+            {
+                styles &= ~WS_EX_TRANSPARENT;
+            }
+
+            SetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE, styles);
         }
 
         private static IntPtr _transparentWindowHandle;

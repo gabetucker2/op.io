@@ -14,3 +14,6 @@
 
 # To run
 `dotnet run`
+
+# To revert to latest
+git reset --hard HEAD

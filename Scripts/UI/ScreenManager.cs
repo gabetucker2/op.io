@@ -49,10 +49,56 @@ namespace op.io
             }
 
             game.Graphics.ApplyChanges();
+            GameInitializer.RefreshTransparencyKey();
             DebugLogger.PrintUI($"Applied WindowMode: {game.WindowMode}, Resolution: {game.ViewportWidth}x{game.ViewportHeight}");
         }
 
         private static Core _resizeTarget;
+        private static bool _dockingModesInitialized;
+        private static WindowMode _dockingEnabledWindowMode = WindowMode.BorderedWindowed;
+        private static WindowMode _dockingDisabledWindowMode = WindowMode.BorderlessWindowed;
+
+        public static void ApplyDockingWindowChrome(Core game, bool dockingEnabled)
+        {
+            if (game == null || game.Graphics == null || game.Window == null)
+            {
+                return;
+            }
+
+            InitializeDockingWindowModes(game);
+
+            WindowMode targetMode = dockingEnabled ? _dockingEnabledWindowMode : _dockingDisabledWindowMode;
+            if (game.WindowMode == targetMode)
+            {
+                return;
+            }
+
+            game.WindowMode = targetMode;
+            ApplyWindowMode(game);
+        }
+
+        private static void InitializeDockingWindowModes(Core game)
+        {
+            if (_dockingModesInitialized || game == null)
+            {
+                return;
+            }
+
+            _dockingEnabledWindowMode = game.WindowMode == WindowMode.BorderedWindowed
+                ? WindowMode.BorderedWindowed
+                : WindowMode.BorderedWindowed;
+
+            _dockingDisabledWindowMode = game.WindowMode == WindowMode.BorderlessFullscreen
+                ? WindowMode.BorderlessFullscreen
+                : WindowMode.BorderlessWindowed;
+
+            if (game.WindowMode != _dockingEnabledWindowMode)
+            {
+                DebugLogger.PrintUI($"Docking mode requires window chrome; switching to {_dockingEnabledWindowMode} while docked.");
+            }
+
+            _dockingModesInitialized = true;
+        }
 
         private static void AttachResizeHandler(Core game)
         {
