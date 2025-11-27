@@ -287,8 +287,17 @@ namespace op.io
                     return false;
                 }
 
+                bool anyTokenHeld = Tokens.Any(t => t.IsHeld());
+
                 if (!ShouldAllowBinding(IsMetaControl))
                 {
+                    // Even if binding is suppressed (e.g., non-meta when inputs are frozen), prevent chord keys from toggling solo switches.
+                    if (InputType == InputType.Switch && Tokens.Count > 1 && anyTokenHeld)
+                    {
+                        InputTypeManager.ConsumeKeys(GetAllKeys(Tokens));
+                        DebugLogger.PrintDebug($"[INPUT] Suppressing combo '{DisplayLabel}' while binding disallowed; consumed keys.");
+                    }
+
                     return false;
                 }
 

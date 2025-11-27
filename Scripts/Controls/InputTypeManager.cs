@@ -16,13 +16,25 @@ namespace op.io
         private static readonly Dictionary<string, bool> _switchStateCache = [];
         private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
         private static readonly Dictionary<string, List<string>> _inputKeyToSettingKeys = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<Keys, List<string>> _keyToComboBindings = new();
         private static readonly string[] _criticalSwitchSettings = ["Crouch", "DebugMode", "AllowGameInputFreeze"];
         private static bool _switchStatesInitialized;
 
-        private static readonly HashSet<Keys> _suppressedSwitchKeys = [];
         private static readonly Dictionary<string, bool> _bindingSwitchStates = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, float> _bindingLastSwitchTime = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, bool> _bindingChordHeld = new(StringComparer.OrdinalIgnoreCase);
+
+        // Minimal combo suppression state
+        private static readonly HashSet<Keys> _comboActiveKeys = new();
+        private static readonly HashSet<Keys> _comboBreakGuard = new();
+
+        private static readonly Dictionary<string, Keys[]> _tokenKeyAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Control"] = new[] { Keys.LeftControl, Keys.RightControl },
+            ["Ctrl"] = new[] { Keys.LeftControl, Keys.RightControl },
+            ["Shift"] = new[] { Keys.LeftShift, Keys.RightShift },
+            ["Alt"] = new[] { Keys.LeftAlt, Keys.RightAlt }
+        };
 
         private static readonly Dictionary<string, float> _lastMouseSwitchTime = new();
         private static readonly Dictionary<Keys, float> _lastKeySwitchTime = new();
@@ -72,6 +84,7 @@ namespace op.io
                         _settingKeyToInputKey[settingKey] = inputKey;
                         RegisterInputKeyForSetting(settingKey, inputKey);
                         SeedBindingState(settingKey, isOn);
+                        RegisterComboKeyMembership(settingKey, inputKey);
 
                         bool mapped = TrySeedSwitchState(inputKey, isOn);
 
@@ -233,20 +246,43 @@ namespace op.io
 
         public static bool IsKeySwitch(Keys key)
         {
-            KeyboardState currentState = Keyboard.GetState();
+            KeyboardState current = Keyboard.GetState();
 
             if (!_keySwitchStates.ContainsKey(key))
                 _keySwitchStates[key] = false;
-
             if (!_lastKeySwitchTime.ContainsKey(key))
                 _lastKeySwitchTime[key] = 0;
 
-            bool suppressionActive = _suppressedSwitchKeys.Contains(key);
+            bool isReleased = !current.IsKeyDown(key) && _previousKeyboardState.IsKeyDown(key);
 
+            // If any registered combo that uses this key is currently held, treat the key as part of the chord so its solo switch cannot toggle.
+            if (!_comboActiveKeys.Contains(key) && current.IsKeyDown(key) && (IsKeyPartOfHeldCombo(key) || IsKeyComboPartnerHeld(key, current)))
+            {
+                _comboActiveKeys.Add(key);
+            }
+
+            // If chord was active for this key, guard until it is fully released.
+            if (_comboActiveKeys.Contains(key))
+            {
+                if (!current.IsKeyDown(key))
+                {
+                    _comboActiveKeys.Remove(key);
+                    _comboBreakGuard.Add(key);
+                }
+                return _keySwitchStates[key];
+            }
+
+            // After chord break, skip the first release edge.
+            if (_comboBreakGuard.Contains(key))
+            {
+                return _keySwitchStates[key];
+            }
+
+            // Normal single-key switch toggle on release with cooldown.
             if (Core.Instance.Player == null)
             {
                 DebugLogger.PrintError("Player instance is null. Cannot check SwitchCooldown.");
-                return false;
+                return _keySwitchStates[key];
             }
 
             if (!_cachedSwitchCooldown.HasValue)
@@ -254,18 +290,10 @@ namespace op.io
                 LoadCooldownValues();
             }
 
-            bool isReleasedThisFrame = !currentState.IsKeyDown(key) && _previousKeyboardState.IsKeyDown(key);
-            if (isReleasedThisFrame && suppressionActive)
-            {
-                _suppressedSwitchKeys.Remove(key);
-                return _keySwitchStates[key];
-            }
-
-            // Toggle on key release (down -> up) after cooldown.
-            if (isReleasedThisFrame && (Core.GAMETIME - _lastKeySwitchTime[key] >= _cachedSwitchCooldown.Value))
+            if (isReleased && (Core.GAMETIME - _lastKeySwitchTime[key] >= _cachedSwitchCooldown.Value))
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
-                _lastKeySwitchTime[key] = Core.GAMETIME; // Reset switch cooldown to the max cooldown value
+                _lastKeySwitchTime[key] = Core.GAMETIME;
                 NotifySwitchStateFromInput(key.ToString(), _keySwitchStates[key]);
             }
 
@@ -286,7 +314,12 @@ namespace op.io
 
             foreach (Keys key in keys)
             {
-                _suppressedSwitchKeys.Add(key);
+                if (key == Keys.None)
+                {
+                    continue;
+                }
+
+                _comboActiveKeys.Add(key);
             }
         }
 
@@ -542,6 +575,33 @@ namespace op.io
         {
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
+            if (_comboBreakGuard.Count > 0)
+            {
+                ClearReleasedComboGuards();
+            }
+        }
+
+        private static void ClearReleasedComboGuards()
+        {
+            List<Keys> toRemove = null;
+            foreach (Keys key in _comboBreakGuard)
+            {
+                if (!_previousKeyboardState.IsKeyDown(key))
+                {
+                    toRemove ??= new List<Keys>();
+                    toRemove.Add(key);
+                }
+            }
+
+            if (toRemove == null)
+            {
+                return;
+            }
+
+            foreach (Keys key in toRemove)
+            {
+                _comboBreakGuard.Remove(key);
+            }
         }
 
         public static bool EvaluateComboSwitch(string settingKey, bool allTokensHeld, IEnumerable<Keys> chordKeys)
@@ -559,6 +619,15 @@ namespace op.io
 
             if (allTokensHeld)
             {
+                if (chordKeys != null)
+                {
+                    foreach (Keys key in chordKeys)
+                    {
+                        if (key == Keys.None) continue;
+                        _comboActiveKeys.Add(key);
+                    }
+                }
+
                 return _bindingSwitchStates[settingKey];
             }
 
@@ -567,10 +636,15 @@ namespace op.io
                 return _bindingSwitchStates[settingKey];
             }
 
-            // The chord was held and is now broken; suppress individual key toggles even if we cannot flip the combo.
+            // Chord just broke; guard the chord keys until they are fully released.
             if (chordKeys != null)
             {
-                ConsumeKeys(chordKeys);
+                foreach (Keys key in chordKeys)
+                {
+                    if (key == Keys.None) continue;
+                    _comboActiveKeys.Remove(key);
+                    _comboBreakGuard.Add(key);
+                }
             }
 
             if (Core.Instance.Player == null)
@@ -640,5 +714,327 @@ namespace op.io
 
             _bindingChordHeld[settingKey] = false;
         }
+
+        private static void RegisterComboKeyMembership(string settingKey, string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
+            {
+                return;
+            }
+
+            bool isCombo = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+            if (!isCombo)
+            {
+                return;
+            }
+
+            foreach (Keys key in GetKeysFromInputKey(inputKey))
+            {
+                if (!_keyToComboBindings.TryGetValue(key, out var list))
+                {
+                    list = [];
+                    _keyToComboBindings[key] = list;
+                }
+
+                if (!list.Contains(settingKey))
+                {
+                    list.Add(settingKey);
+                }
+            }
+        }
+
+        private static IEnumerable<Keys> GetKeysFromInputKey(string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                yield break;
+            }
+
+            string[] tokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            foreach (string raw in tokens)
+            {
+                string token = raw.Trim();
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    continue;
+                }
+
+                foreach (Keys key in ParseTokenToKeys(token))
+                {
+                    yield return key;
+                }
+            }
+        }
+
+        private static IEnumerable<Keys> ParseTokenToKeys(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                yield break;
+            }
+
+            if (_tokenKeyAliases.TryGetValue(token, out Keys[] aliasKeys) && aliasKeys != null)
+            {
+                foreach (Keys aliasKey in aliasKeys)
+                {
+                    yield return aliasKey;
+                }
+
+                yield break;
+            }
+
+            if (Enum.TryParse(token, true, out Keys parsedKey))
+            {
+                yield return parsedKey;
+            }
+        }
+
+        private static bool IsKeyPartOfHeldCombo(Keys key)
+        {
+            if (!_keyToComboBindings.TryGetValue(key, out var combos) || combos == null)
+            {
+                // Fallback: scan all known multi-token bindings in case this key was not registered.
+                return IsKeyInAnyHeldComboByInputKeyScan(key);
+            }
+
+            foreach (string combo in combos)
+            {
+                if (_bindingChordHeld.TryGetValue(combo, out bool held) && held)
+                {
+                    return true;
+                }
+
+                if (_settingKeyToInputKey.TryGetValue(combo, out string inputKey) && AreAllTokensHeld(inputKey))
+                {
+                    return true;
+                }
+            }
+
+            return IsKeyInAnyHeldComboByInputKeyScan(key);
+        }
+
+        // Extra defensive check: walk input key mappings to see if this key is part of any held multi-token binding.
+        private static bool IsKeyInAnyHeldComboByInputKeyScan(Keys key)
+        {
+            foreach (var kvp in _settingKeyToInputKey)
+            {
+                string inputKey = kvp.Value;
+                if (string.IsNullOrWhiteSpace(inputKey))
+                {
+                    continue;
+                }
+
+                string[] tokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length <= 1)
+                {
+                    continue; // Not a combo binding.
+                }
+
+                bool containsKey = false;
+                foreach (string raw in tokens)
+                {
+                    string token = raw.Trim();
+                    foreach (Keys parsed in ParseTokenToKeys(token))
+                    {
+                        if (parsed == key)
+                        {
+                            containsKey = true;
+                            break;
+                        }
+                    }
+
+                    if (containsKey)
+                    {
+                        break;
+                    }
+                }
+
+                if (!containsKey)
+                {
+                    continue;
+                }
+
+                if (AreAllTokensHeld(inputKey))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Checks whether any combo that includes this key has at least one of its partner tokens currently held.
+        private static bool IsKeyComboPartnerHeld(Keys key, KeyboardState currentState)
+        {
+            List<string> candidateInputKeys = [];
+
+            if (_keyToComboBindings.TryGetValue(key, out var combos) && combos != null)
+            {
+                foreach (string combo in combos)
+                {
+                    if (_settingKeyToInputKey.TryGetValue(combo, out string inputKey) && !string.IsNullOrWhiteSpace(inputKey))
+                    {
+                        candidateInputKeys.Add(inputKey);
+                    }
+                }
+            }
+
+            // Fallback: scan all known combo bindings for this key if the map was not populated.
+            if (candidateInputKeys.Count == 0)
+            {
+                foreach (var kvp in _settingKeyToInputKey)
+                {
+                    string inputKey = kvp.Value;
+                    if (string.IsNullOrWhiteSpace(inputKey))
+                    {
+                        continue;
+                    }
+
+                    string[] tokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+                    if (tokens.Length <= 1)
+                    {
+                        continue;
+                    }
+
+                    bool containsKey = false;
+                    foreach (string raw in tokens)
+                    {
+                        string token = raw.Trim();
+                        foreach (Keys parsed in ParseTokenToKeys(token))
+                        {
+                            if (parsed == key)
+                            {
+                                containsKey = true;
+                                break;
+                            }
+                        }
+
+                        if (containsKey)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (containsKey)
+                    {
+                        candidateInputKeys.Add(inputKey);
+                    }
+                }
+            }
+
+            foreach (string inputKey in candidateInputKeys)
+            {
+                string[] tokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length <= 1)
+                {
+                    continue;
+                }
+
+                bool partnerHeld = false;
+                foreach (string raw in tokens)
+                {
+                    string token = raw.Trim();
+                    if (string.IsNullOrWhiteSpace(token))
+                    {
+                        continue;
+                    }
+
+                    bool tokenIncludesKey = false;
+                    foreach (Keys parsed in ParseTokenToKeys(token))
+                    {
+                        if (parsed == key)
+                        {
+                            tokenIncludesKey = true;
+                            break;
+                        }
+                    }
+
+                    if (tokenIncludesKey)
+                    {
+                        continue; // Skip the current key; we only care about partners.
+                    }
+
+                    foreach (Keys parsed in ParseTokenToKeys(token))
+                    {
+                        if (parsed != Keys.None && currentState.IsKeyDown(parsed))
+                        {
+                            partnerHeld = true;
+                            break;
+                        }
+                    }
+
+                    if (partnerHeld)
+                    {
+                        break;
+                    }
+                }
+
+                if (partnerHeld)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AreAllTokensHeld(string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return false;
+            }
+
+            string[] tokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (string raw in tokens)
+            {
+                string token = raw.Trim();
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return false;
+                }
+
+                if (IsMouseInput(token))
+                {
+                    if (!IsMouseTokenHeld(token))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    bool anyHeld = false;
+                    foreach (Keys key in ParseTokenToKeys(token))
+                    {
+                        if (Keyboard.GetState().IsKeyDown(key))
+                        {
+                            anyHeld = true;
+                            break;
+                        }
+                    }
+
+                    if (!anyHeld)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsMouseTokenHeld(string token)
+        {
+            MouseState state = Mouse.GetState();
+            return token.Equals("LeftClick", StringComparison.OrdinalIgnoreCase) ? state.LeftButton == ButtonState.Pressed
+                 : token.Equals("RightClick", StringComparison.OrdinalIgnoreCase) ? state.RightButton == ButtonState.Pressed
+                 : false;
+        }
+
     }
 }
