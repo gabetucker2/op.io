@@ -1465,11 +1465,8 @@ namespace op.io
 
         private static Rectangle GetLayoutBounds(Rectangle viewport)
         {
-            return new Rectangle(
-                viewport.X + UIStyle.LayoutPadding,
-                viewport.Y + UIStyle.LayoutPadding,
-                Math.Max(0, viewport.Width - (UIStyle.LayoutPadding * 2)),
-                Math.Max(0, viewport.Height - (UIStyle.LayoutPadding * 2)));
+            // No outer padding: panels should touch the window edges.
+            return viewport;
         }
 
         private static int GetActiveDragBarHeight()
