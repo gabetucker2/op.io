@@ -1,4 +1,4 @@
-Log created at 2025-11-27T20:03:31.1998371-05:00
+Log created at 2025-11-27T21:16:57.2127481-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 11
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -319,7 +319,7 @@ Log created at 2025-11-27T20:03:31.1998371-05:00
 [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
 [DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
 [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[PLAYER] SwitchCooldown loaded: 0.2 | Agent.cs::LoadSwitchCooldown @ Line 146
+[PLAYER] SwitchCooldown loaded: 0.1 | Agent.cs::LoadSwitchCooldown @ Line 146
 [DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
@@ -328,10 +328,14 @@ Log created at 2025-11-27T20:03:31.1998371-05:00
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [PHYSICS] Destroying GameObject ID=19 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
 [GAMEOBJECT] Unregistered GameObject ID=19 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=18 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=18 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Query executed successfully. Retrieved 15 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
@@ -367,12 +371,6 @@ Log created at 2025-11-27T20:03:31.1998371-05:00
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
-[DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
@@ -394,8 +392,39 @@ Log created at 2025-11-27T20:03:31.1998371-05:00
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
-[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82

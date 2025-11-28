@@ -35,6 +35,8 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
+            bool layoutLocked = BlockManager.IsLayoutLocked;
+
             if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 return;
@@ -56,7 +58,12 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
-            _hoveredRowKey = pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            if (layoutLocked && _isDraggingRow)
+            {
+                ResetDragState();
+            }
+
+            _hoveredRowKey = !layoutLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
 
             if (_isDraggingRow)
             {
@@ -66,7 +73,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     CompleteRowDrag();
                 }
             }
-            else if (pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else if (!layoutLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
             {
                 StartRowDrag(mouseState);
             }

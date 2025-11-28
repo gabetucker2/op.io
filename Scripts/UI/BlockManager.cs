@@ -18,10 +18,13 @@ namespace op.io
         private const string BackendPanelKey = "backend";
         private const string PanelMenuControlKey = "PanelMenu";
         private const string WideWordSeparator = "    ";
+        private const int DragBarButtonPadding = 8;
+        private const int DragBarButtonSpacing = 6;
 
         private static bool _dockingModeEnabled = true;
         private static bool _panelDefinitionsReady;
         private static bool _renderingDockedFrame;
+        private static bool _layoutLocked = true;
         private const int CornerSnapDistance = 16;
         private static readonly Dictionary<string, DockPanel> _panels = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, PanelNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
@@ -66,6 +69,8 @@ namespace op.io
         private static readonly List<PanelMenuEntry> _panelMenuEntries = [];
         private static readonly List<OverlayMenuRow> _overlayRows = [];
         private static PanelMenuEntry _activeNumericEntry;
+
+        public static bool IsLayoutLocked => _layoutLocked;
 
         public static bool DockingModeEnabled
         {
@@ -139,6 +144,7 @@ namespace op.io
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
+            bool allowReorder = dockingEnabled && !_layoutLocked;
 
             if (_overlayMenuVisible)
             {
@@ -148,11 +154,11 @@ namespace op.io
             }
             else if (dockingEnabled)
             {
-                bool resizingPanels = UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                    UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased);
+                bool resizingPanels = allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
+                    UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased));
                 if (!resizingPanels)
                 {
-                    UpdateDragState(leftClickStarted, leftClickReleased);
+                    UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
                 }
                 else
                 {
@@ -563,7 +569,7 @@ namespace op.io
             return false;
         }
 
-        private static void UpdateDragState(bool leftClickStarted, bool leftClickReleased)
+        private static void UpdateDragState(bool leftClickStarted, bool leftClickReleased, bool allowReorder)
         {
             _hoveredDragBarId = null;
 
@@ -571,6 +577,11 @@ namespace op.io
             {
                 _draggingPanel = null;
                 _dropPreview = null;
+                return;
+            }
+
+            if (leftClickStarted && TryToggleLayoutLock(_mousePosition))
+            {
                 return;
             }
 
@@ -590,7 +601,7 @@ namespace op.io
                 }
             }
 
-            DockPanel dragBarHover = HitTestDragBarPanel(_mousePosition, excludeCloseButton: true);
+            DockPanel dragBarHover = HitTestDragBarPanel(_mousePosition, excludeHeaderButtons: true);
             _hoveredDragBarId = dragBarHover?.Id;
 
             DockPanel dragBarHit = null;
@@ -601,6 +612,13 @@ namespace op.io
                 {
                     SetFocusedPanel(dragBarHit);
                 }
+            }
+
+            if (!allowReorder)
+            {
+                _draggingPanel = null;
+                _dropPreview = null;
+                return;
             }
 
             if (_draggingPanel == null && leftClickStarted)
@@ -630,7 +648,20 @@ namespace op.io
             }
         }
 
-        private static DockPanel HitTestDragBarPanel(Point position, bool excludeCloseButton = false)
+        private static bool TryToggleLayoutLock(Point position)
+        {
+            DockPanel lockHit = HitTestLockButton(position);
+            if (lockHit == null)
+            {
+                return false;
+            }
+
+            _layoutLocked = !_layoutLocked;
+            ClearDockingInteractions();
+            return true;
+        }
+
+        private static DockPanel HitTestDragBarPanel(Point position, bool excludeHeaderButtons = false)
         {
             int dragBarHeight = GetActiveDragBarHeight();
             if (dragBarHeight <= 0)
@@ -651,13 +682,9 @@ namespace op.io
                     continue;
                 }
 
-                if (excludeCloseButton)
+                if (excludeHeaderButtons && IsPointOnHeaderButton(panel, dragBarHeight, position))
                 {
-                    Rectangle closeBounds = GetCloseButtonBounds(dragBarRect);
-                    if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
                 return panel;
@@ -691,10 +718,93 @@ namespace op.io
             return null;
         }
 
+        private static DockPanel HitTestLockButton(Point position)
+        {
+            int dragBarHeight = GetActiveDragBarHeight();
+            if (dragBarHeight <= 0)
+            {
+                return null;
+            }
+
+            foreach (DockPanel panel in _orderedPanels)
+            {
+                if (!panel.IsVisible || !IsLockToggleAvailable(panel))
+                {
+                    continue;
+                }
+
+                Rectangle lockBounds = GetLockButtonBounds(panel, dragBarHeight);
+                if (lockBounds != Rectangle.Empty && lockBounds.Contains(position))
+                {
+                    return panel;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsPointOnHeaderButton(DockPanel panel, int dragBarHeight, Point position)
+        {
+            GetHeaderButtonBounds(panel, dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds);
+            return (lockBounds != Rectangle.Empty && lockBounds.Contains(position)) ||
+                (closeBounds != Rectangle.Empty && closeBounds.Contains(position));
+        }
+
         private static Rectangle GetCloseButtonBounds(DockPanel panel, int dragBarHeight)
         {
+            GetHeaderButtonBounds(panel, dragBarHeight, out _, out Rectangle closeBounds);
+            return closeBounds;
+        }
+
+        private static Rectangle GetLockButtonBounds(DockPanel panel, int dragBarHeight)
+        {
+            GetHeaderButtonBounds(panel, dragBarHeight, out Rectangle lockBounds, out _);
+            return lockBounds;
+        }
+
+        private static void GetHeaderButtonBounds(DockPanel panel, int dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds)
+        {
+            lockBounds = Rectangle.Empty;
+            closeBounds = Rectangle.Empty;
+
+            if (panel == null || dragBarHeight <= 0)
+            {
+                return;
+            }
+
             Rectangle dragBarRect = panel.GetDragBarBounds(dragBarHeight);
-            return GetCloseButtonBounds(dragBarRect);
+            if (dragBarRect.Width <= 0 || dragBarRect.Height <= 0)
+            {
+                return;
+            }
+
+            closeBounds = GetCloseButtonBounds(dragBarRect);
+
+            if (!IsLockToggleAvailable(panel) || closeBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            int buttonSize = closeBounds.Width;
+            int x = closeBounds.X - DragBarButtonSpacing - buttonSize;
+            int y = closeBounds.Y;
+            int minimumX = dragBarRect.X + DragBarButtonPadding;
+            if (x < minimumX)
+            {
+                return;
+            }
+
+            lockBounds = new Rectangle(x, y, buttonSize, buttonSize);
+        }
+
+        private static bool IsLockToggleAvailable(DockPanel panel)
+        {
+            if (panel == null)
+            {
+                return false;
+            }
+
+            return panel.Kind == DockPanelKind.Controls || panel.Kind == DockPanelKind.Backend;
         }
 
         private static Rectangle GetCloseButtonBounds(Rectangle dragBarRect)
@@ -704,14 +814,13 @@ namespace op.io
                 return Rectangle.Empty;
             }
 
-            const int horizontalPadding = 8;
             int buttonSize = Math.Clamp(dragBarRect.Height - 10, 14, 24);
-            if (buttonSize <= 0 || dragBarRect.Width <= (horizontalPadding * 2) + buttonSize)
+            if (buttonSize <= 0 || dragBarRect.Width <= (DragBarButtonPadding * 2) + buttonSize)
             {
                 return Rectangle.Empty;
             }
 
-            int x = dragBarRect.Right - horizontalPadding - buttonSize;
+            int x = dragBarRect.Right - DragBarButtonPadding - buttonSize;
             int y = dragBarRect.Y + (dragBarRect.Height - buttonSize) / 2;
             return new Rectangle(x, y, buttonSize, buttonSize);
         }
@@ -1220,7 +1329,7 @@ namespace op.io
 
             DrawRect(spriteBatch, dragBar, UIStyle.HeaderBackground);
             bool dragBarHovered = string.Equals(_hoveredDragBarId, panel.Id, StringComparison.Ordinal);
-            Rectangle closeButtonBounds = GetCloseButtonBounds(dragBar);
+            GetHeaderButtonBounds(panel, dragBarHeight, out Rectangle lockButtonBounds, out Rectangle closeButtonBounds);
 
             if (dragBarHovered)
             {
@@ -1234,6 +1343,12 @@ namespace op.io
                 float textY = dragBar.Bottom - textSize.Y + 3f;
                 Vector2 textPosition = new Vector2(dragBar.X + 12, textY);
                 headerFont.DrawString(spriteBatch, panel.Title, textPosition, UIStyle.TextColor);
+            }
+
+            if (lockButtonBounds != Rectangle.Empty)
+            {
+                bool hovered = lockButtonBounds.Contains(_mousePosition);
+                DrawLockToggleButton(spriteBatch, lockButtonBounds, _layoutLocked, hovered);
             }
 
             if (closeButtonBounds != Rectangle.Empty)
@@ -1262,6 +1377,28 @@ namespace op.io
                 bounds.X + (bounds.Width - glyphSize.X) / 2f,
                 bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
             Color glyphColor = hovered ? Color.White : Color.OrangeRed;
+            glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
+        }
+
+        private static void DrawLockToggleButton(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered)
+        {
+            Color background = isLocked ? new Color(38, 38, 38, hovered ? 240 : 220) : new Color(68, 92, 160, hovered ? 250 : 230);
+            Color border = isLocked ? (hovered ? UIStyle.AccentColor : UIStyle.PanelBorder) : UIStyle.AccentColor;
+            DrawRect(spriteBatch, bounds, background);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable)
+            {
+                return;
+            }
+
+            string glyph = isLocked ? "L" : "U";
+            Vector2 glyphSize = glyphFont.MeasureString(glyph);
+            Vector2 glyphPosition = new(
+                bounds.X + (bounds.Width - glyphSize.X) / 2f,
+                bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
+            Color glyphColor = Color.White;
             glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
         }
 
