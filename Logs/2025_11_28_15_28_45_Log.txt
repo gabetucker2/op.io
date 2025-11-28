@@ -1,4 +1,4 @@
-Log created at 2025-11-28T00:57:21.7886975-05:00
+Log created at 2025-11-28T15:28:45.6838295-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 11
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 21
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 123
@@ -198,8 +198,8 @@ Log created at 2025-11-28T00:57:21.7886975-05:00
 [DEFERRED OUTPUT] [DEBUG] Critical switch 'Crouch' cached verification -> OFF. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 373
 [DEFERRED OUTPUT] [DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 373
 [DEFERRED OUTPUT] [DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> OFF. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 373
-[DEFERRED OUTPUT] [DEBUG] Initializing console... | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 16
-[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 29
+[DEFERRED OUTPUT] [DEBUG] Initializing console... | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 28
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 73
 [UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [GAMEOBJECT] Initializing GameObjects... | GameObjectInitializer.cs::Initialize @ Line 12
 [GAMEOBJECT] Initializing MapObjects... | GameObjectInitializer.cs::InitializeMapObjects @ Line 28
@@ -328,8 +328,8 @@ Log created at 2025-11-28T00:57:21.7886975-05:00
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=19 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=19 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Query executed successfully. Retrieved 15 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
@@ -358,6 +358,78 @@ Log created at 2025-11-28T00:57:21.7886975-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
+[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[DATABASE] Updated and saved DebugMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEBUG] Setting debug mode to: False | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Hiding console because debug mode was disabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 78
+[DEFERRED OUTPUT] [DATABASE] Updated and saved DebugMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEFERRED OUTPUT] [DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 73
+[DATABASE] Updated and saved DebugMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEBUG] Setting debug mode to: False | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Hiding console because debug mode was disabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 78
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: SprintSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Updated and saved DebugMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEFERRED OUTPUT] [DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 73
+[DATABASE] Updated and saved DebugMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEBUG] Setting debug mode to: False | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Hiding console because debug mode was disabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 78
+[DEFERRED OUTPUT] [DATABASE] Updated and saved DebugMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEFERRED OUTPUT] [DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 73
+[DATABASE] Updated and saved DebugMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 70
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEBUG] Setting debug mode to: False | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Hiding console because debug mode was disabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 78
+[DEFERRED OUTPUT] [DATABASE] Updated and saved DebugMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 70
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DEFERRED OUTPUT] [DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 73
 [UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82

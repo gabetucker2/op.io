@@ -44,6 +44,7 @@ namespace op.io
         {
             DebugLogger.PrintDebug($"Setting debug mode to: {value}");
             _debugMode = TypeConversionFunctions.BoolToInt(value);
+            ConsoleManager.SetConsoleVisibility(DEBUGENABLED);
         }
 
         public static int MAXMSGREPEATS

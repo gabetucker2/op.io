@@ -12,6 +12,8 @@ namespace op.io
 
         // This list holds all queued logs until the console is initialized
         private static readonly List<Tuple<string, ConsoleColor, int>> queuedLogs = new();
+        // Holds the full session log so it can be replayed when the console is reopened
+        private static readonly List<Tuple<string, ConsoleColor>> sessionLogs = new();
 
         public static void QueueLog(string formattedMessage, ConsoleColor color, int suppressionBehavior)
         {
@@ -23,6 +25,26 @@ namespace op.io
             var logsCopy = new List<Tuple<string, ConsoleColor, int>>(queuedLogs);
             queuedLogs.Clear();
             return logsCopy;
+        }
+
+        public static void ReplaySessionLogToConsole()
+        {
+            if (!ConsoleManager.ConsoleInitialized)
+                return;
+
+            try
+            {
+                Console.Clear();
+            }
+            catch
+            {
+                // Ignore clear failures; we'll still try to write logs.
+            }
+
+            foreach (var log in sessionLogs)
+            {
+                WriteConsoleOnly(log.Item1, log.Item2);
+            }
         }
 
         public static void Log(
@@ -113,6 +135,8 @@ namespace op.io
 
         private static void WriteConsoleAndFile(string message, ConsoleColor color, bool appendNewLine = true)
         {
+            AppendToSessionLog(message, color);
+
             Console.ForegroundColor = color;
             if (appendNewLine)
             {
@@ -125,6 +149,18 @@ namespace op.io
             Console.ResetColor();
 
             LogFileHandler.AppendLog(message, appendNewLine);
+        }
+
+        private static void WriteConsoleOnly(string message, ConsoleColor color)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine(message);
+            Console.ResetColor();
+        }
+
+        private static void AppendToSessionLog(string message, ConsoleColor color)
+        {
+            sessionLogs.Add(Tuple.Create(message, color));
         }
 
         // Public-facing logging methods for different log levels
