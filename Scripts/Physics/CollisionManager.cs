@@ -6,8 +6,17 @@ namespace op.io
     {
         public static bool CheckCollision(GameObject objA, GameObject objB)
         {
-            if (objA.Shape == null || objB.Shape == null)
+            return TryGetCollision(objA, objB, out _);
+        }
+
+        public static bool TryGetCollision(GameObject objA, GameObject objB, out Vector2 minimumTranslationVector)
+        {
+            minimumTranslationVector = Vector2.Zero;
+
+            if (objA?.Shape == null || objB?.Shape == null)
+            {
                 return false;
+            }
 
             Vector2[] verticesA = objA.Shape.GetTransformedVertices(objA.Position, objA.Rotation);
             Vector2[] verticesB = objB.Shape.GetTransformedVertices(objB.Position, objB.Rotation);
@@ -18,7 +27,7 @@ namespace op.io
                 return false;
             }
 
-            return SATCollisionUtil.SATCollision(verticesA, verticesB);
+            return SATCollisionUtil.TryGetCollision(verticesA, verticesB, out minimumTranslationVector);
         }
     }
 }

@@ -28,13 +28,13 @@ namespace op.io
                         continue;
 
                     // Check if there is a collision between objA and objB
-                    if (CollisionManager.CheckCollision(objA, objB))
+                    if (CollisionManager.TryGetCollision(objA, objB, out Vector2 mtv))
                     {
                         //DebugLogger.PrintPhysics($"Collision confirmed between ID={objA.ID} and ID={objB.ID}");
 
                         // If neither object is static, apply physics resolution
                         if (!(objA.StaticPhysics && objB.StaticPhysics))
-                            HandlePhysicsCollision(objA, objB);
+                            HandlePhysicsCollision(objA, objB, mtv);
 
                         // Handle destruction of objA and objB
                         if (objA.IsDestructible)
@@ -59,34 +59,25 @@ namespace op.io
             }
         }
 
-        private static void HandlePhysicsCollision(GameObject objA, GameObject objB)
+        private static void HandlePhysicsCollision(GameObject objA, GameObject objB, Vector2 minimumTranslationVector)
         {
-            if (!CollisionManager.CheckCollision(objA, objB))
+            if (minimumTranslationVector == Vector2.Zero)
                 return;
-
-            // Get collision normal vector
-            Vector2 collisionNormal = GetCollisionNormal(objA, objB);
-
-            if (collisionNormal == Vector2.Zero)
-            {
-                DebugLogger.PrintWarning($"Zero collision normal between ID={objA.ID} and ID={objB.ID}. Skipping resolution.");
-                return;
-            }
 
             bool objAStatic = objA.StaticPhysics;
             bool objBStatic = objB.StaticPhysics;
 
             // Calculate mass for each object
-            float massA = objAStatic ? float.PositiveInfinity : objA.Mass;
-            float massB = objBStatic ? float.PositiveInfinity : objB.Mass;
+            float massA = objAStatic ? float.PositiveInfinity : Math.Max(objA.Mass, 0.0001f);
+            float massB = objBStatic ? float.PositiveInfinity : Math.Max(objB.Mass, 0.0001f);
 
             // If both objects are dynamic
             if (!objAStatic && !objBStatic)
             {
                 // Both objects move based on their relative masses
                 float totalMass = massA + massB;
-                Vector2 moveA = collisionNormal * (massB / totalMass);
-                Vector2 moveB = collisionNormal * (massA / totalMass);
+                Vector2 moveA = minimumTranslationVector * (massB / totalMass);
+                Vector2 moveB = minimumTranslationVector * (massA / totalMass);
 
                 objA.Position -= moveA;
                 objB.Position += moveB;
@@ -96,14 +87,14 @@ namespace op.io
             else if (objAStatic && !objBStatic)
             {
                 // Static object doesn't move, dynamic object moves based on collision normal
-                objB.Position += collisionNormal;
+                objB.Position += minimumTranslationVector;
 
                 //DebugLogger.PrintPhysics($"Resolved collision: static A. ID={objB.ID}");
             }
             else if (!objAStatic && objBStatic)
             {
                 // Static object doesn't move, dynamic object moves based on collision normal
-                objA.Position -= collisionNormal;
+                objA.Position -= minimumTranslationVector;
 
                 //DebugLogger.PrintPhysics($"Resolved collision: static B. ID={objA.ID}");
             }
@@ -112,40 +103,6 @@ namespace op.io
                 DebugLogger.PrintWarning($"Two static object collision: ID={objA.ID} and ID={objB.ID}");
             }
             // both static objects don't move, no push-back
-        }
-
-        private static Vector2 GetCollisionNormal(GameObject objA, GameObject objB)
-        {
-            if (objA.Shape.ShapeType == "Rectangle" && objB.Shape.ShapeType == "Circle")
-                return RectangleCircleCollisionNormal(objA, objB);
-
-            if (objA.Shape.ShapeType == "Circle" && objB.Shape.ShapeType == "Rectangle")
-                return -RectangleCircleCollisionNormal(objB, objA);
-
-            Vector2 direction = objB.Position - objA.Position;
-            if (direction != Vector2.Zero)
-                direction.Normalize();
-            else
-                DebugLogger.PrintWarning($"Collision fallback: zero vector between ID={objA.ID} and ID={objB.ID}");
-
-            return direction;
-        }
-
-        private static Vector2 RectangleCircleCollisionNormal(GameObject rect, GameObject circle)
-        {
-            Vector2 rectHalfSize = new(rect.Shape.Width / 2f, rect.Shape.Height / 2f);
-            Vector2 rectCenter = rect.Position;
-            Vector2 circleCenter = circle.Position;
-
-            Vector2 delta = circleCenter - rectCenter;
-            Vector2 clamped = Vector2.Clamp(delta, -rectHalfSize, rectHalfSize);
-            Vector2 closest = rectCenter + clamped;
-            Vector2 normal = circleCenter - closest;
-
-            if (normal != Vector2.Zero)
-                normal.Normalize();
-
-            return normal;
         }
     }
 }

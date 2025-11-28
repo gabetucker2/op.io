@@ -10,7 +10,8 @@ namespace op.io
         Blank,
         Controls,
         Notes,
-        Backend
+        Backend,
+        Specs
     }
 
     public sealed class DockPanel

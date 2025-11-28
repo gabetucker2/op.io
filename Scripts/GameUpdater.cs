@@ -9,6 +9,8 @@ namespace op.io
             Core.GAMETIME = (float)gameTime.TotalGameTime.TotalSeconds;
             Core.DELTATIME = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            PerformanceTracker.Update(gameTime);
+
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
             // Centralized switch polling

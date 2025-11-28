@@ -16,6 +16,7 @@ namespace op.io
         private const string ControlsPanelKey = "controls";
         private const string NotesPanelKey = "notes";
         private const string BackendPanelKey = "backend";
+        private const string SpecsPanelKey = "specs";
         private const string PanelMenuControlKey = "PanelMenu";
         private const string WideWordSeparator = "    ";
         private const int DragBarButtonPadding = 8;
@@ -313,6 +314,7 @@ namespace op.io
             _panelMenuEntries.Add(new PanelMenuEntry(ControlsPanelKey, ControlsBlock.PanelTitle, DockPanelKind.Controls, PanelMenuControlMode.Toggle, initialVisible: true));
             _panelMenuEntries.Add(new PanelMenuEntry(NotesPanelKey, NotesBlock.PanelTitle, DockPanelKind.Notes, PanelMenuControlMode.Toggle, initialVisible: true));
             _panelMenuEntries.Add(new PanelMenuEntry(BackendPanelKey, BackendBlock.PanelTitle, DockPanelKind.Backend, PanelMenuControlMode.Toggle, initialVisible: true));
+            _panelMenuEntries.Add(new PanelMenuEntry(SpecsPanelKey, SpecsBlock.PanelTitle, DockPanelKind.Specs, PanelMenuControlMode.Toggle, initialVisible: true));
         }
 
         private static int ClampCount(PanelMenuEntry entry, int value)
@@ -358,6 +360,7 @@ namespace op.io
             PanelNode controlsNode = GetPanelNodesByKind(DockPanelKind.Controls).FirstOrDefault();
             PanelNode notesNode = GetPanelNodesByKind(DockPanelKind.Notes).FirstOrDefault();
             PanelNode backendNode = GetPanelNodesByKind(DockPanelKind.Backend).FirstOrDefault();
+            PanelNode specsNode = GetPanelNodesByKind(DockPanelKind.Specs).FirstOrDefault();
 
             DockNode transparentStack = BuildStack(transparentNodes, DockSplitOrientation.Horizontal);
             DockNode blankStack = BuildStack(blankNodes, DockSplitOrientation.Horizontal);
@@ -367,7 +370,8 @@ namespace op.io
 
             DockNode leftColumn = CombineNodes(blankAndTransparent, gameNode, DockSplitOrientation.Horizontal, 0.36f);
             DockNode controlsAndNotes = CombineNodes(controlsNode, notesNode, DockSplitOrientation.Horizontal, 0.5f);
-            DockNode rightColumn = CombineNodes(controlsAndNotes, backendNode, DockSplitOrientation.Horizontal, 0.72f);
+            DockNode backendAndSpecs = CombineNodes(backendNode, specsNode, DockSplitOrientation.Horizontal, 0.58f);
+            DockNode rightColumn = CombineNodes(controlsAndNotes, backendAndSpecs, DockSplitOrientation.Horizontal, 0.72f);
 
             return CombineNodes(leftColumn, rightColumn, DockSplitOrientation.Vertical, 0.67f);
         }
@@ -847,7 +851,9 @@ namespace op.io
                 return false;
             }
 
-            return panel.Kind == DockPanelKind.Controls || panel.Kind == DockPanelKind.Backend;
+            return panel.Kind == DockPanelKind.Controls ||
+                panel.Kind == DockPanelKind.Backend ||
+                panel.Kind == DockPanelKind.Specs;
         }
 
         private static Rectangle GetCloseButtonBounds(Rectangle dragBarRect)
@@ -1689,6 +1695,9 @@ namespace op.io
                 case DockPanelKind.Backend:
                     BackendBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockPanelKind.Specs:
+                    SpecsBlock.Draw(spriteBatch, contentBounds);
+                    break;
             }
         }
 
@@ -1718,6 +1727,9 @@ namespace op.io
                         break;
                     case DockPanelKind.Backend:
                         BackendBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
+                    case DockPanelKind.Specs:
+                        SpecsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
                 }
             }
