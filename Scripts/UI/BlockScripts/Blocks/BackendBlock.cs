@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io.UI.BlockScripts.Blocks
@@ -12,6 +13,28 @@ namespace op.io.UI.BlockScripts.Blocks
         public const string PanelTitle = "Backend";
 
         private static readonly StringBuilder _stringBuilder = new();
+        private static readonly BlockScrollPanel _scrollPanel = new();
+        private static readonly List<BackendVariable> _rows = new();
+        private static float _lineHeightCache;
+
+        public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
+        {
+            RefreshRows();
+            if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
+            {
+                _lineHeightCache = 0f;
+                _scrollPanel.Update(contentBounds, 0f, mouseState, previousMouseState);
+                return;
+            }
+
+            if (_lineHeightCache <= 0f)
+            {
+                _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
+            }
+
+            float contentHeight = Math.Max(0f, _rows.Count * _lineHeightCache);
+            _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
+        }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
         {
@@ -20,32 +43,55 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            UIStyle.UIFont boldFont = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Bold);
-            UIStyle.UIFont regularFont = UIStyle.FontTech;
-            if (!boldFont.IsAvailable || !regularFont.IsAvailable)
+            if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 return;
             }
 
-            List<BackendVariable> rows = BuildRows();
-            if (rows.Count == 0)
+            if (_rows.Count == 0)
+            {
+                RefreshRows();
+            }
+
+            if (_lineHeightCache <= 0f)
+            {
+                _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
+            }
+
+            Rectangle listBounds = _scrollPanel.ContentViewportBounds;
+            if (listBounds == Rectangle.Empty)
+            {
+                listBounds = contentBounds;
+            }
+
+            if (_rows.Count == 0)
             {
                 string placeholder = "No backend values tracked.";
-                regularFont.DrawString(spriteBatch, placeholder, new Vector2(contentBounds.X, contentBounds.Y), UIStyle.MutedTextColor);
+                regularFont.DrawString(spriteBatch, placeholder, new Vector2(listBounds.X, listBounds.Y), UIStyle.MutedTextColor);
+                _scrollPanel.Draw(spriteBatch);
                 return;
             }
 
-            float lineHeight = Math.Max(boldFont.LineHeight, regularFont.LineHeight) + 2f;
-            float y = contentBounds.Y;
+            float lineHeight = _lineHeightCache;
+            float y = listBounds.Y - _scrollPanel.ScrollOffset;
+            int rowHeight = (int)MathF.Ceiling(lineHeight);
 
-            foreach (BackendVariable row in rows)
+            foreach (BackendVariable row in _rows)
             {
-                if (y + lineHeight > contentBounds.Bottom)
+                Rectangle rowBounds = new(listBounds.X, (int)MathF.Round(y), listBounds.Width, rowHeight);
+                y += lineHeight;
+
+                if (rowBounds.Bottom <= listBounds.Y)
+                {
+                    continue;
+                }
+
+                if (rowBounds.Y >= listBounds.Bottom)
                 {
                     break;
                 }
 
-                Vector2 labelPosition = new(contentBounds.X, y);
+                Vector2 labelPosition = new(rowBounds.X, rowBounds.Y);
                 string header = row.Name;
                 Vector2 headerSize = boldFont.MeasureString(header);
                 boldFont.DrawString(spriteBatch, header, labelPosition, UIStyle.TextColor);
@@ -57,27 +103,24 @@ namespace op.io.UI.BlockScripts.Blocks
                 _stringBuilder.Append(":  ");
                 _stringBuilder.Append(valueText);
 
-                regularFont.DrawString(spriteBatch, _stringBuilder.ToString(), new Vector2(valueX, y), UIStyle.TextColor);
+                regularFont.DrawString(spriteBatch, _stringBuilder.ToString(), new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
 
                 if (row.IsBoolean && row.Value is bool boolValue)
                 {
-                    BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, y, boolValue);
+                    BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, listBounds, lineHeight, rowBounds.Y, boolValue);
                 }
-
-                y += lineHeight;
             }
+
+            _scrollPanel.Draw(spriteBatch);
         }
 
-        private static List<BackendVariable> BuildRows()
+        private static void RefreshRows()
         {
-            List<BackendVariable> rows = new();
-
+            _rows.Clear();
             foreach (var variable in GameTracker.GetTrackedVariables())
             {
-                rows.Add(new BackendVariable(variable.Name, variable.Value, variable.IsBoolean));
+                _rows.Add(new BackendVariable(variable.Name, variable.Value, variable.IsBoolean));
             }
-
-            return rows;
         }
 
         private static string FormatValue(BackendVariable variable)
@@ -93,6 +136,18 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return variable.Value.ToString();
+        }
+
+        private static bool TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont)
+        {
+            boldFont = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Bold);
+            regularFont = UIStyle.FontTech;
+            return boldFont.IsAvailable && regularFont.IsAvailable;
+        }
+
+        private static float CalculateLineHeight(UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
+        {
+            return Math.Max(boldFont.LineHeight, regularFont.LineHeight) + 2f;
         }
 
         private readonly struct BackendVariable

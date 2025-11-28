@@ -1225,6 +1225,9 @@ namespace op.io
                     case DockPanelKind.Controls:
                         ControlsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
+                    case DockPanelKind.Backend:
+                        BackendBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
                 }
             }
         }

@@ -27,6 +27,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static string _pendingDropTargetKey;
         private static Rectangle _dropIndicatorBounds;
         private static float _lineHeightCache;
+        private static readonly BlockScrollPanel _scrollPanel = new();
 
         private static readonly Color HoverRowColor = new(38, 38, 38, 180);
         private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
@@ -41,22 +42,31 @@ namespace op.io.UI.BlockScripts.Blocks
 
             EnsureKeybindCache();
             _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
-            UpdateRowBounds(contentBounds);
+            float contentHeight = _keybindCache.Count * _lineHeightCache;
+            _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
+            Rectangle listBounds = _scrollPanel.ContentViewportBounds;
+            if (listBounds == Rectangle.Empty)
+            {
+                listBounds = contentBounds;
+            }
+
+            UpdateRowBounds(listBounds);
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+            bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
-            _hoveredRowKey = HitTestRow(mouseState.Position);
+            _hoveredRowKey = pointerInsideList ? HitTestRow(mouseState.Position) : null;
 
             if (_isDraggingRow)
             {
-                UpdateRowDrag(contentBounds, mouseState);
+                UpdateRowDrag(listBounds, mouseState);
                 if (leftClickReleased)
                 {
                     CompleteRowDrag();
                 }
             }
-            else if (leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else if (pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
             {
                 StartRowDrag(mouseState);
             }
@@ -79,6 +89,11 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
             }
+            Rectangle listBounds = _scrollPanel.ContentViewportBounds;
+            if (listBounds == Rectangle.Empty)
+            {
+                listBounds = contentBounds;
+            }
 
             EnsurePixelTexture();
 
@@ -91,12 +106,12 @@ namespace op.io.UI.BlockScripts.Blocks
                     continue;
                 }
 
-                if (rowBounds.Y >= contentBounds.Bottom)
+                if (rowBounds.Y >= listBounds.Bottom)
                 {
                     break;
                 }
 
-                if (rowBounds.Bottom <= contentBounds.Y)
+                if (rowBounds.Bottom <= listBounds.Y)
                 {
                     continue;
                 }
@@ -105,7 +120,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (!isDraggingRow)
                 {
                     DrawRowBackground(spriteBatch, row, rowBounds);
-                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, contentBounds);
+                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds);
                 }
             }
 
@@ -116,8 +131,10 @@ namespace op.io.UI.BlockScripts.Blocks
                     FillRect(spriteBatch, _dropIndicatorBounds, DropIndicatorColor);
                 }
 
-                DrawDraggingRow(spriteBatch, contentBounds, lineHeight, boldFont, regularFont);
+                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont);
             }
+
+            _scrollPanel.Draw(spriteBatch);
         }
 
         private static void EnsureKeybindCache()
@@ -382,7 +399,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             int rowHeight = (int)MathF.Ceiling(_lineHeightCache);
-            float y = contentBounds.Y;
+            float y = contentBounds.Y - _scrollPanel.ScrollOffset;
 
             for (int i = 0; i < _keybindCache.Count; i++)
             {
