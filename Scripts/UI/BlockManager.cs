@@ -893,6 +893,8 @@ namespace op.io
             int bestDistance = WindowEdgeSnapDistance + 1;
             DockEdge? bestEdge = null;
 
+            DockSplitOrientation? bestOrientation = null;
+
             void Consider(DockEdge edge, int distance)
             {
                 if (distance < 0 || distance > WindowEdgeSnapDistance || distance >= bestDistance)
@@ -902,6 +904,9 @@ namespace op.io
 
                 bestDistance = distance;
                 bestEdge = edge;
+                bestOrientation = edge is DockEdge.Top or DockEdge.Bottom
+                    ? DockSplitOrientation.Horizontal
+                    : DockSplitOrientation.Vertical;
             }
 
             Consider(DockEdge.Left, Math.Abs(position.X - layout.X));
@@ -914,14 +919,25 @@ namespace op.io
                 return null;
             }
 
-            int halfWidth = Math.Max(1, layout.Width / 2);
-            int halfHeight = Math.Max(1, layout.Height / 2);
+            DockSplitOrientation orientation = bestOrientation ?? DockSplitOrientation.Vertical;
+            int existingCount = CountVisiblePanelsAlongOrientation(_rootNode, orientation, _draggingPanel);
+            int total = Math.Max(1, existingCount + 1);
+            float newFraction = 1f / total;
+
+            int targetWidth = orientation == DockSplitOrientation.Vertical
+                ? Math.Max(1, (int)Math.Round(layout.Width * newFraction))
+                : layout.Width;
+
+            int targetHeight = orientation == DockSplitOrientation.Horizontal
+                ? Math.Max(1, (int)Math.Round(layout.Height * newFraction))
+                : layout.Height;
+
             Rectangle highlight = bestEdge.Value switch
             {
-                DockEdge.Left => new Rectangle(layout.X, layout.Y, halfWidth, layout.Height),
-                DockEdge.Right => new Rectangle(layout.Right - halfWidth, layout.Y, halfWidth, layout.Height),
-                DockEdge.Top => new Rectangle(layout.X, layout.Y, layout.Width, halfHeight),
-                DockEdge.Bottom => new Rectangle(layout.X, layout.Bottom - halfHeight, layout.Width, halfHeight),
+                DockEdge.Left => new Rectangle(layout.X, layout.Y, targetWidth, layout.Height),
+                DockEdge.Right => new Rectangle(layout.Right - targetWidth, layout.Y, targetWidth, layout.Height),
+                DockEdge.Top => new Rectangle(layout.X, layout.Y, layout.Width, targetHeight),
+                DockEdge.Bottom => new Rectangle(layout.X, layout.Bottom - targetHeight, layout.Width, targetHeight),
                 _ => layout
             };
 
@@ -1270,6 +1286,39 @@ namespace op.io
             return (dx * dx) + (dy * dy);
         }
 
+        private static int CountVisiblePanelsAlongOrientation(DockNode node, DockSplitOrientation orientation, DockPanel excludePanel = null)
+        {
+            if (node == null || !node.HasVisibleContent)
+            {
+                return 0;
+            }
+
+            if (node is PanelNode panelNode)
+            {
+                DockPanel panel = panelNode.Panel;
+                if (panel == null || !panel.IsVisible || (excludePanel != null && ReferenceEquals(panel, excludePanel)))
+                {
+                    return 0;
+                }
+
+                return 1;
+            }
+
+            if (node is SplitNode split)
+            {
+                int first = CountVisiblePanelsAlongOrientation(split.First, orientation, excludePanel);
+                int second = CountVisiblePanelsAlongOrientation(split.Second, orientation, excludePanel);
+                if (split.Orientation == orientation)
+                {
+                    return first + second;
+                }
+
+                return Math.Max(first, second);
+            }
+
+            return 0;
+        }
+
         private static Point GetCornerDragPosition(CornerHandle corner, Point position)
         {
             if (!_activeCornerHandle.HasValue || !CornerEquals(_activeCornerHandle.Value, corner))
@@ -1388,20 +1437,23 @@ namespace op.io
                 ? DockSplitOrientation.Horizontal
                 : DockSplitOrientation.Vertical;
 
-            SplitNode split = new(orientation)
-            {
-                SplitRatio = 0.5f
-            };
+            int existingCount = CountVisiblePanelsAlongOrientation(remaining, orientation);
+            int total = Math.Max(1, existingCount + 1);
+            float newPanelFraction = 1f / total;
+
+            SplitNode split = new(orientation);
 
             if (edge is DockEdge.Top or DockEdge.Left)
             {
                 split.First = movingNode;
                 split.Second = remaining;
+                split.SplitRatio = newPanelFraction;
             }
             else
             {
                 split.First = remaining;
                 split.Second = movingNode;
+                split.SplitRatio = 1f - newPanelFraction;
             }
 
             _rootNode = split;
