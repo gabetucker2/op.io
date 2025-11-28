@@ -391,6 +391,12 @@ namespace op.io
 
         private static bool ShouldSuppressNonMetaControls()
         {
+            if (BlockManager.IsPanelMenuOpen())
+            {
+                GameTracker.FreezeGameInputs = true;
+                return true;
+            }
+
             if (Core.Instance == null)
             {
                 GameTracker.FreezeGameInputs = false;

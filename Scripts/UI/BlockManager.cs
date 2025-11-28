@@ -47,7 +47,6 @@ namespace op.io
         private static Rectangle _overlayDismissBounds;
         private static Rectangle _overlayOpenAllBounds;
         private static Rectangle _overlayCloseAllBounds;
-        private static readonly List<OverlayPanelToggle> _overlayToggles = [];
         private static readonly List<ResizeBar> _resizeBars = [];
         private static ResizeBar? _hoveredResizeBar;
         private static ResizeBar? _activeResizeBar;
@@ -63,6 +62,10 @@ namespace op.io
         private static bool _activeCornerSnapLockY;
         private static string _focusedPanelId;
         private static string _hoveredDragBarId;
+        private static KeyboardState _previousKeyboardState;
+        private static readonly List<PanelMenuEntry> _panelMenuEntries = [];
+        private static readonly List<OverlayMenuRow> _overlayRows = [];
+        private static PanelMenuEntry _activeNumericEntry;
 
         public static bool DockingModeEnabled
         {
@@ -113,6 +116,7 @@ namespace op.io
             EnsureSurfaceResources(Core.Instance.GraphicsDevice);
 
             MouseState mouseState = Mouse.GetState();
+            KeyboardState keyboardState = Keyboard.GetState();
             _mousePosition = mouseState.Position;
             bool dockingEnabled = DockingModeEnabled;
             if (!dockingEnabled)
@@ -138,6 +142,7 @@ namespace op.io
 
             if (_overlayMenuVisible)
             {
+                UpdateOverlayKeyboardInput(keyboardState);
                 UpdateOverlayInteractions(leftClickStarted);
                 ClearDockingInteractions();
             }
@@ -162,6 +167,7 @@ namespace op.io
 
             UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState);
             _previousMouseState = mouseState;
+            _previousKeyboardState = keyboardState;
         }
 
         public static bool BeginDockedFrame(GraphicsDevice graphicsDevice)
@@ -241,6 +247,7 @@ namespace op.io
 
         private static void EnsurePanels()
         {
+            EnsurePanelMenuEntries();
             if (_panelDefinitionsReady)
             {
                 return;
@@ -249,58 +256,182 @@ namespace op.io
             _panels.Clear();
             _panelNodes.Clear();
             _orderedPanels.Clear();
+            ClearDockingInteractions();
 
-            DockPanel blank = CreatePanel(BlankPanelKey, BlankBlock.PanelTitle, DockPanelKind.Blank);
-            DockPanel transparent = CreatePanel(TransparentPanelKey, TransparentBlock.PanelTitle, DockPanelKind.Transparent);
-            DockPanel game = CreatePanel(GamePanelKey, GameBlock.PanelTitle, DockPanelKind.Game);
-            DockPanel controls = CreatePanel(ControlsPanelKey, ControlsBlock.PanelTitle, DockPanelKind.Controls);
-            DockPanel notes = CreatePanel(NotesPanelKey, NotesBlock.PanelTitle, DockPanelKind.Notes);
-            DockPanel backend = CreatePanel(BackendPanelKey, BackendBlock.PanelTitle, DockPanelKind.Backend);
-
-            PanelNode blankNode = _panelNodes[blank.Id];
-            PanelNode transparentNode = _panelNodes[transparent.Id];
-            PanelNode gameNode = _panelNodes[game.Id];
-            PanelNode controlsNode = _panelNodes[controls.Id];
-            PanelNode notesNode = _panelNodes[notes.Id];
-            PanelNode backendNode = _panelNodes[backend.Id];
-
-            SplitNode blankAndTransparent = new(DockSplitOrientation.Vertical)
+            foreach (PanelMenuEntry entry in _panelMenuEntries)
             {
-                SplitRatio = 0.5f,
-                First = transparentNode,
-                Second = blankNode
-            };
+                if (entry.ControlMode == PanelMenuControlMode.Toggle)
+                {
+                    DockPanel panel = CreatePanel(entry.IdPrefix, entry.Label, entry.Kind);
+                    panel.IsVisible = entry.IsVisible;
+                }
+                else
+                {
+                    entry.Count = ClampCount(entry, entry.Count);
+                    entry.InputBuffer = entry.Count.ToString();
+                    if (entry.Count == 0)
+                    {
+                        continue;
+                    }
 
-            SplitNode leftColumn = new(DockSplitOrientation.Horizontal)
-            {
-                SplitRatio = 0.36f,
-                First = blankAndTransparent,
-                Second = gameNode
-            };
+                    for (int i = 0; i < entry.Count; i++)
+                    {
+                        string panelId = BuildPanelId(entry.IdPrefix, i);
+                        string title = BuildPanelTitle(entry, i);
+                        CreatePanel(panelId, title, entry.Kind);
+                    }
+                }
+            }
 
-            SplitNode controlsAndNotes = new(DockSplitOrientation.Horizontal)
-            {
-                SplitRatio = 0.5f,
-                First = controlsNode,
-                Second = notesNode
-            };
-
-            SplitNode rightColumn = new(DockSplitOrientation.Horizontal)
-            {
-                SplitRatio = 0.72f,
-                First = controlsAndNotes,
-                Second = backendNode
-            };
-
-            _rootNode = new SplitNode(DockSplitOrientation.Vertical)
-            {
-                SplitRatio = 0.67f,
-                First = leftColumn,
-                Second = rightColumn
-            };
+            _rootNode = BuildDefaultLayout();
 
             _panelDefinitionsReady = true;
             MarkLayoutDirty();
+        }
+
+        private static void EnsurePanelMenuEntries()
+        {
+            if (_panelMenuEntries.Count > 0)
+            {
+                return;
+            }
+
+            _panelMenuEntries.Add(new PanelMenuEntry(BlankPanelKey, BlankBlock.PanelTitle, DockPanelKind.Blank, PanelMenuControlMode.Count, 0, 10, 1));
+            _panelMenuEntries.Add(new PanelMenuEntry(TransparentPanelKey, TransparentBlock.PanelTitle, DockPanelKind.Transparent, PanelMenuControlMode.Count, 0, 10, 1));
+            _panelMenuEntries.Add(new PanelMenuEntry(GamePanelKey, GameBlock.PanelTitle, DockPanelKind.Game, PanelMenuControlMode.Toggle, initialVisible: true));
+            _panelMenuEntries.Add(new PanelMenuEntry(ControlsPanelKey, ControlsBlock.PanelTitle, DockPanelKind.Controls, PanelMenuControlMode.Toggle, initialVisible: true));
+            _panelMenuEntries.Add(new PanelMenuEntry(NotesPanelKey, NotesBlock.PanelTitle, DockPanelKind.Notes, PanelMenuControlMode.Toggle, initialVisible: true));
+            _panelMenuEntries.Add(new PanelMenuEntry(BackendPanelKey, BackendBlock.PanelTitle, DockPanelKind.Backend, PanelMenuControlMode.Toggle, initialVisible: true));
+        }
+
+        private static int ClampCount(PanelMenuEntry entry, int value)
+        {
+            if (entry == null)
+            {
+                return value;
+            }
+
+            return Math.Clamp(value, entry.MinCount, entry.MaxCount);
+        }
+
+        private static string BuildPanelId(string prefix, int index)
+        {
+            if (index <= 0)
+            {
+                return prefix;
+            }
+
+            return string.Concat(prefix, index + 1);
+        }
+
+        private static string BuildPanelTitle(PanelMenuEntry entry, int index)
+        {
+            if (entry == null)
+            {
+                return string.Empty;
+            }
+
+            if (entry.ControlMode != PanelMenuControlMode.Count || entry.Count <= 1)
+            {
+                return entry.Label;
+            }
+
+            return $"{entry.Label} {index + 1}";
+        }
+
+        private static DockNode BuildDefaultLayout()
+        {
+            List<PanelNode> blankNodes = GetPanelNodesByKind(DockPanelKind.Blank);
+            List<PanelNode> transparentNodes = GetPanelNodesByKind(DockPanelKind.Transparent);
+            PanelNode gameNode = GetPanelNodesByKind(DockPanelKind.Game).FirstOrDefault();
+            PanelNode controlsNode = GetPanelNodesByKind(DockPanelKind.Controls).FirstOrDefault();
+            PanelNode notesNode = GetPanelNodesByKind(DockPanelKind.Notes).FirstOrDefault();
+            PanelNode backendNode = GetPanelNodesByKind(DockPanelKind.Backend).FirstOrDefault();
+
+            DockNode transparentStack = BuildStack(transparentNodes, DockSplitOrientation.Horizontal);
+            DockNode blankStack = BuildStack(blankNodes, DockSplitOrientation.Horizontal);
+
+            float sideRatio = CalculateSplitRatio(transparentNodes.Count, blankNodes.Count, 0.5f);
+            DockNode blankAndTransparent = CombineNodes(transparentStack, blankStack, DockSplitOrientation.Vertical, sideRatio);
+
+            DockNode leftColumn = CombineNodes(blankAndTransparent, gameNode, DockSplitOrientation.Horizontal, 0.36f);
+            DockNode controlsAndNotes = CombineNodes(controlsNode, notesNode, DockSplitOrientation.Horizontal, 0.5f);
+            DockNode rightColumn = CombineNodes(controlsAndNotes, backendNode, DockSplitOrientation.Horizontal, 0.72f);
+
+            return CombineNodes(leftColumn, rightColumn, DockSplitOrientation.Vertical, 0.67f);
+        }
+
+        private static float CalculateSplitRatio(int firstCount, int secondCount, float defaultRatio)
+        {
+            int total = Math.Max(1, firstCount + secondCount);
+            if (firstCount <= 0 || secondCount <= 0)
+            {
+                return defaultRatio;
+            }
+
+            float ratio = firstCount / (float)total;
+            return MathHelper.Clamp(ratio, 0.1f, 0.9f);
+        }
+
+        private static DockNode BuildStack(IReadOnlyList<PanelNode> nodes, DockSplitOrientation orientation)
+        {
+            if (nodes == null || nodes.Count == 0)
+            {
+                return null;
+            }
+
+            DockNode current = nodes[0];
+            for (int i = 1; i < nodes.Count; i++)
+            {
+                float ratio = i / (float)(i + 1);
+                current = new SplitNode(orientation)
+                {
+                    SplitRatio = ratio,
+                    First = current,
+                    Second = nodes[i]
+                };
+            }
+
+            return current;
+        }
+
+        private static DockNode CombineNodes(DockNode first, DockNode second, DockSplitOrientation orientation, float splitRatio)
+        {
+            if (first == null)
+            {
+                return second;
+            }
+
+            if (second == null)
+            {
+                return first;
+            }
+
+            return new SplitNode(orientation)
+            {
+                SplitRatio = splitRatio,
+                First = first,
+                Second = second
+            };
+        }
+
+        private static List<PanelNode> GetPanelNodesByKind(DockPanelKind kind)
+        {
+            List<PanelNode> nodes = new();
+            foreach (DockPanel panel in _orderedPanels)
+            {
+                if (panel == null || panel.Kind != kind)
+                {
+                    continue;
+                }
+
+                if (_panelNodes.TryGetValue(panel.Id, out PanelNode node))
+                {
+                    nodes.Add(node);
+                }
+            }
+
+            return nodes;
         }
 
         private static DockPanel CreatePanel(string id, string title, DockPanelKind kind)
@@ -1257,12 +1388,30 @@ namespace op.io
             DrawOverlayDismissButton(spriteBatch);
 
             int rowY = _overlayBounds.Y + 52;
-            foreach (OverlayPanelToggle toggle in _overlayToggles)
+            foreach (OverlayMenuRow row in _overlayRows)
             {
-                string label = toggle.Panel.Title;
-                bodyFont.DrawString(spriteBatch, label, new Vector2(_overlayBounds.X + 20, rowY), UIStyle.TextColor);
-                string state = toggle.Panel.IsVisible ? "Hide" : "Show";
-                DrawButton(spriteBatch, toggle.Bounds, state, toggle.Panel.IsVisible ? UIStyle.AccentColor : UIStyle.PanelBorder);
+                PanelMenuEntry entry = row.Entry;
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                bodyFont.DrawString(spriteBatch, entry.Label, new Vector2(_overlayBounds.X + 20, rowY), UIStyle.TextColor);
+
+                if (entry.ControlMode == PanelMenuControlMode.Toggle)
+                {
+                    string state = entry.IsVisible ? "Hide" : "Show";
+                    DrawButton(spriteBatch, row.ToggleBounds, state, entry.IsVisible ? UIStyle.AccentColor : UIStyle.PanelBorder);
+                }
+                else
+                {
+                    bool atMin = entry.Count <= entry.MinCount;
+                    bool atMax = entry.Count >= entry.MaxCount;
+                    DrawStepperButton(spriteBatch, row.MinusBounds, "-", atMin);
+                    DrawNumberField(spriteBatch, row.InputBounds, GetNumericDisplayText(entry), entry.IsEditing);
+                    DrawStepperButton(spriteBatch, row.PlusBounds, "+", atMax);
+                }
+
                 rowY += 32;
             }
 
@@ -1299,7 +1448,8 @@ namespace op.io
             _overlayDismissBounds = Rectangle.Empty;
             _overlayOpenAllBounds = Rectangle.Empty;
             _overlayCloseAllBounds = Rectangle.Empty;
-            _overlayToggles.Clear();
+            _overlayRows.Clear();
+            ClearOverlayEditingState();
         }
 
         private static void ClearCornerSnap()
@@ -1359,6 +1509,68 @@ namespace op.io
             glyphFont.DrawString(spriteBatch, glyph, glyphPosition, Color.OrangeRed);
         }
 
+        private static void DrawStepperButton(SpriteBatch spriteBatch, Rectangle bounds, string label, bool disabled)
+        {
+            if (bounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            UIStyle.UIFont buttonFont = UIStyle.FontBody;
+            if (!buttonFont.IsAvailable)
+            {
+                return;
+            }
+
+            Color border = disabled ? UIStyle.MutedTextColor : UIStyle.PanelBorder;
+            Color textColor = disabled ? UIStyle.MutedTextColor : UIStyle.TextColor;
+
+            DrawRect(spriteBatch, bounds, UIStyle.PanelBackground);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
+
+            Vector2 textSize = buttonFont.MeasureString(label);
+            Vector2 textPosition = new(bounds.X + (bounds.Width - textSize.X) / 2f, bounds.Y + (bounds.Height - textSize.Y) / 2f);
+            buttonFont.DrawString(spriteBatch, label, textPosition, textColor);
+        }
+
+        private static void DrawNumberField(SpriteBatch spriteBatch, Rectangle bounds, string text, bool isActive)
+        {
+            if (bounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            UIStyle.UIFont font = UIStyle.FontBody;
+            if (!font.IsAvailable)
+            {
+                return;
+            }
+
+            Color border = isActive ? UIStyle.AccentColor : UIStyle.PanelBorder;
+            DrawRect(spriteBatch, bounds, UIStyle.PanelBackground);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
+
+            text ??= string.Empty;
+            Vector2 textSize = font.MeasureString(text);
+            Vector2 textPosition = new(bounds.X + (bounds.Width - textSize.X) / 2f, bounds.Y + (bounds.Height - textSize.Y) / 2f);
+            font.DrawString(spriteBatch, text, textPosition, UIStyle.TextColor);
+        }
+
+        private static string GetNumericDisplayText(PanelMenuEntry entry)
+        {
+            if (entry == null)
+            {
+                return "0";
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.InputBuffer))
+            {
+                return entry.Count.ToString();
+            }
+
+            return entry.InputBuffer;
+        }
+
         private static void UpdateOverlayInteractions(bool leftClickStarted)
         {
             BuildOverlayLayout();
@@ -1374,23 +1586,255 @@ namespace op.io
                 return;
             }
 
-            foreach (OverlayPanelToggle toggle in _overlayToggles)
-            {
-                if (toggle.Bounds.Contains(_mousePosition))
-                {
-                    toggle.Panel.IsVisible = !toggle.Panel.IsVisible;
-                    MarkLayoutDirty();
-                    return;
-                }
-            }
-
             if (_overlayOpenAllBounds.Contains(_mousePosition))
             {
                 SetAllPanelsVisibility(true);
+                return;
             }
-            else if (_overlayCloseAllBounds.Contains(_mousePosition))
+
+            if (_overlayCloseAllBounds.Contains(_mousePosition))
             {
                 SetAllPanelsVisibility(false);
+                return;
+            }
+
+            foreach (OverlayMenuRow row in _overlayRows)
+            {
+                PanelMenuEntry entry = row.Entry;
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                if (entry.ControlMode == PanelMenuControlMode.Toggle)
+                {
+                    if (row.ToggleBounds.Contains(_mousePosition))
+                    {
+                        entry.IsVisible = !entry.IsVisible;
+                        ApplyToggleVisibility(entry);
+                        ResetOverlayLayout();
+                        return;
+                    }
+                }
+                else
+                {
+                    if (row.MinusBounds.Contains(_mousePosition))
+                    {
+                        SetActiveNumericEntry(entry);
+                        AdjustNumericEntry(entry, entry.Count - 1);
+                        return;
+                    }
+
+                    if (row.PlusBounds.Contains(_mousePosition))
+                    {
+                        SetActiveNumericEntry(entry);
+                        AdjustNumericEntry(entry, entry.Count + 1);
+                        return;
+                    }
+
+                    if (row.InputBounds.Contains(_mousePosition))
+                    {
+                        SetActiveNumericEntry(entry);
+                        return;
+                    }
+                }
+            }
+
+            ClearActiveNumericEntry();
+        }
+
+        private static void RebuildPanelsFromMenuChange()
+        {
+            _panelDefinitionsReady = false;
+            EnsurePanels();
+            MarkLayoutDirty();
+        }
+
+        private static void ApplyToggleVisibility(PanelMenuEntry entry)
+        {
+            if (entry == null || entry.ControlMode != PanelMenuControlMode.Toggle)
+            {
+                return;
+            }
+
+            if (_panels.TryGetValue(entry.IdPrefix, out DockPanel panel))
+            {
+                panel.IsVisible = entry.IsVisible;
+            }
+
+            MarkLayoutDirty();
+        }
+
+        private static void AdjustNumericEntry(PanelMenuEntry entry, int newValue)
+        {
+            if (entry == null || entry.ControlMode != PanelMenuControlMode.Count)
+            {
+                return;
+            }
+
+            int clamped = ClampCount(entry, newValue);
+            if (entry.Count == clamped)
+            {
+                entry.InputBuffer = entry.Count.ToString();
+                return;
+            }
+
+            entry.Count = clamped;
+            entry.InputBuffer = entry.Count.ToString();
+            RebuildPanelsFromMenuChange();
+        }
+
+        private static void SetActiveNumericEntry(PanelMenuEntry entry)
+        {
+            if (entry == null || entry.ControlMode != PanelMenuControlMode.Count)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(_activeNumericEntry, entry))
+            {
+                ClearOverlayEditingState();
+                _activeNumericEntry = entry;
+            }
+
+            entry.IsEditing = true;
+            entry.InputBuffer = string.IsNullOrWhiteSpace(entry.InputBuffer) ? entry.Count.ToString() : entry.InputBuffer;
+        }
+
+        private static void ClearActiveNumericEntry()
+        {
+            if (_activeNumericEntry != null)
+            {
+                _activeNumericEntry.IsEditing = false;
+                _activeNumericEntry.InputBuffer = _activeNumericEntry.Count.ToString();
+            }
+
+            _activeNumericEntry = null;
+        }
+
+        private static void ClearOverlayEditingState()
+        {
+            foreach (PanelMenuEntry entry in _panelMenuEntries)
+            {
+                entry.IsEditing = false;
+                if (entry.ControlMode == PanelMenuControlMode.Count)
+                {
+                    entry.InputBuffer = entry.Count.ToString();
+                }
+            }
+
+            _activeNumericEntry = null;
+        }
+
+        private static void UpdateOverlayKeyboardInput(KeyboardState keyboardState)
+        {
+            if (!_overlayMenuVisible || _activeNumericEntry == null)
+            {
+                return;
+            }
+
+            PanelMenuEntry entry = _activeNumericEntry;
+            bool changed = false;
+
+            if (WasKeyPressed(keyboardState, Keys.Back))
+            {
+                if (!string.IsNullOrEmpty(entry.InputBuffer))
+                {
+                    entry.InputBuffer = entry.InputBuffer[..^1];
+                }
+                else
+                {
+                    entry.InputBuffer = string.Empty;
+                }
+
+                changed = true;
+            }
+
+            if (WasKeyPressed(keyboardState, Keys.Delete))
+            {
+                entry.InputBuffer = string.Empty;
+                changed = true;
+            }
+
+            if (WasKeyPressed(keyboardState, Keys.Enter))
+            {
+                ApplyNumericBuffer(entry);
+                ClearActiveNumericEntry();
+                return;
+            }
+
+            if (WasKeyPressed(keyboardState, Keys.Escape))
+            {
+                entry.InputBuffer = entry.Count.ToString();
+                ClearActiveNumericEntry();
+                return;
+            }
+
+            for (int digit = 0; digit <= 9; digit++)
+            {
+                Keys mainKey = (Keys)((int)Keys.D0 + digit);
+                Keys numpadKey = (Keys)((int)Keys.NumPad0 + digit);
+                if (WasKeyPressed(keyboardState, mainKey) || WasKeyPressed(keyboardState, numpadKey))
+                {
+                    AppendDigit(entry, digit);
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                ApplyNumericBuffer(entry);
+            }
+        }
+
+        private static bool WasKeyPressed(KeyboardState current, Keys key)
+        {
+            return current.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
+        }
+
+        private static void AppendDigit(PanelMenuEntry entry, int digit)
+        {
+            if (entry == null || entry.ControlMode != PanelMenuControlMode.Count)
+            {
+                return;
+            }
+
+            entry.InputBuffer ??= string.Empty;
+            if (entry.InputBuffer.Length >= 2)
+            {
+                return;
+            }
+
+            entry.InputBuffer += digit.ToString();
+        }
+
+        private static void ApplyNumericBuffer(PanelMenuEntry entry)
+        {
+            if (entry == null || entry.ControlMode != PanelMenuControlMode.Count)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.InputBuffer))
+            {
+                return;
+            }
+
+            if (!int.TryParse(entry.InputBuffer, out int parsed))
+            {
+                return;
+            }
+
+            int clamped = ClampCount(entry, parsed);
+            if (clamped != parsed)
+            {
+                entry.InputBuffer = clamped.ToString();
+            }
+
+            if (entry.Count != clamped)
+            {
+                entry.Count = clamped;
+                RebuildPanelsFromMenuChange();
             }
         }
 
@@ -1408,7 +1852,8 @@ namespace op.io
             _overlayDismissBounds = Rectangle.Empty;
             _overlayOpenAllBounds = Rectangle.Empty;
             _overlayCloseAllBounds = Rectangle.Empty;
-            _overlayToggles.Clear();
+            _overlayRows.Clear();
+            ClearOverlayEditingState();
         }
 
         private static bool GetPanelMenuState()
@@ -1425,19 +1870,42 @@ namespace op.io
 
         private static void BuildOverlayLayout()
         {
+            EnsurePanelMenuEntries();
             Rectangle viewport = Core.Instance?.GraphicsDevice?.Viewport.Bounds ?? new Rectangle(0, 0, 1280, 720);
             int width = 360;
-            int height = 120 + (_orderedPanels.Count * 32);
+            int height = 120 + (_panelMenuEntries.Count * 32);
             _overlayBounds = new Rectangle(viewport.X + (viewport.Width - width) / 2, viewport.Y + (viewport.Height - height) / 2, width, height);
             int closeButtonSize = 24;
             _overlayDismissBounds = new Rectangle(_overlayBounds.Right - closeButtonSize - 12, _overlayBounds.Y + 12, closeButtonSize, closeButtonSize);
 
-            _overlayToggles.Clear();
+            _overlayRows.Clear();
             int rowY = _overlayBounds.Y + 52;
-            foreach (DockPanel panel in _orderedPanels)
+            foreach (PanelMenuEntry entry in _panelMenuEntries)
             {
-                Rectangle toggleBounds = new(_overlayBounds.Right - 96, rowY - 4, 76, 28);
-                _overlayToggles.Add(new OverlayPanelToggle(panel, toggleBounds));
+                Rectangle toggleBounds = Rectangle.Empty;
+                Rectangle minusBounds = Rectangle.Empty;
+                Rectangle inputBounds = Rectangle.Empty;
+                Rectangle plusBounds = Rectangle.Empty;
+
+                if (entry.ControlMode == PanelMenuControlMode.Toggle)
+                {
+                    toggleBounds = new Rectangle(_overlayBounds.Right - 96, rowY - 4, 76, 28);
+                }
+                else
+                {
+                    const int stepWidth = 28;
+                    const int inputWidth = 52;
+                    int controlHeight = 28;
+                    int totalWidth = (stepWidth * 2) + inputWidth;
+                    int startX = _overlayBounds.Right - 20 - totalWidth;
+                    int controlY = rowY - 4;
+
+                    minusBounds = new Rectangle(startX, controlY, stepWidth, controlHeight);
+                    inputBounds = new Rectangle(minusBounds.Right, controlY, inputWidth, controlHeight);
+                    plusBounds = new Rectangle(inputBounds.Right, controlY, stepWidth, controlHeight);
+                }
+
+                _overlayRows.Add(new OverlayMenuRow(entry, toggleBounds, minusBounds, inputBounds, plusBounds));
                 rowY += 32;
             }
 
@@ -1478,6 +1946,8 @@ namespace op.io
         }
 
         private static bool AnyPanelVisible() => _orderedPanels.Any(panel => panel.IsVisible);
+
+        public static bool IsPanelMenuOpen() => _overlayMenuVisible;
 
         public static bool IsCursorWithinGamePanel()
         {
@@ -1545,12 +2015,35 @@ namespace op.io
 
         private static void SetAllPanelsVisibility(bool value)
         {
-            foreach (DockPanel panel in _orderedPanels)
+            EnsurePanelMenuEntries();
+            bool definitionsChanged = false;
+            foreach (PanelMenuEntry entry in _panelMenuEntries)
             {
-                panel.IsVisible = value;
+                if (entry.ControlMode == PanelMenuControlMode.Toggle)
+                {
+                    entry.IsVisible = value;
+                    ApplyToggleVisibility(entry);
+                }
+                else
+                {
+                    int target = value
+                        ? Math.Max(entry.Count == 0 ? 1 : entry.Count, Math.Max(entry.MinCount, 1))
+                        : entry.MinCount;
+                    target = ClampCount(entry, target);
+
+                    if (entry.Count != target)
+                    {
+                        entry.Count = target;
+                        entry.InputBuffer = entry.Count.ToString();
+                        definitionsChanged = true;
+                    }
+                }
             }
 
-            MarkLayoutDirty();
+            if (definitionsChanged)
+            {
+                RebuildPanelsFromMenuChange();
+            }
         }
 
         private static void UpdateLayoutCache()
@@ -2037,16 +2530,55 @@ namespace op.io
             spriteBatch.Draw(_pixelTexture, right, color);
         }
 
-        private readonly struct OverlayPanelToggle
+        private enum PanelMenuControlMode
         {
-            public OverlayPanelToggle(DockPanel panel, Rectangle bounds)
+            Toggle,
+            Count
+        }
+
+        private sealed class PanelMenuEntry
+        {
+            public PanelMenuEntry(string idPrefix, string label, DockPanelKind kind, PanelMenuControlMode controlMode, int minCount = 0, int maxCount = 10, int initialCount = 0, bool initialVisible = true)
             {
-                Panel = panel;
-                Bounds = bounds;
+                IdPrefix = idPrefix ?? throw new ArgumentNullException(nameof(idPrefix));
+                Label = string.IsNullOrWhiteSpace(label) ? idPrefix : label;
+                Kind = kind;
+                ControlMode = controlMode;
+                MinCount = Math.Max(0, minCount);
+                MaxCount = Math.Max(MinCount, maxCount);
+                Count = controlMode == PanelMenuControlMode.Count ? Math.Clamp(initialCount, MinCount, MaxCount) : 0;
+                IsVisible = controlMode == PanelMenuControlMode.Toggle ? initialVisible : true;
+                InputBuffer = Count.ToString();
             }
 
-            public DockPanel Panel { get; }
-            public Rectangle Bounds { get; }
+            public string IdPrefix { get; }
+            public string Label { get; }
+            public DockPanelKind Kind { get; }
+            public PanelMenuControlMode ControlMode { get; }
+            public int MinCount { get; }
+            public int MaxCount { get; }
+            public int Count { get; set; }
+            public bool IsVisible { get; set; }
+            public bool IsEditing { get; set; }
+            public string InputBuffer { get; set; }
+        }
+
+        private readonly struct OverlayMenuRow
+        {
+            public OverlayMenuRow(PanelMenuEntry entry, Rectangle toggleBounds, Rectangle minusBounds, Rectangle inputBounds, Rectangle plusBounds)
+            {
+                Entry = entry;
+                ToggleBounds = toggleBounds;
+                MinusBounds = minusBounds;
+                InputBounds = inputBounds;
+                PlusBounds = plusBounds;
+            }
+
+            public PanelMenuEntry Entry { get; }
+            public Rectangle ToggleBounds { get; }
+            public Rectangle MinusBounds { get; }
+            public Rectangle InputBounds { get; }
+            public Rectangle PlusBounds { get; }
         }
 
         private readonly struct ResizeBar
