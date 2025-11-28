@@ -19,17 +19,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly Dictionary<string, int> _customOrder = new(StringComparer.OrdinalIgnoreCase);
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly StringBuilder _stringBuilder = new();
+        private static readonly BlockDragState<SpecRow> _dragState = new(row => row.Key, row => row.Bounds, (row, isDragging) =>
+        {
+            row.IsDragging = isDragging;
+            return row;
+        });
         private static Texture2D _pixelTexture;
         private static float _lineHeightCache;
         private static string _hoveredRowKey;
-        private static bool _isDraggingRow;
-        private static string _draggingRowKey;
-        private static SpecRow _draggingRowSnapshot;
-        private static bool _hasDraggingSnapshot;
-        private static float _dragOffsetY;
-        private static float _draggedRowY;
-        private static int _pendingDropIndex;
-        private static Rectangle _dropIndicatorBounds;
 
         private static readonly Color HoverRowColor = new(38, 38, 38, 180);
         private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
@@ -67,24 +64,31 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
-            if (panelLocked && _isDraggingRow)
+            if (panelLocked && _dragState.IsDragging)
             {
-                ResetDragState();
+                _dragState.Reset();
             }
 
             _hoveredRowKey = !panelLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
 
-            if (_isDraggingRow)
+            if (_dragState.IsDragging)
             {
-                UpdateRowDrag(listBounds, mouseState);
+                _dragState.UpdateDrag(_rows, listBounds, _lineHeightCache, mouseState);
                 if (leftClickReleased)
                 {
-                    CompleteRowDrag();
+                    if (_dragState.TryCompleteDrag(_rows, out bool orderChanged))
+                    {
+                        NormalizeRowOrder();
+                        if (orderChanged)
+                        {
+                            UpdateCustomOrderFromRows();
+                        }
+                    }
                 }
             }
             else if (!panelLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
             {
-                StartRowDrag(mouseState);
+                _dragState.TryStartDrag(_rows, _hoveredRowKey, mouseState);
             }
         }
 
@@ -144,7 +148,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     continue;
                 }
 
-                bool draggingThisRow = _isDraggingRow && string.Equals(row.Key, _draggingRowKey, StringComparison.OrdinalIgnoreCase);
+                bool draggingThisRow = _dragState.IsDragging && string.Equals(row.Key, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
                 if (!draggingThisRow)
                 {
                     DrawRowBackground(spriteBatch, row, rowBounds);
@@ -152,11 +156,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
 
-            if (_isDraggingRow && _hasDraggingSnapshot)
+            if (_dragState.IsDragging && _dragState.HasSnapshot)
             {
-                if (_dropIndicatorBounds != Rectangle.Empty)
+                if (_dragState.DropIndicatorBounds != Rectangle.Empty)
                 {
-                    FillRect(spriteBatch, _dropIndicatorBounds, DropIndicatorColor);
+                    FillRect(spriteBatch, _dragState.DropIndicatorBounds, DropIndicatorColor);
                 }
 
                 DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont);
@@ -198,7 +202,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 row.RenderOrder = _customOrder[spec.Key];
             }
 
-            if (!_isDraggingRow)
+            if (!_dragState.IsDragging)
             {
                 for (int i = _rows.Count - 1; i >= 0; i--)
                 {
@@ -273,122 +277,6 @@ namespace op.io.UI.BlockScripts.Blocks
             return null;
         }
 
-        private static void StartRowDrag(MouseState mouseState)
-        {
-            if (string.IsNullOrEmpty(_hoveredRowKey))
-            {
-                return;
-            }
-
-            int index = GetRowIndex(_hoveredRowKey);
-            if (index < 0)
-            {
-                return;
-            }
-
-            SpecRow row = _rows[index];
-            if (row.Bounds == Rectangle.Empty)
-            {
-                return;
-            }
-
-            row.IsDragging = true;
-            _rows[index] = row;
-
-            _isDraggingRow = true;
-            _hasDraggingSnapshot = true;
-            _draggingRowKey = row.Key;
-            _draggingRowSnapshot = row;
-            _dragOffsetY = mouseState.Y - row.Bounds.Y;
-            _draggedRowY = row.Bounds.Y;
-            _pendingDropIndex = index;
-            _dropIndicatorBounds = Rectangle.Empty;
-        }
-
-        private static void UpdateRowDrag(Rectangle contentBounds, MouseState mouseState)
-        {
-            if (!_hasDraggingSnapshot)
-            {
-                return;
-            }
-
-            float minTop = contentBounds.Y - MathF.Min(_lineHeightCache * 0.65f, _lineHeightCache);
-            float maxTop = Math.Max(contentBounds.Y, contentBounds.Bottom - _lineHeightCache);
-            _draggedRowY = MathHelper.Clamp(mouseState.Y - _dragOffsetY, minTop, maxTop);
-
-            float dragCenterY = _draggedRowY + (_lineHeightCache / 2f);
-            int dropIndex = 0;
-            Rectangle indicator = Rectangle.Empty;
-            Rectangle lastBounds = Rectangle.Empty;
-
-            foreach (SpecRow row in _rows)
-            {
-                if (string.Equals(row.Key, _draggingRowKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                Rectangle bounds = row.Bounds;
-                if (bounds == Rectangle.Empty)
-                {
-                    continue;
-                }
-
-                float midpoint = bounds.Y + (bounds.Height / 2f);
-                if (dragCenterY < midpoint)
-                {
-                    int indicatorY = Math.Max(contentBounds.Y - 2, bounds.Y - 2);
-                    indicator = new Rectangle(contentBounds.X, indicatorY, contentBounds.Width, 4);
-                    break;
-                }
-
-                lastBounds = bounds;
-                dropIndex++;
-            }
-
-            if (indicator == Rectangle.Empty)
-            {
-                int indicatorY = lastBounds == Rectangle.Empty ? contentBounds.Y - 2 : lastBounds.Bottom - 2;
-                indicator = new Rectangle(contentBounds.X, Math.Max(contentBounds.Y - 2, indicatorY), contentBounds.Width, 4);
-            }
-
-            _pendingDropIndex = dropIndex;
-            _dropIndicatorBounds = indicator;
-        }
-
-        private static void CompleteRowDrag()
-        {
-            if (!_hasDraggingSnapshot)
-            {
-                ResetDragState();
-                return;
-            }
-
-            int currentIndex = GetRowIndex(_draggingRowKey);
-            if (currentIndex < 0)
-            {
-                ResetDragState();
-                return;
-            }
-
-            SpecRow row = _rows[currentIndex];
-            row.IsDragging = false;
-            _rows[currentIndex] = row;
-
-            _rows.RemoveAt(currentIndex);
-            int insertIndex = Math.Clamp(_pendingDropIndex, 0, _rows.Count);
-            _rows.Insert(insertIndex, row);
-
-            bool orderChanged = insertIndex != currentIndex;
-            NormalizeRowOrder();
-            if (orderChanged)
-            {
-                UpdateCustomOrderFromRows();
-            }
-
-            ResetDragState();
-        }
-
         private static void NormalizeRowOrder()
         {
             for (int i = 0; i < _rows.Count; i++)
@@ -419,7 +307,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (!_isDraggingRow && string.Equals(_hoveredRowKey, row.Key, StringComparison.OrdinalIgnoreCase))
+            if (!_dragState.IsDragging && string.Equals(_hoveredRowKey, row.Key, StringComparison.OrdinalIgnoreCase))
             {
                 FillRect(spriteBatch, bounds, HoverRowColor);
             }
@@ -427,10 +315,15 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
         {
-            Rectangle dragBounds = new(contentBounds.X, (int)MathF.Round(_draggedRowY), contentBounds.Width, (int)MathF.Ceiling(lineHeight));
+            Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, lineHeight);
+            if (dragBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
             FillRect(spriteBatch, dragBounds, DraggingRowBackground);
 
-            SpecRow row = _draggingRowSnapshot;
+            SpecRow row = _dragState.DraggingSnapshot;
             row.Bounds = dragBounds;
             DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds);
         }
@@ -494,14 +387,6 @@ namespace op.io.UI.BlockScripts.Blocks
         private static int GetNextOrderSeed()
         {
             return Math.Max(1, _customOrder.Count + 1);
-        }
-
-        private static void ResetDragState()
-        {
-            _isDraggingRow = false;
-            _hasDraggingSnapshot = false;
-            _draggingRowKey = null;
-            _dropIndicatorBounds = Rectangle.Empty;
         }
 
         private static void EnsurePixelTexture()
