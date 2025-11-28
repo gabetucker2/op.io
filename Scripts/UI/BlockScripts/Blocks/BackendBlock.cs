@@ -12,6 +12,9 @@ namespace op.io.UI.BlockScripts.Blocks
     {
         public const string PanelTitle = "Backend";
 
+        private const string PlaceholderWordSeparator = "    ";
+        private static readonly string PlaceholderText = string.Join(PlaceholderWordSeparator, new[] { "No", "backend", "values", "tracked." });
+
         private static readonly StringBuilder _stringBuilder = new();
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly List<BackendVariable> _rows = new();
@@ -20,7 +23,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             RefreshRows();
-            if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
+            if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 _lineHeightCache = 0f;
                 _scrollPanel.Update(contentBounds, 0f, mouseState, previousMouseState);
@@ -29,7 +32,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (_lineHeightCache <= 0f)
             {
-                _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
+                _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
             }
 
             float contentHeight = Math.Max(0f, _rows.Count * _lineHeightCache);
@@ -43,7 +46,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
+            if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 return;
             }
@@ -55,7 +58,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (_lineHeightCache <= 0f)
             {
-                _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
+                _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
             }
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
@@ -66,8 +69,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (_rows.Count == 0)
             {
-                string placeholder = "No backend values tracked.";
-                regularFont.DrawString(spriteBatch, placeholder, new Vector2(listBounds.X, listBounds.Y), UIStyle.MutedTextColor);
+                regularFont.DrawString(spriteBatch, PlaceholderText, new Vector2(listBounds.X, listBounds.Y), UIStyle.MutedTextColor);
                 _scrollPanel.Draw(spriteBatch);
                 return;
             }
@@ -136,18 +138,6 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return variable.Value.ToString();
-        }
-
-        private static bool TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont)
-        {
-            boldFont = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Bold);
-            regularFont = UIStyle.FontTech;
-            return boldFont.IsAvailable && regularFont.IsAvailable;
-        }
-
-        private static float CalculateLineHeight(UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
-        {
-            return Math.Max(boldFont.LineHeight, regularFont.LineHeight) + 2f;
         }
 
         private readonly struct BackendVariable

@@ -37,13 +37,13 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Controls);
 
-            if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
+            if (!FontManager.TryGetControlsFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 return;
             }
 
             EnsureKeybindCache();
-            _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
+            _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
             float contentHeight = _keybindCache.Count * _lineHeightCache;
             _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
@@ -86,7 +86,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
+            if (!FontManager.TryGetControlsFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 return;
             }
@@ -94,7 +94,7 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureKeybindCache();
             if (_lineHeightCache <= 0f)
             {
-                _lineHeightCache = CalculateLineHeight(boldFont, regularFont);
+                _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
             }
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -428,18 +428,6 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return null;
-        }
-
-        private static bool TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont)
-        {
-            boldFont = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Bold);
-            regularFont = UIStyle.FontTech;
-            return boldFont.IsAvailable && regularFont.IsAvailable;
-        }
-
-        private static float CalculateLineHeight(UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
-        {
-            return Math.Max(boldFont.LineHeight, regularFont.LineHeight) + 2f;
         }
 
         private static void NormalizeCacheOrder()

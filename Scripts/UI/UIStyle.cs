@@ -33,6 +33,8 @@ namespace op.io
         private const float FontHTechSize = 20f;
         private const float FontBodySize = 20f;
         private const float FontTechSize = 18f;
+        private const float BodyMinLineHeight = 16f;
+        private const float MinimumGlyphSpacing = 1f;
 
         private static bool _fontsLoaded;
 
@@ -159,13 +161,16 @@ namespace op.io
                 DebugLogger.PrintError($"Failed to load Monaspace Neon italic font asset '{MonaspaceNeonItalicFontAsset}': {ex.Message}");
             }
 
+            ApplyMinimumSpacing(_fontBebas, _fontMont, _fontMonospaceXenon, _fontMonospaceXenonBold, _fontMonospaceXenonItalic,
+                _fontMonospaceNeon, _fontMonospaceNeonBold, _fontMonospaceNeonItalic);
+
             SpriteFont fallback = _fontMont ?? _fontBebas ?? _fontMonospaceXenon ?? _fontMonospaceNeon;
 
             FontH1 = CreateFontStyle(_fontBebas, FontH1Size);
             FontH2 = CreateFontStyle(_fontMont, FontH2Size);
-            FontHBody = CreateFontStyle(_fontMonospaceNeonBold, FontHBodySize);
+            FontHBody = CreateFontStyle(_fontMonospaceNeonBold, FontHBodySize, BodyMinLineHeight);
             FontHTech = CreateFontStyle(_fontMonospaceXenonBold, FontHTechSize);
-            FontBody = CreateFontStyle(_fontMonospaceNeon, FontBodySize);
+            FontBody = CreateFontStyle(_fontMonospaceNeon, FontBodySize, BodyMinLineHeight);
             FontTech = CreateFontStyle(_fontMonospaceXenon, FontTechSize);
             RegisterFontVariants(_fontMonospaceXenon, fallback);
 
@@ -212,10 +217,11 @@ namespace op.io
             resolved ??= techBase;
             resolved ??= fallback;
 
-            _variantFonts[(family, variant)] = CreateFontStyle(resolved, FontTechSize);
+            float minLineHeight = family == FontFamilyKey.Neon ? BodyMinLineHeight : 0f;
+            _variantFonts[(family, variant)] = CreateFontStyle(resolved, FontTechSize, minLineHeight);
         }
 
-        private static UIFont CreateFontStyle(SpriteFont font, float desiredSize)
+        private static UIFont CreateFontStyle(SpriteFont font, float desiredSize, float minLineHeight = 0f)
         {
             if (font == null)
             {
@@ -223,7 +229,7 @@ namespace op.io
             }
 
             float scale = CalculateScale(font, desiredSize);
-            return new UIFont(font, scale);
+            return new UIFont(font, scale, minLineHeight);
         }
 
         private static float CalculateScale(SpriteFont font, float desiredSize)
@@ -237,18 +243,51 @@ namespace op.io
             return desiredSize / lineHeight;
         }
 
+        private static void ApplyMinimumSpacing(params SpriteFont[] fonts)
+        {
+            if (fonts == null)
+            {
+                return;
+            }
+
+            foreach (SpriteFont font in fonts)
+            {
+                if (font == null)
+                {
+                    continue;
+                }
+
+                font.Spacing = Math.Max(font.Spacing, MinimumGlyphSpacing);
+            }
+        }
+
         public readonly struct UIFont
         {
-            public UIFont(SpriteFont font, float scale)
+            private readonly float _minLineHeight;
+
+            public UIFont(SpriteFont font, float scale, float minLineHeight = 0f)
             {
                 Font = font;
                 Scale = scale > 0f ? scale : 1f;
+                _minLineHeight = Math.Max(0f, minLineHeight);
             }
 
             public SpriteFont Font { get; }
             public float Scale { get; }
             public bool IsAvailable => Font != null;
-            public float LineHeight => (Font?.LineSpacing ?? 0f) * Scale;
+            public float MinLineHeight => _minLineHeight;
+            public float LineHeight
+            {
+                get
+                {
+                    if (!IsAvailable)
+                    {
+                        return 0f;
+                    }
+
+                    return Math.Max(Font.LineSpacing * Scale, _minLineHeight);
+                }
+            }
 
             public Vector2 MeasureString(string text)
             {

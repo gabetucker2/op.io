@@ -348,7 +348,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             EnsureLineCache();
             UIStyle.UIFont bodyFont = UIStyle.FontBody;
-            float lineHeight = Math.Max(bodyFont.LineHeight, 16f);
+            float lineHeight = bodyFont.LineHeight;
             if (lineHeight <= 0f || LineCache.Count == 0)
             {
                 return;
@@ -1065,7 +1065,7 @@ namespace op.io.UI.BlockScripts.Blocks
             FillRect(spriteBatch, TextViewportBounds, UIStyle.PanelBackground * 0.9f);
             DrawRect(spriteBatch, TextViewportBounds, UIStyle.PanelBorder);
 
-            float lineHeight = Math.Max(font.LineHeight, 16f);
+            float lineHeight = font.LineHeight;
             float y = TextViewportBounds.Y;
             foreach (LineLayout layout in LineCache)
             {
