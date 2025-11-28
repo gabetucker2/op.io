@@ -35,7 +35,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
-            bool layoutLocked = BlockManager.IsLayoutLocked;
+            bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Controls);
 
             if (!TryGetRowFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
@@ -58,12 +58,12 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
-            if (layoutLocked && _isDraggingRow)
+            if (panelLocked && _isDraggingRow)
             {
                 ResetDragState();
             }
 
-            _hoveredRowKey = !layoutLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            _hoveredRowKey = !panelLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
 
             if (_isDraggingRow)
             {
@@ -73,7 +73,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     CompleteRowDrag();
                 }
             }
-            else if (!layoutLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else if (!panelLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
             {
                 StartRowDrag(mouseState);
             }

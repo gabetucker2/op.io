@@ -20,15 +20,16 @@ namespace op.io
         private const string WideWordSeparator = "    ";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
+        private const int WindowEdgeSnapDistance = 30;
 
         private static bool _dockingModeEnabled = true;
         private static bool _panelDefinitionsReady;
         private static bool _renderingDockedFrame;
-        private static bool _layoutLocked = true;
         private const int CornerSnapDistance = 16;
         private static readonly Dictionary<string, DockPanel> _panels = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, PanelNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
         private static readonly List<DockPanel> _orderedPanels = [];
+        private static readonly Dictionary<string, bool> _panelLockStates = new(StringComparer.OrdinalIgnoreCase);
         private static DockNode _rootNode;
         private static Rectangle _cachedViewportBounds;
         private static Rectangle _layoutBounds;
@@ -70,7 +71,11 @@ namespace op.io
         private static readonly List<OverlayMenuRow> _overlayRows = [];
         private static PanelMenuEntry _activeNumericEntry;
 
-        public static bool IsLayoutLocked => _layoutLocked;
+        public static bool IsPanelLocked(DockPanelKind panelKind)
+        {
+            DockPanel panel = _orderedPanels.FirstOrDefault(p => p.Kind == panelKind);
+            return IsPanelLocked(panel);
+        }
 
         public static bool DockingModeEnabled
         {
@@ -144,7 +149,7 @@ namespace op.io
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
-            bool allowReorder = dockingEnabled && !_layoutLocked;
+            bool allowReorder = dockingEnabled;
 
             if (_overlayMenuVisible)
             {
@@ -446,6 +451,7 @@ namespace op.io
             _panels[id] = panel;
             _orderedPanels.Add(panel);
             _panelNodes[id] = new PanelNode(panel);
+            EnsurePanelLockState(panel);
             return panel;
         }
 
@@ -580,7 +586,7 @@ namespace op.io
                 return;
             }
 
-            if (leftClickStarted && TryToggleLayoutLock(_mousePosition))
+            if (leftClickStarted && TryTogglePanelLock(_mousePosition))
             {
                 return;
             }
@@ -648,7 +654,7 @@ namespace op.io
             }
         }
 
-        private static bool TryToggleLayoutLock(Point position)
+        private static bool TryTogglePanelLock(Point position)
         {
             DockPanel lockHit = HitTestLockButton(position);
             if (lockHit == null)
@@ -656,9 +662,46 @@ namespace op.io
                 return false;
             }
 
-            _layoutLocked = !_layoutLocked;
+            TogglePanelLock(lockHit);
             ClearDockingInteractions();
             return true;
+        }
+
+        private static bool IsPanelLocked(DockPanel panel)
+        {
+            if (panel == null || !IsLockToggleAvailable(panel))
+            {
+                return false;
+            }
+
+            if (!_panelLockStates.TryGetValue(panel.Id, out bool locked))
+            {
+                locked = true;
+                _panelLockStates[panel.Id] = locked;
+            }
+
+            return locked;
+        }
+
+        private static void TogglePanelLock(DockPanel panel)
+        {
+            if (panel == null)
+            {
+                return;
+            }
+
+            bool nextState = !IsPanelLocked(panel);
+            _panelLockStates[panel.Id] = nextState;
+        }
+
+        private static void EnsurePanelLockState(DockPanel panel)
+        {
+            if (panel == null || !IsLockToggleAvailable(panel) || _panelLockStates.ContainsKey(panel.Id))
+            {
+                return;
+            }
+
+            _panelLockStates[panel.Id] = true;
         }
 
         private static DockPanel HitTestDragBarPanel(Point position, bool excludeHeaderButtons = false)
@@ -825,9 +868,80 @@ namespace op.io
             return new Rectangle(x, y, buttonSize, buttonSize);
         }
 
+        private static DockDropPreview? BuildViewportSnapPreview(Point position)
+        {
+            GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
+            if (graphicsDevice == null)
+            {
+                return null;
+            }
+
+            Rectangle viewport = graphicsDevice.Viewport.Bounds;
+            Rectangle layout = GetLayoutBounds(viewport);
+            if (layout.Width <= 0 || layout.Height <= 0)
+            {
+                return null;
+            }
+
+            Rectangle expanded = layout;
+            expanded.Inflate(WindowEdgeSnapDistance, WindowEdgeSnapDistance);
+            if (!expanded.Contains(position))
+            {
+                return null;
+            }
+
+            int bestDistance = WindowEdgeSnapDistance + 1;
+            DockEdge? bestEdge = null;
+
+            void Consider(DockEdge edge, int distance)
+            {
+                if (distance < 0 || distance > WindowEdgeSnapDistance || distance >= bestDistance)
+                {
+                    return;
+                }
+
+                bestDistance = distance;
+                bestEdge = edge;
+            }
+
+            Consider(DockEdge.Left, Math.Abs(position.X - layout.X));
+            Consider(DockEdge.Right, Math.Abs(layout.Right - position.X));
+            Consider(DockEdge.Top, Math.Abs(position.Y - layout.Y));
+            Consider(DockEdge.Bottom, Math.Abs(layout.Bottom - position.Y));
+
+            if (!bestEdge.HasValue)
+            {
+                return null;
+            }
+
+            int halfWidth = Math.Max(1, layout.Width / 2);
+            int halfHeight = Math.Max(1, layout.Height / 2);
+            Rectangle highlight = bestEdge.Value switch
+            {
+                DockEdge.Left => new Rectangle(layout.X, layout.Y, halfWidth, layout.Height),
+                DockEdge.Right => new Rectangle(layout.Right - halfWidth, layout.Y, halfWidth, layout.Height),
+                DockEdge.Top => new Rectangle(layout.X, layout.Y, layout.Width, halfHeight),
+                DockEdge.Bottom => new Rectangle(layout.X, layout.Bottom - halfHeight, layout.Width, halfHeight),
+                _ => layout
+            };
+
+            return new DockDropPreview
+            {
+                Edge = bestEdge.Value,
+                HighlightBounds = highlight,
+                IsViewportSnap = true
+            };
+        }
+
         private static DockDropPreview? BuildDropPreview(Point position)
         {
-            DockDropPreview? preview = null;
+            DockDropPreview? preview = BuildViewportSnapPreview(position);
+            if (preview.HasValue)
+            {
+                return preview;
+            }
+
+            preview = null;
             foreach (DockPanel panel in _orderedPanels)
             {
                 if (!panel.IsVisible || panel == _draggingPanel)
@@ -1216,7 +1330,18 @@ namespace op.io
 
         private static void ApplyDrop(DockDropPreview preview)
         {
-            if (_draggingPanel == null || preview.TargetPanel == null)
+            if (_draggingPanel == null)
+            {
+                return;
+            }
+
+            if (preview.IsViewportSnap)
+            {
+                ApplyViewportSnap(preview.Edge);
+                return;
+            }
+
+            if (preview.TargetPanel == null)
             {
                 return;
             }
@@ -1235,6 +1360,51 @@ namespace op.io
             _rootNode = DockLayout.Detach(_rootNode, movingNode);
             _rootNode ??= targetNode;
             _rootNode = DockLayout.InsertRelative(_rootNode, movingNode, targetNode, preview.Edge);
+            MarkLayoutDirty();
+        }
+
+        private static void ApplyViewportSnap(DockEdge edge)
+        {
+            if (_draggingPanel == null)
+            {
+                return;
+            }
+
+            if (!_panelNodes.TryGetValue(_draggingPanel.Id, out PanelNode movingNode))
+            {
+                return;
+            }
+
+            _rootNode = DockLayout.Detach(_rootNode, movingNode);
+            DockNode remaining = _rootNode;
+            if (remaining == null)
+            {
+                _rootNode = movingNode;
+                MarkLayoutDirty();
+                return;
+            }
+
+            DockSplitOrientation orientation = edge is DockEdge.Top or DockEdge.Bottom
+                ? DockSplitOrientation.Horizontal
+                : DockSplitOrientation.Vertical;
+
+            SplitNode split = new(orientation)
+            {
+                SplitRatio = 0.5f
+            };
+
+            if (edge is DockEdge.Top or DockEdge.Left)
+            {
+                split.First = movingNode;
+                split.Second = remaining;
+            }
+            else
+            {
+                split.First = remaining;
+                split.Second = movingNode;
+            }
+
+            _rootNode = split;
             MarkLayoutDirty();
         }
 
@@ -1347,8 +1517,9 @@ namespace op.io
 
             if (lockButtonBounds != Rectangle.Empty)
             {
+                bool panelLocked = IsPanelLocked(panel);
                 bool hovered = lockButtonBounds.Contains(_mousePosition);
-                DrawLockToggleButton(spriteBatch, lockButtonBounds, _layoutLocked, hovered);
+                DrawLockToggleButton(spriteBatch, lockButtonBounds, panelLocked, hovered);
             }
 
             if (closeButtonBounds != Rectangle.Empty)
@@ -2751,6 +2922,7 @@ namespace op.io
             public DockPanel TargetPanel;
             public DockEdge Edge;
             public Rectangle HighlightBounds;
+            public bool IsViewportSnap;
         }
 
         private readonly struct CornerSnapResult
