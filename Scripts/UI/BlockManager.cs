@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using op.io.UI.Blocks;
+using op.io.UI.BlockScripts.Blocks;
 
 namespace op.io
 {

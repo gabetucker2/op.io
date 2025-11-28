@@ -17,3 +17,6 @@
 
 # To revert to latest
 git reset --hard HEAD
+
+# To remove excess files no longer in the repo
+git clean -fd
