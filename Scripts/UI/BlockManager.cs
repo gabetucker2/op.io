@@ -131,19 +131,20 @@ namespace op.io
             KeyboardState keyboardState = Keyboard.GetState();
             _mousePosition = mouseState.Position;
             bool dockingEnabled = DockingModeEnabled;
+            bool rebindOverlayOpen = ControlsBlock.IsRebindOverlayOpen();
             if (!dockingEnabled)
             {
                 ClearDockingInteractions();
             }
 
-            bool panelMenuState = GetPanelMenuState();
+            bool panelMenuState = rebindOverlayOpen ? false : GetPanelMenuState();
             if (panelMenuState != _panelMenuSwitchState)
             {
                 _panelMenuSwitchState = panelMenuState;
                 _overlayMenuVisible = panelMenuState;
             }
 
-            if (!_overlayMenuVisible)
+            if (!_overlayMenuVisible && !rebindOverlayOpen)
             {
                 ResetOverlayLayout();
             }
@@ -153,7 +154,11 @@ namespace op.io
             bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
             bool allowReorder = dockingEnabled;
 
-            if (_overlayMenuVisible)
+            if (rebindOverlayOpen)
+            {
+                ClearDockingInteractions();
+            }
+            else if (_overlayMenuVisible)
             {
                 UpdateOverlayKeyboardInput(keyboardState);
                 UpdateOverlayInteractions(leftClickStarted);
@@ -178,7 +183,7 @@ namespace op.io
                 ClearDockingInteractions();
             }
 
-            UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState);
+            UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState, keyboardState, _previousKeyboardState);
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
         }
@@ -253,6 +258,7 @@ namespace op.io
             }
 
             DrawOverlayMenu(spriteBatch);
+            ControlsBlock.DrawRebindOverlay(spriteBatch);
             spriteBatch.End();
 
             _renderingDockedFrame = false;
@@ -1701,10 +1707,16 @@ namespace op.io
             }
         }
 
-        private static void UpdateInteractiveBlocks(GameTime gameTime, MouseState mouseState, MouseState previousMouseState)
+        private static void UpdateInteractiveBlocks(GameTime gameTime, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             if (gameTime == null || _orderedPanels.Count == 0)
             {
+                return;
+            }
+
+            if (ControlsBlock.IsRebindOverlayOpen())
+            {
+                ControlsBlock.UpdateRebindOverlay(gameTime, mouseState, previousMouseState, keyboardState, previousKeyboardState);
                 return;
             }
 
@@ -1732,6 +1744,11 @@ namespace op.io
                         SpecsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
                 }
+            }
+
+            if (ControlsBlock.IsRebindOverlayOpen())
+            {
+                ControlsBlock.UpdateRebindOverlay(gameTime, mouseState, previousMouseState, keyboardState, previousKeyboardState);
             }
         }
 
@@ -2320,6 +2337,8 @@ namespace op.io
         private static bool AnyPanelVisible() => _orderedPanels.Any(panel => panel.IsVisible);
 
         public static bool IsPanelMenuOpen() => _overlayMenuVisible;
+
+        public static bool IsInputBlocked() => _overlayMenuVisible || ControlsBlock.IsRebindOverlayOpen();
 
         public static bool IsCursorWithinGamePanel()
         {

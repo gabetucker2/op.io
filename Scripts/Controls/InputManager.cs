@@ -232,6 +232,88 @@ namespace op.io
             SetTriggerOverride(settingKey, triggerOverride && newType == InputType.Trigger);
         }
 
+        public static bool TryUpdateBindingInputKey(string settingKey, string newInputKey, out string displayLabel)
+        {
+            displayLabel = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(newInputKey))
+            {
+                return false;
+            }
+
+            if (!_controlBindings.TryGetValue(settingKey, out ControlBinding binding))
+            {
+                return false;
+            }
+
+            if (binding.LockMode)
+            {
+                return false;
+            }
+
+            InputType targetType = binding.InputType;
+            if (ControlKeyRules.RequiresSwitchSemantics(settingKey))
+            {
+                targetType = InputType.SaveSwitch;
+            }
+
+            if (!TryCreateBinding(settingKey, newInputKey, targetType, binding.IsMetaControl, binding.LockMode, out ControlBinding updated))
+            {
+                return false;
+            }
+
+            _controlBindings[settingKey] = updated;
+            displayLabel = updated.DisplayLabel;
+            InputTypeManager.UpdateInputKeyMapping(settingKey, newInputKey);
+            if (IsSwitchType(targetType))
+            {
+                InputTypeManager.EnsureSwitchRegistration(settingKey);
+                SwitchStateScanner.RefreshSwitchKeys();
+            }
+
+            return true;
+        }
+
+        public static bool TryUnbind(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            if (!_controlBindings.TryGetValue(settingKey, out ControlBinding binding))
+            {
+                return false;
+            }
+
+            if (binding.LockMode)
+            {
+                return false;
+            }
+
+            ControlKeyData.SetInputKey(settingKey, string.Empty);
+            InputTypeManager.ClearInputKeyMapping(settingKey);
+            _controlBindings.Remove(settingKey);
+            SwitchStateScanner.RefreshSwitchKeys();
+            return true;
+        }
+
+        public static IReadOnlyList<string> GetBindingsForInputKey(string inputKey, string excludeSetting = null)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return Array.Empty<string>();
+            }
+
+            List<string> keys = InputTypeManager.GetSettingKeysForInputKey(inputKey).ToList();
+            if (!string.IsNullOrWhiteSpace(excludeSetting))
+            {
+                keys.RemoveAll(k => string.Equals(k, excludeSetting, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return keys;
+        }
+
         private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, bool lockMode, out ControlBinding binding)
         {
             binding = null;
@@ -463,7 +545,7 @@ namespace op.io
 
         private static bool ShouldSuppressNonMetaControls()
         {
-            if (BlockManager.IsPanelMenuOpen())
+            if (BlockManager.IsInputBlocked())
             {
                 GameTracker.FreezeGameInputs = true;
                 return true;

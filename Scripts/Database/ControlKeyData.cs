@@ -141,6 +141,23 @@ VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState);";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }
 
+        public static void SetInputKey(string settingKey, string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
+            {
+                return;
+            }
+
+            var parameters = new Dictionary<string, object>
+            {
+                ["@inputKey"] = inputKey.Trim(),
+                ["@settingKey"] = settingKey
+            };
+
+            const string sql = "UPDATE ControlKey SET InputKey = @inputKey WHERE SettingKey = @settingKey;";
+            DatabaseQuery.ExecuteNonQuery(sql, parameters);
+        }
+
         public static void EnsureSwitchStartState(string settingKey, int defaultValue)
         {
             var parameters = new Dictionary<string, object>

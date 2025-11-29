@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -26,6 +27,19 @@ namespace op.io.UI.BlockScripts.Blocks
         private static string _hoveredTypeKey;
         private static bool _hoveredTypeIndicator;
         private static readonly BlockScrollPanel _scrollPanel = new();
+        private static string _pressedRowKey;
+        private static Point _pressStartPosition;
+        private static bool _rebindOverlayVisible;
+        private static string _rebindAction;
+        private static string _rebindCurrentInput;
+        private static string _rebindPendingInput;
+        private static string _rebindPendingDisplay;
+        private static Rectangle _rebindModalBounds;
+        private static Rectangle _rebindConfirmButtonBounds;
+        private static Rectangle _rebindUnbindButtonBounds;
+        private static bool _rebindCaptured;
+        private static bool _suppressNextCapture;
+        private static string _rebindConflictWarning;
 
         private static readonly Color HoverRowColor = new(38, 38, 38, 180);
         private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
@@ -33,8 +47,11 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly Color TypeToggleIdleFill = new(38, 38, 38, 140);
         private static readonly Color TypeToggleHoverFill = new(68, 92, 160, 200);
         private static readonly Color TypeToggleActiveFill = new(68, 92, 160, 230);
+        private static readonly Color RebindScrimColor = new(8, 8, 8, 190);
+        private static readonly Color WarningColor = new(200, 68, 68);
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
+        private const int DragStartThreshold = 6;
 
         private static bool IsSwitchType(InputType inputType) =>
             inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
@@ -73,8 +90,10 @@ namespace op.io.UI.BlockScripts.Blocks
             UpdateRowBounds(listBounds);
             UpdateTypeToggleBounds(boldFont);
 
-            bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
-            bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+            bool leftDown = mouseState.LeftButton == ButtonState.Pressed;
+            bool leftDownPrev = previousMouseState.LeftButton == ButtonState.Pressed;
+            bool leftClickStarted = leftDown && !leftDownPrev;
+            bool leftClickReleased = !leftDown && leftDownPrev;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
             if (panelLocked && _dragState.IsDragging)
@@ -93,6 +112,11 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 _hoveredTypeKey = null;
                 _hoveredTypeIndicator = false;
+            }
+
+            if (!allowInteraction)
+            {
+                _pressedRowKey = null;
             }
 
             if (_dragState.IsDragging)
@@ -114,9 +138,45 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 // Interaction consumed by type toggle.
             }
-            else if (!panelLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else
             {
-                _dragState.TryStartDrag(_keybindCache, _hoveredRowKey, mouseState);
+                if (allowInteraction && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+                {
+                    _pressedRowKey = _hoveredRowKey;
+                    _pressStartPosition = mouseState.Position;
+                }
+
+                if (allowInteraction && _pressedRowKey != null && leftDown && !_dragState.IsDragging)
+                {
+                    if (HasDragExceededThreshold(mouseState.Position))
+                    {
+                        _dragState.TryStartDrag(_keybindCache, _pressedRowKey, mouseState);
+                        _pressedRowKey = null;
+                    }
+                }
+
+                if (leftClickReleased)
+                {
+                    if (_dragState.IsDragging)
+                    {
+                        if (_dragState.TryCompleteDrag(_keybindCache, out bool orderChanged))
+                        {
+                            NormalizeCacheOrder();
+                            if (orderChanged)
+                            {
+                                PersistRowOrder();
+                            }
+                        }
+                    }
+                    else if (allowInteraction &&
+                        !string.IsNullOrEmpty(_pressedRowKey) &&
+                        string.Equals(_pressedRowKey, _hoveredRowKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        BeginRebindFlow(_pressedRowKey);
+                    }
+
+                    _pressedRowKey = null;
+                }
             }
         }
 
@@ -170,12 +230,12 @@ namespace op.io.UI.BlockScripts.Blocks
                 bool isDraggingRow = _dragState.IsDragging && string.Equals(row.Action, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
                 if (!isDraggingRow)
                 {
-                    DrawRowBackground(spriteBatch, row, rowBounds);
+                    DrawRowBackground(spriteBatch, row, rowBounds, panelLocked);
                     DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds, panelLocked);
                 }
             }
 
-            if (_dragState.IsDragging && _dragState.HasSnapshot)
+            if (!panelLocked && _dragState.IsDragging && _dragState.HasSnapshot)
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
                 {
@@ -301,9 +361,9 @@ namespace op.io.UI.BlockScripts.Blocks
             ControlKeyData.UpdateRenderOrders(updates);
         }
 
-        private static void DrawRowBackground(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle bounds)
+        private static void DrawRowBackground(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle bounds, bool panelLocked)
         {
-            if (bounds == Rectangle.Empty || _pixelTexture == null)
+            if (panelLocked || bounds == Rectangle.Empty || _pixelTexture == null)
             {
                 return;
             }
@@ -388,6 +448,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 _keybindCache[i] = row;
                 y += _lineHeightCache;
             }
+        }
+
+        private static bool HasDragExceededThreshold(Point position)
+        {
+            int deltaX = Math.Abs(position.X - _pressStartPosition.X);
+            int deltaY = Math.Abs(position.Y - _pressStartPosition.Y);
+            return deltaX >= DragStartThreshold || deltaY >= DragStartThreshold;
         }
 
         private static void UpdateTypeToggleBounds(UIStyle.UIFont boldFont)
@@ -620,6 +687,484 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return true;
+        }
+
+        public static bool IsRebindOverlayOpen() => _rebindOverlayVisible;
+
+        public static void UpdateRebindOverlay(GameTime gameTime, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        {
+            if (!_rebindOverlayVisible)
+            {
+                return;
+            }
+
+            EnsureRebindLayout();
+
+            bool leftReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+            bool pointerOnConfirm = _rebindConfirmButtonBounds.Contains(mouseState.Position);
+            bool pointerOnUnbind = _rebindUnbindButtonBounds.Contains(mouseState.Position);
+
+            if (!(pointerOnConfirm && leftReleased) && !(pointerOnUnbind && leftReleased))
+            {
+                if (_suppressNextCapture)
+                {
+                    if (AnyReleaseDetected(keyboardState, previousKeyboardState, mouseState, previousMouseState))
+                    {
+                        _suppressNextCapture = false;
+                    }
+                }
+                else if (TryCaptureBinding(keyboardState, previousKeyboardState, mouseState, previousMouseState, out string inputKey, out string displayLabel))
+                {
+                    _rebindPendingInput = inputKey;
+                _rebindPendingDisplay = displayLabel;
+                _rebindCaptured = true;
+                EvaluateBindingConflicts(inputKey);
+            }
+        }
+
+            if (leftReleased && pointerOnUnbind)
+            {
+                SetPendingUnbind();
+            }
+            else if (leftReleased && pointerOnConfirm)
+            {
+                ApplyRebindSelection();
+            }
+        }
+
+        public static void DrawRebindOverlay(SpriteBatch spriteBatch)
+        {
+            if (!_rebindOverlayVisible || spriteBatch == null)
+            {
+                return;
+            }
+
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            UIStyle.UIFont bodyFont = UIStyle.FontTech;
+            UIStyle.UIFont buttonFont = UIStyle.FontBody;
+            if (!headerFont.IsAvailable || !bodyFont.IsAvailable || !buttonFont.IsAvailable)
+            {
+                return;
+            }
+
+            Rectangle viewport = GetViewportBounds();
+            if (viewport == Rectangle.Empty)
+            {
+                return;
+            }
+
+            EnsurePixelTexture();
+            EnsureRebindLayout();
+            if (_rebindModalBounds == Rectangle.Empty || _rebindConfirmButtonBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            FillRect(spriteBatch, viewport, RebindScrimColor);
+            FillRect(spriteBatch, _rebindModalBounds, UIStyle.PanelBackground);
+            DrawRectOutline(spriteBatch, _rebindModalBounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
+
+            string title = string.IsNullOrWhiteSpace(_rebindAction) ? "Rebind keybind" : $"Rebind {_rebindAction}";
+            Vector2 titleSize = headerFont.MeasureString(title);
+            Vector2 titlePosition = new(_rebindModalBounds.X + (_rebindModalBounds.Width - titleSize.X) / 2f, _rebindModalBounds.Y + 12);
+            headerFont.DrawString(spriteBatch, title, titlePosition, UIStyle.TextColor);
+
+            float lineHeight = MathF.Max(20f, bodyFont.LineHeight);
+            int textX = _rebindModalBounds.X + 20;
+            float textY = _rebindModalBounds.Y + titleSize.Y + 24f;
+
+            string instruction = "Press and release a new key or mouse button to capture.";
+            bodyFont.DrawString(spriteBatch, instruction, new Vector2(textX, textY), UIStyle.TextColor);
+            textY += lineHeight + 6f;
+
+            string currentValue = string.IsNullOrWhiteSpace(_rebindCurrentInput) ? "Unbound" : _rebindCurrentInput;
+            string currentLabel = $"Current: {currentValue}";
+            bodyFont.DrawString(spriteBatch, currentLabel, new Vector2(textX, textY), UIStyle.MutedTextColor);
+            textY += lineHeight + 4f;
+
+            string pendingValue = string.IsNullOrWhiteSpace(_rebindPendingDisplay)
+                ? (string.IsNullOrWhiteSpace(_rebindCurrentInput) ? "Unbound" : _rebindCurrentInput)
+                : _rebindPendingDisplay;
+            string pendingLabel = _rebindCaptured ? "New binding" : "Pending";
+            string pendingText = $"{pendingLabel}: {pendingValue}";
+            Color pendingColor = _rebindCaptured ? UIStyle.AccentColor : UIStyle.TextColor;
+            bodyFont.DrawString(spriteBatch, pendingText, new Vector2(textX, textY), pendingColor);
+            textY += lineHeight + 8f;
+
+            string footer = "Confirm to save and close.";
+            bodyFont.DrawString(spriteBatch, footer, new Vector2(textX, textY), UIStyle.MutedTextColor);
+
+            if (!string.IsNullOrWhiteSpace(_rebindConflictWarning))
+            {
+                textY += lineHeight + 4f;
+                bodyFont.DrawString(spriteBatch, _rebindConflictWarning, new Vector2(textX, textY), WarningColor);
+            }
+
+            FillRect(spriteBatch, _rebindUnbindButtonBounds, UIStyle.PanelBackground);
+            DrawRectOutline(spriteBatch, _rebindUnbindButtonBounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
+            string unbindLabel = "Unbind";
+            Vector2 unbindSize = buttonFont.MeasureString(unbindLabel);
+            Vector2 unbindPosition = new(
+                _rebindUnbindButtonBounds.X + (_rebindUnbindButtonBounds.Width - unbindSize.X) / 2f,
+                _rebindUnbindButtonBounds.Y + (_rebindUnbindButtonBounds.Height - unbindSize.Y) / 2f);
+            buttonFont.DrawString(spriteBatch, unbindLabel, unbindPosition, UIStyle.TextColor);
+
+            FillRect(spriteBatch, _rebindConfirmButtonBounds, UIStyle.PanelBackground);
+            DrawRectOutline(spriteBatch, _rebindConfirmButtonBounds, UIStyle.AccentColor, UIStyle.PanelBorderThickness);
+            string confirmLabel = "Confirm";
+            Vector2 confirmSize = buttonFont.MeasureString(confirmLabel);
+            Vector2 confirmPosition = new(
+                _rebindConfirmButtonBounds.X + (_rebindConfirmButtonBounds.Width - confirmSize.X) / 2f,
+                _rebindConfirmButtonBounds.Y + (_rebindConfirmButtonBounds.Height - confirmSize.Y) / 2f);
+            buttonFont.DrawString(spriteBatch, confirmLabel, confirmPosition, UIStyle.TextColor);
+        }
+
+        private static void BeginRebindFlow(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            int index = GetRowIndex(settingKey);
+            if (index < 0)
+            {
+                return;
+            }
+
+            KeybindDisplayRow row = _keybindCache[index];
+            if (row.ToggleLocked)
+            {
+                return;
+            }
+
+            _dragState.Reset();
+            _pressedRowKey = null;
+
+            _rebindOverlayVisible = true;
+            _rebindAction = row.Action;
+            string currentBinding = string.IsNullOrWhiteSpace(row.Input) ? string.Empty : row.Input;
+            _rebindCurrentInput = currentBinding;
+            _rebindPendingInput = currentBinding;
+            _rebindPendingDisplay = string.IsNullOrWhiteSpace(currentBinding) ? "Unbound" : currentBinding;
+            _rebindCaptured = false;
+            _suppressNextCapture = true;
+            _rebindModalBounds = Rectangle.Empty;
+            _rebindConfirmButtonBounds = Rectangle.Empty;
+            _rebindUnbindButtonBounds = Rectangle.Empty;
+            EvaluateBindingConflicts(currentBinding);
+        }
+
+        private static void ApplyRebindSelection()
+        {
+            if (!_rebindOverlayVisible || string.IsNullOrWhiteSpace(_rebindAction))
+            {
+                ResetRebindOverlay();
+                return;
+            }
+
+            string finalBinding = string.IsNullOrWhiteSpace(_rebindPendingInput) ? _rebindCurrentInput : _rebindPendingInput;
+            finalBinding = finalBinding?.Trim();
+            if (string.IsNullOrWhiteSpace(finalBinding))
+            {
+                TryApplyUnbind();
+                return;
+            }
+
+            try
+            {
+                ControlKeyData.SetInputKey(_rebindAction, finalBinding);
+                if (!InputManager.TryUpdateBindingInputKey(_rebindAction, finalBinding, out string displayLabel))
+                {
+                    DebugLogger.PrintWarning($"Failed to apply new binding for '{_rebindAction}'.");
+                    displayLabel = finalBinding;
+                }
+
+                int index = GetRowIndex(_rebindAction);
+                if (index >= 0)
+                {
+                    var row = _keybindCache[index];
+                    row.Input = string.IsNullOrWhiteSpace(displayLabel) ? finalBinding : displayLabel;
+                    _keybindCache[index] = row;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to persist keybind '{_rebindAction}': {ex.Message}");
+            }
+            finally
+            {
+                ResetRebindOverlay();
+            }
+        }
+
+        private static void TryApplyUnbind()
+        {
+            try
+            {
+                if (!InputManager.TryUnbind(_rebindAction))
+                {
+                    DebugLogger.PrintWarning($"Failed to unbind '{_rebindAction}'.");
+                }
+
+                int index = GetRowIndex(_rebindAction);
+                if (index >= 0)
+                {
+                    var row = _keybindCache[index];
+                    row.Input = "Unbound";
+                    _keybindCache[index] = row;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to unbind keybind '{_rebindAction}': {ex.Message}");
+            }
+            finally
+            {
+                ResetRebindOverlay();
+            }
+        }
+
+        private static void ResetRebindOverlay()
+        {
+            _rebindOverlayVisible = false;
+            _rebindAction = null;
+            _rebindCurrentInput = null;
+            _rebindPendingInput = null;
+            _rebindPendingDisplay = null;
+            _rebindCaptured = false;
+            _suppressNextCapture = false;
+            _rebindModalBounds = Rectangle.Empty;
+            _rebindConfirmButtonBounds = Rectangle.Empty;
+            _rebindUnbindButtonBounds = Rectangle.Empty;
+            _rebindConflictWarning = null;
+        }
+
+        private static void EnsureRebindLayout()
+        {
+            Rectangle viewport = GetViewportBounds();
+            if (viewport == Rectangle.Empty)
+            {
+                _rebindModalBounds = Rectangle.Empty;
+                _rebindConfirmButtonBounds = Rectangle.Empty;
+                _rebindUnbindButtonBounds = Rectangle.Empty;
+                return;
+            }
+
+            int width = Math.Clamp((int)(viewport.Width * 0.46f), 360, 640);
+            int height = Math.Clamp((int)(viewport.Height * 0.32f), 220, 360);
+            int modalX = viewport.X + (viewport.Width - width) / 2;
+            int modalY = viewport.Y + (viewport.Height - height) / 2;
+            _rebindModalBounds = new Rectangle(modalX, modalY, width, height);
+
+            const int padding = 20;
+            const int buttonHeight = 34;
+            int buttonWidth = _rebindModalBounds.Width - (padding * 2);
+            _rebindUnbindButtonBounds = new Rectangle(_rebindModalBounds.X + padding, _rebindModalBounds.Bottom - padding - (buttonHeight * 2) - 8, buttonWidth, buttonHeight);
+            _rebindConfirmButtonBounds = new Rectangle(_rebindModalBounds.X + padding, _rebindModalBounds.Bottom - padding - buttonHeight, buttonWidth, buttonHeight);
+        }
+
+        private static Rectangle GetViewportBounds()
+        {
+            if (Core.Instance?.GraphicsDevice == null)
+            {
+                return Rectangle.Empty;
+            }
+
+            return Core.Instance.GraphicsDevice.Viewport.Bounds;
+        }
+
+        private static bool TryCaptureBinding(KeyboardState keyboardState, KeyboardState previousKeyboardState, MouseState mouseState, MouseState previousMouseState, out string inputKey, out string displayLabel)
+        {
+            inputKey = null;
+            displayLabel = null;
+
+            Keys? releasedKey = GetReleasedKey(keyboardState, previousKeyboardState);
+            string releasedMouse = GetReleasedMouseButton(mouseState, previousMouseState);
+
+            if (!releasedKey.HasValue && string.IsNullOrWhiteSpace(releasedMouse))
+            {
+                return false;
+            }
+
+            List<string> tokens = new();
+            AppendModifierToken(keyboardState, Keys.LeftControl, Keys.RightControl, "Ctrl", tokens);
+            AppendModifierToken(keyboardState, Keys.LeftShift, Keys.RightShift, "Shift", tokens);
+            AppendModifierToken(keyboardState, Keys.LeftAlt, Keys.RightAlt, "Alt", tokens);
+
+            if (releasedKey.HasValue)
+            {
+                tokens.Add(NormalizeKeyToken(releasedKey.Value));
+            }
+            else
+            {
+                tokens.Add(releasedMouse);
+            }
+
+            inputKey = string.Join(" + ", tokens).Trim();
+            displayLabel = BuildDisplayLabel(tokens);
+            return !string.IsNullOrWhiteSpace(inputKey);
+        }
+
+        private static bool AnyReleaseDetected(KeyboardState keyboardState, KeyboardState previousKeyboardState, MouseState mouseState, MouseState previousMouseState)
+        {
+            return GetReleasedKey(keyboardState, previousKeyboardState).HasValue ||
+                !string.IsNullOrWhiteSpace(GetReleasedMouseButton(mouseState, previousMouseState));
+        }
+
+        private static Keys? GetReleasedKey(KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        {
+            Keys[] previouslyPressed = previousKeyboardState.GetPressedKeys();
+            if (previouslyPressed == null || previouslyPressed.Length == 0)
+            {
+                return null;
+            }
+
+            foreach (Keys key in previouslyPressed)
+            {
+                if (key == Keys.None)
+                {
+                    continue;
+                }
+
+                if (!keyboardState.IsKeyDown(key))
+                {
+                    return key;
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetReleasedMouseButton(MouseState mouseState, MouseState previousMouseState)
+        {
+            if (mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed)
+            {
+                return "LeftClick";
+            }
+
+            if (mouseState.RightButton == ButtonState.Released && previousMouseState.RightButton == ButtonState.Pressed)
+            {
+                return "RightClick";
+            }
+
+            return null;
+        }
+
+        private static void AppendModifierToken(KeyboardState keyboardState, Keys primary, Keys secondary, string tokenLabel, List<string> tokens)
+        {
+            if (tokens == null || string.IsNullOrWhiteSpace(tokenLabel))
+            {
+                return;
+            }
+
+            if ((primary != Keys.None && keyboardState.IsKeyDown(primary)) || (secondary != Keys.None && keyboardState.IsKeyDown(secondary)))
+            {
+                if (!tokens.Contains(tokenLabel, StringComparer.OrdinalIgnoreCase))
+                {
+                    tokens.Add(tokenLabel);
+                }
+            }
+        }
+
+        private static string NormalizeKeyToken(Keys key)
+        {
+            if (key == Keys.LeftControl || key == Keys.RightControl)
+            {
+                return "Ctrl";
+            }
+
+            if (key == Keys.LeftShift || key == Keys.RightShift)
+            {
+                return "Shift";
+            }
+
+            if (key == Keys.LeftAlt || key == Keys.RightAlt)
+            {
+                return "Alt";
+            }
+
+            string token = key.ToString();
+            if (token.Length <= 1)
+            {
+                return token.ToUpperInvariant();
+            }
+
+            return char.ToUpperInvariant(token[0]) + token[1..];
+        }
+
+        private static string BuildDisplayLabel(IReadOnlyList<string> tokens)
+        {
+            if (tokens == null || tokens.Count == 0)
+            {
+                return "Unbound";
+            }
+
+            _stringBuilder.Clear();
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                string token = tokens[i];
+                if (string.Equals(token, "LeftClick", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Left Click";
+                }
+                else if (string.Equals(token, "RightClick", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Right Click";
+                }
+
+                _stringBuilder.Append(token);
+                if (i < tokens.Count - 1)
+                {
+                    _stringBuilder.Append(" + ");
+                }
+            }
+
+            return _stringBuilder.ToString();
+        }
+
+        private static void DrawRectOutline(SpriteBatch spriteBatch, Rectangle bounds, Color color, int thickness)
+        {
+            if (_pixelTexture == null || bounds.Width <= 0 || bounds.Height <= 0 || spriteBatch == null)
+            {
+                return;
+            }
+
+            thickness = Math.Max(1, thickness);
+            Rectangle top = new(bounds.X, bounds.Y, bounds.Width, thickness);
+            Rectangle bottom = new(bounds.X, bounds.Bottom - thickness, bounds.Width, thickness);
+            Rectangle left = new(bounds.X, bounds.Y, thickness, bounds.Height);
+            Rectangle right = new(bounds.Right - thickness, bounds.Y, thickness, bounds.Height);
+
+            spriteBatch.Draw(_pixelTexture, top, color);
+            spriteBatch.Draw(_pixelTexture, bottom, color);
+            spriteBatch.Draw(_pixelTexture, left, color);
+            spriteBatch.Draw(_pixelTexture, right, color);
+        }
+
+        private static void EvaluateBindingConflicts(string inputKey)
+        {
+            _rebindConflictWarning = null;
+
+            if (string.IsNullOrWhiteSpace(inputKey) || string.IsNullOrWhiteSpace(_rebindAction))
+            {
+                return;
+            }
+
+            IReadOnlyList<string> conflicts = InputManager.GetBindingsForInputKey(inputKey, _rebindAction);
+            if (conflicts.Count > 0)
+            {
+                _rebindConflictWarning = "Already bound to: " + string.Join(", ", conflicts);
+            }
+        }
+
+        private static void SetPendingUnbind()
+        {
+            _rebindPendingInput = string.Empty;
+            _rebindPendingDisplay = "Unbound";
+            _rebindCaptured = true;
+            _suppressNextCapture = true;
+            _rebindConflictWarning = null;
         }
 
         private struct KeybindDisplayRow

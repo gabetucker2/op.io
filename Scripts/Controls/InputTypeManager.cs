@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -468,6 +469,92 @@ namespace op.io
             if (!isCombo && !string.IsNullOrWhiteSpace(primaryToken))
             {
                 AddInputKeyMapping(primaryToken, settingKey);
+            }
+        }
+
+        public static void UpdateInputKeyMapping(string settingKey, string newInputKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(newInputKey))
+            {
+                return;
+            }
+
+            if (_settingKeyToInputKey.TryGetValue(settingKey, out string existing) && !string.IsNullOrWhiteSpace(existing))
+            {
+                RemoveInputKeyMapping(settingKey, existing);
+            }
+
+            _settingKeyToInputKey[settingKey] = newInputKey;
+            RegisterInputKeyForSetting(settingKey, newInputKey);
+            RegisterComboKeyMembership(settingKey, newInputKey);
+        }
+
+        public static void ClearInputKeyMapping(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            if (_settingKeyToInputKey.TryGetValue(settingKey, out string existing) && !string.IsNullOrWhiteSpace(existing))
+            {
+                RemoveInputKeyMapping(settingKey, existing);
+            }
+
+            _settingKeyToInputKey.Remove(settingKey);
+        }
+
+        public static IReadOnlyList<string> GetSettingKeysForInputKey(string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return Array.Empty<string>();
+            }
+
+            if (_inputKeyToSettingKeys.TryGetValue(inputKey.Trim(), out var list) && list != null && list.Count > 0)
+            {
+                return list.ToList();
+            }
+
+            return Array.Empty<string>();
+        }
+
+        private static void RemoveInputKeyMapping(string settingKey, string inputKey)
+        {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return;
+            }
+
+            if (_inputKeyToSettingKeys.TryGetValue(inputKey, out var directList))
+            {
+                directList.Remove(settingKey);
+                if (directList.Count == 0)
+                {
+                    _inputKeyToSettingKeys.Remove(inputKey);
+                }
+            }
+
+            string primaryToken = GetPrimaryToken(inputKey);
+            if (!string.IsNullOrWhiteSpace(primaryToken) && _inputKeyToSettingKeys.TryGetValue(primaryToken, out var primaryList))
+            {
+                primaryList.Remove(settingKey);
+                if (primaryList.Count == 0)
+                {
+                    _inputKeyToSettingKeys.Remove(primaryToken);
+                }
+            }
+
+            foreach (Keys key in GetKeysFromInputKey(inputKey))
+            {
+                if (_keyToComboBindings.TryGetValue(key, out var combos) && combos != null)
+                {
+                    combos.Remove(settingKey);
+                    if (combos.Count == 0)
+                    {
+                        _keyToComboBindings.Remove(key);
+                    }
+                }
             }
         }
 
