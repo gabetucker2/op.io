@@ -332,7 +332,167 @@ namespace op.io
                 keys.RemoveAll(k => string.Equals(k, excludeSetting, StringComparison.OrdinalIgnoreCase));
             }
 
+            List<string> normalizedInput = NormalizeInputTokens(inputKey);
+            if (normalizedInput.Count == 0)
+            {
+                return keys;
+            }
+
+            foreach (var kvp in _controlBindings)
+            {
+                if (!string.IsNullOrWhiteSpace(excludeSetting) && string.Equals(kvp.Key, excludeSetting, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (keys.Contains(kvp.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (BindingMatchesInputTokens(kvp.Value, normalizedInput))
+                {
+                    keys.Add(kvp.Key);
+                }
+            }
+
             return keys;
+        }
+
+        private static List<string> NormalizeInputTokens(string inputKey)
+        {
+            List<string> tokens = new();
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return tokens;
+            }
+
+            string[] rawTokens = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            foreach (string raw in rawTokens)
+            {
+                string normalized = NormalizeInputToken(raw);
+                if (!string.IsNullOrWhiteSpace(normalized))
+                {
+                    tokens.Add(normalized);
+                }
+            }
+
+            tokens.Sort(StringComparer.OrdinalIgnoreCase);
+            return tokens;
+        }
+
+        private static bool BindingMatchesInputTokens(ControlBinding binding, IReadOnlyList<string> normalizedInputTokens)
+        {
+            if (binding?.Tokens == null || normalizedInputTokens == null || normalizedInputTokens.Count == 0)
+            {
+                return false;
+            }
+
+            List<string> bindingTokens = new();
+            foreach (InputBindingToken token in binding.Tokens)
+            {
+                string normalized = token.IsMouse
+                    ? NormalizeInputToken(token.MouseButton)
+                    : NormalizeKeyToken(token.Keys);
+                if (!string.IsNullOrWhiteSpace(normalized))
+                {
+                    bindingTokens.Add(normalized);
+                }
+            }
+
+            if (bindingTokens.Count != normalizedInputTokens.Count)
+            {
+                return false;
+            }
+
+            bindingTokens.Sort(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < bindingTokens.Count; i++)
+            {
+                if (!string.Equals(bindingTokens[i], normalizedInputTokens[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static string NormalizeInputToken(string rawToken)
+        {
+            if (string.IsNullOrWhiteSpace(rawToken))
+            {
+                return string.Empty;
+            }
+
+            string trimmed = rawToken.Trim();
+            string collapsed = trimmed.Replace(" ", string.Empty);
+
+            if (collapsed.Equals("LeftClick", StringComparison.OrdinalIgnoreCase))
+            {
+                return "LeftClick";
+            }
+
+            if (collapsed.Equals("RightClick", StringComparison.OrdinalIgnoreCase))
+            {
+                return "RightClick";
+            }
+
+            if (collapsed.Equals("LeftControl", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("RightControl", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("Control", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("Ctrl", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Ctrl";
+            }
+
+            if (collapsed.Equals("LeftShift", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("RightShift", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("Shift", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Shift";
+            }
+
+            if (collapsed.Equals("LeftAlt", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("RightAlt", StringComparison.OrdinalIgnoreCase) ||
+                collapsed.Equals("Alt", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Alt";
+            }
+
+            return NormalizeLabel(trimmed);
+        }
+
+        private static string NormalizeKeyToken(IReadOnlyList<Keys> keys)
+        {
+            if (keys == null || keys.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            foreach (Keys key in keys)
+            {
+                switch (key)
+                {
+                    case Keys.LeftControl:
+                    case Keys.RightControl:
+                        return "Ctrl";
+                    case Keys.LeftShift:
+                    case Keys.RightShift:
+                        return "Shift";
+                    case Keys.LeftAlt:
+                    case Keys.RightAlt:
+                        return "Alt";
+                    default:
+                        string label = NormalizeLabel(key.ToString());
+                        if (!string.IsNullOrWhiteSpace(label))
+                        {
+                            return label;
+                        }
+                        break;
+                }
+            }
+
+            return string.Empty;
         }
 
         private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, bool lockMode, out ControlBinding binding)

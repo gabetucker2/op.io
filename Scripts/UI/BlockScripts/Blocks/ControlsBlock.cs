@@ -1272,7 +1272,7 @@ namespace op.io.UI.BlockScripts.Blocks
             IReadOnlyList<string> conflicts = InputManager.GetBindingsForInputKey(canonical, _rebindAction);
             if (conflicts.Count > 0)
             {
-                _rebindConflictWarning = "Warning: also bound to " + string.Join(", ", conflicts);
+                _rebindConflictWarning = "Duplicate binding: also bound to " + string.Join(", ", conflicts);
             }
         }
 
