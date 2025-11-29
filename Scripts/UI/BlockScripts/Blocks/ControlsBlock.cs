@@ -354,9 +354,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 bool state = GetSwitchState(row.Action);
                 BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, state);
             }
-            else if (row.InputType == InputType.Trigger && !panelLocked &&
-                (string.Equals(_hoveredTypeKey, row.Action, StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(_hoveredRowKey, row.Action, StringComparison.OrdinalIgnoreCase)))
+            else if (row.InputType == InputType.Trigger && !panelLocked)
             {
                 BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, row.TriggerAutoFire);
             }
