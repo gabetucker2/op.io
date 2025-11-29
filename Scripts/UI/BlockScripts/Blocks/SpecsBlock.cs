@@ -17,6 +17,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static readonly List<SpecRow> _rows = new();
         private static readonly Dictionary<string, int> _customOrder = new(StringComparer.OrdinalIgnoreCase);
+        private static bool _orderCacheHydrated;
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly StringBuilder _stringBuilder = new();
         private static readonly BlockDragState<SpecRow> _dragState = new(row => row.Key, row => row.Bounds, (row, isDragging) =>
@@ -169,10 +170,33 @@ namespace op.io.UI.BlockScripts.Blocks
             _scrollPanel.Draw(spriteBatch);
         }
 
+        private static void EnsureOrderCacheHydrated()
+        {
+            if (_orderCacheHydrated)
+            {
+                return;
+            }
+
+            Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockPanelKind.Specs);
+            if (storedOrders.Count > 0)
+            {
+                _customOrder.Clear();
+                foreach (var entry in storedOrders)
+                {
+                    _customOrder[entry.Key] = entry.Value;
+                }
+            }
+
+            _orderCacheHydrated = true;
+        }
+
         private static void RefreshRows()
         {
+            EnsureOrderCacheHydrated();
+
             IReadOnlyList<SystemSpec> specs = SystemSpecsProvider.GetSpecs();
             HashSet<string> incoming = new(StringComparer.OrdinalIgnoreCase);
+            bool orderChanged = false;
             int nextOrder = GetNextOrderSeed();
 
             foreach (SystemSpec spec in specs)
@@ -186,6 +210,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (!_customOrder.ContainsKey(spec.Key))
                 {
                     _customOrder[spec.Key] = nextOrder++;
+                    orderChanged = true;
                 }
 
                 SpecRow row = FindRow(spec.Key);
@@ -209,27 +234,69 @@ namespace op.io.UI.BlockScripts.Blocks
                     if (!incoming.Contains(_rows[i].Key))
                     {
                         _rows.RemoveAt(i);
+                        orderChanged = true;
                     }
                 }
             }
 
-            NormalizeCustomOrder();
+            foreach (string key in new List<string>(_customOrder.Keys))
+            {
+                if (!incoming.Contains(key))
+                {
+                    _customOrder.Remove(key);
+                    orderChanged = true;
+                }
+            }
+
+            orderChanged |= NormalizeCustomOrder();
             ApplyOrdersToRows();
+
+            if (orderChanged)
+            {
+                PersistRowOrders();
+            }
         }
 
-        private static void NormalizeCustomOrder()
+        private static bool NormalizeCustomOrder()
         {
             if (_customOrder.Count == 0)
             {
-                return;
+                return false;
             }
 
             List<KeyValuePair<string, int>> entries = new(_customOrder);
             entries.Sort((a, b) => a.Value.CompareTo(b.Value));
+            bool changed = false;
             for (int i = 0; i < entries.Count; i++)
             {
-                _customOrder[entries[i].Key] = i + 1;
+                int desiredOrder = i + 1;
+                if (_customOrder[entries[i].Key] != desiredOrder)
+                {
+                    _customOrder[entries[i].Key] = desiredOrder;
+                    changed = true;
+                }
             }
+
+            return changed;
+        }
+
+        private static void PersistRowOrders()
+        {
+            List<KeyValuePair<string, int>> ordered = new(_customOrder);
+            ordered.Sort((a, b) => a.Value.CompareTo(b.Value));
+
+            List<(string RowKey, int Order)> rows = new(ordered.Count);
+            foreach (KeyValuePair<string, int> entry in ordered)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Key) || entry.Value <= 0)
+                {
+                    continue;
+                }
+
+                rows.Add((entry.Key, entry.Value));
+            }
+
+            BlockDataStore.SaveRowOrders(DockPanelKind.Specs, rows);
         }
 
         private static void ApplyOrdersToRows()
@@ -293,10 +360,19 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void UpdateCustomOrderFromRows()
         {
+            bool changed = false;
             for (int i = 0; i < _rows.Count; i++)
             {
                 SpecRow row = _rows[i];
                 _customOrder[row.Key] = row.RenderOrder;
+                changed = true;
+            }
+
+            changed |= NormalizeCustomOrder();
+
+            if (changed)
+            {
+                PersistRowOrders();
             }
         }
 
@@ -386,7 +462,16 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static int GetNextOrderSeed()
         {
-            return Math.Max(1, _customOrder.Count + 1);
+            int max = 0;
+            foreach (int value in _customOrder.Values)
+            {
+                if (value > max)
+                {
+                    max = value;
+                }
+            }
+
+            return Math.Max(1, max + 1);
         }
 
         private static void EnsurePixelTexture()

@@ -9,8 +9,8 @@ namespace op.io
         // Manual settings
 
         // do not use `ForceDebugMode` unless `DebugMode` in `InitDB_StartData_Settlings.sql` isn't working.
-        public static bool ForceDebugMode { get; set; } = false;
         public static bool RestartDB { get; set; } = true;
+        public static bool ForceDebugMode { get; set; } = false;
 
         public static Color TransparentWindowColor = new(255, 105, 180);
         public static Color DefaultColor = new(255, 105, 179);

@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.Blocks;
+using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io
 {
@@ -678,11 +679,8 @@ namespace op.io
                 return false;
             }
 
-            if (!_panelLockStates.TryGetValue(panel.Id, out bool locked))
-            {
-                locked = true;
-                _panelLockStates[panel.Id] = locked;
-            }
+            EnsurePanelLockState(panel);
+            _panelLockStates.TryGetValue(panel.Id, out bool locked);
 
             return locked;
         }
@@ -696,6 +694,7 @@ namespace op.io
 
             bool nextState = !IsPanelLocked(panel);
             _panelLockStates[panel.Id] = nextState;
+            BlockDataStore.SetPanelLock(panel.Kind, nextState);
         }
 
         private static void EnsurePanelLockState(DockPanel panel)
@@ -705,7 +704,8 @@ namespace op.io
                 return;
             }
 
-            _panelLockStates[panel.Id] = true;
+            bool storedLock = BlockDataStore.GetPanelLock(panel.Kind);
+            _panelLockStates[panel.Id] = storedLock;
         }
 
         private static DockPanel HitTestDragBarPanel(Point position, bool excludeHeaderButtons = false)

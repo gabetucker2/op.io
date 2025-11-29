@@ -2,6 +2,7 @@
 using System.IO;
 using System.Data.SQLite;
 using System.Collections.Generic;
+using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io
 {
@@ -23,6 +24,11 @@ namespace op.io
             bool databaseExists = File.Exists(primaryPath);
             bool shouldReset = Core.RestartDB || !databaseExists;
 
+            if (shouldReset)
+            {
+                BlockDataStore.ResetCache();
+            }
+
             if (!shouldReset && databaseExists)
             {
                 DebugLogger.PrintDatabase("RestartDB disabled and database already exists. Skipping database reset.");
@@ -35,6 +41,7 @@ namespace op.io
                 }
 
                 DatabaseConfig.ConfigureDatabase(existingConnection);
+                EnsureBlockTables(existingConnection);
                 DatabaseManager.CloseConnection(existingConnection);
                 _alreadyInitialized = true;
                 return;
@@ -54,6 +61,7 @@ namespace op.io
 
             // Load structure scripts FIRST
             LoadStructureScripts(connection);
+            EnsureBlockTables(connection);
 
             // Verify tables exist BEFORE inserting data
             VerifyTablesExistence(connection);
@@ -75,6 +83,19 @@ namespace op.io
             SQLScriptExecutor.RunSQLScript(connection, structurePathGOs);
 
             DebugLogger.PrintDatabase("Database structure scripts loaded successfully.");
+        }
+
+        private static void EnsureBlockTables(SQLiteConnection connection)
+        {
+            try
+            {
+                BlockDataStore.EnsureTables(connection, DockPanelKind.Controls, DockPanelKind.Backend, DockPanelKind.Specs);
+                DebugLogger.PrintDatabase("Ensured block tables for lock/order persistence.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to ensure block tables: {ex.Message}");
+            }
         }
 
         private static void LoadStartData(SQLiteConnection connection)

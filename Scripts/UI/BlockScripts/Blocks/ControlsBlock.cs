@@ -161,6 +161,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 ControlKeyMigrations.EnsureApplied();
                 _keybindCache.Clear();
 
+                Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockPanelKind.Controls);
+
                 const string sql = "SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey;";
                 var rows = DatabaseQuery.ExecuteQuery(sql);
                 int fallbackOrder = 1;
@@ -181,6 +183,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     string actionLabel = row.TryGetValue("SettingKey", out object action) ? action?.ToString() ?? "Action" : "Action";
                     string inputLabel = row.TryGetValue("InputKey", out object key) ? key?.ToString() ?? "Key" : "Key";
                     int orderValue = row.TryGetValue("ControlOrder", out object orderObj) ? Convert.ToInt32(orderObj) : fallbackOrder;
+                    int resolvedOrder = storedOrders.TryGetValue(actionLabel, out int storedOrder) ? storedOrder : orderValue;
 
                     if (ControlKeyRules.RequiresSwitchSemantics(actionLabel))
                     {
@@ -193,7 +196,7 @@ namespace op.io.UI.BlockScripts.Blocks
                         Input = inputLabel,
                         TypeLabel = parsedType.ToString(),
                         InputType = parsedType,
-                        RenderOrder = orderValue > 0 ? orderValue : fallbackOrder,
+                        RenderOrder = resolvedOrder > 0 ? resolvedOrder : fallbackOrder,
                         Bounds = Rectangle.Empty,
                         IsDragging = false
                     });
@@ -201,7 +204,9 @@ namespace op.io.UI.BlockScripts.Blocks
                     fallbackOrder++;
                 }
 
+                _keybindCache.Sort((a, b) => a.RenderOrder.CompareTo(b.RenderOrder));
                 NormalizeCacheOrder();
+                PersistRowOrder();
             }
             catch (Exception ex)
             {
@@ -215,6 +220,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void PersistRowOrder()
         {
+            List<(string RowKey, int Order)> blockOrders = new(_keybindCache.Count);
             List<(string SettingKey, int Order)> updates = new(_keybindCache.Count);
             foreach (KeybindDisplayRow row in _keybindCache)
             {
@@ -223,9 +229,11 @@ namespace op.io.UI.BlockScripts.Blocks
                     continue;
                 }
 
+                blockOrders.Add((row.Action, row.RenderOrder));
                 updates.Add((row.Action, row.RenderOrder));
             }
 
+            BlockDataStore.SaveRowOrders(DockPanelKind.Controls, blockOrders);
             ControlKeyData.UpdateRenderOrders(updates);
         }
 
