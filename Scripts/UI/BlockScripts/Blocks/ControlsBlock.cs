@@ -23,11 +23,18 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
         private static float _lineHeightCache;
+        private static string _hoveredTypeKey;
+        private static bool _hoveredTypeIndicator;
         private static readonly BlockScrollPanel _scrollPanel = new();
 
         private static readonly Color HoverRowColor = new(38, 38, 38, 180);
         private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
         private static readonly Color DropIndicatorColor = new(110, 142, 255, 90);
+        private static readonly Color TypeToggleIdleFill = new(38, 38, 38, 140);
+        private static readonly Color TypeToggleHoverFill = new(68, 92, 160, 200);
+        private static readonly Color TypeToggleActiveFill = new(68, 92, 160, 230);
+        private const int TypeTogglePadding = 2;
+        private const int TypeIndicatorDiameter = 10;
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
@@ -49,6 +56,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             UpdateRowBounds(listBounds);
+            UpdateTypeToggleBounds(boldFont);
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -59,7 +67,18 @@ namespace op.io.UI.BlockScripts.Blocks
                 _dragState.Reset();
             }
 
-            _hoveredRowKey = !panelLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            bool allowInteraction = !panelLocked && pointerInsideList;
+            _hoveredRowKey = allowInteraction ? HitTestRow(mouseState.Position) : null;
+            if (allowInteraction)
+            {
+                _hoveredTypeKey = HitTestTypeToggle(mouseState.Position, listBounds, out bool indicatorArea);
+                _hoveredTypeIndicator = indicatorArea;
+            }
+            else
+            {
+                _hoveredTypeKey = null;
+                _hoveredTypeIndicator = false;
+            }
 
             if (_dragState.IsDragging)
             {
@@ -75,6 +94,10 @@ namespace op.io.UI.BlockScripts.Blocks
                         }
                     }
                 }
+            }
+            else if (allowInteraction && leftClickStarted && TryToggleInputType(_hoveredTypeKey, boldFont, _hoveredTypeIndicator))
+            {
+                // Interaction consumed by type toggle.
             }
             else if (!panelLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
             {
@@ -94,6 +117,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Controls);
+
             EnsureKeybindCache();
             if (_lineHeightCache <= 0f)
             {
@@ -106,6 +131,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             EnsurePixelTexture();
+            UpdateTypeToggleBounds(boldFont);
 
             float lineHeight = _lineHeightCache;
             foreach (KeybindDisplayRow row in _keybindCache)
@@ -130,7 +156,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (!isDraggingRow)
                 {
                     DrawRowBackground(spriteBatch, row, rowBounds);
-                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds);
+                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds, panelLocked);
                 }
             }
 
@@ -141,7 +167,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     FillRect(spriteBatch, _dragState.DropIndicatorBounds, DropIndicatorColor);
                 }
 
-                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont);
+                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont, panelLocked);
             }
 
             _scrollPanel.Draw(spriteBatch);
@@ -162,6 +188,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 _keybindCache.Clear();
 
                 Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockPanelKind.Controls);
+                Dictionary<string, string> storedRowData = BlockDataStore.LoadRowData(DockPanelKind.Controls);
 
                 const string sql = "SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey;";
                 var rows = DatabaseQuery.ExecuteQuery(sql);
@@ -185,20 +212,42 @@ namespace op.io.UI.BlockScripts.Blocks
                     int orderValue = row.TryGetValue("ControlOrder", out object orderObj) ? Convert.ToInt32(orderObj) : fallbackOrder;
                     int resolvedOrder = storedOrders.TryGetValue(actionLabel, out int storedOrder) ? storedOrder : orderValue;
 
+                    bool triggerAuto = false;
+                    string canonicalKey = BlockDataStore.CanonicalizeRowKey(DockPanelKind.Controls, actionLabel);
+                    if (storedRowData.TryGetValue(canonicalKey, out string storedData) &&
+                        TryParseRowData(storedData, out InputType storedType, out bool storedTriggerAuto) &&
+                        storedType != InputType.Switch)
+                    {
+                        parsedType = storedType;
+                        triggerAuto = storedTriggerAuto;
+                    }
+
                     if (ControlKeyRules.RequiresSwitchSemantics(actionLabel))
                     {
                         parsedType = InputType.Switch;
+                        triggerAuto = false;
                     }
+
+                    string parsedTypeLabel = parsedType.ToString();
+                    if (!string.Equals(typeLabel, parsedTypeLabel, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ControlKeyData.SetInputType(actionLabel, parsedTypeLabel);
+                    }
+
+                    InputManager.UpdateBindingInputType(actionLabel, parsedType, triggerAuto);
+                    BlockDataStore.SetRowData(DockPanelKind.Controls, actionLabel, SerializeRowData(parsedType, triggerAuto));
 
                     _keybindCache.Add(new KeybindDisplayRow
                     {
                         Action = actionLabel,
                         Input = inputLabel,
-                        TypeLabel = parsedType.ToString(),
+                        TypeLabel = parsedTypeLabel,
                         InputType = parsedType,
                         RenderOrder = resolvedOrder > 0 ? resolvedOrder : fallbackOrder,
                         Bounds = Rectangle.Empty,
-                        IsDragging = false
+                        IsDragging = false,
+                        TypeToggleBounds = Rectangle.Empty,
+                        TriggerAutoFire = triggerAuto
                     });
 
                     fallbackOrder++;
@@ -250,7 +299,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
+        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, bool panelLocked)
         {
             Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, lineHeight);
             if (dragBounds == Rectangle.Empty)
@@ -262,12 +311,26 @@ namespace op.io.UI.BlockScripts.Blocks
 
             KeybindDisplayRow row = _dragState.DraggingSnapshot;
             row.Bounds = dragBounds;
-            DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds);
+            row.TypeToggleBounds = Rectangle.Empty;
+            DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds, panelLocked);
         }
 
-        private static void DrawRowContents(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle rowBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, Rectangle contentBounds)
+        private static void DrawRowContents(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle rowBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, Rectangle contentBounds, bool panelLocked)
         {
             Vector2 labelPosition = new(rowBounds.X, rowBounds.Y);
+
+            bool showToggle = !panelLocked && row.IsToggleCandidate && row.TypeToggleBounds != Rectangle.Empty;
+            if (showToggle)
+            {
+                bool hovered = string.Equals(_hoveredTypeKey, row.Action, StringComparison.OrdinalIgnoreCase);
+                Color fill = row.InputType == InputType.Trigger && row.TriggerAutoFire ? TypeToggleActiveFill : TypeToggleIdleFill;
+                if (hovered)
+                {
+                    fill = TypeToggleHoverFill;
+                }
+
+                FillRect(spriteBatch, row.TypeToggleBounds, fill);
+            }
 
             _stringBuilder.Clear();
             _stringBuilder.Append(row.Action);
@@ -291,6 +354,12 @@ namespace op.io.UI.BlockScripts.Blocks
                 bool state = GetSwitchState(row.Action);
                 BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, state);
             }
+            else if (row.InputType == InputType.Trigger && !panelLocked &&
+                (string.Equals(_hoveredTypeKey, row.Action, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(_hoveredRowKey, row.Action, StringComparison.OrdinalIgnoreCase)))
+            {
+                BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, row.TriggerAutoFire);
+            }
         }
 
         private static void UpdateRowBounds(Rectangle contentBounds)
@@ -312,6 +381,38 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
+        private static void UpdateTypeToggleBounds(UIStyle.UIFont boldFont)
+        {
+            if (_lineHeightCache <= 0f || !boldFont.IsAvailable)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _keybindCache.Count; i++)
+            {
+                var row = _keybindCache[i];
+                if (row.Bounds == Rectangle.Empty || row.IsSwitch)
+                {
+                    row.TypeToggleBounds = Rectangle.Empty;
+                    _keybindCache[i] = row;
+                    continue;
+                }
+
+                string actionPrefix = string.Concat(row.Action ?? string.Empty, " ");
+                string typeLabel = string.Concat("[", row.TypeLabel ?? string.Empty, "]");
+                Vector2 actionSize = boldFont.MeasureString(actionPrefix);
+                Vector2 typeSize = boldFont.MeasureString(typeLabel);
+
+                int x = (int)MathF.Round(row.Bounds.X + actionSize.X) - TypeTogglePadding;
+                int y = row.Bounds.Y;
+                int height = row.Bounds.Height > 0 ? row.Bounds.Height : (int)MathF.Ceiling(_lineHeightCache);
+                int width = (int)MathF.Ceiling(typeSize.X) + (TypeTogglePadding * 2);
+
+                row.TypeToggleBounds = new Rectangle(x, y, width, height);
+                _keybindCache[i] = row;
+            }
+        }
+
         private static string HitTestRow(Point position)
         {
             foreach (KeybindDisplayRow row in _keybindCache)
@@ -319,6 +420,37 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (row.Bounds.Contains(position))
                 {
                     return row.Action;
+                }
+            }
+
+            return null;
+        }
+
+        private static string HitTestTypeToggle(Point position, Rectangle contentBounds, out bool indicatorArea)
+        {
+            indicatorArea = false;
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (row.IsSwitch || row.TypeToggleBounds == Rectangle.Empty)
+                {
+                    continue;
+                }
+
+                if (row.TypeToggleBounds.Contains(position))
+                {
+                    return row.Action;
+                }
+
+                if (row.InputType == InputType.Trigger && _lineHeightCache > 0f)
+                {
+                    int indicatorX = Math.Max(contentBounds.X, contentBounds.Right - TypeIndicatorDiameter - 4);
+                    int indicatorY = (int)(row.Bounds.Y + ((_lineHeightCache - TypeIndicatorDiameter) / 2f));
+                    Rectangle indicatorBounds = new(indicatorX, indicatorY, TypeIndicatorDiameter, TypeIndicatorDiameter);
+                    if (indicatorBounds.Contains(position))
+                    {
+                        indicatorArea = true;
+                        return row.Action;
+                    }
                 }
             }
 
@@ -357,6 +489,64 @@ namespace op.io.UI.BlockScripts.Blocks
             return -1;
         }
 
+        private static bool TryToggleInputType(string settingKey, UIStyle.UIFont boldFont, bool clickedIndicator)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            int index = GetRowIndex(settingKey);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var row = _keybindCache[index];
+            if (row.IsSwitch)
+            {
+                return false;
+            }
+
+            InputType nextType = row.InputType;
+            bool triggerAuto = row.TriggerAutoFire;
+
+            if (row.InputType == InputType.Hold)
+            {
+                nextType = InputType.Trigger;
+                triggerAuto = false; // default OFF when first entering trigger
+            }
+            else if (row.InputType == InputType.Trigger)
+            {
+                if (clickedIndicator)
+                {
+                    triggerAuto = !row.TriggerAutoFire; // toggle trigger without leaving trigger mode
+                }
+                else
+                {
+                    nextType = InputType.Hold; // pill click flips back to hold
+                    triggerAuto = false;
+                }
+            }
+
+            row.InputType = nextType;
+            row.TypeLabel = nextType.ToString();
+            row.TriggerAutoFire = triggerAuto;
+            _keybindCache[index] = row;
+
+            string serialized = SerializeRowData(nextType, triggerAuto);
+            BlockDataStore.SetRowData(DockPanelKind.Controls, row.Action, serialized);
+            ControlKeyData.SetInputType(row.Action, nextType.ToString());
+            InputManager.UpdateBindingInputType(row.Action, nextType, triggerAuto);
+
+            if (boldFont.IsAvailable)
+            {
+                UpdateTypeToggleBounds(boldFont);
+            }
+
+            return true;
+        }
+
         private static bool GetSwitchState(string settingKey)
         {
             if (ControlStateManager.ContainsSwitchState(settingKey))
@@ -388,6 +578,42 @@ namespace op.io.UI.BlockScripts.Blocks
             spriteBatch.Draw(_pixelTexture, bounds, color);
         }
 
+        private static string SerializeRowData(InputType inputType, bool triggerAuto)
+        {
+            return $"{inputType}|{(triggerAuto ? 1 : 0)}";
+        }
+
+        private static bool TryParseRowData(string data, out InputType inputType, out bool triggerAuto)
+        {
+            inputType = InputType.Hold;
+            triggerAuto = false;
+
+            if (string.IsNullOrWhiteSpace(data))
+            {
+                return false;
+            }
+
+            string[] parts = data.Split('|', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0 || !Enum.TryParse(parts[0], true, out inputType))
+            {
+                inputType = InputType.Hold;
+                return false;
+            }
+
+            if (inputType == InputType.Switch || inputType == InputType.Hold)
+            {
+                triggerAuto = false;
+                return true;
+            }
+
+            if (parts.Length > 1 && int.TryParse(parts[1], out int parsedAuto))
+            {
+                triggerAuto = parsedAuto != 0;
+            }
+
+            return true;
+        }
+
         private struct KeybindDisplayRow
         {
             public string Action;
@@ -396,8 +622,11 @@ namespace op.io.UI.BlockScripts.Blocks
             public InputType InputType;
             public int RenderOrder;
             public Rectangle Bounds;
+            public Rectangle TypeToggleBounds;
             public bool IsDragging;
+            public bool TriggerAutoFire;
             public bool IsSwitch => InputType == InputType.Switch;
+            public bool IsToggleCandidate => InputType == InputType.Hold || InputType == InputType.Trigger;
         }
     }
 }

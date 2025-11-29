@@ -13,6 +13,7 @@ namespace op.io
         // Dictionary to store control key mappings (keyboard and mouse, including combos)
         private static readonly Dictionary<string, ControlBinding> _controlBindings = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, float> _cachedSpeedMultipliers = [];
+        private static readonly Dictionary<string, bool> _triggerOverrides = new(StringComparer.OrdinalIgnoreCase);
         private static bool _isControlKeyLoaded = false;
         private static readonly Dictionary<string, Keys[]> _modifierAliases = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -167,6 +168,28 @@ namespace op.io
             return 0;
         }
 
+        public static void UpdateBindingInputType(string settingKey, InputType newType, bool triggerOverride)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            if (!_controlBindings.TryGetValue(settingKey, out ControlBinding binding))
+            {
+                return;
+            }
+
+            if (ControlKeyRules.RequiresSwitchSemantics(settingKey))
+            {
+                newType = InputType.Switch;
+            }
+
+            ControlBinding updated = new(binding.SettingKey, newType, binding.Tokens, binding.DisplayLabel, binding.IsMetaControl);
+            _controlBindings[settingKey] = updated;
+            SetTriggerOverride(settingKey, triggerOverride && newType == InputType.Trigger);
+        }
+
         private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, out ControlBinding binding)
         {
             binding = null;
@@ -285,6 +308,11 @@ namespace op.io
                 if (Tokens == null || Tokens.Count == 0)
                 {
                     return false;
+                }
+
+                if (InputType == InputType.Trigger && IsTriggerOverrideActive(SettingKey))
+                {
+                    return true;
                 }
 
                 bool anyTokenHeld = Tokens.Any(t => t.IsHeld());
@@ -422,6 +450,32 @@ namespace op.io
             }
 
             return true;
+        }
+
+        public static void SetTriggerOverride(string settingKey, bool isActive)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            if (!isActive)
+            {
+                _triggerOverrides.Remove(settingKey);
+                return;
+            }
+
+            _triggerOverrides[settingKey] = true;
+        }
+
+        private static bool IsTriggerOverrideActive(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            return _triggerOverrides.TryGetValue(settingKey, out bool state) && state;
         }
 
         private readonly struct InputBindingToken

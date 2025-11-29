@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
+using System.Linq;
 
 namespace op.io.UI.BlockScripts.BlockUtilities
 {
@@ -15,6 +16,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
         private const string LegacyLockRowKey = "__block_lock__";
         private const string TablePrefix = "Block";
         private const string LegacyTablePrefix = "Block_";
+        private const string RowDataColumnName = "RowData";
 
         private static readonly Dictionary<string, bool> _tableReady = new(StringComparer.OrdinalIgnoreCase);
 
@@ -99,27 +101,52 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
                 using SQLiteTransaction transaction = connection.BeginTransaction();
 
-                using var clearCommand = new SQLiteCommand($"DELETE FROM {tableName} WHERE RowKey <> @lockKey;", connection, transaction);
-                clearCommand.Parameters.AddWithValue("@lockKey", LockRowKey);
-                clearCommand.ExecuteNonQuery();
-
                 if (rows != null && rows.Count > 0)
                 {
-                using var insert = new SQLiteCommand($"INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder) VALUES (@rowKey, @order);", connection, transaction);
-                var rowKeyParam = insert.Parameters.Add("@rowKey", DbType.String);
-                var orderParam = insert.Parameters.Add("@order", DbType.Int32);
-
-                foreach ((string RowKey, int Order) row in rows)
-                {
-                    string normalizedKey = NormalizeRowKey(panelKind, row.RowKey);
-                    if (string.IsNullOrWhiteSpace(normalizedKey) || row.Order <= 0)
+                    HashSet<string> normalizedKeys = new(StringComparer.OrdinalIgnoreCase);
+                    foreach ((string RowKey, int Order) row in rows)
                     {
-                        continue;
+                        string normalizedKey = NormalizeRowKey(panelKind, row.RowKey);
+                        if (string.IsNullOrWhiteSpace(normalizedKey))
+                        {
+                            continue;
+                        }
+
+                        normalizedKeys.Add(normalizedKey);
                     }
+
+                    if (normalizedKeys.Count > 0)
+                    {
+                        // Remove rows that are no longer present, but keep the lock row intact.
+                        string placeholders = string.Join(", ", normalizedKeys.Select((_, i) => $"@row{i}"));
+                        using var delete = new SQLiteCommand($"DELETE FROM {tableName} WHERE RowKey <> @lockKey AND RowKey NOT IN ({placeholders});", connection, transaction);
+                        delete.Parameters.AddWithValue("@lockKey", LockRowKey);
+                        int index = 0;
+                        foreach (string key in normalizedKeys)
+                        {
+                            delete.Parameters.AddWithValue($"@row{index++}", key);
+                        }
+                        delete.ExecuteNonQuery();
+                    }
+
+                    using var upsert = new SQLiteCommand($@"
+INSERT INTO {tableName} (RowKey, RenderOrder)
+VALUES (@rowKey, @order)
+ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connection, transaction);
+                    var rowKeyParam = upsert.Parameters.Add("@rowKey", DbType.String);
+                    var orderParam = upsert.Parameters.Add("@order", DbType.Int32);
+
+                    foreach ((string RowKey, int Order) row in rows)
+                    {
+                        string normalizedKey = NormalizeRowKey(panelKind, row.RowKey);
+                        if (string.IsNullOrWhiteSpace(normalizedKey) || row.Order <= 0)
+                        {
+                            continue;
+                        }
 
                         rowKeyParam.Value = normalizedKey;
                         orderParam.Value = row.Order;
-                        insert.ExecuteNonQuery();
+                        upsert.ExecuteNonQuery();
                     }
                 }
 
@@ -211,6 +238,96 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             return NormalizeRowKey(panelKind, rowKey);
         }
 
+        public static Dictionary<string, string> LoadRowData(DockPanelKind panelKind)
+        {
+            SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
+            if (connection == null)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            try
+            {
+                EnsureTable(panelKind, connection);
+                string tableName = GetTableName(panelKind);
+
+                string sql = $"SELECT RowKey, {RowDataColumnName} FROM {tableName} WHERE RowKey <> @lockKey;";
+                using var command = new SQLiteCommand(sql, connection);
+                command.Parameters.AddWithValue("@lockKey", LockRowKey);
+
+                using SQLiteDataReader reader = command.ExecuteReader();
+                Dictionary<string, string> data = new(StringComparer.OrdinalIgnoreCase);
+
+                while (reader.Read())
+                {
+                    string rowKey = NormalizeRowKey(panelKind, reader["RowKey"]?.ToString());
+                    if (string.IsNullOrWhiteSpace(rowKey))
+                    {
+                        continue;
+                    }
+
+                    string rowData = reader[RowDataColumnName]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(rowData))
+                    {
+                        data[rowKey] = rowData;
+                    }
+                }
+
+                return data;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load block row data for {panelKind}: {ex.Message}");
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                if (disposeConnection)
+                {
+                    DatabaseManager.CloseConnection(connection);
+                }
+            }
+        }
+
+        public static void SetRowData(DockPanelKind panelKind, string rowKey, string rowData)
+        {
+            if (string.IsNullOrWhiteSpace(rowKey))
+            {
+                return;
+            }
+
+            SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
+            if (connection == null)
+            {
+                return;
+            }
+
+            try
+            {
+                EnsureTable(panelKind, connection);
+                string tableName = GetTableName(panelKind);
+
+                using var command = new SQLiteCommand($@"
+INSERT INTO {tableName} (RowKey, {RowDataColumnName})
+VALUES (@rowKey, @rowData)
+ON CONFLICT(RowKey) DO UPDATE SET {RowDataColumnName} = excluded.{RowDataColumnName};", connection);
+                command.Parameters.AddWithValue("@rowKey", NormalizeRowKey(panelKind, rowKey));
+                command.Parameters.AddWithValue("@rowData", rowData ?? string.Empty);
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to persist block row data for {panelKind}: {ex.Message}");
+            }
+            finally
+            {
+                if (disposeConnection)
+                {
+                    DatabaseManager.CloseConnection(connection);
+                }
+            }
+        }
+
         private static void EnsureTable(DockPanelKind panelKind, SQLiteConnection connection = null)
         {
             string tableName = GetTableName(panelKind);
@@ -238,6 +355,7 @@ CREATE TABLE IF NOT EXISTS {tableName} (
                 using var createCommand = new SQLiteCommand(createSql, targetConnection);
                 createCommand.ExecuteNonQuery();
 
+                EnsureRowDataColumn(targetConnection, tableName);
                 MigrateLegacyTable(targetConnection, panelKind, tableName);
                 MigrateLegacyLockRow(targetConnection, tableName);
 
@@ -476,6 +594,45 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
             {
                 return fallback;
             }
+        }
+
+        private static void EnsureRowDataColumn(SQLiteConnection connection, string tableName)
+        {
+            if (connection == null || string.IsNullOrWhiteSpace(tableName))
+            {
+                return;
+            }
+
+            if (ColumnExists(connection, tableName, RowDataColumnName))
+            {
+                return;
+            }
+
+            using var command = new SQLiteCommand($"ALTER TABLE {tableName} ADD COLUMN {RowDataColumnName} TEXT;", connection);
+            command.ExecuteNonQuery();
+        }
+
+        private static bool ColumnExists(SQLiteConnection connection, string tableName, string columnName)
+        {
+            if (connection == null || string.IsNullOrWhiteSpace(tableName) || string.IsNullOrWhiteSpace(columnName))
+            {
+                return false;
+            }
+
+            string pragmaSql = $"PRAGMA table_info({tableName});";
+            using var command = new SQLiteCommand(pragmaSql, connection);
+
+            using SQLiteDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (reader["name"] != null &&
+                    string.Equals(reader["name"].ToString(), columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
