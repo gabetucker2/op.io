@@ -16,6 +16,7 @@ namespace op.io
             public int? SwitchStartState { get; init; }
             public bool MetaControl { get; init; }
             public int RenderOrder { get; init; }
+            public bool LockMode { get; init; }
         }
 
         public static ControlKeyRecord GetControl(string settingKey)
@@ -31,7 +32,7 @@ namespace op.io
             };
 
             const string sql = @"
-SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder
+SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode
 FROM ControlKey
 WHERE SettingKey = @settingKey
 LIMIT 1;";
@@ -50,7 +51,8 @@ LIMIT 1;";
                 InputType = row["InputType"]?.ToString(),
                 SwitchStartState = row["SwitchStartState"] == DBNull.Value ? null : Convert.ToInt32(row["SwitchStartState"]),
                 MetaControl = row.TryGetValue("MetaControl", out object metaValue) && Convert.ToInt32(metaValue) != 0,
-                RenderOrder = row.TryGetValue("ControlOrder", out object orderValue) ? Convert.ToInt32(orderValue) : 0
+                RenderOrder = row.TryGetValue("ControlOrder", out object orderValue) ? Convert.ToInt32(orderValue) : 0,
+                LockMode = row.TryGetValue("LockMode", out object lockValue) && Convert.ToInt32(lockValue) != 0
             };
         }
 
@@ -67,22 +69,42 @@ LIMIT 1;";
                 ["@inputKey"] = record.InputKey ?? string.Empty,
                 ["@inputType"] = record.InputType ?? "Hold",
                 ["@metaControl"] = record.MetaControl ? 1 : 0,
-                ["@switchStartState"] = record.SwitchStartState
+                ["@switchStartState"] = record.SwitchStartState,
+                ["@lockMode"] = record.LockMode ? 1 : 0
             };
 
             bool orderColumnAvailable = ColumnExists(RenderOrderColumnName);
+            bool lockModeAvailable = ColumnExists("LockMode");
             if (orderColumnAvailable)
             {
                 parameters["@renderOrder"] = record.RenderOrder > 0 ? record.RenderOrder : GetNextRenderOrderValue();
             }
 
-            string sql = orderColumnAvailable
-                ? @"
+            string sql;
+            if (orderColumnAvailable && lockModeAvailable)
+            {
+                sql = @"
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @renderOrder, @switchStartState, @lockMode);";
+            }
+            else if (orderColumnAvailable)
+            {
+                sql = @"
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @renderOrder, @switchStartState);"
-                : @"
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @renderOrder, @switchStartState);";
+            }
+            else if (lockModeAvailable)
+            {
+                sql = @"
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, LockMode)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @lockMode);";
+            }
+            else
+            {
+                sql = @"
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState)
 VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState);";
+            }
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }

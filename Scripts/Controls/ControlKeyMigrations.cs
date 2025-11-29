@@ -7,7 +7,7 @@ namespace op.io
     internal static class ControlKeyMigrations
     {
         private static bool _applied;
-        private static readonly string[] MetaControlKeys = ["Exit", "PanelMenu", "DockingMode", "DebugMode", "AllowGameInputFreeze"];
+        private static readonly string[] MetaControlKeys = ["Exit", "PanelMenu", "DockingMode", "DebugMode", "AllowGameInputFreeze", "TransparentTabBlocking"];
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
 
         public static void EnsureApplied()
@@ -28,8 +28,12 @@ namespace op.io
                 EnsurePanelMenuControl();
                 EnsureExitControl();
                 EnsureTransparentTabBlockingControl();
+                EnsureLockModeColumn();
+                MigrateLegacySwitchType();
                 EnsureMetaControlColumn();
                 ControlKeyData.ApplyMetaControlFlags(MetaControlKeys);
+                EnsureCrouchUsesNoSaveSwitch();
+                LockExitBinding();
 
                 _applied = true;
             }
@@ -65,12 +69,12 @@ namespace op.io
             {
                 SettingKey = "PanelMenu",
                 InputKey = "Shift + X",
-                InputType = "Switch",
+                InputType = "SaveSwitch",
                 SwitchStartState = 0,
                 MetaControl = true
             });
 
-            ControlKeyData.SetInputType("PanelMenu", "Switch");
+            ControlKeyData.SetInputType("PanelMenu", "SaveSwitch");
             ControlKeyData.EnsureSwitchStartState("PanelMenu", 0);
         }
 
@@ -86,15 +90,66 @@ namespace op.io
             {
                 SettingKey = TransparentTabBlockingKey,
                 InputKey = "Shift + V",
-                InputType = "Switch",
+                InputType = "SaveSwitch",
                 SwitchStartState = 0,
                 MetaControl = false,
                 RenderOrder = 15
             });
 
-            ControlKeyData.SetInputType(TransparentTabBlockingKey, "Switch");
+            ControlKeyData.SetInputType(TransparentTabBlockingKey, "SaveSwitch");
             ControlKeyData.EnsureSwitchStartState(TransparentTabBlockingKey, 0);
             ControlKeyData.EnsureInputKey(TransparentTabBlockingKey, "Shift + V");
+        }
+
+        private static void EnsureCrouchUsesNoSaveSwitch()
+        {
+            ControlKeyData.SetInputType("Crouch", "NoSaveSwitch");
+            ControlKeyData.EnsureSwitchStartState("Crouch", 0);
+        }
+
+        private static void EnsureLockModeColumn()
+        {
+            const string column = "LockMode";
+            if (!ControlKeyData.ColumnExists(column))
+            {
+                ControlKeyData.AddColumn(column, "INTEGER NOT NULL DEFAULT 0");
+            }
+
+            try
+            {
+                const string normalizeSql = "UPDATE ControlKey SET LockMode = COALESCE(LockMode, 0);";
+                DatabaseQuery.ExecuteNonQuery(normalizeSql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to normalize LockMode column: {ex.Message}");
+            }
+        }
+
+        private static void LockExitBinding()
+        {
+            try
+            {
+                const string sql = "UPDATE ControlKey SET LockMode = 1 WHERE SettingKey = 'Exit';";
+                DatabaseQuery.ExecuteNonQuery(sql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to lock Exit binding: {ex.Message}");
+            }
+        }
+
+        private static void MigrateLegacySwitchType()
+        {
+            try
+            {
+                const string sql = "UPDATE ControlKey SET InputType = 'SaveSwitch' WHERE InputType = 'Switch';";
+                DatabaseQuery.ExecuteNonQuery(sql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to migrate legacy switch input types: {ex.Message}");
+            }
         }
     }
 

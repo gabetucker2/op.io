@@ -4,6 +4,7 @@
     {
         Hold,
         Trigger,
-        Switch
+        SaveSwitch,
+        NoSaveSwitch
     }
 }

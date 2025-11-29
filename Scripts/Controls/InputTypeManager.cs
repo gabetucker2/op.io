@@ -17,7 +17,7 @@ namespace op.io
         private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
         private static readonly Dictionary<string, List<string>> _inputKeyToSettingKeys = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<Keys, List<string>> _keyToComboBindings = new();
-        private static readonly string[] _criticalSwitchSettings = ["Crouch", "DebugMode", "AllowGameInputFreeze"];
+        private static readonly string[] _criticalSwitchSettings = ["DebugMode", "AllowGameInputFreeze"];
         private static bool _switchStatesInitialized;
 
         private static readonly Dictionary<string, bool> _bindingSwitchStates = new(StringComparer.OrdinalIgnoreCase);
@@ -55,7 +55,8 @@ namespace op.io
 
             try
             {
-                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
+                const string sql = "SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch');";
+                var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
                 {
@@ -77,7 +78,15 @@ namespace op.io
                             continue;
                         }
 
-                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
+                        string inputTypeLabel = row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty;
+                        bool saveToBackend = !IsNoSaveSwitch(inputTypeLabel);
+                        ControlStateManager.RegisterSwitchPersistence(settingKey, saveToBackend);
+
+                        int switchState = 0;
+                        if (row.TryGetValue("SwitchStartState", out object switchStateObj) && switchStateObj != null && switchStateObj != DBNull.Value)
+                        {
+                            switchState = Convert.ToInt32(switchStateObj);
+                        }
                         bool isOn = TypeConversionFunctions.IntToBool(switchState);
 
                         _switchStateCache[settingKey] = isOn;
@@ -386,7 +395,7 @@ namespace op.io
                 { "@settingKey", settingKey }
             };
 
-            var rows = DatabaseQuery.ExecuteQuery("SELECT InputKey, SwitchStartState FROM ControlKey WHERE SettingKey = @settingKey LIMIT 1;", parameters);
+            var rows = DatabaseQuery.ExecuteQuery("SELECT InputKey, SwitchStartState, InputType FROM ControlKey WHERE SettingKey = @settingKey LIMIT 1;", parameters);
 
             if (rows.Count == 0)
             {
@@ -406,11 +415,18 @@ namespace op.io
                 return false;
             }
 
-            bool state = TypeConversionFunctions.IntToBool(Convert.ToInt32(row["SwitchStartState"]));
+            bool saveToBackend = !IsNoSaveSwitch(row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty);
+            ControlStateManager.RegisterSwitchPersistence(settingKey, saveToBackend);
+
+            object switchStateObj = row.TryGetValue("SwitchStartState", out object rawState) ? rawState : null;
+            int switchState = switchStateObj == null || switchStateObj == DBNull.Value ? 0 : Convert.ToInt32(switchStateObj);
+            bool state = TypeConversionFunctions.IntToBool(switchState);
             _switchStateCache[settingKey] = state;
             _settingKeyToInputKey[settingKey] = inputKey;
             RegisterInputKeyForSetting(settingKey, inputKey);
+            SeedBindingState(settingKey, state);
             TrySeedSwitchState(inputKey, state);
+            ControlStateManager.SetSwitchState(settingKey, state);
             return true;
         }
 
@@ -479,6 +495,21 @@ namespace op.io
             return _switchStateCache.Keys;
         }
 
+        public static bool EnsureSwitchRegistration(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            if (_settingKeyToInputKey.ContainsKey(settingKey))
+            {
+                return true;
+            }
+
+            return LoadSwitchStateForSetting(settingKey);
+        }
+
         public static bool OverrideSwitchState(string settingKey, bool state)
         {
             if (string.IsNullOrWhiteSpace(settingKey))
@@ -534,6 +565,11 @@ namespace op.io
         {
             return string.Equals(inputKey, "LeftClick", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(inputKey, "RightClick", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsNoSaveSwitch(string inputTypeLabel)
+        {
+            return string.Equals(inputTypeLabel, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GetPrimaryToken(string inputKey)

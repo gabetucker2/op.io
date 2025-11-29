@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS ControlKey (
     InputType TEXT NOT NULL,
     MetaControl INTEGER NOT NULL DEFAULT 0,
     RenderOrder INTEGER NOT NULL DEFAULT 0,
-    SwitchStartState BOOLEAN DEFAULT 0
+    SwitchStartState BOOLEAN DEFAULT 0,
+    LockMode INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS ControlSettings (

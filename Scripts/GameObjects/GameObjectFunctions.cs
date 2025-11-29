@@ -8,37 +8,34 @@ namespace op.io
     {
         public static Vector2 GetGOLocalScreenPosition(GameObject gameObject)
         {
-            var player = Core.Instance.Player;
+            GameObject target = gameObject ?? Core.Instance.Player;
 
-            if (player == null)
+            if (target == null)
             {
-                DebugLogger.PrintError("Player instance is null. Make sure the player is properly initialized.");
+                DebugLogger.PrintError("Target GameObject is null. Make sure the object is properly initialized.");
                 return new Vector2(0, 0);
             }
 
-            // Assuming Player's position is stored as a Vector2
-            Vector2 playerPosition = new(player.Position.X, player.Position.Y);
+            Vector2 position = new(target.Position.X, target.Position.Y);
 
-            // Convert player's position to screen coordinates
-            Vector2 screenPosition = new((int)playerPosition.X, (int)playerPosition.Y);
+            Vector2 screenPosition = new((int)position.X, (int)position.Y);
 
-            DebugLogger.PrintUI($"Player screen position calculated: {screenPosition}");
+            DebugLogger.PrintUI($"GameObject screen position calculated: {screenPosition}");
 
             return screenPosition;
         }
 
         public static Vector2 GetGOGlobalScreenPosition(GameObject gameObject)
         {
-            var player = Core.Instance.Player;
+            GameObject target = gameObject ?? Core.Instance.Player;
 
-            if (player == null)
+            if (target == null)
             {
-                DebugLogger.PrintError("Player instance is null. Make sure the player is properly initialized.");
+                DebugLogger.PrintError("Target GameObject is null. Make sure the object is properly initialized.");
                 return new Vector2(0, 0);
             }
 
-            // Get the local screen position of the player
-            Vector2 localScreenPosition = GetGOLocalScreenPosition(gameObject);
+            Vector2 localScreenPosition = GetGOLocalScreenPosition(target);
 
             if (BlockManager.TryProjectGameToWindow(localScreenPosition, out Vector2 projectedPosition))
             {
@@ -57,21 +54,20 @@ namespace op.io
 
             DebugLogger.PrintUI($"Window Handle Retrieved: {windowHandle}");
 
-            if (!GetWindowRect(windowHandle, out RECT rect))
+            // Translate client coordinates to absolute screen coordinates so the cursor aligns with the rendered center.
+            POINT clientPoint = new()
             {
-                DebugLogger.PrintError("Failed to retrieve window rectangle for global screen position.");
+                X = (int)localScreenPosition.X,
+                Y = (int)localScreenPosition.Y
+            };
+
+            if (!ClientToScreen(windowHandle, ref clientPoint))
+            {
+                DebugLogger.PrintError("Failed to translate client coordinates to screen coordinates.");
                 return localScreenPosition;
             }
 
-            int windowX = rect.Left;
-            int windowY = rect.Top;
-            DebugLogger.PrintUI($"Window rectangle retrieved: X={windowX}, Y={windowY}");
-
-            // Calculate global screen position
-            Vector2 globalScreenPosition = new(
-                localScreenPosition.X + windowX,
-                localScreenPosition.Y + windowY
-            );
+            Vector2 globalScreenPosition = new(clientPoint.X, clientPoint.Y);
 
             DebugLogger.PrintUI($"Player global screen position calculated: {globalScreenPosition}");
 
@@ -79,14 +75,12 @@ namespace op.io
         }
 
         [DllImport("user32.dll")]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
-        private struct RECT
+        private struct POINT
         {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
+            public int X;
+            public int Y;
         }
     }
 }

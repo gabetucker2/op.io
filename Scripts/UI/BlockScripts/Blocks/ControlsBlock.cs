@@ -36,6 +36,21 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
 
+        private static bool IsSwitchType(InputType inputType) =>
+            inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
+
+        private static bool IsPersistentSwitch(InputType inputType) => inputType == InputType.SaveSwitch;
+
+        private static InputType ParseInputTypeLabel(string typeLabel)
+        {
+            if (string.Equals(typeLabel, "Switch", StringComparison.OrdinalIgnoreCase))
+            {
+                return InputType.SaveSwitch;
+            }
+
+            return Enum.TryParse(typeLabel, true, out InputType parsed) ? parsed : InputType.Hold;
+        }
+
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Controls);
@@ -202,10 +217,7 @@ namespace op.io.UI.BlockScripts.Blocks
                         typeLabel = "Unknown";
                     }
 
-                    if (!Enum.TryParse(typeLabel, true, out InputType parsedType))
-                    {
-                        parsedType = InputType.Hold;
-                    }
+                    InputType parsedType = ParseInputTypeLabel(typeLabel);
 
                     string actionLabel = row.TryGetValue("SettingKey", out object action) ? action?.ToString() ?? "Action" : "Action";
                     string inputLabel = row.TryGetValue("InputKey", out object key) ? key?.ToString() ?? "Key" : "Key";
@@ -216,7 +228,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     string canonicalKey = BlockDataStore.CanonicalizeRowKey(DockPanelKind.Controls, actionLabel);
                     if (storedRowData.TryGetValue(canonicalKey, out string storedData) &&
                         TryParseRowData(storedData, out InputType storedType, out bool storedTriggerAuto) &&
-                        storedType != InputType.Switch)
+                        !IsPersistentSwitch(storedType))
                     {
                         parsedType = storedType;
                         triggerAuto = storedTriggerAuto;
@@ -224,9 +236,11 @@ namespace op.io.UI.BlockScripts.Blocks
 
                     if (ControlKeyRules.RequiresSwitchSemantics(actionLabel))
                     {
-                        parsedType = InputType.Switch;
+                        parsedType = InputType.SaveSwitch;
                         triggerAuto = false;
                     }
+
+                    bool toggleLocked = InputManager.IsTypeLocked(actionLabel);
 
                     string parsedTypeLabel = parsedType.ToString();
                     if (!string.Equals(typeLabel, parsedTypeLabel, StringComparison.OrdinalIgnoreCase))
@@ -247,7 +261,8 @@ namespace op.io.UI.BlockScripts.Blocks
                         Bounds = Rectangle.Empty,
                         IsDragging = false,
                         TypeToggleBounds = Rectangle.Empty,
-                        TriggerAutoFire = triggerAuto
+                        TriggerAutoFire = triggerAuto,
+                        ToggleLocked = toggleLocked
                     });
 
                     fallbackOrder++;
@@ -349,14 +364,10 @@ namespace op.io.UI.BlockScripts.Blocks
             float valueX = labelPosition.X + headerSize.X;
             regularFont.DrawString(spriteBatch, value, new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
 
-            if (row.IsSwitch)
+            if (IsSwitchType(row.InputType))
             {
                 bool state = GetSwitchState(row.Action);
                 BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, state);
-            }
-            else if (row.InputType == InputType.Trigger && !panelLocked)
-            {
-                BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, row.TriggerAutoFire);
             }
         }
 
@@ -389,7 +400,7 @@ namespace op.io.UI.BlockScripts.Blocks
             for (int i = 0; i < _keybindCache.Count; i++)
             {
                 var row = _keybindCache[i];
-                if (row.Bounds == Rectangle.Empty || row.IsSwitch)
+                if (row.Bounds == Rectangle.Empty || IsPersistentSwitch(row.InputType) || row.InputType == InputType.Trigger || row.ToggleLocked)
                 {
                     row.TypeToggleBounds = Rectangle.Empty;
                     _keybindCache[i] = row;
@@ -429,7 +440,7 @@ namespace op.io.UI.BlockScripts.Blocks
             indicatorArea = false;
             foreach (KeybindDisplayRow row in _keybindCache)
             {
-                if (row.IsSwitch || row.TypeToggleBounds == Rectangle.Empty)
+                if (IsPersistentSwitch(row.InputType) || row.TypeToggleBounds == Rectangle.Empty)
                 {
                     continue;
                 }
@@ -439,7 +450,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     return row.Action;
                 }
 
-                if (row.InputType == InputType.Trigger && _lineHeightCache > 0f)
+                if (row.InputType == InputType.Trigger && _lineHeightCache > 0f && row.IsToggleCandidate)
                 {
                     int indicatorX = Math.Max(contentBounds.X, contentBounds.Right - TypeIndicatorDiameter - 4);
                     int indicatorY = (int)(row.Bounds.Y + ((_lineHeightCache - TypeIndicatorDiameter) / 2f));
@@ -501,7 +512,12 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             var row = _keybindCache[index];
-            if (row.IsSwitch)
+            if (IsPersistentSwitch(row.InputType) || row.InputType == InputType.Trigger)
+            {
+                return false;
+            }
+
+            if (row.ToggleLocked)
             {
                 return false;
             }
@@ -511,20 +527,13 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (row.InputType == InputType.Hold)
             {
-                nextType = InputType.Trigger;
-                triggerAuto = false; // default OFF when first entering trigger
+                nextType = InputType.NoSaveSwitch;
+                triggerAuto = false;
             }
-            else if (row.InputType == InputType.Trigger)
+            else if (row.InputType == InputType.NoSaveSwitch)
             {
-                if (clickedIndicator)
-                {
-                    triggerAuto = !row.TriggerAutoFire; // toggle trigger without leaving trigger mode
-                }
-                else
-                {
-                    nextType = InputType.Hold; // pill click flips back to hold
-                    triggerAuto = false;
-                }
+                nextType = InputType.Hold;
+                triggerAuto = false;
             }
 
             row.InputType = nextType;
@@ -592,13 +601,14 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             string[] parts = data.Split('|', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0 || !Enum.TryParse(parts[0], true, out inputType))
+            if (parts.Length == 0)
             {
-                inputType = InputType.Hold;
                 return false;
             }
 
-            if (inputType == InputType.Switch || inputType == InputType.Hold)
+            inputType = ParseInputTypeLabel(parts[0]);
+
+            if (IsSwitchType(inputType) || inputType == InputType.Hold)
             {
                 triggerAuto = false;
                 return true;
@@ -623,8 +633,10 @@ namespace op.io.UI.BlockScripts.Blocks
             public Rectangle TypeToggleBounds;
             public bool IsDragging;
             public bool TriggerAutoFire;
-            public bool IsSwitch => InputType == InputType.Switch;
-            public bool IsToggleCandidate => InputType == InputType.Hold || InputType == InputType.Trigger;
+            public bool ToggleLocked;
+            public bool IsSwitchType => ControlsBlock.IsSwitchType(InputType);
+            public bool IsPersistentSwitch => ControlsBlock.IsPersistentSwitch(InputType);
+            public bool IsToggleCandidate => !IsPersistentSwitch && InputType != InputType.Trigger && !ToggleLocked;
         }
     }
 }

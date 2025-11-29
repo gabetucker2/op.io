@@ -24,14 +24,6 @@ namespace op.io
                 DebugModeHandler.ApplySwitchState(value);
             });
 
-            SwitchRegistry.RegisterConsumer("Crouch", value =>
-            {
-                if (Core.Instance.Player is Agent agent)
-                {
-                    agent.IsCrouching = value;
-                }
-            });
-
             SwitchRegistry.RegisterConsumer("TransparentTabBlocking", value =>
             {
                 GameInitializer.SetWindowClickThrough(value);

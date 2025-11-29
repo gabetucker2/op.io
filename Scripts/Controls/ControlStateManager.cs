@@ -8,6 +8,7 @@ namespace op.io
         private static Dictionary<string, bool> _switchStates = [];
         private static Dictionary<string, bool> _switchStateBuffer = [];
         private static Dictionary<string, bool> _prevSwitchStates = [];
+        private static readonly Dictionary<string, bool> _switchPersistence = new(StringComparer.OrdinalIgnoreCase);
 
         public static void Tickwise_PrevSwitchTrackUpdate()
         {
@@ -59,6 +60,11 @@ namespace op.io
             if (!ContainsSwitchState(settingKey))
             {
                 int newState = DatabaseConfig.GetSetting("ControlKey", "SwitchStartState", settingKey, -1);
+                if (newState < 0)
+                {
+                    newState = TypeConversionFunctions.BoolToInt(state);
+                }
+
                 DebugLogger.Print($"Initializing {settingKey} switch with default state from database: {newState}");
                 _switchStates[settingKey] = TypeConversionFunctions.IntToBool(newState); // State from DB
             }
@@ -67,8 +73,11 @@ namespace op.io
                 if (_switchStates[settingKey] != state)
                 {
                     _switchStates[settingKey] = state;
-                    DebugLogger.PrintDatabase($"Updated and saved {settingKey} to {state} from {!state}");  //  NEVER CALLS
-                    SaveSwitchState(settingKey, _switchStates[settingKey]);
+                    if (ShouldPersist(settingKey))
+                    {
+                        DebugLogger.PrintDatabase($"Updated and saved {settingKey} to {state} from {!state}");  //  NEVER CALLS
+                        SaveSwitchState(settingKey, _switchStates[settingKey]);
+                    }
                     DispatchSwitchChange(settingKey, state);
                 }
             }
@@ -91,6 +100,11 @@ namespace op.io
             DatabaseConfig.UpdateSetting("ControlKey", "SwitchStartState", settingKey, TypeConversionFunctions.BoolToInt(isOn));
         }
 
+        private static bool ShouldPersist(string settingKey)
+        {
+            return _switchPersistence.TryGetValue(settingKey, out bool persist) && persist;
+        }
+
         public static bool ContainsSwitchState(string settingKey)
         {
             return _switchStates.ContainsKey(settingKey);
@@ -99,6 +113,16 @@ namespace op.io
         public static IReadOnlyDictionary<string, bool> GetCachedSwitchStatesSnapshot()
         {
             return new Dictionary<string, bool>(_switchStates);
+        }
+
+        public static void RegisterSwitchPersistence(string settingKey, bool saveToBackend)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            _switchPersistence[settingKey] = saveToBackend;
         }
 
         /// <summary>
@@ -131,7 +155,8 @@ namespace op.io
             try
             {
                 // Fetch all control keys with SwitchStartState from the database
-                var result = DatabaseQuery.ExecuteQuery("SELECT SettingKey, SwitchStartState FROM ControlKey WHERE InputType = 'Switch';");
+                const string sql = "SELECT SettingKey, SwitchStartState, InputType FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch');";
+                var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
                 {
@@ -144,8 +169,12 @@ namespace op.io
                     if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
                     {
                         string settingKey = row["SettingKey"].ToString();
-                        int switchState = Convert.ToInt32(row["SwitchStartState"]);
+                        object switchStateObj = row.TryGetValue("SwitchStartState", out object rawState) ? rawState : null;
+                        int switchState = switchStateObj == null || switchStateObj == DBNull.Value ? 0 : Convert.ToInt32(switchStateObj);
                         bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
+                        bool saveToBackend = !string.Equals(row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase);
+
+                        RegisterSwitchPersistence(settingKey, saveToBackend);
 
                         // Store this information in ControlStateManager
                         SetSwitchState(settingKey, switchStateBool);

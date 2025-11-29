@@ -23,6 +23,24 @@ namespace op.io
             ["Alt"] = new[] { Keys.LeftAlt, Keys.RightAlt }
         };
 
+        private static bool IsSwitchType(InputType inputType) =>
+            inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
+
+        private static InputType ParseInputType(string inputTypeLabel)
+        {
+            if (string.IsNullOrWhiteSpace(inputTypeLabel))
+            {
+                return InputType.Hold;
+            }
+
+            if (string.Equals(inputTypeLabel, "Switch", StringComparison.OrdinalIgnoreCase))
+            {
+                return InputType.SaveSwitch;
+            }
+
+            return Enum.TryParse(inputTypeLabel, true, out InputType parsed) ? parsed : InputType.Hold;
+        }
+
         // This will be set during initialization to avoid unnecessary database calls.
         static InputManager()
         {
@@ -35,13 +53,14 @@ namespace op.io
 
             ControlKeyMigrations.EnsureApplied();
 
-            var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, MetaControl FROM ControlKey;");
+            var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, MetaControl, LockMode FROM ControlKey;");
             foreach (var control in controls)
             {
                 string settingKey = control["SettingKey"].ToString();
                 string inputKey = control["InputKey"].ToString();
-                InputType inputType = Enum.Parse<InputType>(control["InputType"].ToString());
+                InputType inputType = ParseInputType(control["InputType"]?.ToString());
                 bool isMetaControl = false;
+                bool lockMode = false;
                 if (control.TryGetValue("MetaControl", out object metaValue) && metaValue != null && metaValue != DBNull.Value)
                 {
                     try
@@ -54,12 +73,24 @@ namespace op.io
                     }
                 }
 
-                if (ControlKeyRules.RequiresSwitchSemantics(settingKey) && inputType != InputType.Switch)
+                if (control.TryGetValue("LockMode", out object lockValue) && lockValue != null && lockValue != DBNull.Value)
                 {
-                    inputType = InputType.Switch;
+                    try
+                    {
+                        lockMode = Convert.ToInt32(lockValue) != 0;
+                    }
+                    catch
+                    {
+                        lockMode = false;
+                    }
                 }
 
-                if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, out ControlBinding binding))
+                if (ControlKeyRules.RequiresSwitchSemantics(settingKey) && !IsSwitchType(inputType))
+                {
+                    inputType = InputType.SaveSwitch;
+                }
+
+                if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, lockMode, out ControlBinding binding))
                 {
                     _controlBindings[settingKey] = binding;
                 }
@@ -70,7 +101,7 @@ namespace op.io
             }
 
             if (!_controlBindings.ContainsKey("PanelMenu") &&
-                TryCreateBinding("PanelMenu", "Shift + X", InputType.Switch, true, out ControlBinding defaultBinding))
+                TryCreateBinding("PanelMenu", "Shift + X", InputType.SaveSwitch, true, false, out ControlBinding defaultBinding))
             {
                 _controlBindings["PanelMenu"] = defaultBinding;
             }
@@ -168,6 +199,11 @@ namespace op.io
             return 0;
         }
 
+        public static bool IsTypeLocked(string settingKey)
+        {
+            return _controlBindings.TryGetValue(settingKey, out ControlBinding binding) && binding.LockMode;
+        }
+
         public static void UpdateBindingInputType(string settingKey, InputType newType, bool triggerOverride)
         {
             if (string.IsNullOrWhiteSpace(settingKey))
@@ -182,15 +218,21 @@ namespace op.io
 
             if (ControlKeyRules.RequiresSwitchSemantics(settingKey))
             {
-                newType = InputType.Switch;
+                newType = InputType.SaveSwitch;
             }
 
-            ControlBinding updated = new(binding.SettingKey, newType, binding.Tokens, binding.DisplayLabel, binding.IsMetaControl);
+            ControlBinding updated = new(binding.SettingKey, newType, binding.Tokens, binding.DisplayLabel, binding.IsMetaControl, binding.LockMode);
             _controlBindings[settingKey] = updated;
+            if (IsSwitchType(newType))
+            {
+                ControlKeyData.EnsureSwitchStartState(settingKey, 0);
+                InputTypeManager.EnsureSwitchRegistration(settingKey);
+                SwitchStateScanner.RefreshSwitchKeys();
+            }
             SetTriggerOverride(settingKey, triggerOverride && newType == InputType.Trigger);
         }
 
-        private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, out ControlBinding binding)
+        private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, bool lockMode, out ControlBinding binding)
         {
             binding = null;
             if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
@@ -232,7 +274,7 @@ namespace op.io
             }
 
             string displayLabel = string.Join(" + ", tokens.Select(t => t.DisplayName));
-            binding = new ControlBinding(settingKey, inputType, tokens, displayLabel, isMetaControl);
+            binding = new ControlBinding(settingKey, inputType, tokens, displayLabel, isMetaControl, lockMode);
             return true;
         }
 
@@ -287,13 +329,14 @@ namespace op.io
 
         private sealed class ControlBinding
         {
-            public ControlBinding(string settingKey, InputType inputType, IReadOnlyList<InputBindingToken> tokens, string displayLabel, bool isMetaControl)
+            public ControlBinding(string settingKey, InputType inputType, IReadOnlyList<InputBindingToken> tokens, string displayLabel, bool isMetaControl, bool lockMode)
             {
                 SettingKey = settingKey;
                 InputType = inputType;
                 Tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
                 DisplayLabel = string.IsNullOrWhiteSpace(displayLabel) ? string.Join(" + ", tokens) : displayLabel;
                 IsMetaControl = isMetaControl;
+                LockMode = lockMode;
             }
 
             public string SettingKey { get; }
@@ -301,6 +344,7 @@ namespace op.io
             public IReadOnlyList<InputBindingToken> Tokens { get; }
             public string DisplayLabel { get; }
             public bool IsMetaControl { get; }
+            public bool LockMode { get; }
             public int TokenCount => Tokens?.Count ?? 0;
 
             public bool IsActive()
@@ -310,6 +354,7 @@ namespace op.io
                     return false;
                 }
 
+                // LockMode only prevents rebinding in the UI; the binding should still be usable.
                 if (InputType == InputType.Trigger && IsTriggerOverrideActive(SettingKey))
                 {
                     return true;
@@ -320,7 +365,7 @@ namespace op.io
                 if (!ShouldAllowBinding(IsMetaControl))
                 {
                     // Even if binding is suppressed (e.g., non-meta when inputs are frozen), prevent chord keys from toggling solo switches.
-                    if (InputType == InputType.Switch && Tokens.Count > 1 && anyTokenHeld)
+                    if (IsSwitchType(InputType) && Tokens.Count > 1 && anyTokenHeld)
                     {
                         InputTypeManager.ConsumeKeys(GetAllKeys(Tokens));
                         DebugLogger.PrintDebug($"[INPUT] Suppressing combo '{DisplayLabel}' while binding disallowed; consumed keys.");
@@ -329,17 +374,16 @@ namespace op.io
                     return false;
                 }
 
-            bool modifiersHeld = true;
-            bool hasModifiers = Tokens.Count > 1;
-            int modifierCount = Math.Max(0, Tokens.Count - 1);
+                bool modifiersHeld = true;
+                bool hasModifiers = Tokens.Count > 1;
+                int modifierCount = Math.Max(0, Tokens.Count - 1);
 
-
-            for (int i = 0; i < modifierCount; i++)
-            {
-                if (!Tokens[i].IsHeld())
+                for (int i = 0; i < modifierCount; i++)
+                {
+                    if (!Tokens[i].IsHeld())
                     {
                         modifiersHeld = false;
-                        if (InputType != InputType.Switch)
+                        if (!IsSwitchType(InputType))
                         {
                             return false;
                         }
@@ -353,7 +397,7 @@ namespace op.io
                 {
                     InputType.Hold => modifiersHeld && primary.IsHeld(),
                     InputType.Trigger => modifiersHeld && primary.IsTriggered(),
-                    InputType.Switch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
+                    InputType.SaveSwitch or InputType.NoSaveSwitch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
                     _ => false
                 };
             }
