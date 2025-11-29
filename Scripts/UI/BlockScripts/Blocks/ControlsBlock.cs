@@ -50,7 +50,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly Color TypeToggleHoverFill = new(68, 92, 160, 200);
         private static readonly Color TypeToggleActiveFill = new(68, 92, 160, 230);
         private static readonly Color RebindScrimColor = new(8, 8, 8, 190);
-        private static readonly Color WarningColor = new(200, 68, 68);
+        private static readonly Color WarningColor = new(240, 196, 64);
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
         private const int ValueHighlightPadding = 2;
@@ -1262,7 +1262,7 @@ namespace op.io.UI.BlockScripts.Blocks
             IReadOnlyList<string> conflicts = InputManager.GetBindingsForInputKey(canonical, _rebindAction);
             if (conflicts.Count > 0)
             {
-                _rebindConflictWarning = "Already bound to: " + string.Join(", ", conflicts);
+                _rebindConflictWarning = "Warning: also bound to " + string.Join(", ", conflicts);
             }
         }
 
