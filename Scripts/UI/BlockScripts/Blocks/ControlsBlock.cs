@@ -44,6 +44,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static string _rebindConflictWarning;
         private static bool _rebindConfirmHovered;
         private static bool _rebindUnbindHovered;
+        private static bool _rebindPendingUnbind;
 
         private static readonly Color HoverRowColor = new(38, 38, 38, 180);
         private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
@@ -798,6 +799,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     _rebindPendingCanonical = inputKey;
                     _rebindPendingDisplay = displayLabel;
                     _rebindCaptured = true;
+                    _rebindPendingUnbind = false;
                     EvaluateBindingConflicts(inputKey);
                 }
             }
@@ -919,6 +921,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindCurrentInput = string.IsNullOrWhiteSpace(currentBindingDisplay) ? "Unbound" : currentBindingDisplay;
             _rebindPendingDisplay = _rebindCurrentInput;
             _rebindCaptured = false;
+            _rebindPendingUnbind = false;
             _suppressNextCapture = true;
             _rebindModalBounds = Rectangle.Empty;
             _rebindConfirmButtonBounds = Rectangle.Empty;
@@ -936,8 +939,20 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            string finalBinding = string.IsNullOrWhiteSpace(_rebindPendingCanonical) ? _rebindCurrentCanonical : _rebindPendingCanonical;
-            finalBinding = finalBinding?.Trim();
+            bool hasPendingBinding = !string.IsNullOrWhiteSpace(_rebindPendingCanonical);
+            if (_rebindPendingUnbind)
+            {
+                TryApplyUnbind();
+                return;
+            }
+
+            if (!hasPendingBinding)
+            {
+                ResetRebindOverlay();
+                return;
+            }
+
+            string finalBinding = _rebindPendingCanonical?.Trim();
             if (string.IsNullOrWhiteSpace(finalBinding))
             {
                 TryApplyUnbind();
@@ -1021,6 +1036,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindConflictWarning = null;
             _rebindConfirmHovered = false;
             _rebindUnbindHovered = false;
+            _rebindPendingUnbind = false;
         }
 
         private static void EnsureRebindLayout()
@@ -1267,6 +1283,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindCaptured = true;
             _suppressNextCapture = true;
             _rebindConflictWarning = null;
+            _rebindPendingUnbind = true;
         }
 
         private struct KeybindDisplayRow

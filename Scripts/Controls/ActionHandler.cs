@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System;
 using System.Windows.Forms;
+using op.io.UI.BlockScripts.Blocks;
 
 namespace op.io
 {
@@ -9,6 +10,12 @@ namespace op.io
     {
         public static void Tickwise_CheckActions()
         {
+            // Suppress gameplay actions while the keybind overlay is active so captured keys (e.g., Escape) don't trigger game exits.
+            if (ControlsBlock.IsRebindOverlayOpen())
+            {
+                return;
+            }
+
             // Exit Action
             if (InputManager.IsInputActive("Exit"))
             {
