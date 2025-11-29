@@ -25,7 +25,17 @@ namespace op.io
         public static bool IsHovered(Rectangle bounds, Point pointer) =>
             bounds != Rectangle.Empty && bounds.Contains(pointer);
 
-        public static void Draw(SpriteBatch spriteBatch, Rectangle bounds, string label, ButtonStyle style, bool isHovered, bool isDisabled = false)
+        public static void Draw(
+            SpriteBatch spriteBatch,
+            Rectangle bounds,
+            string label,
+            ButtonStyle style,
+            bool isHovered,
+            bool isDisabled = false,
+            Color? textColorOverride = null,
+            Color? fillOverride = null,
+            Color? hoverFillOverride = null,
+            Color? borderOverride = null)
         {
             if (spriteBatch == null || bounds == Rectangle.Empty)
             {
@@ -40,9 +50,9 @@ namespace op.io
 
             EnsurePixelTexture(spriteBatch.GraphicsDevice ?? Core.Instance?.GraphicsDevice);
 
-            Color fill = GetFillColor(style, isHovered, isDisabled);
-            Color border = GetBorderColor(style, isDisabled);
-            Color textColor = isDisabled ? UIStyle.MutedTextColor : UIStyle.TextColor;
+            Color fill = GetFillColor(style, isHovered, isDisabled, fillOverride, hoverFillOverride);
+            Color border = GetBorderColor(style, isDisabled, borderOverride);
+            Color textColor = textColorOverride ?? (isDisabled ? UIStyle.MutedTextColor : UIStyle.TextColor);
 
             FillRect(spriteBatch, bounds, fill);
             DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
@@ -53,32 +63,44 @@ namespace op.io
             font.DrawString(spriteBatch, label, textPosition, textColor);
         }
 
-        private static Color GetFillColor(ButtonStyle style, bool isHovered, bool isDisabled)
+        private static Color GetFillColor(ButtonStyle style, bool isHovered, bool isDisabled, Color? fillOverride, Color? hoverFillOverride)
         {
+            Color baseFill = fillOverride ?? style switch
+            {
+                ButtonStyle.Blue => BlueFill,
+                _ => GreyFill
+            };
+
+            Color hoverFill = hoverFillOverride ?? style switch
+            {
+                ButtonStyle.Blue => BlueHoverFill,
+                _ => GreyHoverFill
+            };
+
+            Color selected = isHovered ? hoverFill : baseFill;
+
             if (isDisabled)
             {
-                return GreyFill;
+                selected *= 0.8f;
             }
 
-            return style switch
-            {
-                ButtonStyle.Blue => isHovered ? BlueHoverFill : BlueFill,
-                _ => isHovered ? GreyHoverFill : GreyFill
-            };
+            return selected;
         }
 
-        private static Color GetBorderColor(ButtonStyle style, bool isDisabled)
+        private static Color GetBorderColor(ButtonStyle style, bool isDisabled, Color? borderOverride)
         {
-            if (isDisabled)
-            {
-                return UIStyle.PanelBorder;
-            }
-
-            return style switch
+            Color selected = borderOverride ?? (style switch
             {
                 ButtonStyle.Blue => UIStyle.AccentColor,
                 _ => UIStyle.PanelBorder
-            };
+            });
+
+            if (isDisabled)
+            {
+                selected = UIStyle.MutedTextColor;
+            }
+
+            return selected;
         }
 
         private static void FillRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)

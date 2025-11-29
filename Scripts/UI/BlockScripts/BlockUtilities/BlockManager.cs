@@ -1790,7 +1790,9 @@ namespace op.io
                 if (entry.ControlMode == PanelMenuControlMode.Toggle)
                 {
                     string state = entry.IsVisible ? "Hide" : "Show";
-                    DrawButton(spriteBatch, row.ToggleBounds, state, entry.IsVisible ? UIStyle.AccentColor : UIStyle.PanelBorder);
+                    bool hovered = UIButtonRenderer.IsHovered(row.ToggleBounds, _mousePosition);
+                    UIButtonRenderer.ButtonStyle style = entry.IsVisible ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey;
+                    UIButtonRenderer.Draw(spriteBatch, row.ToggleBounds, state, style, hovered);
                 }
                 else
                 {
@@ -1806,8 +1808,10 @@ namespace op.io
 
             string openAllLabel = JoinWordsWithWideSpacing("Open", "all");
             string closeAllLabel = JoinWordsWithWideSpacing("Close", "all");
-            DrawButton(spriteBatch, _overlayOpenAllBounds, openAllLabel, UIStyle.AccentColor);
-            DrawButton(spriteBatch, _overlayCloseAllBounds, closeAllLabel, UIStyle.PanelBorder);
+            bool openAllHovered = UIButtonRenderer.IsHovered(_overlayOpenAllBounds, _mousePosition);
+            bool closeAllHovered = UIButtonRenderer.IsHovered(_overlayCloseAllBounds, _mousePosition);
+            UIButtonRenderer.Draw(spriteBatch, _overlayOpenAllBounds, openAllLabel, UIButtonRenderer.ButtonStyle.Blue, openAllHovered);
+            UIButtonRenderer.Draw(spriteBatch, _overlayCloseAllBounds, closeAllLabel, UIButtonRenderer.ButtonStyle.Grey, closeAllHovered);
         }
 
         private static void CollapseInteractions()
@@ -1856,22 +1860,6 @@ namespace op.io
             _activeResizeBarSnapCoordinate = null;
         }
 
-        private static void DrawButton(SpriteBatch spriteBatch, Rectangle bounds, string label, Color border)
-        {
-            UIStyle.UIFont buttonFont = UIStyle.FontBody;
-            if (!buttonFont.IsAvailable)
-            {
-                return;
-            }
-
-            DrawRect(spriteBatch, bounds, UIStyle.PanelBackground);
-            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
-
-            Vector2 textSize = buttonFont.MeasureString(label);
-            Vector2 textPosition = new(bounds.X + (bounds.Width - textSize.X) / 2f, bounds.Y + (bounds.Height - textSize.Y) / 2f);
-            buttonFont.DrawString(spriteBatch, label, textPosition, UIStyle.TextColor);
-        }
-
         private static void DrawOverlayDismissButton(SpriteBatch spriteBatch)
         {
             if (_overlayDismissBounds == Rectangle.Empty)
@@ -1879,23 +1867,21 @@ namespace op.io
                 return;
             }
 
+            bool hovered = UIButtonRenderer.IsHovered(_overlayDismissBounds, _mousePosition);
             Color background = new(64, 24, 24, 240);
+            Color hoverBackground = new(90, 36, 36, 240);
             Color border = new(150, 40, 40);
-            DrawRect(spriteBatch, _overlayDismissBounds, background);
-            DrawRectOutline(spriteBatch, _overlayDismissBounds, border, UIStyle.PanelBorderThickness);
-
-            UIStyle.UIFont glyphFont = UIStyle.FontBody;
-            if (!glyphFont.IsAvailable)
-            {
-                return;
-            }
-
-            const string glyph = "X";
-            Vector2 glyphSize = glyphFont.MeasureString(glyph);
-            Vector2 glyphPosition = new(
-                _overlayDismissBounds.X + (_overlayDismissBounds.Width - glyphSize.X) / 2f,
-                _overlayDismissBounds.Y + (_overlayDismissBounds.Height - glyphSize.Y) / 2f - 1f);
-            glyphFont.DrawString(spriteBatch, glyph, glyphPosition, Color.OrangeRed);
+            UIButtonRenderer.Draw(
+                spriteBatch,
+                _overlayDismissBounds,
+                "X",
+                UIButtonRenderer.ButtonStyle.Grey,
+                hovered,
+                isDisabled: false,
+                textColorOverride: Color.OrangeRed,
+                fillOverride: background,
+                hoverFillOverride: hoverBackground,
+                borderOverride: border);
         }
 
         private static void DrawStepperButton(SpriteBatch spriteBatch, Rectangle bounds, string label, bool disabled)
@@ -1905,21 +1891,8 @@ namespace op.io
                 return;
             }
 
-            UIStyle.UIFont buttonFont = UIStyle.FontBody;
-            if (!buttonFont.IsAvailable)
-            {
-                return;
-            }
-
-            Color border = disabled ? UIStyle.MutedTextColor : UIStyle.PanelBorder;
-            Color textColor = disabled ? UIStyle.MutedTextColor : UIStyle.TextColor;
-
-            DrawRect(spriteBatch, bounds, UIStyle.PanelBackground);
-            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
-
-            Vector2 textSize = buttonFont.MeasureString(label);
-            Vector2 textPosition = new(bounds.X + (bounds.Width - textSize.X) / 2f, bounds.Y + (bounds.Height - textSize.Y) / 2f);
-            buttonFont.DrawString(spriteBatch, label, textPosition, textColor);
+            bool hovered = UIButtonRenderer.IsHovered(bounds, _mousePosition);
+            UIButtonRenderer.Draw(spriteBatch, bounds, label, UIButtonRenderer.ButtonStyle.Grey, hovered, disabled);
         }
 
         private static void DrawNumberField(SpriteBatch spriteBatch, Rectangle bounds, string text, bool isActive)

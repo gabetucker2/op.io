@@ -939,7 +939,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void DrawButton(SpriteBatch spriteBatch, UIStyle.UIFont font, NotesCommand command, Rectangle bounds)
         {
             bool disabled = IsButtonDisabled(command);
-            bool hovered = bounds.Contains(LastMouseState.Position);
+            bool hovered = UIButtonRenderer.IsHovered(bounds, LastMouseState.Position);
             bool isActiveOverlay = command switch
             {
                 NotesCommand.Open => ActiveOverlay == OverlayMode.Open,
@@ -947,30 +947,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 _ => false
             };
 
-            Color background = UIStyle.PanelBackground;
-            Color border = UIStyle.PanelBorder;
-            if (disabled)
-            {
-                background *= 0.6f;
-                border *= 0.6f;
-            }
-            else if (isActiveOverlay)
-            {
-                border = UIStyle.AccentColor;
-            }
-            else if (hovered)
-            {
-                border = UIStyle.AccentMuted;
-            }
-
-            FillRect(spriteBatch, bounds, background);
-            DrawRect(spriteBatch, bounds, border);
-
-            string label = command.ToString();
-            Vector2 size = font.MeasureString(label);
-            Vector2 position = new(bounds.X + (bounds.Width - size.X) / 2f, bounds.Y + (bounds.Height - size.Y) / 2f);
-            Color textColor = disabled ? UIStyle.MutedTextColor : UIStyle.TextColor;
-            font.DrawString(spriteBatch, label, position, textColor);
+            UIButtonRenderer.ButtonStyle style = isActiveOverlay ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey;
+            UIButtonRenderer.Draw(spriteBatch, bounds, command.ToString(), style, hovered, disabled);
         }
 
         private static void DrawActiveNoteLabel(SpriteBatch spriteBatch, UIStyle.UIFont font)
