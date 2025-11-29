@@ -11,8 +11,10 @@ namespace op.io.UI.BlockScripts.BlockUtilities
     /// </summary>
     internal static class BlockDataStore
     {
-        private const string LockRowKey = "__block_lock__";
-        private const string TablePrefix = "Block_";
+        private const string LockRowKey = "BlockLock";
+        private const string LegacyLockRowKey = "__block_lock__";
+        private const string TablePrefix = "Block";
+        private const string LegacyTablePrefix = "Block_";
 
         private static readonly Dictionary<string, bool> _tableReady = new(StringComparer.OrdinalIgnoreCase);
 
@@ -57,7 +59,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
                 while (reader.Read())
                 {
-                    string rowKey = NormalizeRowKey(reader["RowKey"]?.ToString());
+                    string rowKey = NormalizeRowKey(panelKind, reader["RowKey"]?.ToString());
                     int order = DecodeInt(reader["RenderOrder"], orders.Count + 1);
 
                     if (!string.IsNullOrWhiteSpace(rowKey) && order > 0)
@@ -103,17 +105,17 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
                 if (rows != null && rows.Count > 0)
                 {
-                    using var insert = new SQLiteCommand($"INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder, IsLocked) VALUES (@rowKey, @order, 0);", connection, transaction);
-                    var rowKeyParam = insert.Parameters.Add("@rowKey", DbType.String);
-                    var orderParam = insert.Parameters.Add("@order", DbType.Int32);
+                using var insert = new SQLiteCommand($"INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder) VALUES (@rowKey, @order);", connection, transaction);
+                var rowKeyParam = insert.Parameters.Add("@rowKey", DbType.String);
+                var orderParam = insert.Parameters.Add("@order", DbType.Int32);
 
-                    foreach ((string RowKey, int Order) row in rows)
+                foreach ((string RowKey, int Order) row in rows)
+                {
+                    string normalizedKey = NormalizeRowKey(panelKind, row.RowKey);
+                    if (string.IsNullOrWhiteSpace(normalizedKey) || row.Order <= 0)
                     {
-                        string normalizedKey = NormalizeRowKey(row.RowKey);
-                        if (string.IsNullOrWhiteSpace(normalizedKey) || row.Order <= 0)
-                        {
-                            continue;
-                        }
+                        continue;
+                    }
 
                         rowKeyParam.Value = normalizedKey;
                         orderParam.Value = row.Order;
@@ -181,7 +183,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
                 EnsureTable(panelKind, connection);
 
                 string tableName = GetTableName(panelKind);
-                using var command = new SQLiteCommand($"INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder, IsLocked) VALUES (@lockKey, 0, @isLocked);", connection);
+                using var command = new SQLiteCommand($"INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder, IsLocked) VALUES (@lockKey, NULL, @isLocked);", connection);
                 command.Parameters.AddWithValue("@lockKey", LockRowKey);
                 command.Parameters.AddWithValue("@isLocked", isLocked ? 1 : 0);
                 command.ExecuteNonQuery();
@@ -204,6 +206,11 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             return string.Concat(TablePrefix, panelKind);
         }
 
+        public static string CanonicalizeRowKey(DockPanelKind panelKind, string rowKey)
+        {
+            return NormalizeRowKey(panelKind, rowKey);
+        }
+
         private static void EnsureTable(DockPanelKind panelKind, SQLiteConnection connection = null)
         {
             string tableName = GetTableName(panelKind);
@@ -221,17 +228,20 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
             try
             {
-                string createSql = $@"
+            string createSql = $@"
 CREATE TABLE IF NOT EXISTS {tableName} (
     RowKey TEXT PRIMARY KEY,
-    RenderOrder INTEGER NOT NULL DEFAULT 0,
+    RenderOrder INTEGER,
     IsLocked INTEGER NOT NULL DEFAULT 0
 );";
 
                 using var createCommand = new SQLiteCommand(createSql, targetConnection);
                 createCommand.ExecuteNonQuery();
 
-                using var ensureLockRow = new SQLiteCommand($"INSERT OR IGNORE INTO {tableName} (RowKey, RenderOrder, IsLocked) VALUES (@lockKey, 0, 0);", targetConnection);
+                MigrateLegacyTable(targetConnection, panelKind, tableName);
+                MigrateLegacyLockRow(targetConnection, tableName);
+
+                using var ensureLockRow = new SQLiteCommand($"INSERT OR IGNORE INTO {tableName} (RowKey, IsLocked) VALUES (@lockKey, 0);", targetConnection);
                 ensureLockRow.Parameters.AddWithValue("@lockKey", LockRowKey);
                 ensureLockRow.ExecuteNonQuery();
 
@@ -266,6 +276,167 @@ CREATE TABLE IF NOT EXISTS {tableName} (
 
             shouldDispose = connection != null;
             return connection;
+        }
+
+        private static void MigrateLegacyTable(SQLiteConnection connection, DockPanelKind panelKind, string newTableName)
+        {
+            string legacyTableName = string.Concat(LegacyTablePrefix, panelKind);
+            if (!TableExists(connection, legacyTableName))
+            {
+                return;
+            }
+
+            // Skip migration if the new table already has data.
+            using (var countNew = new SQLiteCommand($"SELECT COUNT(1) FROM {newTableName};", connection))
+            {
+                object newCount = countNew.ExecuteScalar();
+                if (Convert.ToInt32(newCount) > 0)
+                {
+                    return;
+                }
+            }
+
+            string migrateSql = $@"
+INSERT OR IGNORE INTO {newTableName} (RowKey, RenderOrder, IsLocked)
+SELECT RowKey, RenderOrder, IsLocked FROM {legacyTableName};";
+
+            using var migrateCommand = new SQLiteCommand(migrateSql, connection);
+            migrateCommand.ExecuteNonQuery();
+        }
+
+        private static void MigrateLegacyLockRow(SQLiteConnection connection, string tableName)
+        {
+            // Copy old lock row value if present, then remove legacy row.
+            string migrateSql = $@"
+INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder, IsLocked)
+SELECT @newKey, RenderOrder, IsLocked FROM {tableName} WHERE RowKey = @oldKey LIMIT 1;
+DELETE FROM {tableName} WHERE RowKey = @oldKey;";
+
+            using var migrateCommand = new SQLiteCommand(migrateSql, connection);
+            migrateCommand.Parameters.AddWithValue("@newKey", LockRowKey);
+            migrateCommand.Parameters.AddWithValue("@oldKey", LegacyLockRowKey);
+            migrateCommand.ExecuteNonQuery();
+        }
+
+        private static bool TableExists(SQLiteConnection connection, string tableName)
+        {
+            using var command = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type = 'table' AND name = @name LIMIT 1;", connection);
+            command.Parameters.AddWithValue("@name", tableName);
+            object result = command.ExecuteScalar();
+            return result != null && result != DBNull.Value;
+        }
+
+        private static string NormalizeRowKey(DockPanelKind panelKind, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            string trimmed = value.Trim();
+            if (trimmed.Equals(LegacyLockRowKey, StringComparison.OrdinalIgnoreCase) ||
+                trimmed.Equals(LockRowKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return LockRowKey;
+            }
+
+            if (panelKind == DockPanelKind.Specs)
+            {
+                return NormalizeSpecsKey(trimmed);
+            }
+
+            return trimmed;
+        }
+
+        private static string NormalizeSpecsKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return string.Empty;
+            }
+
+            string lower = key.Trim();
+            if (lower.Equals("target_fps", StringComparison.OrdinalIgnoreCase))
+            {
+                return "TargetFPS";
+            }
+
+            if (lower.Equals("fps", StringComparison.OrdinalIgnoreCase))
+            {
+                return "FPS";
+            }
+
+            if (lower.Equals("frame_time", StringComparison.OrdinalIgnoreCase))
+            {
+                return "FrameTime";
+            }
+
+            if (lower.Equals("window_mode", StringComparison.OrdinalIgnoreCase))
+            {
+                return "WindowMode";
+            }
+
+            if (lower.Equals("fixed_time", StringComparison.OrdinalIgnoreCase))
+            {
+                return "FixedTime";
+            }
+
+            if (lower.Equals("window_size", StringComparison.OrdinalIgnoreCase))
+            {
+                return "WindowSize";
+            }
+
+            if (lower.Equals("surface_format", StringComparison.OrdinalIgnoreCase))
+            {
+                return "SurfaceFormat";
+            }
+
+            if (lower.Equals("depth_format", StringComparison.OrdinalIgnoreCase))
+            {
+                return "DepthFormat";
+            }
+
+            if (lower.Equals("graphics_profile", StringComparison.OrdinalIgnoreCase))
+            {
+                return "GraphicsProfile";
+            }
+
+            if (lower.Equals("backbuffer", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Backbuffer";
+            }
+
+            if (lower.Equals("adapter", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Adapter";
+            }
+
+            if (lower.Equals("cpu_threads", StringComparison.OrdinalIgnoreCase))
+            {
+                return "CPUThreads";
+            }
+
+            if (lower.Equals("process_memory", StringComparison.OrdinalIgnoreCase))
+            {
+                return "ProcessMemory";
+            }
+
+            if (lower.Equals("managed_memory", StringComparison.OrdinalIgnoreCase))
+            {
+                return "ManagedMemory";
+            }
+
+            if (lower.Equals("vsync", StringComparison.OrdinalIgnoreCase))
+            {
+                return "VSync";
+            }
+
+            if (lower.Equals("os", StringComparison.OrdinalIgnoreCase))
+            {
+                return "OS";
+            }
+
+            return key.Trim();
         }
 
         private static string NormalizeRowKey(string value)

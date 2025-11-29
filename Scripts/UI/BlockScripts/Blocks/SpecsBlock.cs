@@ -206,25 +206,26 @@ namespace op.io.UI.BlockScripts.Blocks
                     continue;
                 }
 
-                incoming.Add(spec.Key);
-                if (!_customOrder.ContainsKey(spec.Key))
+                string storageKey = BlockDataStore.CanonicalizeRowKey(DockPanelKind.Specs, spec.Key);
+                incoming.Add(storageKey);
+                if (!_customOrder.ContainsKey(storageKey))
                 {
-                    _customOrder[spec.Key] = nextOrder++;
+                    _customOrder[storageKey] = nextOrder++;
                     orderChanged = true;
                 }
 
-                SpecRow row = FindRow(spec.Key);
+                SpecRow row = FindRow(storageKey);
                 if (row == null)
                 {
-                    row = new SpecRow(spec.Key);
+                    row = new SpecRow(storageKey);
                     _rows.Add(row);
                 }
 
-                row.Label = string.IsNullOrWhiteSpace(spec.Label) ? spec.Key : spec.Label;
+                row.Label = string.IsNullOrWhiteSpace(spec.Label) ? storageKey : spec.Label;
                 row.Value = spec.Value ?? string.Empty;
                 row.IsBoolean = spec.IsBoolean;
                 row.BoolValue = spec.BoolValue;
-                row.RenderOrder = _customOrder[spec.Key];
+                row.RenderOrder = _customOrder[storageKey];
             }
 
             if (!_dragState.IsDragging)

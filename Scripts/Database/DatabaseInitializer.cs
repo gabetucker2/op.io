@@ -101,9 +101,11 @@ namespace op.io
         private static void LoadStartData(SQLiteConnection connection)
         {
             string dataPathSettings = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_Settings.sql");
+            string dataPathBlocks = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_Blocks.sql");
             string dataPathGOs = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_GOs.sql");
 
             SQLScriptExecutor.RunSQLScript(connection, dataPathSettings);
+            SQLScriptExecutor.RunSQLScript(connection, dataPathBlocks);
             SQLScriptExecutor.RunSQLScript(connection, dataPathGOs);
         }
 

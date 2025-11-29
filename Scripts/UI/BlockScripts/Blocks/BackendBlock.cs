@@ -224,26 +224,27 @@ namespace op.io.UI.BlockScripts.Blocks
                     continue;
                 }
 
-                incoming.Add(variable.Name);
-                if (!_customOrder.ContainsKey(variable.Name))
+                string storageKey = BlockDataStore.CanonicalizeRowKey(DockPanelKind.Backend, variable.Name);
+                incoming.Add(storageKey);
+                if (!_customOrder.ContainsKey(storageKey))
                 {
-                    _customOrder[variable.Name] = nextOrder++;
+                    _customOrder[storageKey] = nextOrder++;
                     orderChanged = true;
                 }
 
-                BackendVariable row = FindRow(variable.Name);
+                BackendVariable row = FindRow(storageKey);
                 bool wasDragging = row?.IsDragging ?? false;
                 Rectangle previousBounds = row?.Bounds ?? Rectangle.Empty;
 
                 if (row == null)
                 {
-                    row = new BackendVariable(variable.Name, variable.Value, variable.IsBoolean);
+                    row = new BackendVariable(storageKey, variable.Value, variable.IsBoolean);
                     _rows.Add(row);
                 }
 
                 row.Value = variable.Value;
                 row.IsBoolean = variable.IsBoolean;
-                row.RenderOrder = _customOrder[variable.Name];
+                row.RenderOrder = _customOrder[storageKey];
                 row.IsDragging = wasDragging;
                 row.Bounds = previousBounds;
             }
