@@ -243,10 +243,31 @@ namespace op.io
 
             if (!_controlBindings.TryGetValue(settingKey, out ControlBinding binding))
             {
-                return false;
-            }
+                ControlKeyData.ControlKeyRecord record = ControlKeyData.GetControl(settingKey);
+                if (record == null)
+                {
+                    return false;
+                }
 
-            if (binding.LockMode)
+                InputType inferredType = ParseInputType(record.InputType);
+                if (ControlKeyRules.RequiresSwitchSemantics(settingKey))
+                {
+                    inferredType = InputType.SaveSwitch;
+                }
+
+                if (record.LockMode)
+                {
+                    return false;
+                }
+
+                if (!TryCreateBinding(settingKey, newInputKey, inferredType, record.MetaControl, record.LockMode, out ControlBinding created))
+                {
+                    return false;
+                }
+
+                binding = created;
+            }
+            else if (binding.LockMode)
             {
                 return false;
             }

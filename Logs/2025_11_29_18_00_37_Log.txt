@@ -1,4 +1,4 @@
-Log created at 2025-11-29T16:35:03.0330669-05:00
+Log created at 2025-11-29T18:00:37.0307441-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 11
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 146
@@ -197,14 +197,14 @@ Log created at 2025-11-29T16:35:03.0330669-05:00
 [DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
 [DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 6 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [DEFERRED OUTPUT] [DATABASE] Setting starting debug mode to switch value: 1 | DebugModeHandler.cs::get_DEBUGENABLED @ Line 24
-[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'Crouch' (LeftControl) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 104
-[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'PanelMenu' (Shift + X) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 104
-[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DockingMode' (V) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 104
-[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DebugMode' (Shift + B) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 104
-[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'AllowGameInputFreeze' (Shift + C) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 104
-[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'TransparentTabBlocking' (Shift + V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 104
-[DEFERRED OUTPUT] [DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 382
-[DEFERRED OUTPUT] [DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 382
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'Crouch' (LeftControl) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 105
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'PanelMenu' (Shift + X) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 105
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DockingMode' (V) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 105
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DebugMode' (Shift + B) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 105
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'AllowGameInputFreeze' (Shift + C) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 105
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'TransparentTabBlocking' (Shift + V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 105
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 383
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 383
 [DEFERRED OUTPUT] [DEBUG] Initializing console... | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 31
 [DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 84
 [UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
@@ -353,8 +353,6 @@ Log created at 2025-11-29T16:35:03.0330669-05:00
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
@@ -520,19 +518,84 @@ Log created at 2025-11-29T16:35:03.0330669-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 28
-[UI] GameObject screen position calculated: {X:270 Y:202} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
-[UI] Local screen position of player: {X:282 Y:718} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
-[UI] Window Handle Retrieved: 11275642 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
-[UI] Player global screen position calculated: {X:854 Y:774} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
-[UI] Cursor returned to player position: {X:854 Y:774} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
-[UI] GameObject screen position calculated: {X:464 Y:201} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
-[UI] Local screen position of player: {X:476.00003 Y:717} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
-[UI] Window Handle Retrieved: 11275642 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
-[UI] Player global screen position calculated: {X:1048 Y:773} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
-[UI] Cursor returned to player position: {X:1048 Y:773} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
 [DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: MoveTowardsCursor | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[UI] GameObject screen position calculated: {X:431 Y:194} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:443 Y:742} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:1023 Y:829} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:1023 Y:829} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] GameObject screen position calculated: {X:370 Y:205} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:382 Y:753} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:962 Y:840} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:962 Y:840} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] GameObject screen position calculated: {X:552 Y:201} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:564 Y:749} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:1144 Y:836} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:1144 Y:836} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] GameObject screen position calculated: {X:533 Y:143} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:545 Y:691} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:1125 Y:778} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:1125 Y:778} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] GameObject screen position calculated: {X:539 Y:169} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:551 Y:717} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:1131 Y:804} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:1131 Y:804} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] GameObject screen position calculated: {X:561 Y:322} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:573 Y:870} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:1153 Y:957} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:1153 Y:957} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[UI] GameObject screen position calculated: {X:447 Y:171} | GameObjectFunctions.cs::GetGOLocalScreenPosition @ Line 23
+[UI] Local screen position of player: {X:459 Y:719} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 45
+[UI] Window Handle Retrieved: 8522688 | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 55
+[UI] Player global screen position calculated: {X:1039 Y:806} | GameObjectFunctions.cs::GetGOGlobalScreenPosition @ Line 72
+[UI] Cursor returned to player position: {X:1039 Y:806} | ActionHandler.cs::Tickwise_CheckActions @ Line 24
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: Crouch | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[UI] Exit action triggered. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 15
+[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'PanelMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103

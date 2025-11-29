@@ -23,6 +23,7 @@ namespace op.io.UI.BlockScripts.Blocks
         });
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
+        private static string _hoveredKeyAction;
         private static float _lineHeightCache;
         private static string _hoveredTypeKey;
         private static bool _hoveredTypeIndicator;
@@ -32,8 +33,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static bool _rebindOverlayVisible;
         private static string _rebindAction;
         private static string _rebindCurrentInput;
-        private static string _rebindPendingInput;
         private static string _rebindPendingDisplay;
+        private static string _rebindCurrentCanonical;
+        private static string _rebindPendingCanonical;
         private static Rectangle _rebindModalBounds;
         private static Rectangle _rebindConfirmButtonBounds;
         private static Rectangle _rebindUnbindButtonBounds;
@@ -51,6 +53,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly Color WarningColor = new(200, 68, 68);
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
+        private const int ValueHighlightPadding = 2;
         private const int DragStartThreshold = 6;
 
         private static bool IsSwitchType(InputType inputType) =>
@@ -89,6 +92,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             UpdateRowBounds(listBounds);
             UpdateTypeToggleBounds(boldFont);
+            UpdateKeyValueBounds(boldFont, regularFont);
 
             bool leftDown = mouseState.LeftButton == ButtonState.Pressed;
             bool leftDownPrev = previousMouseState.LeftButton == ButtonState.Pressed;
@@ -107,11 +111,13 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 _hoveredTypeKey = HitTestTypeToggle(mouseState.Position, listBounds, out bool indicatorArea);
                 _hoveredTypeIndicator = indicatorArea;
+                _hoveredKeyAction = HitTestKeyValue(mouseState.Position);
             }
             else
             {
                 _hoveredTypeKey = null;
                 _hoveredTypeIndicator = false;
+                _hoveredKeyAction = null;
             }
 
             if (!allowInteraction)
@@ -321,6 +327,7 @@ namespace op.io.UI.BlockScripts.Blocks
                         Bounds = Rectangle.Empty,
                         IsDragging = false,
                         TypeToggleBounds = Rectangle.Empty,
+                        KeyValueBounds = Rectangle.Empty,
                         TriggerAutoFire = triggerAuto,
                         ToggleLocked = toggleLocked
                     });
@@ -368,7 +375,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (!_dragState.IsDragging && string.Equals(_hoveredRowKey, row.Action, StringComparison.OrdinalIgnoreCase))
+            if (ShouldHighlightRow(row, panelLocked))
             {
                 FillRect(spriteBatch, bounds, HoverRowColor);
             }
@@ -387,6 +394,7 @@ namespace op.io.UI.BlockScripts.Blocks
             KeybindDisplayRow row = _dragState.DraggingSnapshot;
             row.Bounds = dragBounds;
             row.TypeToggleBounds = Rectangle.Empty;
+            row.KeyValueBounds = Rectangle.Empty;
             DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds, panelLocked);
         }
 
@@ -422,6 +430,26 @@ namespace op.io.UI.BlockScripts.Blocks
             _stringBuilder.Append(row.Input);
             string value = _stringBuilder.ToString();
             float valueX = labelPosition.X + headerSize.X;
+
+            // Build a background aligned to the keybind text (after the ":  " prefix) so it visually sits behind the clickable keys.
+            Rectangle keyValueBounds = row.KeyValueBounds;
+            if (keyValueBounds == Rectangle.Empty && !string.IsNullOrWhiteSpace(row.Input))
+            {
+                float keyTextX = valueX + regularFont.MeasureString(":  ").X;
+                float keyTextWidth = regularFont.MeasureString(row.Input).X;
+                keyValueBounds = new Rectangle(
+                    (int)MathF.Floor(keyTextX) - ValueHighlightPadding,
+                    rowBounds.Y,
+                    (int)MathF.Ceiling(keyTextWidth) + (ValueHighlightPadding * 2),
+                    rowBounds.Height);
+            }
+
+            if (!panelLocked && keyValueBounds != Rectangle.Empty)
+            {
+                bool keyHovered = string.Equals(_hoveredKeyAction, row.Action, StringComparison.OrdinalIgnoreCase);
+                Color fill = keyHovered ? TypeToggleHoverFill : TypeToggleIdleFill;
+                FillRect(spriteBatch, keyValueBounds, fill);
+            }
             regularFont.DrawString(spriteBatch, value, new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
 
             if (IsSwitchType(row.InputType))
@@ -457,6 +485,14 @@ namespace op.io.UI.BlockScripts.Blocks
             return deltaX >= DragStartThreshold || deltaY >= DragStartThreshold;
         }
 
+        private static bool ShouldHighlightRow(KeybindDisplayRow row, bool panelLocked)
+        {
+            return !panelLocked &&
+                !_dragState.IsDragging &&
+                !string.IsNullOrWhiteSpace(_hoveredRowKey) &&
+                string.Equals(_hoveredRowKey, row.Action, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static void UpdateTypeToggleBounds(UIStyle.UIFont boldFont)
         {
             if (_lineHeightCache <= 0f || !boldFont.IsAvailable)
@@ -485,6 +521,45 @@ namespace op.io.UI.BlockScripts.Blocks
                 int width = (int)MathF.Ceiling(typeSize.X) + (TypeTogglePadding * 2);
 
                 row.TypeToggleBounds = new Rectangle(x, y, width, height);
+                _keybindCache[i] = row;
+            }
+        }
+
+        private static void UpdateKeyValueBounds(UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
+        {
+            if (_lineHeightCache <= 0f || !boldFont.IsAvailable || !regularFont.IsAvailable)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _keybindCache.Count; i++)
+            {
+                var row = _keybindCache[i];
+                if (row.Bounds == Rectangle.Empty || string.IsNullOrWhiteSpace(row.Input))
+                {
+                    row.KeyValueBounds = Rectangle.Empty;
+                    _keybindCache[i] = row;
+                    continue;
+                }
+
+                _stringBuilder.Clear();
+                _stringBuilder.Append(row.Action);
+                _stringBuilder.Append(' ');
+                _stringBuilder.Append('[');
+                _stringBuilder.Append(row.TypeLabel);
+                _stringBuilder.Append(']');
+                string header = _stringBuilder.ToString();
+
+                Vector2 headerSize = boldFont.MeasureString(header);
+                Vector2 prefixSize = regularFont.MeasureString(":  ");
+                Vector2 inputSize = regularFont.MeasureString(row.Input);
+
+                int x = (int)MathF.Floor(row.Bounds.X + headerSize.X + prefixSize.X) - ValueHighlightPadding;
+                int y = row.Bounds.Y;
+                int height = row.Bounds.Height > 0 ? row.Bounds.Height : (int)MathF.Ceiling(_lineHeightCache);
+                int width = (int)MathF.Ceiling(inputSize.X) + (ValueHighlightPadding * 2);
+
+                row.KeyValueBounds = new Rectangle(x, y, width, height);
                 _keybindCache[i] = row;
             }
         }
@@ -715,12 +790,12 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
                 else if (TryCaptureBinding(keyboardState, previousKeyboardState, mouseState, previousMouseState, out string inputKey, out string displayLabel))
                 {
-                    _rebindPendingInput = inputKey;
-                _rebindPendingDisplay = displayLabel;
-                _rebindCaptured = true;
-                EvaluateBindingConflicts(inputKey);
+                    _rebindPendingCanonical = inputKey;
+                    _rebindPendingDisplay = displayLabel;
+                    _rebindCaptured = true;
+                    EvaluateBindingConflicts(inputKey);
+                }
             }
-        }
 
             if (leftReleased && pointerOnUnbind)
             {
@@ -843,16 +918,22 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _rebindOverlayVisible = true;
             _rebindAction = row.Action;
-            string currentBinding = string.IsNullOrWhiteSpace(row.Input) ? string.Empty : row.Input;
-            _rebindCurrentInput = currentBinding;
-            _rebindPendingInput = currentBinding;
-            _rebindPendingDisplay = string.IsNullOrWhiteSpace(currentBinding) ? "Unbound" : currentBinding;
+            string currentBindingDisplay = string.IsNullOrWhiteSpace(row.Input) ? string.Empty : row.Input;
+            string currentCanonical = ControlKeyData.GetControl(row.Action)?.InputKey;
+            if (string.IsNullOrWhiteSpace(currentCanonical))
+            {
+                currentCanonical = currentBindingDisplay;
+            }
+            _rebindCurrentCanonical = currentCanonical ?? string.Empty;
+            _rebindPendingCanonical = _rebindCurrentCanonical;
+            _rebindCurrentInput = string.IsNullOrWhiteSpace(currentBindingDisplay) ? "Unbound" : currentBindingDisplay;
+            _rebindPendingDisplay = _rebindCurrentInput;
             _rebindCaptured = false;
             _suppressNextCapture = true;
             _rebindModalBounds = Rectangle.Empty;
             _rebindConfirmButtonBounds = Rectangle.Empty;
             _rebindUnbindButtonBounds = Rectangle.Empty;
-            EvaluateBindingConflicts(currentBinding);
+            EvaluateBindingConflicts(_rebindCurrentCanonical);
         }
 
         private static void ApplyRebindSelection()
@@ -863,7 +944,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            string finalBinding = string.IsNullOrWhiteSpace(_rebindPendingInput) ? _rebindCurrentInput : _rebindPendingInput;
+            string finalBinding = string.IsNullOrWhiteSpace(_rebindPendingCanonical) ? _rebindCurrentCanonical : _rebindPendingCanonical;
             finalBinding = finalBinding?.Trim();
             if (string.IsNullOrWhiteSpace(finalBinding))
             {
@@ -877,7 +958,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (!InputManager.TryUpdateBindingInputKey(_rebindAction, finalBinding, out string displayLabel))
                 {
                     DebugLogger.PrintWarning($"Failed to apply new binding for '{_rebindAction}'.");
-                    displayLabel = finalBinding;
+                    displayLabel = InputManager.GetBindingDisplayLabel(_rebindAction);
+                    if (string.IsNullOrWhiteSpace(displayLabel))
+                    {
+                        displayLabel = finalBinding;
+                    }
                 }
 
                 int index = GetRowIndex(_rebindAction);
@@ -914,6 +999,9 @@ namespace op.io.UI.BlockScripts.Blocks
                     row.Input = "Unbound";
                     _keybindCache[index] = row;
                 }
+
+                _rebindCurrentCanonical = string.Empty;
+                _rebindPendingCanonical = string.Empty;
             }
             catch (Exception ex)
             {
@@ -930,7 +1018,8 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindOverlayVisible = false;
             _rebindAction = null;
             _rebindCurrentInput = null;
-            _rebindPendingInput = null;
+            _rebindCurrentCanonical = null;
+            _rebindPendingCanonical = null;
             _rebindPendingDisplay = null;
             _rebindCaptured = false;
             _suppressNextCapture = false;
@@ -1030,6 +1119,19 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (!keyboardState.IsKeyDown(key))
                 {
                     return key;
+                }
+            }
+
+            return null;
+        }
+
+        private static string HitTestKeyValue(Point position)
+        {
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (row.KeyValueBounds != Rectangle.Empty && row.KeyValueBounds.Contains(position))
+                {
+                    return row.Action;
                 }
             }
 
@@ -1151,7 +1253,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            IReadOnlyList<string> conflicts = InputManager.GetBindingsForInputKey(inputKey, _rebindAction);
+            string canonical = inputKey.Trim();
+            if (string.IsNullOrWhiteSpace(canonical))
+            {
+                return;
+            }
+
+            IReadOnlyList<string> conflicts = InputManager.GetBindingsForInputKey(canonical, _rebindAction);
             if (conflicts.Count > 0)
             {
                 _rebindConflictWarning = "Already bound to: " + string.Join(", ", conflicts);
@@ -1160,8 +1268,8 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void SetPendingUnbind()
         {
-            _rebindPendingInput = string.Empty;
             _rebindPendingDisplay = "Unbound";
+            _rebindPendingCanonical = string.Empty;
             _rebindCaptured = true;
             _suppressNextCapture = true;
             _rebindConflictWarning = null;
@@ -1176,6 +1284,7 @@ namespace op.io.UI.BlockScripts.Blocks
             public int RenderOrder;
             public Rectangle Bounds;
             public Rectangle TypeToggleBounds;
+            public Rectangle KeyValueBounds;
             public bool IsDragging;
             public bool TriggerAutoFire;
             public bool ToggleLocked;
