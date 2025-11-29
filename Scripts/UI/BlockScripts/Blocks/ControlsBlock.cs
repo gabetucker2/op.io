@@ -42,6 +42,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private static bool _rebindCaptured;
         private static bool _suppressNextCapture;
         private static string _rebindConflictWarning;
+        private static bool _rebindConfirmHovered;
+        private static bool _rebindUnbindHovered;
 
         private static readonly Color HoverRowColor = new(38, 38, 38, 180);
         private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
@@ -775,9 +777,12 @@ namespace op.io.UI.BlockScripts.Blocks
 
             EnsureRebindLayout();
 
+            _rebindConfirmHovered = UIButtonRenderer.IsHovered(_rebindConfirmButtonBounds, mouseState.Position);
+            _rebindUnbindHovered = UIButtonRenderer.IsHovered(_rebindUnbindButtonBounds, mouseState.Position);
+
             bool leftReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
-            bool pointerOnConfirm = _rebindConfirmButtonBounds.Contains(mouseState.Position);
-            bool pointerOnUnbind = _rebindUnbindButtonBounds.Contains(mouseState.Position);
+            bool pointerOnConfirm = _rebindConfirmHovered;
+            bool pointerOnUnbind = _rebindUnbindHovered;
 
             if (!(pointerOnConfirm && leftReleased) && !(pointerOnUnbind && leftReleased))
             {
@@ -875,23 +880,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 bodyFont.DrawString(spriteBatch, _rebindConflictWarning, new Vector2(textX, textY), WarningColor);
             }
 
-            FillRect(spriteBatch, _rebindUnbindButtonBounds, UIStyle.PanelBackground);
-            DrawRectOutline(spriteBatch, _rebindUnbindButtonBounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
-            string unbindLabel = "Unbind";
-            Vector2 unbindSize = buttonFont.MeasureString(unbindLabel);
-            Vector2 unbindPosition = new(
-                _rebindUnbindButtonBounds.X + (_rebindUnbindButtonBounds.Width - unbindSize.X) / 2f,
-                _rebindUnbindButtonBounds.Y + (_rebindUnbindButtonBounds.Height - unbindSize.Y) / 2f);
-            buttonFont.DrawString(spriteBatch, unbindLabel, unbindPosition, UIStyle.TextColor);
-
-            FillRect(spriteBatch, _rebindConfirmButtonBounds, UIStyle.PanelBackground);
-            DrawRectOutline(spriteBatch, _rebindConfirmButtonBounds, UIStyle.AccentColor, UIStyle.PanelBorderThickness);
-            string confirmLabel = "Confirm";
-            Vector2 confirmSize = buttonFont.MeasureString(confirmLabel);
-            Vector2 confirmPosition = new(
-                _rebindConfirmButtonBounds.X + (_rebindConfirmButtonBounds.Width - confirmSize.X) / 2f,
-                _rebindConfirmButtonBounds.Y + (_rebindConfirmButtonBounds.Height - confirmSize.Y) / 2f);
-            buttonFont.DrawString(spriteBatch, confirmLabel, confirmPosition, UIStyle.TextColor);
+            UIButtonRenderer.Draw(spriteBatch, _rebindUnbindButtonBounds, "Unbind", UIButtonRenderer.ButtonStyle.Grey, _rebindUnbindHovered);
+            UIButtonRenderer.Draw(spriteBatch, _rebindConfirmButtonBounds, "Confirm", UIButtonRenderer.ButtonStyle.Blue, _rebindConfirmHovered);
         }
 
         private static void BeginRebindFlow(string settingKey)
@@ -933,6 +923,8 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindModalBounds = Rectangle.Empty;
             _rebindConfirmButtonBounds = Rectangle.Empty;
             _rebindUnbindButtonBounds = Rectangle.Empty;
+            _rebindConfirmHovered = false;
+            _rebindUnbindHovered = false;
             EvaluateBindingConflicts(_rebindCurrentCanonical);
         }
 
@@ -1027,6 +1019,8 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindConfirmButtonBounds = Rectangle.Empty;
             _rebindUnbindButtonBounds = Rectangle.Empty;
             _rebindConflictWarning = null;
+            _rebindConfirmHovered = false;
+            _rebindUnbindHovered = false;
         }
 
         private static void EnsureRebindLayout()
