@@ -172,8 +172,9 @@ namespace op.io.UI.BlockScripts.BlockUtilities
                 return;
             }
 
-            int travelRange = Math.Max(1, _trackBounds.Height - _thumbBounds.Height);
-            int clampedY = Math.Clamp(mouseY - _thumbDragOffset, _trackBounds.Y, _trackBounds.Y + travelRange);
+            int maxThumbTop = Math.Max(_trackBounds.Y, _trackBounds.Bottom - _thumbBounds.Height);
+            int travelRange = Math.Max(1, maxThumbTop - _trackBounds.Y);
+            int clampedY = Math.Clamp(mouseY - _thumbDragOffset, _trackBounds.Y, maxThumbTop);
             float normalized = (clampedY - _trackBounds.Y) / (float)travelRange;
             _scrollOffset = _maxOffset <= 0f ? 0f : normalized * _maxOffset;
         }
@@ -186,8 +187,9 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             }
 
             int halfThumb = _thumbBounds.Height / 2;
-            int travelRange = Math.Max(1, _trackBounds.Height - _thumbBounds.Height);
-            int targetY = Math.Clamp(mouseY - halfThumb, _trackBounds.Y, _trackBounds.Y + travelRange);
+            int maxThumbTop = Math.Max(_trackBounds.Y, _trackBounds.Bottom - _thumbBounds.Height);
+            int travelRange = Math.Max(1, maxThumbTop - _trackBounds.Y);
+            int targetY = Math.Clamp(mouseY - halfThumb, _trackBounds.Y, maxThumbTop);
             float normalized = (targetY - _trackBounds.Y) / (float)travelRange;
             _scrollOffset = _maxOffset <= 0f ? 0f : normalized * _maxOffset;
         }
@@ -201,12 +203,16 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             }
 
             float ratio = contentHeight <= 0f || viewportHeight <= 0f ? 1f : MathHelper.Clamp(viewportHeight / contentHeight, 0.05f, 1f);
-            int thumbHeight = (int)MathF.Round(_trackBounds.Height * ratio);
-            thumbHeight = Math.Clamp(thumbHeight, ThumbMinHeight, _trackBounds.Height);
+            int rawHeight = (int)MathF.Round(_trackBounds.Height * ratio);
+            int maxThumbHeight = Math.Max(0, _trackBounds.Height);
+            int minThumbHeight = Math.Min(ThumbMinHeight, maxThumbHeight);
+            int thumbHeight = Math.Clamp(rawHeight, minThumbHeight, maxThumbHeight);
 
             float travelRange = Math.Max(0, _trackBounds.Height - thumbHeight);
-            float normalized = _maxOffset <= 0f ? 0f : (_scrollOffset / _maxOffset);
+            float normalized = _maxOffset <= 0f ? 0f : MathHelper.Clamp(_scrollOffset / _maxOffset, 0f, 1f);
             int thumbY = (int)MathF.Round(_trackBounds.Y + (travelRange * normalized));
+            int maxThumbTop = Math.Max(_trackBounds.Y, _trackBounds.Bottom - thumbHeight);
+            thumbY = Math.Clamp(thumbY, _trackBounds.Y, maxThumbTop);
 
             _thumbBounds = new Rectangle(_trackBounds.X, thumbY, _trackBounds.Width, thumbHeight);
         }

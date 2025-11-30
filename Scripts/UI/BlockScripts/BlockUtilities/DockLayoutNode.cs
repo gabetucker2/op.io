@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 
 namespace op.io
@@ -21,7 +22,9 @@ namespace op.io
     {
         public Rectangle Bounds { get; protected set; }
         public abstract bool HasVisibleContent { get; }
-        public abstract void Arrange(Rectangle bounds, int minSize);
+        public abstract int GetMinWidth();
+        public abstract int GetMinHeight();
+        public abstract void Arrange(Rectangle bounds);
     }
 
     public sealed class PanelNode : DockNode
@@ -34,7 +37,27 @@ namespace op.io
         public DockPanel Panel { get; }
         public override bool HasVisibleContent => Panel != null && Panel.IsVisible;
 
-        public override void Arrange(Rectangle bounds, int minSize)
+        public override int GetMinWidth()
+        {
+            if (Panel == null || !Panel.IsVisible)
+            {
+                return 0;
+            }
+
+            return Math.Max(0, Panel.MinWidth);
+        }
+
+        public override int GetMinHeight()
+        {
+            if (Panel == null || !Panel.IsVisible)
+            {
+                return 0;
+            }
+
+            return Math.Max(0, Panel.MinHeight);
+        }
+
+        public override void Arrange(Rectangle bounds)
         {
             Bounds = bounds;
             if (Panel != null)
@@ -60,7 +83,61 @@ namespace op.io
             (First?.HasVisibleContent ?? false) ||
             (Second?.HasVisibleContent ?? false);
 
-        public override void Arrange(Rectangle bounds, int minSize)
+        public override int GetMinWidth()
+        {
+            int firstMin = First?.GetMinWidth() ?? 0;
+            int secondMin = Second?.GetMinWidth() ?? 0;
+            bool firstVisible = First?.HasVisibleContent ?? false;
+            bool secondVisible = Second?.HasVisibleContent ?? false;
+
+            if (!firstVisible && !secondVisible)
+            {
+                return 0;
+            }
+
+            if (!firstVisible)
+            {
+                return secondMin;
+            }
+
+            if (!secondVisible)
+            {
+                return firstMin;
+            }
+
+            return Orientation == DockSplitOrientation.Vertical
+                ? firstMin + secondMin
+                : Math.Max(firstMin, secondMin);
+        }
+
+        public override int GetMinHeight()
+        {
+            int firstMin = First?.GetMinHeight() ?? 0;
+            int secondMin = Second?.GetMinHeight() ?? 0;
+            bool firstVisible = First?.HasVisibleContent ?? false;
+            bool secondVisible = Second?.HasVisibleContent ?? false;
+
+            if (!firstVisible && !secondVisible)
+            {
+                return 0;
+            }
+
+            if (!firstVisible)
+            {
+                return secondMin;
+            }
+
+            if (!secondVisible)
+            {
+                return firstMin;
+            }
+
+            return Orientation == DockSplitOrientation.Horizontal
+                ? firstMin + secondMin
+                : Math.Max(firstMin, secondMin);
+        }
+
+        public override void Arrange(Rectangle bounds)
         {
             Bounds = bounds;
             bool firstVisible = First?.HasVisibleContent ?? false;
@@ -73,37 +150,41 @@ namespace op.io
 
             if (!firstVisible)
             {
-                Second?.Arrange(bounds, minSize);
+                Second?.Arrange(bounds);
                 return;
             }
 
             if (!secondVisible)
             {
-                First?.Arrange(bounds, minSize);
+                First?.Arrange(bounds);
                 return;
             }
 
             if (Orientation == DockSplitOrientation.Horizontal)
             {
-                int minClamp = System.Math.Min(minSize, bounds.Height / 2);
-                int maxClamp = System.Math.Max(minClamp, bounds.Height - minClamp);
-                int splitHeight = System.Math.Clamp((int)(bounds.Height * SplitRatio), minClamp, maxClamp);
+                int minFirstHeight = Math.Min(bounds.Height, Math.Max(0, First?.GetMinHeight() ?? 0));
+                int minSecondHeight = Math.Min(bounds.Height, Math.Max(0, Second?.GetMinHeight() ?? 0));
+                int minSplit = Math.Min(bounds.Height, Math.Max(0, minFirstHeight));
+                int maxSplit = Math.Max(minSplit, bounds.Height - minSecondHeight);
+                int splitHeight = Math.Clamp((int)(bounds.Height * SplitRatio), minSplit, maxSplit);
 
                 Rectangle top = new(bounds.X, bounds.Y, bounds.Width, splitHeight);
                 Rectangle bottom = new(bounds.X, bounds.Y + splitHeight, bounds.Width, bounds.Height - splitHeight);
-                First?.Arrange(top, minSize);
-                Second?.Arrange(bottom, minSize);
+                First?.Arrange(top);
+                Second?.Arrange(bottom);
             }
             else
             {
-                int minClamp = System.Math.Min(minSize, bounds.Width / 2);
-                int maxClamp = System.Math.Max(minClamp, bounds.Width - minClamp);
-                int splitWidth = System.Math.Clamp((int)(bounds.Width * SplitRatio), minClamp, maxClamp);
+                int minFirstWidth = Math.Min(bounds.Width, Math.Max(0, First?.GetMinWidth() ?? 0));
+                int minSecondWidth = Math.Min(bounds.Width, Math.Max(0, Second?.GetMinWidth() ?? 0));
+                int minSplit = Math.Min(bounds.Width, Math.Max(0, minFirstWidth));
+                int maxSplit = Math.Max(minSplit, bounds.Width - minSecondWidth);
+                int splitWidth = Math.Clamp((int)(bounds.Width * SplitRatio), minSplit, maxSplit);
 
                 Rectangle left = new(bounds.X, bounds.Y, splitWidth, bounds.Height);
                 Rectangle right = new(bounds.X + splitWidth, bounds.Y, bounds.Width - splitWidth, bounds.Height);
-                First?.Arrange(left, minSize);
-                Second?.Arrange(right, minSize);
+                First?.Arrange(left);
+                Second?.Arrange(right);
             }
         }
     }

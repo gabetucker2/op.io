@@ -459,11 +459,34 @@ namespace op.io
         private static DockPanel CreatePanel(string id, string title, DockPanelKind kind)
         {
             DockPanel panel = new(id, title, kind);
+            (int minWidth, int minHeight) = GetPanelMinimumSize(kind);
+            panel.MinWidth = Math.Max(0, minWidth);
+            panel.MinHeight = Math.Max(0, minHeight);
             _panels[id] = panel;
             _orderedPanels.Add(panel);
             _panelNodes[id] = new PanelNode(panel);
             EnsurePanelLockState(panel);
             return panel;
+        }
+
+        private static (int MinWidth, int MinHeight) GetPanelMinimumSize(DockPanelKind kind)
+        {
+            const int defaultMin = 10;
+            (int width, int height) = kind switch
+            {
+                DockPanelKind.Game => (GameBlock.MinWidth, GameBlock.MinHeight),
+                DockPanelKind.Transparent => (TransparentBlock.MinWidth, TransparentBlock.MinHeight),
+                DockPanelKind.Blank => (BlankBlock.MinWidth, BlankBlock.MinHeight),
+                DockPanelKind.Controls => (ControlsBlock.MinWidth, ControlsBlock.MinHeight),
+                DockPanelKind.Notes => (NotesBlock.MinWidth, NotesBlock.MinHeight),
+                DockPanelKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
+                DockPanelKind.Specs => (SpecsBlock.MinWidth, SpecsBlock.MinHeight),
+                _ => (defaultMin, defaultMin)
+            };
+
+            // Ensure the drag bar area can never be occluded.
+            int dragBarProtectedHeight = Math.Max(height, UIStyle.DragBarHeight);
+            return (width, dragBarProtectedHeight);
         }
 
         private static void EnsureSurfaceResources(GraphicsDevice graphicsDevice)
@@ -1075,12 +1098,12 @@ namespace op.io
             if (handle.Orientation == DockSplitOrientation.Vertical)
             {
                 int relative = position.X - bounds.X;
-                newRatio = ClampSplitRatio(relative, bounds.Width);
+                newRatio = ClampSplitRatio(handle.Node, relative, bounds.Width);
             }
             else
             {
                 int relative = position.Y - bounds.Y;
-                newRatio = ClampSplitRatio(relative, bounds.Height);
+                newRatio = ClampSplitRatio(handle.Node, relative, bounds.Height);
             }
 
             if (float.IsNaN(newRatio) || float.IsInfinity(newRatio))
@@ -1376,15 +1399,25 @@ namespace op.io
             return position;
         }
 
-        private static float ClampSplitRatio(int relativePosition, int spanLength)
+        private static float ClampSplitRatio(SplitNode node, int relativePosition, int spanLength)
         {
-            if (spanLength <= 0)
+            if (node == null || spanLength <= 0)
             {
                 return 0.5f;
             }
 
-            int minClamp = Math.Min(UIStyle.MinPanelSize, spanLength / 2);
-            int maxClamp = Math.Max(minClamp, spanLength - minClamp);
+            int minFirst = node.Orientation == DockSplitOrientation.Vertical
+                ? node.First?.GetMinWidth() ?? 0
+                : node.First?.GetMinHeight() ?? 0;
+            int minSecond = node.Orientation == DockSplitOrientation.Vertical
+                ? node.Second?.GetMinWidth() ?? 0
+                : node.Second?.GetMinHeight() ?? 0;
+
+            minFirst = Math.Clamp(minFirst, 0, spanLength);
+            minSecond = Math.Clamp(minSecond, 0, spanLength);
+
+            int minClamp = Math.Min(spanLength, Math.Max(0, minFirst));
+            int maxClamp = Math.Max(minClamp, spanLength - minSecond);
             int clamped = Math.Clamp(relativePosition, minClamp, maxClamp);
             return clamped / (float)Math.Max(1, spanLength);
         }
@@ -2437,7 +2470,7 @@ namespace op.io
             }
 
             _layoutBounds = GetLayoutBounds(viewport);
-            _rootNode?.Arrange(_layoutBounds, UIStyle.MinPanelSize);
+            _rootNode?.Arrange(_layoutBounds);
 
             if (DockingModeEnabled)
             {

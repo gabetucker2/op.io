@@ -12,6 +12,8 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class NotesBlock
     {
         public const string PanelTitle = "Notes";
+        public const int MinWidth = 0;
+        public const int MinHeight = 0;
 
         private enum OverlayMode
         {

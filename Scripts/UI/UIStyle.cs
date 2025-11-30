@@ -12,7 +12,7 @@ namespace op.io
         public const int LayoutPadding = 24;
         public const int PanelPadding = 12;
         public const int DragBarHeight = 32;
-        public const int MinPanelSize = 120;
+        public const int MinPanelSize = 10;
         public const float DropEdgeThreshold = 0.28f;
         public const int ResizeBarThickness = 8;
         public const int PanelBorderThickness = 1;

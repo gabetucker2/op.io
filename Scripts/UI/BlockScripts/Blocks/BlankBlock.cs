@@ -6,6 +6,8 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class BlankBlock
     {
         public const string PanelTitle = "Blank Block";
+        public const int MinWidth = 0;
+        public const int MinHeight = 0;
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
         {

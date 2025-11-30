@@ -29,6 +29,8 @@ namespace op.io
         public DockPanelKind Kind { get; }
         public bool IsVisible { get; set; } = true;
         public Rectangle Bounds { get; set; }
+        public int MinWidth { get; set; } = 10;
+        public int MinHeight { get; set; } = 10;
 
         public Rectangle GetDragBarBounds(int dragBarHeight)
         {

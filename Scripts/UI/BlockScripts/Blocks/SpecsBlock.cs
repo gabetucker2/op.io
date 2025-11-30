@@ -11,6 +11,8 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class SpecsBlock
     {
         public const string PanelTitle = "Specs";
+        public const int MinWidth = 0;
+        public const int MinHeight = 0;
 
         private const string PlaceholderWordSeparator = "    ";
         private static readonly string PlaceholderText = string.Join(PlaceholderWordSeparator, new[] { "No", "specs", "available." });
