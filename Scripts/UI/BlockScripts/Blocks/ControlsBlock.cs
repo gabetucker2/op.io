@@ -11,8 +11,8 @@ namespace op.io.UI.BlockScripts.Blocks
 {
     internal static class ControlsBlock
     {
-        public const string PanelTitle = "Controls";
-        public const int MinWidth = 25;
+        public const string BlockTitle = "Controls";
+        public const int MinWidth = 30;
         public const int MinHeight = 0;
 
         private static readonly List<KeybindDisplayRow> _keybindCache = new();
@@ -78,7 +78,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
-            bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Controls);
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Controls);
 
             if (!FontManager.TryGetControlsFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
@@ -105,12 +105,12 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftClickReleased = !leftDown && leftDownPrev;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
-            if (panelLocked && _dragState.IsDragging)
+            if (blockLocked && _dragState.IsDragging)
             {
                 _dragState.Reset();
             }
 
-            bool allowInteraction = !panelLocked && pointerInsideList;
+            bool allowInteraction = !blockLocked && pointerInsideList;
             _hoveredRowKey = allowInteraction ? HitTestRow(mouseState.Position) : null;
             if (allowInteraction)
             {
@@ -203,7 +203,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Controls);
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Controls);
 
             EnsureKeybindCache();
             if (_lineHeightCache <= 0f)
@@ -241,19 +241,19 @@ namespace op.io.UI.BlockScripts.Blocks
                 bool isDraggingRow = _dragState.IsDragging && string.Equals(row.Action, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
                 if (!isDraggingRow)
                 {
-                    DrawRowBackground(spriteBatch, row, rowBounds, panelLocked);
-                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds, panelLocked);
+                    DrawRowBackground(spriteBatch, row, rowBounds, blockLocked);
+                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds, blockLocked);
                 }
             }
 
-            if (!panelLocked && _dragState.IsDragging && _dragState.HasSnapshot)
+            if (!blockLocked && _dragState.IsDragging && _dragState.HasSnapshot)
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
                 {
                     FillRect(spriteBatch, _dragState.DropIndicatorBounds, DropIndicatorColor);
                 }
 
-                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont, panelLocked);
+                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont, blockLocked);
             }
 
             _scrollPanel.Draw(spriteBatch);
@@ -273,8 +273,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 ControlKeyMigrations.EnsureApplied();
                 _keybindCache.Clear();
 
-                Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockPanelKind.Controls);
-                Dictionary<string, string> storedRowData = BlockDataStore.LoadRowData(DockPanelKind.Controls);
+                Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockBlockKind.Controls);
+                Dictionary<string, string> storedRowData = BlockDataStore.LoadRowData(DockBlockKind.Controls);
 
                 const string sql = "SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey;";
                 var rows = DatabaseQuery.ExecuteQuery(sql);
@@ -296,7 +296,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     int resolvedOrder = storedOrders.TryGetValue(actionLabel, out int storedOrder) ? storedOrder : orderValue;
 
                     bool triggerAuto = false;
-                    string canonicalKey = BlockDataStore.CanonicalizeRowKey(DockPanelKind.Controls, actionLabel);
+                    string canonicalKey = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Controls, actionLabel);
                     if (storedRowData.TryGetValue(canonicalKey, out string storedData) &&
                         TryParseRowData(storedData, out InputType storedType, out bool storedTriggerAuto) &&
                         !IsPersistentSwitch(storedType))
@@ -320,7 +320,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     }
 
                     InputManager.UpdateBindingInputType(actionLabel, parsedType, triggerAuto);
-                    BlockDataStore.SetRowData(DockPanelKind.Controls, actionLabel, SerializeRowData(parsedType, triggerAuto));
+                    BlockDataStore.SetRowData(DockBlockKind.Controls, actionLabel, SerializeRowData(parsedType, triggerAuto));
 
                     _keybindCache.Add(new KeybindDisplayRow
                     {
@@ -346,7 +346,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to load keybinds for controls panel: {ex.Message}");
+                DebugLogger.PrintError($"Failed to load keybinds for controls block: {ex.Message}");
             }
             finally
             {
@@ -369,24 +369,24 @@ namespace op.io.UI.BlockScripts.Blocks
                 updates.Add((row.Action, row.RenderOrder));
             }
 
-            BlockDataStore.SaveRowOrders(DockPanelKind.Controls, blockOrders);
+            BlockDataStore.SaveRowOrders(DockBlockKind.Controls, blockOrders);
             ControlKeyData.UpdateRenderOrders(updates);
         }
 
-        private static void DrawRowBackground(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle bounds, bool panelLocked)
+        private static void DrawRowBackground(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle bounds, bool blockLocked)
         {
-            if (panelLocked || bounds == Rectangle.Empty || _pixelTexture == null)
+            if (blockLocked || bounds == Rectangle.Empty || _pixelTexture == null)
             {
                 return;
             }
 
-            if (ShouldHighlightRow(row, panelLocked))
+            if (ShouldHighlightRow(row, blockLocked))
             {
                 FillRect(spriteBatch, bounds, HoverRowColor);
             }
         }
 
-        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, bool panelLocked)
+        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, bool blockLocked)
         {
             Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, lineHeight);
             if (dragBounds == Rectangle.Empty)
@@ -400,14 +400,14 @@ namespace op.io.UI.BlockScripts.Blocks
             row.Bounds = dragBounds;
             row.TypeToggleBounds = Rectangle.Empty;
             row.KeyValueBounds = Rectangle.Empty;
-            DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds, panelLocked);
+            DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds, blockLocked);
         }
 
-        private static void DrawRowContents(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle rowBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, Rectangle contentBounds, bool panelLocked)
+        private static void DrawRowContents(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle rowBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, Rectangle contentBounds, bool blockLocked)
         {
             Vector2 labelPosition = new(rowBounds.X, rowBounds.Y);
 
-            bool showToggle = !panelLocked && row.IsToggleCandidate && row.TypeToggleBounds != Rectangle.Empty;
+            bool showToggle = !blockLocked && row.IsToggleCandidate && row.TypeToggleBounds != Rectangle.Empty;
             if (showToggle)
             {
                 bool hovered = string.Equals(_hoveredTypeKey, row.Action, StringComparison.OrdinalIgnoreCase);
@@ -449,7 +449,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     rowBounds.Height);
             }
 
-            if (!panelLocked && keyValueBounds != Rectangle.Empty)
+            if (!blockLocked && keyValueBounds != Rectangle.Empty)
             {
                 bool keyHovered = string.Equals(_hoveredKeyAction, row.Action, StringComparison.OrdinalIgnoreCase);
                 Color fill = keyHovered ? TypeToggleHoverFill : TypeToggleIdleFill;
@@ -490,9 +490,9 @@ namespace op.io.UI.BlockScripts.Blocks
             return deltaX >= DragStartThreshold || deltaY >= DragStartThreshold;
         }
 
-        private static bool ShouldHighlightRow(KeybindDisplayRow row, bool panelLocked)
+        private static bool ShouldHighlightRow(KeybindDisplayRow row, bool blockLocked)
         {
-            return !panelLocked &&
+            return !blockLocked &&
                 !_dragState.IsDragging &&
                 !string.IsNullOrWhiteSpace(_hoveredRowKey) &&
                 string.Equals(_hoveredRowKey, row.Action, StringComparison.OrdinalIgnoreCase);
@@ -689,7 +689,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _keybindCache[index] = row;
 
             string serialized = SerializeRowData(nextType, triggerAuto);
-            BlockDataStore.SetRowData(DockPanelKind.Controls, row.Action, serialized);
+            BlockDataStore.SetRowData(DockBlockKind.Controls, row.Action, serialized);
             ControlKeyData.SetInputType(row.Action, nextType.ToString());
             InputManager.UpdateBindingInputType(row.Action, nextType, triggerAuto);
 
@@ -845,8 +845,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             FillRect(spriteBatch, viewport, RebindScrimColor);
-            FillRect(spriteBatch, _rebindModalBounds, UIStyle.PanelBackground);
-            DrawRectOutline(spriteBatch, _rebindModalBounds, UIStyle.PanelBorder, UIStyle.PanelBorderThickness);
+            FillRect(spriteBatch, _rebindModalBounds, UIStyle.BlockBackground);
+            DrawRectOutline(spriteBatch, _rebindModalBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
             string title = string.IsNullOrWhiteSpace(_rebindAction) ? "Rebind keybind" : $"Rebind {_rebindAction}";
             Vector2 titleSize = headerFont.MeasureString(title);

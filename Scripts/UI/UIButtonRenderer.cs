@@ -55,7 +55,7 @@ namespace op.io
             Color textColor = textColorOverride ?? (isDisabled ? UIStyle.MutedTextColor : UIStyle.TextColor);
 
             FillRect(spriteBatch, bounds, fill);
-            DrawRectOutline(spriteBatch, bounds, border, UIStyle.PanelBorderThickness);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
 
             label ??= string.Empty;
             Vector2 textSize = font.MeasureString(label);
@@ -92,7 +92,7 @@ namespace op.io
             Color selected = borderOverride ?? (style switch
             {
                 ButtonStyle.Blue => UIStyle.AccentColor,
-                _ => UIStyle.PanelBorder
+                _ => UIStyle.BlockBorder
             });
 
             if (isDisabled)

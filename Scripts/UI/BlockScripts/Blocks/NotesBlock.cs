@@ -11,8 +11,8 @@ namespace op.io.UI.BlockScripts.Blocks
 {
     internal static class NotesBlock
     {
-        public const string PanelTitle = "Notes";
-        public const int MinWidth = 25;
+        public const string BlockTitle = "Notes";
+        public const int MinWidth = 30;
         public const int MinHeight = 0;
 
         private enum OverlayMode
@@ -104,7 +104,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 OverlayHoverIndex = -1;
             }
 
-            bool editingEnabled = BlockManager.PanelHasFocus(DockPanelKind.Notes) && HasActiveNote;
+            bool editingEnabled = BlockManager.BlockHasFocus(DockBlockKind.Notes) && HasActiveNote;
 
             KeyboardState keyboardState = Keyboard.GetState();
             if (editingEnabled)
@@ -927,7 +927,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
             FillRect(spriteBatch, CommandBarBounds, UIStyle.HeaderBackground);
-            DrawRect(spriteBatch, CommandBarBounds, UIStyle.PanelBorder);
+            DrawRect(spriteBatch, CommandBarBounds, UIStyle.BlockBorder);
 
             for (int i = 0; i < CommandOrder.Length; i++)
             {
@@ -989,8 +989,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            FillRect(spriteBatch, OverlayBounds, UIStyle.PanelBackground);
-            DrawRect(spriteBatch, OverlayBounds, UIStyle.PanelBorder);
+            FillRect(spriteBatch, OverlayBounds, UIStyle.BlockBackground);
+            DrawRect(spriteBatch, OverlayBounds, UIStyle.BlockBorder);
 
             string header = ActiveOverlay == OverlayMode.Delete ? "Select a note to delete" : "Select a note to open";
             Vector2 headerSize = headerFont.MeasureString(header);
@@ -1018,7 +1018,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 Rectangle rowRect = new(rowsBounds.X, rowY, rowsBounds.Width, OverlayRowHeight - 2);
                 bool hovered = i == OverlayHoverIndex;
-                Color rowColor = hovered ? UIStyle.AccentMuted : UIStyle.PanelBackground;
+                Color rowColor = hovered ? UIStyle.AccentMuted : UIStyle.BlockBackground;
                 FillRect(spriteBatch, rowRect, rowColor);
 
                 NoteFileEntry entry = NoteFiles[i];
@@ -1042,8 +1042,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            FillRect(spriteBatch, TextViewportBounds, UIStyle.PanelBackground * 0.9f);
-            DrawRect(spriteBatch, TextViewportBounds, UIStyle.PanelBorder);
+            FillRect(spriteBatch, TextViewportBounds, UIStyle.BlockBackground * 0.9f);
+            DrawRect(spriteBatch, TextViewportBounds, UIStyle.BlockBorder);
 
             float lineHeight = font.LineHeight;
             float y = TextViewportBounds.Y;
@@ -1063,7 +1063,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 y += lineHeight;
             }
 
-            if (CursorBlinkVisible && BlockManager.PanelHasFocus(DockPanelKind.Notes))
+            if (CursorBlinkVisible && BlockManager.BlockHasFocus(DockBlockKind.Notes))
             {
                 DrawCursor(spriteBatch, font, lineHeight);
             }
@@ -1104,8 +1104,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            FillRect(spriteBatch, TextViewportBounds, UIStyle.PanelBackground * 0.9f);
-            DrawRect(spriteBatch, TextViewportBounds, UIStyle.PanelBorder);
+            FillRect(spriteBatch, TextViewportBounds, UIStyle.BlockBackground * 0.9f);
+            DrawRect(spriteBatch, TextViewportBounds, UIStyle.BlockBorder);
 
             const string placeholder = "Create a note";
             Vector2 size = font.MeasureString(placeholder);

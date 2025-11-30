@@ -8,6 +8,7 @@ namespace op.io
 {
     public static class InputManager
     {
+        private const string BlockMenuKey = ControlKeyMigrations.BlockMenuKey;
         private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
 
         // Dictionary to store control key mappings (keyboard and mouse, including combos)
@@ -100,10 +101,10 @@ namespace op.io
                 }
             }
 
-            if (!_controlBindings.ContainsKey("PanelMenu") &&
-                TryCreateBinding("PanelMenu", "Shift + X", InputType.SaveSwitch, true, false, out ControlBinding defaultBinding))
+            if (!_controlBindings.ContainsKey(BlockMenuKey) &&
+                TryCreateBinding(BlockMenuKey, "Shift + X", InputType.SaveSwitch, true, false, out ControlBinding defaultBinding))
             {
-                _controlBindings["PanelMenu"] = defaultBinding;
+                _controlBindings[BlockMenuKey] = defaultBinding;
             }
 
             _isControlKeyLoaded = true;
@@ -763,7 +764,7 @@ namespace op.io
                 return false;
             }
 
-            bool shouldFreeze = !BlockManager.IsCursorWithinGamePanel();
+            bool shouldFreeze = !BlockManager.IsCursorWithinGameBlock();
             GameTracker.FreezeGameInputs = shouldFreeze;
             return shouldFreeze;
         }

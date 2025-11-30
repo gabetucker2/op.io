@@ -27,42 +27,42 @@ namespace op.io
         public abstract void Arrange(Rectangle bounds);
     }
 
-    public sealed class PanelNode : DockNode
+    public sealed class BlockNode : DockNode
     {
-        public PanelNode(DockPanel panel)
+        public BlockNode(DockBlock block)
         {
-            Panel = panel;
+            Block = block;
         }
 
-        public DockPanel Panel { get; }
-        public override bool HasVisibleContent => Panel != null && Panel.IsVisible;
+        public DockBlock Block { get; }
+        public override bool HasVisibleContent => Block != null && Block.IsVisible;
 
         public override int GetMinWidth()
         {
-            if (Panel == null || !Panel.IsVisible)
+            if (Block == null || !Block.IsVisible)
             {
                 return 0;
             }
 
-            return Math.Max(0, Panel.MinWidth);
+            return Math.Max(0, Block.MinWidth);
         }
 
         public override int GetMinHeight()
         {
-            if (Panel == null || !Panel.IsVisible)
+            if (Block == null || !Block.IsVisible)
             {
                 return 0;
             }
 
-            return Math.Max(0, Panel.MinHeight);
+            return Math.Max(0, Block.MinHeight);
         }
 
         public override void Arrange(Rectangle bounds)
         {
             Bounds = bounds;
-            if (Panel != null)
+            if (Block != null)
             {
-                Panel.Bounds = bounds;
+                Block.Bounds = bounds;
             }
         }
     }
@@ -225,14 +225,14 @@ namespace op.io
 
     public static class DockLayout
     {
-        public static DockNode Detach(DockNode node, PanelNode target)
+        public static DockNode Detach(DockNode node, BlockNode target)
         {
             if (node == null || target == null)
             {
                 return node;
             }
 
-            if (node is PanelNode panelNode && panelNode == target)
+            if (node is BlockNode blockNode && blockNode == target)
             {
                 return null;
             }
@@ -261,7 +261,7 @@ namespace op.io
             return node;
         }
 
-        public static DockNode InsertRelative(DockNode node, PanelNode insertNode, PanelNode referenceNode, DockEdge edge)
+        public static DockNode InsertRelative(DockNode node, BlockNode insertNode, BlockNode referenceNode, DockEdge edge)
         {
             if (insertNode == null)
             {
@@ -278,7 +278,7 @@ namespace op.io
                 return insertNode;
             }
 
-            if (node is PanelNode panelNode && panelNode == referenceNode)
+            if (node is BlockNode blockNode && blockNode == referenceNode)
             {
                 var orientation = edge is DockEdge.Top or DockEdge.Bottom
                     ? DockSplitOrientation.Horizontal
@@ -292,11 +292,11 @@ namespace op.io
                 if (edge is DockEdge.Top or DockEdge.Left)
                 {
                     split.First = insertNode;
-                    split.Second = panelNode;
+                    split.Second = blockNode;
                 }
                 else
                 {
-                    split.First = panelNode;
+                    split.First = blockNode;
                     split.Second = insertNode;
                 }
 

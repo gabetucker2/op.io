@@ -6,9 +6,11 @@ namespace op.io
 {
     internal static class ControlKeyMigrations
     {
-        private static bool _applied;
-        private static readonly string[] MetaControlKeys = ["Exit", "PanelMenu", "DockingMode", "DebugMode", "AllowGameInputFreeze", "TransparentTabBlocking"];
+        internal const string BlockMenuKey = "BlockMenu";
+        internal const string LegacyPanelMenuKey = "PanelMenu";
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
+        private static bool _applied;
+        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey];
 
         public static void EnsureApplied()
         {
@@ -25,7 +27,7 @@ namespace op.io
             try
             {
                 EnsureRenderOrderColumn();
-                EnsurePanelMenuControl();
+                EnsureBlockMenuControl();
                 EnsureExitControl();
                 EnsureTransparentTabBlockingControl();
                 EnsureLockModeColumn();
@@ -63,19 +65,44 @@ namespace op.io
             }
         }
 
-        private static void EnsurePanelMenuControl()
+        private static void EnsureBlockMenuControl()
         {
+            try
+            {
+                ControlKeyData.ControlKeyRecord existing = ControlKeyData.GetControl(BlockMenuKey);
+                if (existing == null && ControlKeyData.GetControl(LegacyPanelMenuKey) != null)
+                {
+                    var parameters = new Dictionary<string, object>
+                    {
+                        ["@newKey"] = BlockMenuKey,
+                        ["@legacyKey"] = LegacyPanelMenuKey
+                    };
+
+                    const string migrateSql = @"
+UPDATE ControlKey
+SET SettingKey = @newKey
+WHERE SettingKey = @legacyKey;";
+
+                    DatabaseQuery.ExecuteNonQuery(migrateSql, parameters);
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to migrate legacy {LegacyPanelMenuKey} binding to {BlockMenuKey}: {ex.Message}");
+            }
+
             ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
             {
-                SettingKey = "PanelMenu",
+                SettingKey = BlockMenuKey,
                 InputKey = "Shift + X",
                 InputType = "SaveSwitch",
                 SwitchStartState = 0,
-                MetaControl = true
+                MetaControl = true,
+                RenderOrder = 11
             });
 
-            ControlKeyData.SetInputType("PanelMenu", "SaveSwitch");
-            ControlKeyData.EnsureSwitchStartState("PanelMenu", 0);
+            ControlKeyData.SetInputType(BlockMenuKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(BlockMenuKey, 0);
         }
 
         private static void EnsureExitControl()
@@ -157,12 +184,13 @@ namespace op.io
     {
         public static bool RequiresSwitchSemantics(string settingKey)
         {
-            return string.Equals(settingKey, "PanelMenu", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(settingKey, ControlKeyMigrations.BlockMenuKey, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(settingKey, ControlKeyMigrations.LegacyPanelMenuKey, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool ShouldScannerTrackSwitch(string settingKey)
         {
-            return !string.Equals(settingKey, "PanelMenu", StringComparison.OrdinalIgnoreCase);
+            return !RequiresSwitchSemantics(settingKey);
         }
     }
 }

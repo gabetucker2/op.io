@@ -10,12 +10,12 @@ namespace op.io
     public static class UIStyle
     {
         public const int LayoutPadding = 24;
-        public const int PanelPadding = 12;
+        public const int BlockPadding = 12;
         public const int DragBarHeight = 32;
-        public const int MinPanelSize = 10;
+        public const int MinBlockSize = 10;
         public const float DropEdgeThreshold = 0.28f;
         public const int ResizeBarThickness = 8;
-        public const int PanelBorderThickness = 1;
+        public const int BlockBorderThickness = 1;
         public const int DragOutlineThickness = 2;
 
         private const string BebasFontAsset = "Fonts/Bebas";
@@ -69,8 +69,8 @@ namespace op.io
         private static readonly Dictionary<(FontFamilyKey, FontVariant), UIFont> _variantFonts = new();
 
         public static readonly Color ScreenBackground = new(18, 18, 18);
-        public static readonly Color PanelBackground = new(26, 26, 26);
-        public static readonly Color PanelBorder = new(48, 48, 48);
+        public static readonly Color BlockBackground = new(26, 26, 26);
+        public static readonly Color BlockBorder = new(48, 48, 48);
         public static readonly Color HeaderBackground = new(35, 35, 35);
         public static readonly Color TextColor = new(226, 226, 226);
         public static readonly Color MutedTextColor = new(160, 160, 160);

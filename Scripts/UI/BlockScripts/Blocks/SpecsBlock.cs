@@ -10,8 +10,8 @@ namespace op.io.UI.BlockScripts.Blocks
 {
     internal static class SpecsBlock
     {
-        public const string PanelTitle = "Specs";
-        public const int MinWidth = 25;
+        public const string BlockTitle = "Specs";
+        public const int MinWidth = 30;
         public const int MinHeight = 0;
 
         private const string PlaceholderWordSeparator = "    ";
@@ -37,7 +37,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
-            bool panelLocked = BlockManager.IsPanelLocked(DockPanelKind.Specs);
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Specs);
 
             RefreshRows();
 
@@ -67,12 +67,12 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
-            if (panelLocked && _dragState.IsDragging)
+            if (blockLocked && _dragState.IsDragging)
             {
                 _dragState.Reset();
             }
 
-            _hoveredRowKey = !panelLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            _hoveredRowKey = !blockLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
 
             if (_dragState.IsDragging)
             {
@@ -89,7 +89,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     }
                 }
             }
-            else if (!panelLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else if (!blockLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
             {
                 _dragState.TryStartDrag(_rows, _hoveredRowKey, mouseState);
             }
@@ -179,7 +179,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockPanelKind.Specs);
+            Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockBlockKind.Specs);
             if (storedOrders.Count > 0)
             {
                 _customOrder.Clear();
@@ -208,7 +208,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     continue;
                 }
 
-                string storageKey = BlockDataStore.CanonicalizeRowKey(DockPanelKind.Specs, spec.Key);
+                string storageKey = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Specs, spec.Key);
                 incoming.Add(storageKey);
                 if (!_customOrder.ContainsKey(storageKey))
                 {
@@ -299,7 +299,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 rows.Add((entry.Key, entry.Value));
             }
 
-            BlockDataStore.SaveRowOrders(DockPanelKind.Specs, rows);
+            BlockDataStore.SaveRowOrders(DockBlockKind.Specs, rows);
         }
 
         private static void ApplyOrdersToRows()

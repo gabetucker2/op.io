@@ -25,20 +25,20 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             _tableReady.Clear();
         }
 
-        public static void EnsureTables(SQLiteConnection connection, params DockPanelKind[] panelKinds)
+        public static void EnsureTables(SQLiteConnection connection, params DockBlockKind[] blockKinds)
         {
-            if (panelKinds == null || panelKinds.Length == 0)
+            if (blockKinds == null || blockKinds.Length == 0)
             {
                 return;
             }
 
-            foreach (DockPanelKind kind in panelKinds)
+            foreach (DockBlockKind kind in blockKinds)
             {
                 EnsureTable(kind, connection);
             }
         }
 
-        public static Dictionary<string, int> LoadRowOrders(DockPanelKind panelKind)
+        public static Dictionary<string, int> LoadRowOrders(DockBlockKind blockKind)
         {
             SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
             if (connection == null)
@@ -48,9 +48,9 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
             try
             {
-                EnsureTable(panelKind, connection);
+                EnsureTable(blockKind, connection);
 
-                string tableName = GetTableName(panelKind);
+                string tableName = GetTableName(blockKind);
                 string sql = $"SELECT RowKey, RenderOrder FROM {tableName} WHERE RowKey <> @lockKey ORDER BY RenderOrder ASC, RowKey ASC;";
 
                 using var command = new SQLiteCommand(sql, connection);
@@ -61,7 +61,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
                 while (reader.Read())
                 {
-                    string rowKey = NormalizeRowKey(panelKind, reader["RowKey"]?.ToString());
+                    string rowKey = NormalizeRowKey(blockKind, reader["RowKey"]?.ToString());
                     int order = DecodeInt(reader["RenderOrder"], orders.Count + 1);
 
                     if (!string.IsNullOrWhiteSpace(rowKey) && order > 0)
@@ -74,7 +74,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to load block rows for {panelKind}: {ex.Message}");
+                DebugLogger.PrintError($"Failed to load block rows for {blockKind}: {ex.Message}");
                 return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             }
             finally
@@ -86,7 +86,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             }
         }
 
-        public static void SaveRowOrders(DockPanelKind panelKind, IReadOnlyCollection<(string RowKey, int Order)> rows)
+        public static void SaveRowOrders(DockBlockKind blockKind, IReadOnlyCollection<(string RowKey, int Order)> rows)
         {
             SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
             if (connection == null)
@@ -96,8 +96,8 @@ namespace op.io.UI.BlockScripts.BlockUtilities
 
             try
             {
-                EnsureTable(panelKind, connection);
-                string tableName = GetTableName(panelKind);
+                EnsureTable(blockKind, connection);
+                string tableName = GetTableName(blockKind);
 
                 using SQLiteTransaction transaction = connection.BeginTransaction();
 
@@ -106,7 +106,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
                     HashSet<string> normalizedKeys = new(StringComparer.OrdinalIgnoreCase);
                     foreach ((string RowKey, int Order) row in rows)
                     {
-                        string normalizedKey = NormalizeRowKey(panelKind, row.RowKey);
+                        string normalizedKey = NormalizeRowKey(blockKind, row.RowKey);
                         if (string.IsNullOrWhiteSpace(normalizedKey))
                         {
                             continue;
@@ -138,7 +138,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
 
                     foreach ((string RowKey, int Order) row in rows)
                     {
-                        string normalizedKey = NormalizeRowKey(panelKind, row.RowKey);
+                        string normalizedKey = NormalizeRowKey(blockKind, row.RowKey);
                         if (string.IsNullOrWhiteSpace(normalizedKey) || row.Order <= 0)
                         {
                             continue;
@@ -154,7 +154,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to persist block rows for {panelKind}: {ex.Message}");
+                DebugLogger.PrintError($"Failed to persist block rows for {blockKind}: {ex.Message}");
             }
             finally
             {
@@ -165,7 +165,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
         }
 
-        public static bool GetPanelLock(DockPanelKind panelKind)
+        public static bool GetBlockLock(DockBlockKind blockKind)
         {
             SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
             if (connection == null)
@@ -175,9 +175,9 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
 
             try
             {
-                EnsureTable(panelKind, connection);
+                EnsureTable(blockKind, connection);
 
-                string tableName = GetTableName(panelKind);
+                string tableName = GetTableName(blockKind);
                 using var command = new SQLiteCommand($"SELECT IsLocked FROM {tableName} WHERE RowKey = @lockKey LIMIT 1;", connection);
                 command.Parameters.AddWithValue("@lockKey", LockRowKey);
                 object result = command.ExecuteScalar();
@@ -185,7 +185,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to read block lock for {panelKind}: {ex.Message}");
+                DebugLogger.PrintError($"Failed to read block lock for {blockKind}: {ex.Message}");
                 return false;
             }
             finally
@@ -197,7 +197,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
         }
 
-        public static void SetPanelLock(DockPanelKind panelKind, bool isLocked)
+        public static void SetBlockLock(DockBlockKind blockKind, bool isLocked)
         {
             SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
             if (connection == null)
@@ -207,9 +207,9 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
 
             try
             {
-                EnsureTable(panelKind, connection);
+                EnsureTable(blockKind, connection);
 
-                string tableName = GetTableName(panelKind);
+                string tableName = GetTableName(blockKind);
                 using var command = new SQLiteCommand($"INSERT OR REPLACE INTO {tableName} (RowKey, RenderOrder, IsLocked) VALUES (@lockKey, NULL, @isLocked);", connection);
                 command.Parameters.AddWithValue("@lockKey", LockRowKey);
                 command.Parameters.AddWithValue("@isLocked", isLocked ? 1 : 0);
@@ -217,7 +217,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to persist block lock for {panelKind}: {ex.Message}");
+                DebugLogger.PrintError($"Failed to persist block lock for {blockKind}: {ex.Message}");
             }
             finally
             {
@@ -228,17 +228,17 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
         }
 
-        public static string GetTableName(DockPanelKind panelKind)
+        public static string GetTableName(DockBlockKind blockKind)
         {
-            return string.Concat(TablePrefix, panelKind);
+            return string.Concat(TablePrefix, blockKind);
         }
 
-        public static string CanonicalizeRowKey(DockPanelKind panelKind, string rowKey)
+        public static string CanonicalizeRowKey(DockBlockKind blockKind, string rowKey)
         {
-            return NormalizeRowKey(panelKind, rowKey);
+            return NormalizeRowKey(blockKind, rowKey);
         }
 
-        public static Dictionary<string, string> LoadRowData(DockPanelKind panelKind)
+        public static Dictionary<string, string> LoadRowData(DockBlockKind blockKind)
         {
             SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
             if (connection == null)
@@ -248,8 +248,8 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
 
             try
             {
-                EnsureTable(panelKind, connection);
-                string tableName = GetTableName(panelKind);
+                EnsureTable(blockKind, connection);
+                string tableName = GetTableName(blockKind);
 
                 string sql = $"SELECT RowKey, {RowDataColumnName} FROM {tableName} WHERE RowKey <> @lockKey;";
                 using var command = new SQLiteCommand(sql, connection);
@@ -260,7 +260,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
 
                 while (reader.Read())
                 {
-                    string rowKey = NormalizeRowKey(panelKind, reader["RowKey"]?.ToString());
+                    string rowKey = NormalizeRowKey(blockKind, reader["RowKey"]?.ToString());
                     if (string.IsNullOrWhiteSpace(rowKey))
                     {
                         continue;
@@ -277,7 +277,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to load block row data for {panelKind}: {ex.Message}");
+                DebugLogger.PrintError($"Failed to load block row data for {blockKind}: {ex.Message}");
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
             finally
@@ -289,7 +289,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
         }
 
-        public static void SetRowData(DockPanelKind panelKind, string rowKey, string rowData)
+        public static void SetRowData(DockBlockKind blockKind, string rowKey, string rowData)
         {
             if (string.IsNullOrWhiteSpace(rowKey))
             {
@@ -304,20 +304,20 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
 
             try
             {
-                EnsureTable(panelKind, connection);
-                string tableName = GetTableName(panelKind);
+                EnsureTable(blockKind, connection);
+                string tableName = GetTableName(blockKind);
 
                 using var command = new SQLiteCommand($@"
 INSERT INTO {tableName} (RowKey, {RowDataColumnName})
 VALUES (@rowKey, @rowData)
 ON CONFLICT(RowKey) DO UPDATE SET {RowDataColumnName} = excluded.{RowDataColumnName};", connection);
-                command.Parameters.AddWithValue("@rowKey", NormalizeRowKey(panelKind, rowKey));
+                command.Parameters.AddWithValue("@rowKey", NormalizeRowKey(blockKind, rowKey));
                 command.Parameters.AddWithValue("@rowData", rowData ?? string.Empty);
                 command.ExecuteNonQuery();
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to persist block row data for {panelKind}: {ex.Message}");
+                DebugLogger.PrintError($"Failed to persist block row data for {blockKind}: {ex.Message}");
             }
             finally
             {
@@ -328,9 +328,9 @@ ON CONFLICT(RowKey) DO UPDATE SET {RowDataColumnName} = excluded.{RowDataColumnN
             }
         }
 
-        private static void EnsureTable(DockPanelKind panelKind, SQLiteConnection connection = null)
+        private static void EnsureTable(DockBlockKind blockKind, SQLiteConnection connection = null)
         {
-            string tableName = GetTableName(panelKind);
+            string tableName = GetTableName(blockKind);
             if (_tableReady.ContainsKey(tableName))
             {
                 return;
@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS {tableName} (
                 createCommand.ExecuteNonQuery();
 
                 EnsureRowDataColumn(targetConnection, tableName);
-                MigrateLegacyTable(targetConnection, panelKind, tableName);
+                MigrateLegacyTable(targetConnection, blockKind, tableName);
                 MigrateLegacyLockRow(targetConnection, tableName);
 
                 using var ensureLockRow = new SQLiteCommand($"INSERT OR IGNORE INTO {tableName} (RowKey, IsLocked) VALUES (@lockKey, 0);", targetConnection);
@@ -396,9 +396,9 @@ CREATE TABLE IF NOT EXISTS {tableName} (
             return connection;
         }
 
-        private static void MigrateLegacyTable(SQLiteConnection connection, DockPanelKind panelKind, string newTableName)
+        private static void MigrateLegacyTable(SQLiteConnection connection, DockBlockKind blockKind, string newTableName)
         {
-            string legacyTableName = string.Concat(LegacyTablePrefix, panelKind);
+            string legacyTableName = string.Concat(LegacyTablePrefix, blockKind);
             if (!TableExists(connection, legacyTableName))
             {
                 return;
@@ -444,7 +444,7 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
             return result != null && result != DBNull.Value;
         }
 
-        private static string NormalizeRowKey(DockPanelKind panelKind, string value)
+        private static string NormalizeRowKey(DockBlockKind blockKind, string value)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -458,7 +458,13 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
                 return LockRowKey;
             }
 
-            if (panelKind == DockPanelKind.Specs)
+            if (blockKind == DockBlockKind.Controls &&
+                trimmed.Equals("PanelMenu", StringComparison.OrdinalIgnoreCase))
+            {
+                return "BlockMenu";
+            }
+
+            if (blockKind == DockBlockKind.Specs)
             {
                 return NormalizeSpecsKey(trimmed);
             }
