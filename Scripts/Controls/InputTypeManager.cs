@@ -134,8 +134,37 @@ namespace op.io
         {
             MouseState currentMouseState = Mouse.GetState();
 
-            return (mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Pressed) ||
-                   (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Pressed);
+            if (string.IsNullOrWhiteSpace(mouseKey))
+            {
+                return false;
+            }
+
+            if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase))
+            {
+                return currentMouseState.LeftButton == ButtonState.Pressed;
+            }
+
+            if (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase))
+            {
+                return currentMouseState.RightButton == ButtonState.Pressed;
+            }
+
+            if (string.Equals(mouseKey, "MiddleClick", StringComparison.OrdinalIgnoreCase))
+            {
+                return currentMouseState.MiddleButton == ButtonState.Pressed;
+            }
+
+            if (string.Equals(mouseKey, "Mouse4", StringComparison.OrdinalIgnoreCase))
+            {
+                return currentMouseState.XButton1 == ButtonState.Pressed;
+            }
+
+            if (string.Equals(mouseKey, "Mouse5", StringComparison.OrdinalIgnoreCase))
+            {
+                return currentMouseState.XButton2 == ButtonState.Pressed;
+            }
+
+            return false;
         }
 
         public static bool IsKeyTriggered(Keys key)
@@ -197,19 +226,49 @@ namespace op.io
                 LoadCooldownValues();
             }
 
-            bool isTriggered = false;
             bool isCooldownPassed = (Core.GAMETIME - _lastMouseTriggerTime[mouseKey]) >= _cachedTriggerCooldown.Value;
+            bool triggered = false;
 
-            if ((mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Released &&
-                 _previousMouseState.LeftButton == ButtonState.Pressed && isCooldownPassed) ||
-                (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Released &&
-                 _previousMouseState.RightButton == ButtonState.Pressed && isCooldownPassed))
+            if (string.Equals(mouseKey, "ScrollUp", StringComparison.OrdinalIgnoreCase) && IsScrollUp(currentMouseState, _previousMouseState) && isCooldownPassed)
             {
-                isTriggered = true;
-                _lastMouseTriggerTime[mouseKey] = Core.GAMETIME; // Reset trigger cooldown to the max cooldown value
+                triggered = true;
+            }
+            else if (string.Equals(mouseKey, "ScrollDown", StringComparison.OrdinalIgnoreCase) && IsScrollDown(currentMouseState, _previousMouseState) && isCooldownPassed)
+            {
+                triggered = true;
+            }
+            else if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.LeftButton == ButtonState.Released &&
+                     _previousMouseState.LeftButton == ButtonState.Pressed && isCooldownPassed)
+            {
+                triggered = true;
+            }
+            else if (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.RightButton == ButtonState.Released &&
+                     _previousMouseState.RightButton == ButtonState.Pressed && isCooldownPassed)
+            {
+                triggered = true;
+            }
+            else if (string.Equals(mouseKey, "MiddleClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.MiddleButton == ButtonState.Released &&
+                     _previousMouseState.MiddleButton == ButtonState.Pressed && isCooldownPassed)
+            {
+                triggered = true;
+            }
+            else if (string.Equals(mouseKey, "Mouse4", StringComparison.OrdinalIgnoreCase) && currentMouseState.XButton1 == ButtonState.Released &&
+                     _previousMouseState.XButton1 == ButtonState.Pressed && isCooldownPassed)
+            {
+                triggered = true;
+            }
+            else if (string.Equals(mouseKey, "Mouse5", StringComparison.OrdinalIgnoreCase) && currentMouseState.XButton2 == ButtonState.Released &&
+                     _previousMouseState.XButton2 == ButtonState.Pressed && isCooldownPassed)
+            {
+                triggered = true;
             }
 
-            return isTriggered;
+            if (triggered)
+            {
+                _lastMouseTriggerTime[mouseKey] = Core.GAMETIME;
+            }
+
+            return triggered;
         }
 
         public static bool IsMouseButtonSwitch(string mouseKey)
@@ -234,12 +293,24 @@ namespace op.io
                 LoadCooldownValues();
             }
 
-            if ((mouseKey == "LeftClick" && currentMouseState.LeftButton == ButtonState.Released &&
-                 _previousMouseState.LeftButton == ButtonState.Pressed &&
-                 (Core.GAMETIME - _lastMouseSwitchTime[mouseKey] >= _cachedSwitchCooldown.Value)) ||
-                (mouseKey == "RightClick" && currentMouseState.RightButton == ButtonState.Released &&
-                 _previousMouseState.RightButton == ButtonState.Pressed &&
-                 (Core.GAMETIME - _lastMouseSwitchTime[mouseKey] >= _cachedSwitchCooldown.Value)))
+            float elapsed = Core.GAMETIME - _lastMouseSwitchTime[mouseKey];
+            bool cooldownPassed = elapsed >= _cachedSwitchCooldown.Value;
+
+            bool shouldToggle =
+                (string.Equals(mouseKey, "ScrollUp", StringComparison.OrdinalIgnoreCase) && IsScrollUp(currentMouseState, _previousMouseState) && cooldownPassed) ||
+                (string.Equals(mouseKey, "ScrollDown", StringComparison.OrdinalIgnoreCase) && IsScrollDown(currentMouseState, _previousMouseState) && cooldownPassed) ||
+                (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.LeftButton == ButtonState.Released &&
+                 _previousMouseState.LeftButton == ButtonState.Pressed && cooldownPassed) ||
+                (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.RightButton == ButtonState.Released &&
+                 _previousMouseState.RightButton == ButtonState.Pressed && cooldownPassed) ||
+                (string.Equals(mouseKey, "MiddleClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.MiddleButton == ButtonState.Released &&
+                 _previousMouseState.MiddleButton == ButtonState.Pressed && cooldownPassed) ||
+                (string.Equals(mouseKey, "Mouse4", StringComparison.OrdinalIgnoreCase) && currentMouseState.XButton1 == ButtonState.Released &&
+                 _previousMouseState.XButton1 == ButtonState.Pressed && cooldownPassed) ||
+                (string.Equals(mouseKey, "Mouse5", StringComparison.OrdinalIgnoreCase) && currentMouseState.XButton2 == ButtonState.Released &&
+                 _previousMouseState.XButton2 == ButtonState.Pressed && cooldownPassed);
+
+            if (shouldToggle)
             {
                 _mouseSwitchStates[mouseKey] = !_mouseSwitchStates[mouseKey];
                 _lastMouseSwitchTime[mouseKey] = Core.GAMETIME; // Reset switch cooldown to the max cooldown value
@@ -651,7 +722,12 @@ namespace op.io
         private static bool IsMouseInput(string inputKey)
         {
             return string.Equals(inputKey, "LeftClick", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(inputKey, "RightClick", StringComparison.OrdinalIgnoreCase);
+                   string.Equals(inputKey, "RightClick", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputKey, "MiddleClick", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputKey, "Mouse4", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputKey, "Mouse5", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputKey, "ScrollUp", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputKey, "ScrollDown", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsNoSaveSwitch(string inputTypeLabel)
@@ -1156,8 +1232,14 @@ namespace op.io
             MouseState state = Mouse.GetState();
             return token.Equals("LeftClick", StringComparison.OrdinalIgnoreCase) ? state.LeftButton == ButtonState.Pressed
                  : token.Equals("RightClick", StringComparison.OrdinalIgnoreCase) ? state.RightButton == ButtonState.Pressed
+                 : token.Equals("MiddleClick", StringComparison.OrdinalIgnoreCase) ? state.MiddleButton == ButtonState.Pressed
+                 : token.Equals("Mouse4", StringComparison.OrdinalIgnoreCase) ? state.XButton1 == ButtonState.Pressed
+                 : token.Equals("Mouse5", StringComparison.OrdinalIgnoreCase) ? state.XButton2 == ButtonState.Pressed
                  : false;
         }
+
+        private static bool IsScrollUp(MouseState current, MouseState previous) => current.ScrollWheelValue > previous.ScrollWheelValue;
+        private static bool IsScrollDown(MouseState current, MouseState previous) => current.ScrollWheelValue < previous.ScrollWheelValue;
 
     }
 }

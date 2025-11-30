@@ -1150,6 +1150,17 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static string GetReleasedMouseButton(MouseState mouseState, MouseState previousMouseState)
         {
+            int scrollDelta = mouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue;
+            if (scrollDelta > 0)
+            {
+                return "ScrollUp";
+            }
+
+            if (scrollDelta < 0)
+            {
+                return "ScrollDown";
+            }
+
             if (mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed)
             {
                 return "LeftClick";
@@ -1158,6 +1169,21 @@ namespace op.io.UI.BlockScripts.Blocks
             if (mouseState.RightButton == ButtonState.Released && previousMouseState.RightButton == ButtonState.Pressed)
             {
                 return "RightClick";
+            }
+
+            if (mouseState.MiddleButton == ButtonState.Released && previousMouseState.MiddleButton == ButtonState.Pressed)
+            {
+                return "MiddleClick";
+            }
+
+            if (mouseState.XButton1 == ButtonState.Released && previousMouseState.XButton1 == ButtonState.Pressed)
+            {
+                return "Mouse4";
+            }
+
+            if (mouseState.XButton2 == ButtonState.Released && previousMouseState.XButton2 == ButtonState.Pressed)
+            {
+                return "Mouse5";
             }
 
             return null;
@@ -1223,6 +1249,26 @@ namespace op.io.UI.BlockScripts.Blocks
                 else if (string.Equals(token, "RightClick", StringComparison.OrdinalIgnoreCase))
                 {
                     token = "Right Click";
+                }
+                else if (string.Equals(token, "MiddleClick", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Middle Click";
+                }
+                else if (string.Equals(token, "Mouse4", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Mouse 4";
+                }
+                else if (string.Equals(token, "Mouse5", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Mouse 5";
+                }
+                else if (string.Equals(token, "ScrollUp", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Scroll Up";
+                }
+                else if (string.Equals(token, "ScrollDown", StringComparison.OrdinalIgnoreCase))
+                {
+                    token = "Scroll Down";
                 }
 
                 _stringBuilder.Append(token);

@@ -425,17 +425,13 @@ namespace op.io
             }
 
             string trimmed = rawToken.Trim();
+            string mouse = CanonicalizeMouseToken(trimmed);
+            if (!string.IsNullOrEmpty(mouse))
+            {
+                return mouse;
+            }
+
             string collapsed = trimmed.Replace(" ", string.Empty);
-
-            if (collapsed.Equals("LeftClick", StringComparison.OrdinalIgnoreCase))
-            {
-                return "LeftClick";
-            }
-
-            if (collapsed.Equals("RightClick", StringComparison.OrdinalIgnoreCase))
-            {
-                return "RightClick";
-            }
 
             if (collapsed.Equals("LeftControl", StringComparison.OrdinalIgnoreCase) ||
                 collapsed.Equals("RightControl", StringComparison.OrdinalIgnoreCase) ||
@@ -460,6 +456,29 @@ namespace op.io
             }
 
             return NormalizeLabel(trimmed);
+        }
+
+        private static string CanonicalizeMouseToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return string.Empty;
+            }
+
+            string collapsed = token.Replace(" ", string.Empty);
+            string lower = collapsed.ToLowerInvariant();
+
+            return lower switch
+            {
+                "leftclick" => "LeftClick",
+                "rightclick" => "RightClick",
+                "middleclick" or "middlemouse" or "mouse3" or "mmb" or "wheelclick" or "scrollclick" or "scrollpress" => "MiddleClick",
+                "mouse4" or "mb4" or "m4" or "xbutton1" or "button4" => "Mouse4",
+                "mouse5" or "mb5" or "m5" or "xbutton2" or "button5" => "Mouse5",
+                "scrollup" or "wheelup" or "scrollwheelup" => "ScrollUp",
+                "scrolldown" or "wheeldown" or "scrollwheeldown" => "ScrollDown",
+                _ => string.Empty
+            };
         }
 
         private static string NormalizeKeyToken(IReadOnlyList<Keys> keys)
@@ -545,14 +564,14 @@ namespace op.io
         {
             bindingToken = default;
 
-            if (string.Equals(token, "LeftClick", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(token, "RightClick", StringComparison.OrdinalIgnoreCase))
+            string canonical = CanonicalizeMouseToken(token);
+            if (string.IsNullOrWhiteSpace(canonical))
             {
-                bindingToken = InputBindingToken.CreateMouse(token);
-                return true;
+                return false;
             }
 
-            return false;
+            bindingToken = InputBindingToken.CreateMouse(canonical);
+            return true;
         }
 
         private static bool TryCreateKeyToken(string token, out InputBindingToken bindingToken)
@@ -876,6 +895,31 @@ namespace op.io
                 if (mouseButton.Equals("RightClick", StringComparison.OrdinalIgnoreCase))
                 {
                     return "Right Click";
+                }
+
+                if (mouseButton.Equals("MiddleClick", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Middle Click";
+                }
+
+                if (mouseButton.Equals("Mouse4", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Mouse 4";
+                }
+
+                if (mouseButton.Equals("Mouse5", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Mouse 5";
+                }
+
+                if (mouseButton.Equals("ScrollUp", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Scroll Up";
+                }
+
+                if (mouseButton.Equals("ScrollDown", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Scroll Down";
                 }
 
                 return mouseButton;
