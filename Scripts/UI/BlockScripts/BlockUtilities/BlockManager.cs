@@ -1065,17 +1065,26 @@ namespace op.io
 
         private static ResizeBar? HitTestResizeBar(Point position)
         {
+            // Prefer the deepest (most specific) split when handles overlap so dragging a nested panel
+            // doesn't unexpectedly move higher-level columns/rows.
+            ResizeBar? best = null;
+            int bestDepth = -1;
+
             foreach (ResizeBar handle in _resizeBars)
             {
                 Rectangle hitBounds = handle.Bounds;
                 hitBounds.Inflate(2, 2);
                 if (hitBounds.Contains(position))
                 {
-                    return handle;
+                    if (!best.HasValue || handle.Depth > bestDepth)
+                    {
+                        best = handle;
+                        bestDepth = handle.Depth;
+                    }
                 }
             }
 
-            return null;
+            return best;
         }
 
         private static void ApplyResizeBarDrag(ResizeBar handle, Point position)
@@ -1084,6 +1093,13 @@ namespace op.io
             {
                 return;
             }
+
+            int oldFirstSpan = handle.Orientation == DockSplitOrientation.Vertical
+                ? handle.Node.First?.Bounds.Width ?? 0
+                : handle.Node.First?.Bounds.Height ?? 0;
+            int oldSecondSpan = handle.Orientation == DockSplitOrientation.Vertical
+                ? handle.Node.Second?.Bounds.Width ?? 0
+                : handle.Node.Second?.Bounds.Height ?? 0;
 
             position = GetResizeBarPosition(handle, position);
 
@@ -1115,6 +1131,17 @@ namespace op.io
             if (Math.Abs(newRatio - previousRatio) > 0.0001f)
             {
                 handle.Node.SplitRatio = newRatio;
+
+                if (handle.Orientation == DockSplitOrientation.Horizontal)
+                {
+                    int total = bounds.Height;
+                    int newFirstSpan = Math.Max(0, Math.Min(total, (int)MathF.Round(total * newRatio)));
+                    int newSecondSpan = Math.Max(0, total - newFirstSpan);
+
+                    AdjustNestedHorizontalSplit(handle.Node, adjustingFirstChild: true, oldChildSpan: oldFirstSpan, newChildSpan: newFirstSpan);
+                    AdjustNestedHorizontalSplit(handle.Node, adjustingFirstChild: false, oldChildSpan: oldSecondSpan, newChildSpan: newSecondSpan);
+                }
+
                 MarkLayoutDirty();
             }
         }
@@ -1420,6 +1447,52 @@ namespace op.io
             int maxClamp = Math.Max(minClamp, spanLength - minSecond);
             int clamped = Math.Clamp(relativePosition, minClamp, maxClamp);
             return clamped / (float)Math.Max(1, spanLength);
+        }
+
+        private static void AdjustNestedHorizontalSplit(SplitNode parent, bool adjustingFirstChild, int oldChildSpan, int newChildSpan)
+        {
+            if (parent == null || newChildSpan <= 0 || oldChildSpan == newChildSpan)
+            {
+                return;
+            }
+
+            SplitNode nested = adjustingFirstChild ? parent.First as SplitNode : parent.Second as SplitNode;
+            if (nested == null || nested.Orientation != DockSplitOrientation.Horizontal)
+            {
+                return;
+            }
+
+            int adjacentSpan = adjustingFirstChild
+                ? nested.Second?.Bounds.Height ?? 0
+                : nested.First?.Bounds.Height ?? 0;
+            int farSpan = adjustingFirstChild
+                ? nested.First?.Bounds.Height ?? 0
+                : nested.Second?.Bounds.Height ?? 0;
+
+            if (adjacentSpan <= 0 && farSpan <= 0)
+            {
+                return;
+            }
+
+            int minAdjacent = Math.Clamp(adjustingFirstChild ? nested.Second?.GetMinHeight() ?? 0 : nested.First?.GetMinHeight() ?? 0, 0, newChildSpan);
+            int minFar = Math.Clamp(adjustingFirstChild ? nested.First?.GetMinHeight() ?? 0 : nested.Second?.GetMinHeight() ?? 0, 0, newChildSpan);
+
+            int targetFar = Math.Clamp(farSpan, minFar, Math.Max(minFar, newChildSpan - minAdjacent));
+            int targetAdjacent = Math.Max(minAdjacent, newChildSpan - targetFar);
+
+            float ratio;
+            if (adjustingFirstChild)
+            {
+                // Keep the far (top) child steady; let the adjacent (bottom) child absorb the delta.
+                ratio = targetFar / (float)Math.Max(1, newChildSpan);
+            }
+            else
+            {
+                // Keep the far (bottom) child steady; let the adjacent (top) child absorb the delta.
+                ratio = targetAdjacent / (float)Math.Max(1, newChildSpan);
+            }
+
+            nested.SplitRatio = MathHelper.Clamp(ratio, 0.001f, 0.999f);
         }
 
         private static void ApplyDrop(DockDropPreview preview)
@@ -2505,7 +2578,7 @@ namespace op.io
             }
 
             _resizeBars.Clear();
-            CollectResizeBars(_rootNode);
+            CollectResizeBars(_rootNode, 0);
             RebuildCornerHandles();
 
             if (_hoveredResizeBar.HasValue)
@@ -2588,7 +2661,7 @@ namespace op.io
             }
         }
 
-        private static void CollectResizeBars(DockNode node)
+        private static void CollectResizeBars(DockNode node, int depth)
         {
             if (node is not SplitNode split)
             {
@@ -2603,18 +2676,18 @@ namespace op.io
                 Rectangle handleBounds = GetResizeBarBounds(split);
                 if (handleBounds.Width > 0 && handleBounds.Height > 0)
                 {
-                    _resizeBars.Add(new ResizeBar(split, split.Orientation, handleBounds));
+                    _resizeBars.Add(new ResizeBar(split, split.Orientation, handleBounds, depth));
                 }
             }
 
             if (split.First != null)
             {
-                CollectResizeBars(split.First);
+                CollectResizeBars(split.First, depth + 1);
             }
 
             if (split.Second != null)
             {
-                CollectResizeBars(split.Second);
+                CollectResizeBars(split.Second, depth + 1);
             }
         }
 
@@ -2980,16 +3053,18 @@ namespace op.io
 
         private readonly struct ResizeBar
         {
-            public ResizeBar(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
+            public ResizeBar(SplitNode node, DockSplitOrientation orientation, Rectangle bounds, int depth)
             {
                 Node = node;
                 Orientation = orientation;
                 Bounds = bounds;
+                Depth = depth;
             }
 
             public SplitNode Node { get; }
             public DockSplitOrientation Orientation { get; }
             public Rectangle Bounds { get; }
+            public int Depth { get; }
         }
 
         private readonly struct CornerHandle
