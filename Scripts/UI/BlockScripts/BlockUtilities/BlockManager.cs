@@ -72,6 +72,7 @@ namespace op.io
         private static readonly List<PanelMenuEntry> _panelMenuEntries = [];
         private static readonly List<OverlayMenuRow> _overlayRows = [];
         private static PanelMenuEntry _activeNumericEntry;
+        private static Dictionary<string, Rectangle> _resizeStartPanelBounds;
 
         public static bool IsPanelLocked(DockPanelKind panelKind)
         {
@@ -166,8 +167,8 @@ namespace op.io
             }
             else if (dockingEnabled)
             {
-                bool resizingPanels = allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                    UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased));
+                bool resizingPanels = allowReorder && (UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased) ||
+                    UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased));
                 if (!resizingPanels)
                 {
                     UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
@@ -545,6 +546,11 @@ namespace op.io
             {
                 if (!leftClickHeld || leftClickReleased)
                 {
+                    if (_activeResizeBar.HasValue)
+                    {
+                        DebugLogger.PrintUI($"[ResizeBarEnd] {DescribeResizeBar(_activeResizeBar.Value)}");
+                    }
+                    LogResizePanelDeltas();
                     _activeResizeBar = null;
                     ClearResizeBarSnap();
                     return false;
@@ -559,6 +565,8 @@ namespace op.io
 
             if (hovered.HasValue && leftClickStarted)
             {
+                DebugLogger.PrintUI($"[ResizeBarStart] {DescribeResizeBar(hovered.Value)} Mouse={_mousePosition}");
+                CapturePanelBoundsForResize();
                 _activeResizeBar = hovered;
                 ClearResizeBarSnap();
                 ApplyResizeBarDrag(hovered.Value, _mousePosition);
@@ -586,6 +594,11 @@ namespace op.io
             {
                 if (!leftClickHeld || leftClickReleased)
                 {
+                    if (_activeCornerHandle.HasValue)
+                    {
+                        DebugLogger.PrintUI($"[CornerEnd] {DescribeCornerHandle(_activeCornerHandle.Value)}");
+                        LogResizePanelDeltas();
+                    }
                     _activeCornerHandle = null;
                     ClearCornerSnap();
                     return false;
@@ -600,6 +613,8 @@ namespace op.io
 
             if (hovered.HasValue && leftClickStarted)
             {
+                DebugLogger.PrintUI($"[CornerStart] {DescribeCornerHandle(hovered.Value)} Mouse={_mousePosition}");
+                CapturePanelBoundsForResize();
                 _activeCornerHandle = hovered;
                 ClearCornerSnap();
                 ApplyCornerHandleDrag(hovered.Value, _mousePosition);
@@ -1053,7 +1068,6 @@ namespace op.io
             foreach (CornerHandle corner in _cornerHandles)
             {
                 Rectangle hitBounds = corner.Bounds;
-                hitBounds.Inflate(2, 2);
                 if (hitBounds.Contains(position))
                 {
                     return corner;
@@ -1094,13 +1108,6 @@ namespace op.io
                 return;
             }
 
-            int oldFirstSpan = handle.Orientation == DockSplitOrientation.Vertical
-                ? handle.Node.First?.Bounds.Width ?? 0
-                : handle.Node.First?.Bounds.Height ?? 0;
-            int oldSecondSpan = handle.Orientation == DockSplitOrientation.Vertical
-                ? handle.Node.Second?.Bounds.Width ?? 0
-                : handle.Node.Second?.Bounds.Height ?? 0;
-
             position = GetResizeBarPosition(handle, position);
 
             Rectangle bounds = handle.Node.Bounds;
@@ -1130,17 +1137,16 @@ namespace op.io
             newRatio = MathHelper.Clamp(newRatio, 0.001f, 0.999f);
             if (Math.Abs(newRatio - previousRatio) > 0.0001f)
             {
+                string firstDesc = DescribeNode(handle.Node.First);
+                string secondDesc = DescribeNode(handle.Node.Second);
+                DebugLogger.PrintUI($"[ResizeBarDrag] Ori={handle.Orientation} Node={DescribeNode(handle.Node)} Prev={previousRatio:F3} New={newRatio:F3} RelativePos={(handle.Orientation == DockSplitOrientation.Vertical ? position.X - bounds.X : position.Y - bounds.Y)} Bounds={bounds} Mouse={position} First={firstDesc} Second={secondDesc}");
                 handle.Node.SplitRatio = newRatio;
 
-                if (handle.Orientation == DockSplitOrientation.Horizontal)
-                {
-                    int total = bounds.Height;
-                    int newFirstSpan = Math.Max(0, Math.Min(total, (int)MathF.Round(total * newRatio)));
-                    int newSecondSpan = Math.Max(0, total - newFirstSpan);
-
-                    AdjustNestedHorizontalSplit(handle.Node, adjustingFirstChild: true, oldChildSpan: oldFirstSpan, newChildSpan: newFirstSpan);
-                    AdjustNestedHorizontalSplit(handle.Node, adjustingFirstChild: false, oldChildSpan: oldSecondSpan, newChildSpan: newSecondSpan);
-                }
+                int totalSpan = handle.Orientation == DockSplitOrientation.Vertical ? bounds.Width : bounds.Height;
+                int newFirstSpan = Math.Max(0, Math.Min(totalSpan, (int)MathF.Round(totalSpan * newRatio)));
+                int newSecondSpan = Math.Max(0, totalSpan - newFirstSpan);
+                handle.Node.PreferredFirstSpan = newFirstSpan;
+                handle.Node.PreferredSecondSpan = newSecondSpan;
 
                 MarkLayoutDirty();
             }
@@ -1447,52 +1453,6 @@ namespace op.io
             int maxClamp = Math.Max(minClamp, spanLength - minSecond);
             int clamped = Math.Clamp(relativePosition, minClamp, maxClamp);
             return clamped / (float)Math.Max(1, spanLength);
-        }
-
-        private static void AdjustNestedHorizontalSplit(SplitNode parent, bool adjustingFirstChild, int oldChildSpan, int newChildSpan)
-        {
-            if (parent == null || newChildSpan <= 0 || oldChildSpan == newChildSpan)
-            {
-                return;
-            }
-
-            SplitNode nested = adjustingFirstChild ? parent.First as SplitNode : parent.Second as SplitNode;
-            if (nested == null || nested.Orientation != DockSplitOrientation.Horizontal)
-            {
-                return;
-            }
-
-            int adjacentSpan = adjustingFirstChild
-                ? nested.Second?.Bounds.Height ?? 0
-                : nested.First?.Bounds.Height ?? 0;
-            int farSpan = adjustingFirstChild
-                ? nested.First?.Bounds.Height ?? 0
-                : nested.Second?.Bounds.Height ?? 0;
-
-            if (adjacentSpan <= 0 && farSpan <= 0)
-            {
-                return;
-            }
-
-            int minAdjacent = Math.Clamp(adjustingFirstChild ? nested.Second?.GetMinHeight() ?? 0 : nested.First?.GetMinHeight() ?? 0, 0, newChildSpan);
-            int minFar = Math.Clamp(adjustingFirstChild ? nested.First?.GetMinHeight() ?? 0 : nested.Second?.GetMinHeight() ?? 0, 0, newChildSpan);
-
-            int targetFar = Math.Clamp(farSpan, minFar, Math.Max(minFar, newChildSpan - minAdjacent));
-            int targetAdjacent = Math.Max(minAdjacent, newChildSpan - targetFar);
-
-            float ratio;
-            if (adjustingFirstChild)
-            {
-                // Keep the far (top) child steady; let the adjacent (bottom) child absorb the delta.
-                ratio = targetFar / (float)Math.Max(1, newChildSpan);
-            }
-            else
-            {
-                // Keep the far (bottom) child steady; let the adjacent (top) child absorb the delta.
-                ratio = targetAdjacent / (float)Math.Max(1, newChildSpan);
-            }
-
-            nested.SplitRatio = MathHelper.Clamp(ratio, 0.001f, 0.999f);
         }
 
         private static void ApplyDrop(DockDropPreview preview)
@@ -2699,7 +2659,9 @@ namespace op.io
                 return;
             }
 
-            int inflate = Math.Max(2, UIStyle.ResizeBarThickness / 2);
+            // Keep corner targets tight to the actual intersection so dragging a nearby bar
+            // doesn't accidentally activate a combined corner resize.
+            int inflate = 0;
 
             foreach (ResizeBar vertical in _resizeBars)
             {
@@ -2815,6 +2777,78 @@ namespace op.io
             return ReferenceEquals(a.Node, b.Node) && a.Orientation == b.Orientation;
         }
 
+        private static void CapturePanelBoundsForResize()
+        {
+            _resizeStartPanelBounds = new Dictionary<string, Rectangle>(StringComparer.OrdinalIgnoreCase);
+            foreach (DockPanel panel in _orderedPanels)
+            {
+                if (panel != null)
+                {
+                    _resizeStartPanelBounds[panel.Id] = panel.Bounds;
+                }
+            }
+        }
+
+        private static void LogResizePanelDeltas()
+        {
+            if (_resizeStartPanelBounds == null || _resizeStartPanelBounds.Count == 0)
+            {
+                return;
+            }
+
+            List<string> changes = new();
+            foreach (DockPanel panel in _orderedPanels)
+            {
+                if (panel == null)
+                {
+                    continue;
+                }
+
+                Rectangle start = _resizeStartPanelBounds.TryGetValue(panel.Id, out Rectangle value) ? value : Rectangle.Empty;
+                Rectangle end = panel.Bounds;
+                if (start == end)
+                {
+                    continue;
+                }
+
+                changes.Add($"{panel.Title}: {start} -> {end}");
+            }
+
+            if (changes.Count > 0)
+            {
+                DebugLogger.PrintUI("[ResizeLayoutDelta] " + string.Join(" | ", changes));
+            }
+
+            _resizeStartPanelBounds = null;
+        }
+
+        private static string DescribeNode(DockNode node)
+        {
+            if (node is PanelNode panelNode)
+            {
+                string id = panelNode.Panel?.Id ?? "null";
+                Rectangle bounds = panelNode.Panel?.Bounds ?? panelNode.Bounds;
+                return $"Panel(id={id}, bounds={bounds})";
+            }
+
+            if (node is SplitNode split)
+            {
+                return $"Split({split.Orientation}, ratio={split.SplitRatio:F3}, bounds={split.Bounds})";
+            }
+
+            return node?.GetType()?.Name ?? "null";
+        }
+
+        private static string DescribeResizeBar(ResizeBar handle)
+        {
+            return $"Handle[{handle.Orientation}] Depth={handle.Depth} Bounds={handle.Bounds} Node={DescribeNode(handle.Node)} First={DescribeNode(handle.Node?.First)} Second={DescribeNode(handle.Node?.Second)}";
+        }
+
+        private static string DescribeCornerHandle(CornerHandle corner)
+        {
+            return $"Corner V={DescribeResizeBar(corner.VerticalHandle)} H={DescribeResizeBar(corner.HorizontalHandle)} Bounds={corner.Bounds}";
+        }
+
         private static void ClearResizeBars()
         {
             _resizeBars.Clear();
@@ -2826,6 +2860,7 @@ namespace op.io
             _activeCornerHandle = null;
             ClearCornerSnap();
             _hoveredDragBarId = null;
+            _resizeStartPanelBounds = null;
         }
 
         private static bool TryGetGamePanel(out DockPanel panel)

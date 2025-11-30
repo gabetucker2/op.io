@@ -11,7 +11,7 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class BackendBlock
     {
         public const string PanelTitle = "Backend";
-        public const int MinWidth = 0;
+        public const int MinWidth = 30;
         public const int MinHeight = 0;
 
         private const string PlaceholderWordSeparator = "    ";

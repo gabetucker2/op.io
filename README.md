@@ -21,4 +21,5 @@ git reset --hard HEAD
 # To remove excess files no longer in the repo
 git clean -fd
 
+# Other
 To unbind a key, make sure it's saved as an empty string.

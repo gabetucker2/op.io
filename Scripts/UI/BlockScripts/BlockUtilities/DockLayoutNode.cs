@@ -78,6 +78,8 @@ namespace op.io
         public float SplitRatio { get; set; } = 0.5f;
         public DockNode First { get; set; }
         public DockNode Second { get; set; }
+        public int? PreferredFirstSpan { get; set; }
+        public int? PreferredSecondSpan { get; set; }
 
         public override bool HasVisibleContent =>
             (First?.HasVisibleContent ?? false) ||
@@ -166,12 +168,28 @@ namespace op.io
                 int minSecondHeight = Math.Min(bounds.Height, Math.Max(0, Second?.GetMinHeight() ?? 0));
                 int minSplit = Math.Min(bounds.Height, Math.Max(0, minFirstHeight));
                 int maxSplit = Math.Max(minSplit, bounds.Height - minSecondHeight);
-                int splitHeight = Math.Clamp((int)(bounds.Height * SplitRatio), minSplit, maxSplit);
+                int splitHeight;
+                if (PreferredFirstSpan.HasValue)
+                {
+                    splitHeight = Math.Clamp(PreferredFirstSpan.Value, minSplit, maxSplit);
+                    float derivedRatio = bounds.Height > 0 ? splitHeight / (float)bounds.Height : SplitRatio;
+                    SplitRatio = MathHelper.Clamp(derivedRatio, 0.001f, 0.999f);
+                }
+                else
+                {
+                    splitHeight = Math.Clamp((int)(bounds.Height * SplitRatio), minSplit, maxSplit);
+                }
 
                 Rectangle top = new(bounds.X, bounds.Y, bounds.Width, splitHeight);
                 Rectangle bottom = new(bounds.X, bounds.Y + splitHeight, bounds.Width, bounds.Height - splitHeight);
                 First?.Arrange(top);
                 Second?.Arrange(bottom);
+
+                if (!PreferredFirstSpan.HasValue)
+                {
+                    PreferredFirstSpan = top.Height;
+                    PreferredSecondSpan = bottom.Height;
+                }
             }
             else
             {
@@ -179,12 +197,28 @@ namespace op.io
                 int minSecondWidth = Math.Min(bounds.Width, Math.Max(0, Second?.GetMinWidth() ?? 0));
                 int minSplit = Math.Min(bounds.Width, Math.Max(0, minFirstWidth));
                 int maxSplit = Math.Max(minSplit, bounds.Width - minSecondWidth);
-                int splitWidth = Math.Clamp((int)(bounds.Width * SplitRatio), minSplit, maxSplit);
+                int splitWidth;
+                if (PreferredFirstSpan.HasValue)
+                {
+                    splitWidth = Math.Clamp(PreferredFirstSpan.Value, minSplit, maxSplit);
+                    float derivedRatio = bounds.Width > 0 ? splitWidth / (float)bounds.Width : SplitRatio;
+                    SplitRatio = MathHelper.Clamp(derivedRatio, 0.001f, 0.999f);
+                }
+                else
+                {
+                    splitWidth = Math.Clamp((int)(bounds.Width * SplitRatio), minSplit, maxSplit);
+                }
 
                 Rectangle left = new(bounds.X, bounds.Y, splitWidth, bounds.Height);
                 Rectangle right = new(bounds.X + splitWidth, bounds.Y, bounds.Width - splitWidth, bounds.Height);
                 First?.Arrange(left);
                 Second?.Arrange(right);
+
+                if (!PreferredFirstSpan.HasValue)
+                {
+                    PreferredFirstSpan = left.Width;
+                    PreferredSecondSpan = right.Width;
+                }
             }
         }
     }

@@ -12,7 +12,7 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class ControlsBlock
     {
         public const string PanelTitle = "Controls";
-        public const int MinWidth = 0;
+        public const int MinWidth = 30;
         public const int MinHeight = 0;
 
         private static readonly List<KeybindDisplayRow> _keybindCache = new();
