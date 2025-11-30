@@ -650,8 +650,7 @@ namespace op.io
                         ClearPanelFocus();
                     }
 
-                    closeHit.IsVisible = false;
-                    MarkLayoutDirty();
+                    HandlePanelClose(closeHit);
                     return;
                 }
             }
@@ -714,6 +713,63 @@ namespace op.io
             TogglePanelLock(lockHit);
             ClearDockingInteractions();
             return true;
+        }
+
+        private static void HandlePanelClose(DockPanel panel)
+        {
+            if (panel == null)
+            {
+                return;
+            }
+
+            panel.IsVisible = false;
+
+            if (TryDecrementCountedPanel(panel))
+            {
+                return;
+            }
+
+            MarkLayoutDirty();
+        }
+
+        private static bool TryDecrementCountedPanel(DockPanel panel)
+        {
+            EnsurePanelMenuEntries();
+            PanelMenuEntry entry = _panelMenuEntries.FirstOrDefault(e => e.Kind == panel.Kind && e.ControlMode == PanelMenuControlMode.Count);
+            if (entry == null)
+            {
+                return false;
+            }
+
+            int remainingPanels = _orderedPanels.Count(p => p != null && p.Kind == panel.Kind && !ReferenceEquals(p, panel));
+            entry.Count = ClampCount(entry, remainingPanels);
+            entry.InputBuffer = entry.Count.ToString();
+
+            RemovePanel(panel);
+            return true;
+        }
+
+        private static void RemovePanel(DockPanel panel)
+        {
+            if (panel == null)
+            {
+                return;
+            }
+
+            if (_panelNodes.TryGetValue(panel.Id, out PanelNode node))
+            {
+                _rootNode = DockLayout.Detach(_rootNode, node);
+                _panelNodes.Remove(panel.Id);
+            }
+
+            _panels.Remove(panel.Id);
+            _orderedPanels.Remove(panel);
+            _panelLockStates.Remove(panel.Id);
+            if (string.Equals(_hoveredDragBarId, panel.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                _hoveredDragBarId = null;
+            }
+            MarkLayoutDirty();
         }
 
         private static bool IsPanelLocked(DockPanel panel)

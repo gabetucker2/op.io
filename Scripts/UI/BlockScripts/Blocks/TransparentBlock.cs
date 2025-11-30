@@ -6,7 +6,7 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class TransparentBlock
     {
         public const string PanelTitle = "Transparent Block";
-        public const int MinWidth = 30;
+        public const int MinWidth = 25;
         public const int MinHeight = 0;
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
