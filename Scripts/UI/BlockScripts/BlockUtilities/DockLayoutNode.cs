@@ -75,6 +75,7 @@ namespace op.io
         }
 
         public DockSplitOrientation Orientation { get; set; }
+        public bool IsUserSized { get; set; }
         public float SplitRatio { get; set; } = 0.5f;
         public DockNode First { get; set; }
         public DockNode Second { get; set; }
@@ -141,6 +142,7 @@ namespace op.io
 
         public override void Arrange(Rectangle bounds)
         {
+            Rectangle previousBounds = Bounds;
             Bounds = bounds;
             bool firstVisible = First?.HasVisibleContent ?? false;
             bool secondVisible = Second?.HasVisibleContent ?? false;
@@ -168,6 +170,9 @@ namespace op.io
                 int minSecondHeight = Math.Min(bounds.Height, Math.Max(0, Second?.GetMinHeight() ?? 0));
                 int minSplit = Math.Min(bounds.Height, Math.Max(0, minFirstHeight));
                 int maxSplit = Math.Max(minSplit, bounds.Height - minSecondHeight);
+
+                AdjustPreferredSpansForParentChange(previousBounds, bounds, minFirstHeight, minSecondHeight);
+
                 int splitHeight;
                 if (PreferredFirstSpan.HasValue)
                 {
@@ -177,7 +182,7 @@ namespace op.io
                 }
                 else
                 {
-                    splitHeight = Math.Clamp((int)(bounds.Height * SplitRatio), minSplit, maxSplit);
+                    splitHeight = Math.Clamp((int)MathF.Round(bounds.Height * SplitRatio), minSplit, maxSplit);
                 }
 
                 Rectangle top = new(bounds.X, bounds.Y, bounds.Width, splitHeight);
@@ -185,11 +190,8 @@ namespace op.io
                 First?.Arrange(top);
                 Second?.Arrange(bottom);
 
-                if (!PreferredFirstSpan.HasValue)
-                {
-                    PreferredFirstSpan = top.Height;
-                    PreferredSecondSpan = bottom.Height;
-                }
+                PreferredFirstSpan = top.Height;
+                PreferredSecondSpan = bottom.Height;
             }
             else
             {
@@ -197,6 +199,9 @@ namespace op.io
                 int minSecondWidth = Math.Min(bounds.Width, Math.Max(0, Second?.GetMinWidth() ?? 0));
                 int minSplit = Math.Min(bounds.Width, Math.Max(0, minFirstWidth));
                 int maxSplit = Math.Max(minSplit, bounds.Width - minSecondWidth);
+
+                AdjustPreferredSpansForParentChange(previousBounds, bounds, minFirstWidth, minSecondWidth);
+
                 int splitWidth;
                 if (PreferredFirstSpan.HasValue)
                 {
@@ -206,7 +211,7 @@ namespace op.io
                 }
                 else
                 {
-                    splitWidth = Math.Clamp((int)(bounds.Width * SplitRatio), minSplit, maxSplit);
+                    splitWidth = Math.Clamp((int)MathF.Round(bounds.Width * SplitRatio), minSplit, maxSplit);
                 }
 
                 Rectangle left = new(bounds.X, bounds.Y, splitWidth, bounds.Height);
@@ -214,12 +219,95 @@ namespace op.io
                 First?.Arrange(left);
                 Second?.Arrange(right);
 
-                if (!PreferredFirstSpan.HasValue)
-                {
-                    PreferredFirstSpan = left.Width;
-                    PreferredSecondSpan = right.Width;
-                }
+                PreferredFirstSpan = left.Width;
+                PreferredSecondSpan = right.Width;
             }
+        }
+
+        private void AdjustPreferredSpansForParentChange(Rectangle previousBounds, Rectangle newBounds, int minFirstSpan, int minSecondSpan)
+        {
+            if (!PreferredFirstSpan.HasValue || !PreferredSecondSpan.HasValue)
+            {
+                return;
+            }
+
+            if (previousBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            if (Orientation == DockSplitOrientation.Horizontal)
+            {
+                AdjustPreferredValues(
+                    previousBounds.Height,
+                    previousBounds.Y,
+                    previousBounds.Bottom,
+                    newBounds.Height,
+                    newBounds.Y,
+                    newBounds.Bottom,
+                    minFirstSpan,
+                    minSecondSpan);
+            }
+            else
+            {
+                AdjustPreferredValues(
+                    previousBounds.Width,
+                    previousBounds.X,
+                    previousBounds.Right,
+                    newBounds.Width,
+                    newBounds.X,
+                    newBounds.Right,
+                    minFirstSpan,
+                    minSecondSpan);
+            }
+        }
+
+        private void AdjustPreferredValues(
+            int oldTotal,
+            int oldStart,
+            int oldEnd,
+            int newTotal,
+            int newStart,
+            int newEnd,
+            int minFirstSpan,
+            int minSecondSpan)
+        {
+            if (oldTotal <= 0 || oldTotal == newTotal)
+            {
+                return;
+            }
+
+            int delta = newTotal - oldTotal;
+            bool startEdgeChanged = newStart != oldStart && newEnd == oldEnd;
+            bool endEdgeChanged = newStart == oldStart && newEnd != oldEnd;
+
+            int first = PreferredFirstSpan.Value;
+            int second = PreferredSecondSpan.Value;
+
+            if (endEdgeChanged)
+            {
+                second += delta;
+            }
+            else if (startEdgeChanged)
+            {
+                first += delta;
+            }
+            else
+            {
+                // If the node moved or both edges shifted, bias the adjustment toward
+                // the second child so unaffected siblings keep their size.
+                second += delta;
+            }
+
+            int minFirst = Math.Clamp(minFirstSpan, 0, newTotal);
+            int minSecond = Math.Clamp(minSecondSpan, 0, newTotal);
+            int maxFirst = Math.Max(minFirst, newTotal - minSecond);
+
+            first = Math.Clamp(first, minFirst, maxFirst);
+            second = Math.Max(minSecond, newTotal - first);
+
+            PreferredFirstSpan = first;
+            PreferredSecondSpan = second;
         }
     }
 

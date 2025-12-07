@@ -1135,22 +1135,34 @@ namespace op.io
 
         private static ResizeBar? HitTestResizeBar(Point position)
         {
-            // Prefer the deepest (most specific) split when handles overlap so dragging a nested block
-            // doesn't unexpectedly move higher-level columns/rows.
+            // When handles overlap (e.g., nested splits near each other), pick the one whose center
+            // is closest to the cursor along the resize axis, breaking ties by depth so nested layouts
+            // still feel precise without stealing drags meant for a parent boundary.
             ResizeBar? best = null;
             int bestDepth = -1;
+            int bestDistance = int.MaxValue;
 
             foreach (ResizeBar handle in _resizeBars)
             {
                 Rectangle hitBounds = handle.Bounds;
                 hitBounds.Inflate(2, 2);
-                if (hitBounds.Contains(position))
+                if (!hitBounds.Contains(position))
                 {
-                    if (!best.HasValue || handle.Depth > bestDepth)
-                    {
-                        best = handle;
-                        bestDepth = handle.Depth;
-                    }
+                    continue;
+                }
+
+                int axisCenter = GetResizeBarAxisCenter(handle);
+                int axisDistance = handle.Orientation == DockSplitOrientation.Vertical
+                    ? Math.Abs(position.X - axisCenter)
+                    : Math.Abs(position.Y - axisCenter);
+
+                if (!best.HasValue ||
+                    axisDistance < bestDistance ||
+                    (axisDistance == bestDistance && handle.Depth > bestDepth))
+                {
+                    best = handle;
+                    bestDepth = handle.Depth;
+                    bestDistance = axisDistance;
                 }
             }
 
@@ -1203,6 +1215,7 @@ namespace op.io
                 int newSecondSpan = Math.Max(0, totalSpan - newFirstSpan);
                 handle.Node.PreferredFirstSpan = newFirstSpan;
                 handle.Node.PreferredSecondSpan = newSecondSpan;
+                handle.Node.IsUserSized = true;
 
                 MarkLayoutDirty();
             }
