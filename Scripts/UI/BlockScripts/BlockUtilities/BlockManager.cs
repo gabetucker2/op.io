@@ -63,6 +63,7 @@ namespace op.io
         private static CornerHandle? _activeCornerHandle;
         private static CornerHandle? _activeCornerLinkedHandle;
         private static CornerHandle? _activeCornerSnapTarget;
+        private static bool _isPropagatingResize;
         private static Point? _activeCornerSnapPosition;
         private static Point? _activeCornerSnapAnchor;
         private static bool _activeCornerSnapLockX;
@@ -487,9 +488,11 @@ namespace op.io
                 _ => (defaultMin, defaultMin)
             };
 
-            // Ensure the drag bar area can never be occluded.
-            int dragBarProtectedHeight = Math.Max(height, UIStyle.DragBarHeight);
-            return (width, dragBarProtectedHeight);
+            // Keep at least the drag bar height so we can detect when a header is being pushed;
+            // overflow gets propagated to neighboring resize edges instead of hard-clamping.
+            int clampedWidth = Math.Max(width, UIStyle.MinBlockSize);
+            int clampedHeight = Math.Max(height, UIStyle.DragBarHeight);
+            return (clampedWidth, clampedHeight);
         }
 
         private static void EnsureSurfaceResources(GraphicsDevice graphicsDevice)
@@ -559,6 +562,17 @@ namespace op.io
                 }
 
                 ApplyResizeBarDrag(_activeResizeBar.Value, _mousePosition);
+
+                // If we're snapped to another handle, move that handle in lockstep so both edges nudge together.
+                if (_activeResizeBarSnapTarget.HasValue && _activeResizeBarSnapCoordinate.HasValue)
+                {
+                    ResizeBar snapTarget = _activeResizeBarSnapTarget.Value;
+                    Point snappedPosition = snapTarget.Orientation == DockSplitOrientation.Vertical
+                        ? new Point(_activeResizeBarSnapCoordinate.Value, _mousePosition.Y)
+                        : new Point(_mousePosition.X, _activeResizeBarSnapCoordinate.Value);
+                    ApplyResizeBarDrag(snapTarget, snappedPosition);
+                }
+
                 return true;
             }
 
@@ -1181,8 +1195,20 @@ namespace op.io
                 return;
             }
 
-            position = GetResizeBarPosition(handle, position);
+            // Avoid propagating loops when we nudge neighboring handles.
+            if (_isPropagatingResize)
+            {
+                position = GetResizeBarPosition(handle, position);
+                ApplyResizeBarDragInternal(handle, position, allowPropagation: false);
+                return;
+            }
 
+            position = GetResizeBarPosition(handle, position);
+            ApplyResizeBarDragInternal(handle, position, allowPropagation: true);
+        }
+
+        private static void ApplyResizeBarDragInternal(ResizeBar handle, Point position, bool allowPropagation)
+        {
             Rectangle bounds = handle.Node.Bounds;
             if (bounds.Width <= 0 || bounds.Height <= 0)
             {
@@ -1191,15 +1217,23 @@ namespace op.io
 
             float previousRatio = handle.Node.SplitRatio;
             float newRatio;
+
+            int span = handle.Orientation == DockSplitOrientation.Vertical ? bounds.Width : bounds.Height;
+            int axisPositionRaw = handle.Orientation == DockSplitOrientation.Vertical ? position.X - bounds.X : position.Y - bounds.Y;
+            int minFirst = handle.Node.Orientation == DockSplitOrientation.Vertical
+                ? handle.Node.First?.GetMinWidth() ?? 0
+                : handle.Node.First?.GetMinHeight() ?? 0;
+            int minSecond = handle.Node.Orientation == DockSplitOrientation.Vertical
+                ? handle.Node.Second?.GetMinWidth() ?? 0
+                : handle.Node.Second?.GetMinHeight() ?? 0;
+
             if (handle.Orientation == DockSplitOrientation.Vertical)
             {
-                int relative = position.X - bounds.X;
-                newRatio = ClampSplitRatio(handle.Node, relative, bounds.Width);
+                newRatio = ClampSplitRatio(handle.Node, axisPositionRaw, bounds.Width);
             }
             else
             {
-                int relative = position.Y - bounds.Y;
-                newRatio = ClampSplitRatio(handle.Node, relative, bounds.Height);
+                newRatio = ClampSplitRatio(handle.Node, axisPositionRaw, bounds.Height);
             }
 
             if (float.IsNaN(newRatio) || float.IsInfinity(newRatio))
@@ -1223,6 +1257,96 @@ namespace op.io
                 handle.Node.IsUserSized = true;
 
                 MarkLayoutDirty();
+            }
+
+            if (allowPropagation)
+            {
+                int minClamp = Math.Min(span, Math.Max(0, minFirst));
+                int maxClamp = Math.Max(minClamp, span - Math.Max(0, minSecond));
+
+                if (axisPositionRaw < minClamp)
+                {
+                    int overflow = minClamp - axisPositionRaw;
+                    NudgeNearestResizeBar(handle, overflow, negativeDirection: true);
+                }
+                else if (axisPositionRaw > maxClamp)
+                {
+                    int overflow = axisPositionRaw - maxClamp;
+                    NudgeNearestResizeBar(handle, overflow, negativeDirection: false);
+                }
+            }
+        }
+
+        private static void NudgeNearestResizeBar(ResizeBar source, int amount, bool negativeDirection)
+        {
+            if (amount <= 0)
+            {
+                return;
+            }
+
+            ResizeBar? best = null;
+            int bestDistance = int.MaxValue;
+
+            foreach (ResizeBar other in _resizeBars)
+            {
+                if (ResizeBarsEqual(other, source) || other.Orientation != source.Orientation)
+                {
+                    continue;
+                }
+
+                Rectangle a = source.Bounds;
+                Rectangle b = other.Bounds;
+
+                bool overlaps = source.Orientation == DockSplitOrientation.Vertical
+                    ? a.Y < b.Bottom && a.Bottom > b.Y
+                    : a.X < b.Right && a.Right > b.X;
+
+                if (!overlaps)
+                {
+                    continue;
+                }
+
+                int delta = source.Orientation == DockSplitOrientation.Vertical
+                    ? b.Center.X - a.Center.X
+                    : b.Center.Y - a.Center.Y;
+
+                if (negativeDirection && delta >= 0)
+                {
+                    continue;
+                }
+
+                if (!negativeDirection && delta <= 0)
+                {
+                    continue;
+                }
+
+                int distance = Math.Abs(delta);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = other;
+                }
+            }
+
+            if (!best.HasValue)
+            {
+                return;
+            }
+
+            ResizeBar target = best.Value;
+            int signedAmount = negativeDirection ? -amount : amount;
+            Point targetPosition = target.Orientation == DockSplitOrientation.Vertical
+                ? new Point(target.Bounds.Center.X + signedAmount, target.Bounds.Center.Y)
+                : new Point(target.Bounds.Center.X, target.Bounds.Center.Y + signedAmount);
+
+            _isPropagatingResize = true;
+            try
+            {
+                ApplyResizeBarDragInternal(target, targetPosition, allowPropagation: false);
+            }
+            finally
+            {
+                _isPropagatingResize = false;
             }
         }
 
