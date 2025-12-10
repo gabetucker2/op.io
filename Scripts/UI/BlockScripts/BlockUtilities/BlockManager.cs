@@ -61,6 +61,7 @@ namespace op.io
         private static readonly List<CornerHandle> _cornerHandles = [];
         private static CornerHandle? _hoveredCornerHandle;
         private static CornerHandle? _activeCornerHandle;
+        private static CornerHandle? _activeCornerLinkedHandle;
         private static CornerHandle? _activeCornerSnapTarget;
         private static Point? _activeCornerSnapPosition;
         private static Point? _activeCornerSnapAnchor;
@@ -167,8 +168,9 @@ namespace op.io
             }
             else if (dockingEnabled)
             {
-                bool resizingBlocks = allowReorder && (UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                    UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased));
+                // Evaluate corners first so clicks on intersections start a dual-axis drag instead of being swallowed by a single edge.
+                bool resizingBlocks = allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
+                    UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased));
                 if (!resizingBlocks)
                 {
                     UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
@@ -584,6 +586,7 @@ namespace op.io
                 if (!leftClickHeld)
                 {
                     _activeCornerHandle = null;
+                    _activeCornerLinkedHandle = null;
                     ClearCornerSnap();
                 }
 
@@ -600,6 +603,7 @@ namespace op.io
                         LogResizeBlockDeltas();
                     }
                     _activeCornerHandle = null;
+                    _activeCornerLinkedHandle = null;
                     ClearCornerSnap();
                     return false;
                 }
@@ -616,6 +620,7 @@ namespace op.io
                 DebugLogger.PrintUI($"[CornerStart] {DescribeCornerHandle(hovered.Value)} Mouse={_mousePosition}");
                 CaptureBlockBoundsForResize();
                 _activeCornerHandle = hovered;
+                _activeCornerLinkedHandle = FindAlignedCorner(hovered.Value);
                 ClearCornerSnap();
                 ApplyCornerHandleDrag(hovered.Value, _mousePosition);
                 return true;
@@ -1226,6 +1231,13 @@ namespace op.io
             Point snapped = GetCornerDragPosition(corner, position);
             ApplyResizeBarDrag(corner.VerticalHandle, snapped);
             ApplyResizeBarDrag(corner.HorizontalHandle, snapped);
+
+            // If two corners started the drag already snapped together, move the paired corner in lockstep.
+            if (_activeCornerHandle.HasValue && CornerEquals(corner, _activeCornerHandle.Value) && _activeCornerLinkedHandle.HasValue)
+            {
+                ApplyResizeBarDrag(_activeCornerLinkedHandle.Value.VerticalHandle, snapped);
+                ApplyResizeBarDrag(_activeCornerLinkedHandle.Value.HorizontalHandle, snapped);
+            }
         }
 
         private static Point GetResizeBarPosition(ResizeBar handle, Point position)
@@ -1464,40 +1476,8 @@ namespace op.io
                 return position;
             }
 
-            CornerSnapResult? snapResult = FindCornerSnapTarget(corner, position, CornerSnapDistance);
-            if (snapResult.HasValue)
-            {
-                CornerSnapResult result = snapResult.Value;
-                Point lockedPosition = new(
-                    result.LockX ? result.SnapPoint.X : position.X,
-                    result.LockY ? result.SnapPoint.Y : position.Y);
-                Point anchor = new(
-                    result.LockX ? result.SnapPoint.X : position.X,
-                    result.LockY ? result.SnapPoint.Y : position.Y);
-
-                _activeCornerSnapTarget = result.Target;
-                _activeCornerSnapPosition = lockedPosition;
-                _activeCornerSnapAnchor = anchor;
-                _activeCornerSnapLockX = result.LockX;
-                _activeCornerSnapLockY = result.LockY;
-                return lockedPosition;
-            }
-
-            if (_activeCornerSnapPosition.HasValue && _activeCornerSnapAnchor.HasValue && (_activeCornerSnapLockX || _activeCornerSnapLockY))
-            {
-                if (IsWithinCornerSnapRange(position))
-                {
-                    Point snapPoint = _activeCornerSnapPosition.Value;
-                    Point clamped = new(
-                        _activeCornerSnapLockX ? snapPoint.X : position.X,
-                        _activeCornerSnapLockY ? snapPoint.Y : position.Y);
-                    _activeCornerSnapPosition = clamped;
-                    return clamped;
-                }
-
-                ClearCornerSnap();
-            }
-
+            // Allow free corner dragging; do not snap to nearby intersections to avoid grid-like movement.
+            ClearCornerSnap();
             return position;
         }
 
@@ -1967,6 +1947,7 @@ namespace op.io
             ClearResizeBarSnap();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
+            _activeCornerLinkedHandle = null;
             ClearCornerSnap();
         }
 
@@ -2644,6 +2625,11 @@ namespace op.io
                 _activeCornerHandle = FindCornerHandle(_activeCornerHandle.Value);
             }
 
+            if (_activeCornerLinkedHandle.HasValue)
+            {
+                _activeCornerLinkedHandle = FindCornerHandle(_activeCornerLinkedHandle.Value);
+            }
+
             if (_activeCornerSnapTarget.HasValue)
             {
                 CornerHandle? refreshed = FindCornerHandle(_activeCornerSnapTarget.Value);
@@ -2828,6 +2814,26 @@ namespace op.io
                    ReferenceEquals(a.HorizontalHandle.Node, b.HorizontalHandle.Node);
         }
 
+        private static CornerHandle? FindAlignedCorner(CornerHandle corner)
+        {
+            Point intersection = GetCornerIntersection(corner);
+            foreach (CornerHandle other in _cornerHandles)
+            {
+                if (CornerEquals(other, corner))
+                {
+                    continue;
+                }
+
+                Point otherIntersection = GetCornerIntersection(other);
+                if (DistanceSquared(intersection, otherIntersection) == 0)
+                {
+                    return other;
+                }
+            }
+
+            return null;
+        }
+
         private static Point GetCornerIntersection(CornerHandle corner)
         {
             return new Point(
@@ -2927,6 +2933,7 @@ namespace op.io
             _cornerHandles.Clear();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
+            _activeCornerLinkedHandle = null;
             ClearCornerSnap();
             _hoveredDragBarId = null;
             _resizeStartBlockBounds = null;
