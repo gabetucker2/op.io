@@ -1226,6 +1226,9 @@ namespace op.io
             int minSecond = handle.Node.Orientation == DockSplitOrientation.Vertical
                 ? handle.Node.Second?.GetMinWidth() ?? 0
                 : handle.Node.Second?.GetMinHeight() ?? 0;
+            ResizeBar? snapPartner = _activeResizeBarSnapTarget.HasValue && _activeResizeBarSnapTarget.Value.Orientation == handle.Orientation
+                ? _activeResizeBarSnapTarget
+                : null;
 
             if (handle.Orientation == DockSplitOrientation.Vertical)
             {
@@ -1267,24 +1270,24 @@ namespace op.io
                 if (axisPositionRaw < minClamp)
                 {
                     int overflow = minClamp - axisPositionRaw;
-                    NudgeNearestResizeBar(handle, overflow, negativeDirection: true);
+                    NudgeNearestResizeBar(handle, overflow, negativeDirection: true, snapPartner);
                 }
                 else if (axisPositionRaw > maxClamp)
                 {
                     int overflow = axisPositionRaw - maxClamp;
-                    NudgeNearestResizeBar(handle, overflow, negativeDirection: false);
+                    NudgeNearestResizeBar(handle, overflow, negativeDirection: false, snapPartner);
                 }
             }
         }
 
-        private static void NudgeNearestResizeBar(ResizeBar source, int amount, bool negativeDirection)
+        private static void NudgeNearestResizeBar(ResizeBar source, int amount, bool negativeDirection, ResizeBar? preferred = null)
         {
             if (amount <= 0)
             {
                 return;
             }
 
-            ResizeBar? best = null;
+            ResizeBar? best = preferred;
             int bestDistance = int.MaxValue;
 
             foreach (ResizeBar other in _resizeBars)
@@ -1321,7 +1324,7 @@ namespace op.io
                 }
 
                 int distance = Math.Abs(delta);
-                if (distance < bestDistance)
+                if (!best.HasValue || distance < bestDistance)
                 {
                     bestDistance = distance;
                     best = other;
