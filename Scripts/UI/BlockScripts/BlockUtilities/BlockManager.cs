@@ -19,7 +19,6 @@ namespace op.io
         private const string BackendBlockKey = "backend";
         private const string SpecsBlockKey = "specs";
         private const string BlockMenuControlKey = "BlockMenu";
-        private const string WideWordSeparator = "    ";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
         private const int WindowEdgeSnapDistance = 30;
@@ -2048,8 +2047,8 @@ namespace op.io
                 rowY += 32;
             }
 
-            string openAllLabel = JoinWordsWithWideSpacing("Open", "all");
-            string closeAllLabel = JoinWordsWithWideSpacing("Close", "all");
+            string openAllLabel = TextSpacingHelper.JoinWithWideSpacing("Open", "all");
+            string closeAllLabel = TextSpacingHelper.JoinWithWideSpacing("Close", "all");
             bool openAllHovered = UIButtonRenderer.IsHovered(_overlayOpenAllBounds, _mousePosition);
             bool closeAllHovered = UIButtonRenderer.IsHovered(_overlayCloseAllBounds, _mousePosition);
             UIButtonRenderer.Draw(spriteBatch, _overlayOpenAllBounds, openAllLabel, UIButtonRenderer.ButtonStyle.Blue, openAllHovered);
@@ -2536,7 +2535,7 @@ namespace op.io
 
         private static string BuildWideSpacedSentence(string label)
         {
-            return JoinWordsWithWideSpacing("Press", label, "to", "open", "blocks");
+            return TextSpacingHelper.JoinWithWideSpacing("Press", label, "to", "open", "blocks");
         }
 
         private static Rectangle GetLayoutBounds(Rectangle viewport)
@@ -2593,31 +2592,6 @@ namespace op.io
             }
 
             return label;
-        }
-
-        private static string JoinWordsWithWideSpacing(params string[] parts)
-        {
-            if (parts == null || parts.Length == 0)
-            {
-                return string.Empty;
-            }
-
-            List<string> filtered = new(parts.Length);
-            foreach (string part in parts)
-            {
-                if (string.IsNullOrWhiteSpace(part))
-                {
-                    continue;
-                }
-
-                string trimmed = part.Trim();
-                if (trimmed.Length > 0)
-                {
-                    filtered.Add(trimmed);
-                }
-            }
-
-            return filtered.Count == 0 ? string.Empty : string.Join(WideWordSeparator, filtered);
         }
 
         private static void SetAllBlocksVisibility(bool value)
@@ -3344,6 +3318,5 @@ namespace op.io
         }
     }
 }
-
 
 

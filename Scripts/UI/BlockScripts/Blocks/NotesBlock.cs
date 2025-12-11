@@ -6,6 +6,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io.UI.BlockScripts.Blocks
 {
@@ -102,6 +103,23 @@ namespace op.io.UI.BlockScripts.Blocks
             else
             {
                 OverlayHoverIndex = -1;
+            }
+
+            bool textAreaClicked = leftClickStarted
+                && HasActiveNote
+                && TextViewportBounds != Rectangle.Empty
+                && TextViewportBounds.Contains(mousePoint);
+            if (textAreaClicked)
+            {
+                BlockManager.TryFocusBlock(DockBlockKind.Notes);
+            }
+            else if (leftClickStarted && BlockManager.BlockHasFocus(DockBlockKind.Notes))
+            {
+                // Clicking anywhere outside the text viewport should drop focus from the Notes block.
+                if (TextViewportBounds == Rectangle.Empty || !TextViewportBounds.Contains(mousePoint))
+                {
+                    BlockManager.ClearBlockFocus();
+                }
             }
 
             bool editingEnabled = BlockManager.BlockHasFocus(DockBlockKind.Notes) && HasActiveNote;

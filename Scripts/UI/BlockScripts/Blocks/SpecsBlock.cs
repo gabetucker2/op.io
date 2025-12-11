@@ -14,8 +14,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public const int MinWidth = 30;
         public const int MinHeight = 0;
 
-        private const string PlaceholderWordSeparator = "    ";
-        private static readonly string PlaceholderText = string.Join(PlaceholderWordSeparator, new[] { "No", "specs", "available." });
+        private static readonly string PlaceholderText = TextSpacingHelper.JoinWithWideSpacing("No", "specs", "available.");
 
         private static readonly List<SpecRow> _rows = new();
         private static readonly Dictionary<string, int> _customOrder = new(StringComparer.OrdinalIgnoreCase);
