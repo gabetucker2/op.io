@@ -25,7 +25,14 @@ namespace op.io
             {
                 ActionHandler.Move(Core.Instance.Player, direction, Core.Instance.Player.Speed);
             }
-            Core.Instance.Player.Rotation = MouseFunctions.GetAngleToMouse(Core.Instance.Player.Position);
+            if (InputManager.TryGetHoldLatchRotation(out float lockedRotation))
+            {
+                Core.Instance.Player.Rotation = lockedRotation;
+            }
+            else
+            {
+                Core.Instance.Player.Rotation = MouseFunctions.GetAngleToMouse(Core.Instance.Player.Position);
+            }
 
             // Update all GameObjects
             foreach (var gameObject in Core.Instance.GameObjects)

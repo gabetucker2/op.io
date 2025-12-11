@@ -20,6 +20,7 @@ INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('DockingMode'
 INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('DebugMode', 13);
 INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('AllowGameInputFreeze', 14);
 INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('TransparentTabBlocking', 15);
+INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('HoldInputs', 16);
 
 -----------------------------------------------------------------------
 -- Backend block
@@ -27,6 +28,7 @@ INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('TransparentT
 -----------------------------------------------------------------------
 INSERT OR REPLACE INTO BlockBackend (RowKey, IsLocked) VALUES ('BlockLock', 1); -- default locked state stored at block-level
 INSERT OR REPLACE INTO BlockBackend (RowKey, RenderOrder) VALUES ('FreezeGameInputs', 1);
+INSERT OR REPLACE INTO BlockBackend (RowKey, RenderOrder) VALUES ('HoldInputsFrozen', 2);
 
 -----------------------------------------------------------------------
 -- Specs block

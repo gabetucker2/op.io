@@ -40,6 +40,7 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrde
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('DebugMode', 'Shift + B', 'SaveSwitch', 1, 13, 1, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('AllowGameInputFreeze', 'Shift + C', 'SaveSwitch', 1, 14, 1, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('TransparentTabBlocking', 'Shift + V', 'SaveSwitch', 1, 15, 0, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('HoldInputs', 'M', 'NoSaveSwitch', 1, 16, 0, 0);
 
 ---------------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +52,6 @@ INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.1')
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '25');
 
 ---------------------------------------------------------------------------------------------------------------------------
-
 
 
 

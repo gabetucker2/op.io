@@ -8,9 +8,10 @@ namespace op.io
     {
         internal const string BlockMenuKey = "BlockMenu";
         internal const string LegacyPanelMenuKey = "PanelMenu";
+        internal const string HoldInputsKey = "HoldInputs";
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
         private static bool _applied;
-        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey];
+        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey];
 
         public static void EnsureApplied()
         {
@@ -30,6 +31,7 @@ namespace op.io
                 EnsureBlockMenuControl();
                 EnsureExitControl();
                 EnsureTransparentTabBlockingControl();
+                EnsureHoldInputsControl();
                 EnsureLockModeColumn();
                 MigrateLegacySwitchType();
                 EnsureMetaControlColumn();
@@ -126,6 +128,23 @@ WHERE SettingKey = @legacyKey;";
             ControlKeyData.SetInputType(TransparentTabBlockingKey, "SaveSwitch");
             ControlKeyData.EnsureSwitchStartState(TransparentTabBlockingKey, 0);
             ControlKeyData.EnsureInputKey(TransparentTabBlockingKey, "Shift + V");
+        }
+
+        private static void EnsureHoldInputsControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = HoldInputsKey,
+                InputKey = "M",
+                InputType = "NoSaveSwitch",
+                SwitchStartState = 0,
+                MetaControl = true,
+                RenderOrder = 16
+            });
+
+            ControlKeyData.SetInputType(HoldInputsKey, "NoSaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(HoldInputsKey, 0);
+            ControlKeyData.EnsureInputKey(HoldInputsKey, "M");
         }
 
         private static void EnsureCrouchUsesNoSaveSwitch()

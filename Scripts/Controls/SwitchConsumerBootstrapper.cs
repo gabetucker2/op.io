@@ -29,6 +29,18 @@ namespace op.io
                 GameInitializer.SetWindowClickThrough(value);
             });
 
+            SwitchRegistry.RegisterConsumer(ControlKeyMigrations.HoldInputsKey, value =>
+            {
+                if (value)
+                {
+                    InputManager.ApplyHoldLatchSnapshot();
+                }
+                else
+                {
+                    InputManager.ClearHoldLatch();
+                }
+            });
+
             ApplyInitialStates();
         }
 

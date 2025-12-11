@@ -15,6 +15,10 @@ namespace op.io
         private static readonly Dictionary<string, ControlBinding> _controlBindings = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, float> _cachedSpeedMultipliers = [];
         private static readonly Dictionary<string, bool> _triggerOverrides = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> _latchedHoldControls = new(StringComparer.OrdinalIgnoreCase);
+        private static bool _holdLatchEnabled;
+        private static float _holdLatchRotation;
+        internal static bool IsHoldLatchActive => _holdLatchEnabled;
         private static bool _isControlKeyLoaded = false;
         private static readonly Dictionary<string, Keys[]> _modifierAliases = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -203,6 +207,59 @@ namespace op.io
         public static bool IsTypeLocked(string settingKey)
         {
             return _controlBindings.TryGetValue(settingKey, out ControlBinding binding) && binding.LockMode;
+        }
+
+        internal static void ApplyHoldLatchSnapshot()
+        {
+            _holdLatchEnabled = true;
+            _latchedHoldControls.Clear();
+            _holdLatchRotation = Core.Instance?.Player?.Rotation ?? 0f;
+
+            foreach (var kvp in _controlBindings)
+            {
+                ControlBinding binding = kvp.Value;
+                if (!CanLatchBinding(binding))
+                {
+                    continue;
+                }
+
+                if (!ShouldAllowBinding(binding.IsMetaControl))
+                {
+                    continue;
+                }
+
+                if (binding.AreHoldTokensHeld())
+                {
+                    _latchedHoldControls.Add(binding.SettingKey);
+                }
+            }
+        }
+
+        internal static void ClearHoldLatch()
+        {
+            _holdLatchEnabled = false;
+            _latchedHoldControls.Clear();
+        }
+
+        internal static bool TryGetHoldLatchRotation(out float rotation)
+        {
+            rotation = _holdLatchRotation;
+            return _holdLatchEnabled;
+        }
+
+        private static bool CanLatchBinding(ControlBinding binding)
+        {
+            return binding != null &&
+                !binding.IsMetaControl &&
+                binding.InputType == InputType.Hold &&
+                binding.TokenCount > 0;
+        }
+
+        private static bool IsLatchedHold(string settingKey, InputType inputType)
+        {
+            return _holdLatchEnabled &&
+                inputType == InputType.Hold &&
+                _latchedHoldControls.Contains(settingKey);
         }
 
         public static void UpdateBindingInputType(string settingKey, InputType newType, bool triggerOverride)
@@ -637,6 +694,20 @@ namespace op.io
                     return false;
                 }
 
+                if (IsLatchedHold(SettingKey, InputType))
+                {
+                    // Keep global freeze bookkeeping in sync even though the latch bypasses suppression checks.
+                    _ = ShouldAllowBinding(IsMetaControl);
+                    return true;
+                }
+
+                if (_holdLatchEnabled && !IsMetaControl && InputType == InputType.Hold)
+                {
+                    // When the hold latch is active, block any fresh non-meta hold bindings from activating.
+                    _ = ShouldAllowBinding(IsMetaControl);
+                    return false;
+                }
+
                 // LockMode only prevents rebinding in the UI; the binding should still be usable.
                 if (InputType == InputType.Trigger && IsTriggerOverrideActive(SettingKey))
                 {
@@ -683,6 +754,26 @@ namespace op.io
                     InputType.SaveSwitch or InputType.NoSaveSwitch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
                     _ => false
                 };
+            }
+
+            public bool AreHoldTokensHeld()
+            {
+                if (InputType != InputType.Hold || Tokens == null || Tokens.Count == 0)
+                {
+                    return false;
+                }
+
+                int modifierCount = Math.Max(0, Tokens.Count - 1);
+
+                for (int i = 0; i < modifierCount; i++)
+                {
+                    if (!Tokens[i].IsHeld())
+                    {
+                        return false;
+                    }
+                }
+
+                return Tokens[^1].IsHeld();
             }
 
             private bool EvaluateSwitchState(InputBindingToken primary, bool modifiersHeld, bool hasModifiers)
