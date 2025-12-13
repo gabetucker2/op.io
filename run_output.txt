@@ -1,1 +1,2377 @@
 
+2025-12-13T00:13:43.6602935-05:00 GameInitializer.Initialize: start
+2025-12-13T00:13:43.7681022-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:13:43.9105360-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:13:43.9478967-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:14:32.8352492-05:00 GameInitializer.Initialize: start
+2025-12-13T00:14:32.9275137-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:14:33.0710226-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:14:33.1126320-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:14:33.1136948-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1156040-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1162943-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1165580-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1231366-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1234093-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1236465-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1238574-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1300875-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1303554-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1306323-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1309132-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1377799-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1380379-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1382460-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1384166-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1455237-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1458258-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1460600-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1463367-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1547061-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1549669-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1552108-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1554597-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1657541-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1659972-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1662311-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1664696-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1741715-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1743735-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1745489-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1747243-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1824408-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1827394-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1830438-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1832371-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.1931728-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.1935452-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.1938014-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.1940748-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2044195-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2046476-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2048381-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2050678-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2148544-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2151242-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2152964-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2154566-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2259791-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2262873-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2264857-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2266896-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2387339-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2390788-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2393042-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2395595-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2555140-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2558102-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2560369-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2562761-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2719560-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2722669-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2724932-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2726986-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.2902338-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.2905598-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.2907835-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.2909980-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.3073631-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.3075937-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.3077609-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.3079245-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.3207267-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.3209785-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.3211625-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.3213317-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.3352812-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.3356061-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.3358070-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.3359966-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.3495051-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.3497455-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.3499243-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.3501518-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.3660469-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.3663465-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.3665578-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.3667416-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.3849433-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.3852940-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.3855155-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.3857782-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.4108881-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.4112147-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.4114242-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.4116461-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.4369491-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.4372385-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.4374211-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.4376179-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.4647154-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.4650128-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.4653674-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.4655975-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.4950473-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.4953771-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.4955637-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.4957464-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.5259473-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.5263348-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.5265989-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.5268564-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.5514472-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.5518151-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.5520470-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.5522665-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.5782734-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.5786165-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.5788642-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.5790824-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.6076120-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.6080413-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.6083360-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.6085444-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.6400558-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.6403556-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.6405744-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.6407741-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.6729557-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.6732747-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.6735009-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.6737290-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.7025835-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.7029001-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.7030975-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.7033018-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.7320051-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.7323692-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.7327224-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.7330014-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.7590807-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.7593699-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.7595606-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.7597245-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.7865123-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.7868168-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.7870273-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.7872275-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.8138686-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.8141393-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.8143476-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.8145984-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.8469711-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.8473152-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.8475671-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.8478798-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.8857136-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.8860399-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.8863578-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.8866031-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.9235458-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.9238600-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.9240413-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.9242185-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.9584601-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.9588251-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.9590242-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.9592099-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:33.9887898-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:33.9891230-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:33.9893368-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:33.9895383-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.0251890-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.0256163-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.0258891-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.0261719-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.0616671-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.0620208-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.0622551-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.0624691-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.0946130-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.0949162-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.0951186-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.0952874-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.1267890-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.1270897-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.1273452-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.1277642-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.1652610-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.1656353-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.1658531-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.1660563-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.2038387-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.2041905-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.2044217-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.2046405-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.2365375-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.2369367-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.2371652-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.2374408-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.2753424-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.2757820-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.2760417-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.2763545-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.3179306-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.3182950-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.3185231-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.3187762-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.3604496-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.3608728-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.3612377-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.3615411-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.3990420-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.3993612-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.3996041-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.3998328-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.4374856-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.4378219-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.4380196-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.4382168-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.4768866-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.4771673-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.4773429-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.4775315-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.5155907-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.5158958-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.5160832-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.5162516-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.5595765-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.5598723-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.5600559-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.5602385-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.6038040-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.6044495-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.6049428-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.6051467-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.6348917-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.6351907-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.6353746-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.6355659-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.6721444-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.6724331-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.6726564-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.6729061-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.7107363-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.7110078-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.7112039-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.7113996-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.7450417-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.7453211-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.7455659-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.7457803-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.7862780-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.7866608-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.7868816-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.7871917-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.8257862-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.8261402-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.8263911-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.8266139-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.8678642-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.8682763-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.8685656-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.8688150-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.9053692-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.9058117-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.9060201-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.9064103-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.9473195-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.9477652-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.9480738-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.9483891-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:34.9876958-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:34.9881171-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:34.9883877-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:34.9887172-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.0301366-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.0307021-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.0310020-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.0312530-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.0660051-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.0662827-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.0664539-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.0666142-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.1063508-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.1067036-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.1069325-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.1071905-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.1426550-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.1430348-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.1432586-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.1434582-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.1833669-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.1837099-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.1839482-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.1841847-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.2281831-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.2284959-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.2287085-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.2289174-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.2739153-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.2743302-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.2745724-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.2748421-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.3185488-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.3190982-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.3194320-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.3196987-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.3595042-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.3599649-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.3602019-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.3604329-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.4014309-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.4018465-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.4020792-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.4023562-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.4387811-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.4390671-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.4392893-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.4395073-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.4773957-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.4776740-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.4779237-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.4781460-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.5196886-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.5199850-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.5202225-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.5204476-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.5610411-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.5614331-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.5616310-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.5618190-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.6044036-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.6046966-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.6049083-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.6052268-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.6364476-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.6367192-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.6368931-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.6370574-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.6737247-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.6740692-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.6742615-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.6744469-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.7195015-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.7198319-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.7200369-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.7203492-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.7645136-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.7648151-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.7650281-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.7652206-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.8091036-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.8095033-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.8097132-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.8099388-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.8543317-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.8546299-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.8548408-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.8550235-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.9001949-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.9005933-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.9008479-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.9012169-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.9462937-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.9466489-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.9469433-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.9471499-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:35.9924539-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:35.9927713-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:35.9929952-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:35.9931955-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.0389611-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.0393587-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.0395759-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.0398382-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.0859252-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.0862760-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.0865201-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.0867292-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.1243613-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.1246400-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.1248115-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.1249712-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.1625820-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.1628469-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.1630199-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.1631804-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.2042807-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.2045751-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.2047747-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.2049815-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.2478995-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.2482983-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.2486102-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.2488176-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.2911714-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.2914677-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.2916732-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.2918269-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.3275052-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.3278411-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.3280715-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.3283139-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.3693390-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.3696414-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.3698064-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.3700600-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.4141522-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.4145256-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.4146920-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.4148789-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.4527090-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.4530445-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.4532642-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.4535288-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.4964712-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.4968017-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.4970963-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.4973483-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.5434646-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.5437323-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.5439313-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.5440999-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.5858852-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.5861824-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.5863823-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.5866820-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.6258846-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.6261703-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.6263368-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.6264967-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.6698824-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.6702227-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.6704425-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.6708586-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.7210680-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.7213368-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.7215400-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.7217206-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.7633717-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.7636440-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.7638149-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.7639827-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.8041640-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.8044660-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.8046454-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.8048328-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.8480521-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.8483291-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.8484858-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.8492034-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.8958855-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.8961453-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.8962957-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.8965816-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.9451659-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.9455912-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.9457963-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.9459798-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:36.9976400-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:36.9979307-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:36.9981122-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:36.9982816-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.0390238-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.0392995-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.0395117-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.0396955-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.0897361-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.0900228-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.0902081-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.0903674-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.1389834-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.1392614-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.1394208-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.1395875-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.1932839-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.1937106-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.1939977-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.1944127-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.2490060-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.2493227-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.2495356-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.2497238-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.2991390-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.2994166-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.2995938-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.2997602-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.3511676-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.3514548-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.3516094-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.3518306-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.4051977-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.4055369-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.4057131-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.4058845-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.4558392-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.4561443-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.4563442-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.4566086-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.5034058-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.5036538-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.5038233-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.5039962-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.5469719-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.5472633-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.5474435-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.5476504-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.5917022-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.5919577-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.5921286-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.5922887-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.6377020-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.6379875-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.6381574-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.6383577-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.6909102-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.6912657-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.6914522-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.6916248-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.7380488-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.7383093-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.7385306-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.7387403-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.7938304-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.7941278-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.7942875-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.7944369-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.8430138-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.8433193-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.8435393-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.8437311-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.8985013-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.8988164-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.8990614-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.8995176-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:37.9534245-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:37.9537186-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:37.9538977-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:37.9541107-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.0069677-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.0072684-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.0074728-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.0076569-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.0587440-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.0590003-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.0591698-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.0593299-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.1048827-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.1051242-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.1052925-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.1054520-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.1618408-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.1621331-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.1623066-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.1624696-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.2216227-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.2218969-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.2220659-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.2222127-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.2836100-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.2839448-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.2841378-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.2843062-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.3429060-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.3431878-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.3433623-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.3436913-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.3937630-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.3940476-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.3942779-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.3945456-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.4494337-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.4498099-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.4500298-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.4502105-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.5115174-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.5120525-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.5122899-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.5124697-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.5789825-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.5793107-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.5794757-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.5796869-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.6429622-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.6432591-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.6434390-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.6436080-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.6979917-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.6982716-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.6984464-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.6986123-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.7507888-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.7510868-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.7512616-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.7514274-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.8112317-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.8115053-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.8117561-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.8120659-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.8649250-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.8652391-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.8654133-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.8655813-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.9303833-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.9306829-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.9308455-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.9310666-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:38.9823287-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:38.9825961-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:38.9828454-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:38.9831568-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.0518898-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.0521982-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.0523575-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.0525228-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.1192274-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.1195204-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.1197502-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.1200098-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.1865649-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.1868378-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.1870107-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.1871764-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.2431333-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.2434525-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.2436272-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.2437946-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.3102361-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.3105499-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.3107113-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.3108913-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.3648518-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.3651486-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.3653203-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.3654852-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.4254917-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.4259030-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.4261080-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.4263734-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.4953179-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.4956172-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.4958107-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.4960128-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.5510438-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.5513517-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.5515281-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.5517014-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.6149130-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.6152074-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.6153880-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.6155586-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.6765545-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.6768350-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.6769899-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.6772095-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.7411434-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.7414330-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.7416095-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.7417769-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.7998030-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.8000738-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.8002614-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.8004385-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.8565482-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.8569840-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.8572197-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.8574652-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.9218875-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.9222379-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.9224621-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.9226767-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:39.9863997-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:39.9868072-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:39.9870155-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:39.9872633-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.0570059-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.0573235-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.0575015-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.0576675-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.1202519-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.1205231-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.1207012-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.1208659-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.1872363-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.1875163-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.1876689-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.1878120-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.2487814-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.2490889-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.2492653-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.2494366-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.3153454-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.3158118-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.3160706-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.3162766-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.3801529-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.3804297-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.3806289-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.3807890-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.4548914-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.4552830-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.4555369-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.4557506-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.5367291-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.5370309-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.5371959-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.5373767-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.6018584-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.6021070-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.6022919-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.6026107-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.6695700-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.6700964-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.6703504-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.6705955-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.7318676-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.7321914-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.7323958-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.7326417-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.8005469-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.8008548-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.8010370-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.8012032-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.8691596-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.8694884-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.8697053-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.8699040-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:40.9453386-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:40.9460715-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:40.9464508-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:40.9466836-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.0100077-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.0102658-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.0104320-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.0105922-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.0834241-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.0837579-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.0839687-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.0841444-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.1490783-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.1494024-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.1496383-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.1499278-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.2202454-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.2205347-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.2208034-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.2210952-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.3002584-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.3005200-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.3007265-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.3009365-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.3619753-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.3624336-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.3626662-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.3628725-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.4336143-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.4339314-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.4341619-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.4343395-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.5202716-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.5205672-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.5207948-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.5210605-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.6018286-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.6022185-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.6024566-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.6026428-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.6838895-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.6841909-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.6844646-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.6847890-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.7628905-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.7632893-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.7636119-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.7638136-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.8305741-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.8309782-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.8312234-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.8314111-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.8995090-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.8998903-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.9000775-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.9002424-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:41.9654327-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:41.9657024-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:41.9658692-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:41.9660340-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.0301436-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.0305338-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.0308699-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.0311998-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.0989264-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.0991949-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.0993628-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.0995240-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.1747458-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.1750037-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.1751722-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.1753331-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.2566529-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.2569627-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.2571428-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.2573032-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.3387293-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.3390572-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.3392830-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.3394982-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.4176339-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.4179700-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.4182689-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.4185468-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.4864937-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.4869407-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.4871445-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.4873123-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.5663271-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.5667626-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.5670133-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.5672282-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.6527930-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.6531095-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.6533205-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.6535239-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.7363171-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.7367040-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.7369100-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.7374160-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.8102426-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.8105401-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.8107377-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.8109766-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.9008515-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.9013314-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.9015392-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.9017719-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:42.9759345-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:42.9761940-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:42.9763617-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:42.9765179-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.0606702-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.0609449-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.0611295-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.0613395-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.1355233-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.1357820-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.1359623-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.1361406-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.2223611-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.2226553-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.2228163-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.2230007-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.3067358-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.3070120-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.3073364-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.3077276-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.3977178-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.3980197-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.3981830-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.3983319-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.4773614-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.4776150-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.4777957-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.4779606-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.5659676-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.5662567-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.5664652-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.5668496-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.6411286-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.6414189-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.6416824-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.6419690-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.7375030-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.7379680-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.7381697-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.7383561-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.8341251-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.8346487-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.8348549-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.8350299-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.9184659-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.9188067-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.9189749-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.9191367-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:43.9919041-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:43.9922656-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:43.9925027-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:43.9926984-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.0700072-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.0702869-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.0704538-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.0706115-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.1553282-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.1556986-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.1559304-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.1561163-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.2391547-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.2395506-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.2397507-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.2399882-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.3315247-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.3318528-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.3320877-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.3324109-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.4264193-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.4267414-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.4269612-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.4272754-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.5078757-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.5081559-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.5083134-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.5084812-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.5885612-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.5888951-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.5890850-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.5892426-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.6704736-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.6707998-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.6709603-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.6711516-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.7665171-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.7668577-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.7670573-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.7672576-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.8663184-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.8666726-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.8668670-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.8670359-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:44.9640553-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:44.9643847-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:44.9646851-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:44.9649950-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.0668657-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.0673318-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.0675647-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.0677864-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.1642861-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.1646063-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.1647738-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.1649386-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.2609059-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.2612299-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.2613992-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.2617040-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.3443433-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.3446283-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.3448559-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.3451459-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.4442738-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.4446322-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.4448183-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.4450362-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.5267789-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.5270615-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.5272361-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.5274009-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.6158184-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.6162398-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.6164790-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.6167059-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.7132421-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.7137062-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.7139283-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.7141432-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.8180271-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.8185342-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.8187424-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.8189246-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:45.9180053-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:45.9183979-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:45.9185820-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:45.9190893-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.0187403-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.0190692-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.0192270-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.0194103-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.1116581-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.1120183-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.1122225-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.1124104-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.1953122-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.1956165-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.1957858-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.1959461-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.2755365-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.2759521-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.2761706-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.2763607-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.3695003-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.3698351-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.3700093-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.3702195-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.4600466-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.4604373-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.4606966-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.4608962-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.5601044-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.5604168-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.5605802-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.5607901-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.6663159-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.6666591-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.6669019-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.6670980-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.7849381-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.7853204-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.7855147-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.7858452-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.8872657-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.8875428-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.8877217-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.8878908-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:46.9737880-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:46.9740592-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:46.9742756-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:46.9744981-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.0852553-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.0856418-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.0859361-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.0862299-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.2022507-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.2026613-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.2028599-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.2030838-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.2974276-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.2977742-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.2979646-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.2981567-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.4069522-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.4073259-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.4075462-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.4077562-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.5198898-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.5201992-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.5203961-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.5205860-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.6115384-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.6120620-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.6123710-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.6126198-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.7225175-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.7228285-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.7229886-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.7231788-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.8215881-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.8221164-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.8223793-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.8225923-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:47.9376742-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:47.9380014-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:47.9381703-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:47.9383866-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.0394949-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.0398296-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.0400112-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.0402456-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.1299194-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.1303671-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.1305580-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.1307308-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.2406888-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.2410360-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.2412208-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.2413888-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.3292384-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.3297945-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.3300635-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.3302454-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.4238292-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.4241573-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.4244457-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.4246026-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.5350115-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.5353607-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.5355646-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.5357880-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.6365873-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.6368725-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.6370895-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.6372821-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.7511687-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.7515924-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.7518536-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.7520728-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.8781321-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.8784603-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.8786410-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.8788075-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:48.9807566-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:48.9810701-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:48.9813430-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:48.9816742-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.0785092-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.0788679-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.0790380-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.0795086-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.1810748-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.1814227-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.1816851-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.1819275-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.2821335-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.2825180-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.2827221-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.2829088-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.3931008-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.3934024-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.3936047-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.3937436-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.4884130-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.4887274-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.4889441-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.4891153-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.5895281-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.5898609-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.5900447-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.5902243-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.7099655-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.7102904-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.7104926-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.7106513-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.8087568-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.8090367-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.8092036-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.8093952-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:49.9139772-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:49.9143252-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:49.9145427-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:49.9147305-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.0385235-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.0388333-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.0390186-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.0391852-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.1398006-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.1400669-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.1402433-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.1404056-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.2605030-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.2608016-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.2609745-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.2611396-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.3704116-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.3707955-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.3709920-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.3712625-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.4863455-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.4866902-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.4868500-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.4870270-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.6119371-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.6123040-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.6125395-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.6127437-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.7443693-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.7447176-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.7449032-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.7450744-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.8647279-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.8651166-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.8653262-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.8655028-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:50.9616147-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:50.9619305-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:50.9621117-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:50.9622866-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.0769849-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.0773721-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.0775815-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.0778054-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.2083211-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.2086826-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.2088524-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.2090563-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.3335491-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.3338417-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.3340181-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.3341899-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.4332350-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.4335264-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.4337018-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.4338743-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.5385322-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.5389841-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.5394248-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.5396913-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.6405011-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.6407899-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.6410074-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.6412132-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.7706514-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.7710130-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.7711812-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.7713347-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.8936338-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.8939585-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.8941176-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.8943010-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:51.9961218-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:51.9964546-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:51.9966192-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:51.9967971-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.1099691-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.1104897-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.1106909-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.1108837-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.2420876-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.2425217-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.2427449-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.2429419-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.3716690-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.3720269-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.3722239-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.3723908-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.4948388-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.4951917-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.4953631-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.4955417-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.6108951-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.6113869-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.6115784-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.6117570-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.7463934-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.7468123-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.7470356-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.7473677-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.8673369-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.8677859-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.8680347-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.8682699-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:52.9931668-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:52.9936097-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:52.9938240-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:52.9940938-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.1210587-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.1213961-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.1215832-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.1217576-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.2559744-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.2563964-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.2565993-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.2568019-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.3945863-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.3949287-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.3951285-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.3952919-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.5355145-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.5359310-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.5361462-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.5363366-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.6720085-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.6723562-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.6725448-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.6727153-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.8061148-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.8064801-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.8066702-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.8069573-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:53.9351829-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:53.9355609-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:53.9357488-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:53.9359502-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.0703026-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.0706773-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.0709373-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.0711691-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.2044004-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.2047970-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.2049762-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.2051535-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.3387477-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.3390702-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.3392471-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.3394138-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.4709708-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.4713414-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.4715532-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.4717881-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.6120724-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.6125052-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.6126922-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.6128700-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.7257871-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.7261049-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.7262719-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.7265278-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.8571818-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.8577148-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.8579328-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.8581251-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:54.9619207-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:54.9622494-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:54.9624292-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:54.9625959-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.0637868-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.0641220-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.0643465-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.0645775-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.1900108-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.1904142-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.1905928-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.1907866-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.3309683-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.3313680-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.3315522-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.3317238-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.4591461-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.4594912-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.4596561-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.4598234-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.5915673-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.5918981-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.5920884-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.5922698-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.7338093-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.7341256-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.7343176-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.7344991-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.8535172-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.8539021-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.8540980-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.8542678-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:55.9792013-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:55.9795031-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:55.9796839-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:55.9798451-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.1058288-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.1061761-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.1063387-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.1065121-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.2387185-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.2390097-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.2391900-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.2393514-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.3568360-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.3572172-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.3574628-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.3576444-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.4917381-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.4920842-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.4923129-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.4925254-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.6392285-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.6395879-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.6397648-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.6399450-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.7715225-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.7719362-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.7721421-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.7723280-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:56.9283973-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:56.9288510-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:56.9290883-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:56.9292830-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:57.0957832-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:57.0963458-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:57.0966387-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:57.0968627-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:57.2538875-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:57.2543260-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:57.2545489-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:57.2547933-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:57.4205630-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:57.4212271-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:57.4214691-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:57.4217232-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:57.5824379-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:57.5828564-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:57.5830631-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:57.5832854-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:57.7448785-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:57.7453413-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:57.7456033-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:57.7458640-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:57.9058957-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:57.9063552-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:57.9066279-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:57.9071432-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:58.0724217-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:58.0728847-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:58.0731392-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:58.0733558-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:58.2369641-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:58.2376227-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:58.2378495-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:58.2381493-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:58.4048346-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:58.4053258-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:58.4055633-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:58.4057727-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:58.5666173-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:58.5670887-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:58.5673112-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:58.5674957-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:58.7254705-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:58.7258912-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:58.7261604-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:58.7264123-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:58.8907190-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:58.8911374-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:58.8913525-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:58.8915798-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:59.0507388-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:59.0511188-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:59.0513514-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:59.0515597-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:59.2236039-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:59.2240954-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:59.2243459-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:59.2245563-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:59.4008643-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:59.4013896-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:59.4017966-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:59.4020716-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:59.5744964-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:59.5752586-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:59.5755722-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:59.5760514-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:59.7320165-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:59.7324231-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:59.7326026-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:59.7327722-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:14:59.8938164-05:00 ColorScheme.Initialize: start
+2025-12-13T00:14:59.8941450-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:14:59.8943684-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:14:59.8945449-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.0419879-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.0423321-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.0425150-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.0426795-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.1880795-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.1884004-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.1885993-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.1887820-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.3042930-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.3045816-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.3047449-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.3049040-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.4187147-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.4190376-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.4192539-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.4194630-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.5822858-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.5830299-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.5833216-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.5835413-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.7414186-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.7417971-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.7420333-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.7422465-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:00.8876128-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:00.8880114-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:00.8882321-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:00.8884456-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.0479666-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.0482861-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.0484553-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.0486253-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.1825748-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.1828632-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.1830427-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.1833103-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.3081716-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.3085437-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.3087289-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.3089436-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.4265647-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.4269157-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.4270871-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.4272480-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.5393432-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.5396248-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.5398957-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.5401974-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.6556300-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.6559065-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.6560980-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.6562658-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.7913923-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.7916610-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.7918327-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.7919931-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:01.9113605-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:01.9116539-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:01.9118253-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:01.9119889-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.0282632-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.0285364-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.0287060-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.0288726-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.1752266-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.1755626-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.1757816-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.1759803-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.3417253-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.3420296-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.3422040-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.3423730-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.4726783-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.4729371-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.4731572-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.4733665-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.5907704-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.5910727-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.5912599-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.5914575-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.7056030-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.7058752-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.7060518-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.7062159-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.8218913-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.8222264-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.8224070-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.8225715-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:02.9498168-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:02.9501198-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:02.9503374-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:02.9505084-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.0685492-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.0688156-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.0690070-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.0691681-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.2019841-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.2022511-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.2024184-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.2025796-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.3222679-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.3225604-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.3228265-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.3229989-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.4613754-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.4616439-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.4618164-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.4619907-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.5809309-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.5812725-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.5814810-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.5816744-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.7039288-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.7041935-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.7043922-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.7046404-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:03.8331782-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:03.8334966-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:03.8336984-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:03.8338990-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.0021375-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.0024875-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.0026643-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.0028287-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.1692388-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.1696181-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.1698077-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.1699802-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.3351340-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.3354673-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.3357531-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.3359578-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.4584783-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.4587609-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.4589341-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.4590961-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.5837380-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.5840963-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.5843148-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.5844916-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.7299806-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.7303052-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.7304854-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.7306521-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:04.8974400-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:04.8977897-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:04.8979598-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:04.8981211-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:05.0551960-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:05.0555356-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:05.0557264-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:05.0558974-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:05.2153407-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:05.2156570-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:05.2158825-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:05.2160688-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:05.3604489-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:05.3608163-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:05.3610296-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:05.3612050-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:05.5425345-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:05.5430758-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:05.5432934-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:05.5435504-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:05.7021697-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:05.7026168-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:05.7028192-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:05.7030346-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:05.8681096-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:05.8684894-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:05.8687218-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:05.8689099-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.0195437-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.0199523-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.0201438-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.0203171-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.1949451-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.1953307-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.1954951-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.1956437-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.3424894-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.3428568-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.3430394-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.3434262-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.5071412-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.5075348-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.5077213-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.5078944-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.6811529-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.6815877-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.6818997-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.6822190-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.8459406-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.8462197-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.8463953-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.8465648-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:06.9850482-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:06.9854894-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:06.9856655-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:06.9858747-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:07.1762367-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:07.1765547-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:07.1767530-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:07.1769357-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:07.3239624-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:07.3244549-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:07.3247428-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:07.3249444-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:07.5183157-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:07.5186962-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:07.5188744-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:07.5190396-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:07.6967107-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:07.6975980-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:07.6978761-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:07.6981794-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:07.8521678-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:07.8526141-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:07.8527835-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:07.8530234-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:08.0322785-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:08.0326811-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:08.0329123-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:08.0331270-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:08.1781868-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:08.1784914-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:08.1786899-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:08.1788851-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:08.3497069-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:08.3500916-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:08.3502688-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:08.3504631-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:08.5187592-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:08.5191482-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:08.5193594-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:08.5196902-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:08.6879359-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:08.6883551-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:08.6885970-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:08.6887856-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:08.8757223-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:08.8761268-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:08.8763174-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:08.8764731-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:09.0649616-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:09.0653570-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:09.0655490-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:09.0657187-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:09.2427529-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:09.2430671-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:09.2432307-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:09.2433961-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:09.3880965-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:09.3884171-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:09.3885893-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:09.3887521-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:09.5607200-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:09.5611063-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:09.5612999-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:09.5615249-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:09.7468034-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:09.7472004-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:09.7474222-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:09.7476134-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:09.9157556-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:09.9161150-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:09.9162871-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:09.9164840-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:10.0943862-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:10.0947523-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:10.0949867-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:10.0952303-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:10.2599989-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:10.2604014-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:10.2605715-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:10.2607412-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:10.4425682-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:10.4428479-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:10.4430936-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:10.4432964-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:10.6272293-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:10.6275075-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:10.6276931-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:10.6278978-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:10.8107455-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:10.8110879-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:10.8112601-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:10.8114198-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:10.9828865-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:10.9832576-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:10.9834281-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:10.9835803-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:11.1632326-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:11.1635759-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:11.1637459-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:11.1639863-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:11.3351051-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:11.3354203-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:11.3356159-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:11.3358260-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:11.5084457-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:11.5087478-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:11.5089221-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:11.5090839-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:11.6520260-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:11.6523636-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:11.6525327-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:11.6526955-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:11.8369982-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:11.8373311-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:11.8375022-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:11.8377264-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.0233061-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.0236489-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.0238570-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.0240500-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.1975150-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.1978501-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.1980371-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.1982059-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.3658237-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.3661996-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.3664076-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.3666592-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.5319432-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.5322899-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.5324698-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.5326507-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.6728380-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.6731301-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.6733066-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.6734973-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.8401839-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.8404717-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.8406453-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.8408191-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:12.9929731-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:12.9933807-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:12.9935607-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:12.9937255-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:13.1730318-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:13.1733611-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:13.1735335-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:13.1737500-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:13.3571792-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:13.3574880-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:13.3576854-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:13.3578865-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:13.5375441-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:13.5379129-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:13.5380986-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:13.5382910-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:13.7103120-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:13.7107393-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:13.7109650-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:13.7111533-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:13.9059414-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:13.9062363-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:13.9064092-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:13.9066472-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:14.0956376-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:14.0961678-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:14.0963915-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:14.0965928-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:14.2972870-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:14.2976709-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:14.2978654-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:14.2981072-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:14.5040188-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:14.5044652-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:14.5048938-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:14.5052030-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:14.7048182-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:14.7051957-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:14.7054126-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:14.7056636-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:14.8647777-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:14.8651000-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:14.8653372-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:14.8655227-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:15.0712102-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:15.0715738-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:15.0717368-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:15.0718872-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:15.2542647-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:15.2546561-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:15.2549058-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:15.2551253-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:15.4038899-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:15.4042026-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:15.4043979-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:15.4045793-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:15.6086930-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:15.6090770-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:15.6092484-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:15.6094354-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:15.7662198-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:15.7666768-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:15.7669501-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:15.7671419-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:15.9594660-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:15.9597989-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:15.9600079-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:15.9602005-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:16.1529492-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:16.1533866-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:16.1535760-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:16.1537491-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:16.3087264-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:16.3090921-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:16.3092776-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:16.3095828-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:16.4857453-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:16.4861235-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:16.4862982-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:16.4864610-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:16.6974782-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:16.6977632-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:16.6979357-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:16.6981025-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:16.8835213-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:16.8839047-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:16.8841186-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:16.8844521-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:17.0825070-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:17.0828528-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:17.0830404-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:17.0832054-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:17.2300670-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:17.2304471-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:17.2307900-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:17.2311677-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:17.4211315-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:17.4214745-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:17.4216447-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:17.4219137-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:17.6156497-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:17.6160030-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:17.6162116-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:17.6163811-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:17.8011505-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:17.8015632-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:17.8017323-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:17.8019170-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:17.9955430-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:17.9958807-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:17.9960774-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:17.9962813-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:18.1969892-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:18.1973788-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:18.1975458-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:18.1978696-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:18.3579442-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:18.3582834-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:18.3585012-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:18.3586929-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:18.5437713-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:18.5441391-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:18.5443093-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:18.5444911-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:18.7254656-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:18.7258231-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:18.7260184-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:18.7261890-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:18.8837775-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:18.8841137-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:18.8842889-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:18.8844614-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:19.0887058-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:19.0890459-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:19.0892515-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:19.0894446-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:19.2989954-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:19.2993247-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:19.2995286-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:19.2997073-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:19.5116867-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:19.5120888-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:19.5123187-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:19.5126759-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:19.7178897-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:19.7182877-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:19.7185119-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:19.7187123-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:19.8869736-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:19.8872600-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:19.8874492-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:19.8876178-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:20.0517614-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:20.0520857-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:20.0522999-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:20.0525657-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:20.2186167-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:20.2189955-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:20.2192010-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:20.2194618-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:20.3956689-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:20.3960103-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:20.3962072-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:20.3964103-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:20.5649809-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:20.5653229-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:20.5655020-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:20.5656655-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:20.7690805-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:20.7694209-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:20.7695792-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:20.7697748-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:20.9300456-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:20.9304095-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:20.9305883-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:20.9307636-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:21.1335103-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:21.1338808-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:21.1340728-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:21.1344267-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:21.3389166-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:21.3393795-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:21.3395895-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:21.3397608-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:21.5356596-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:21.5360963-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:21.5363440-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:21.5366144-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:21.7643636-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:21.7648437-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:21.7650688-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:21.7652815-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:21.9773376-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:21.9777209-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:21.9778661-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:21.9781324-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:22.1576635-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:22.1579948-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:22.1581932-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:22.1583563-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:22.3606575-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:22.3612296-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:22.3614659-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:22.3617259-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:22.5506928-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:22.5510476-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:22.5512152-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:22.5513879-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:22.7588101-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:22.7591440-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:22.7593088-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:22.7594767-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:22.9750995-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:22.9754480-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:22.9755889-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:22.9758073-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:23.1945292-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:23.1948870-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:23.1950455-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:23.1954183-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:23.4058740-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:23.4062532-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:23.4064196-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:23.4065683-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:23.6268847-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:23.6272643-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:23.6274646-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:23.6276581-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:23.8541879-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:23.8546106-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:23.8547808-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:23.8549980-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:24.0738471-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:24.0742748-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:24.0744757-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:24.0746557-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:24.2864820-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:24.2868564-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:24.2870376-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:24.2872155-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:24.4949685-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:24.4953652-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:24.4955346-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:24.4956977-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:24.7021266-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:24.7024874-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:24.7026896-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:24.7030500-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:24.9144300-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:24.9147639-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:24.9149228-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:24.9150980-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:25.1314439-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:25.1317641-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:25.1319654-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:25.1321602-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:25.3507358-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:25.3511203-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:25.3513075-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:25.3514834-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:25.5693181-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:25.5696207-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:25.5698256-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:25.5700086-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:25.7895622-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:25.7898438-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:25.7900139-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:25.7901750-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:26.0031578-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:26.0035099-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:26.0036686-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:26.0038565-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:26.2134131-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:26.2137774-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:26.2139392-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:26.2144343-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:26.4363067-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:26.4366610-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:26.4368354-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:26.4370819-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:26.6398890-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:26.6402568-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:26.6405567-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:26.6408696-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:26.8504407-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:26.8507355-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:26.8509444-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:26.8511257-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:27.0677851-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:27.0681174-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:27.0683024-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:27.0684610-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:27.2528208-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:27.2531358-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:27.2533219-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:27.2535019-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:27.4238116-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:27.4241331-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:27.4243132-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:27.4244759-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:27.6387588-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:27.6390652-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:27.6392657-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:27.6394245-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:27.8127745-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:27.8131304-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:27.8133627-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:27.8135602-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:28.0236617-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:28.0240208-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:28.0242028-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:28.0243757-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:28.2603038-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:28.2606663-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:28.2608609-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:28.2610700-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:28.4616159-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:28.4619163-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:28.4620874-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:28.4622535-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:28.6819579-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:28.6823228-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:28.6825112-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:28.6826811-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:28.8796105-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:28.8799485-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:28.8801227-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:28.8802972-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:29.1294067-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:29.1297899-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:29.1299557-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:29.1301166-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:29.3782399-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:29.3787419-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:29.3790937-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:29.3793424-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:29.5849252-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:29.5853045-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:29.5855168-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:29.5856946-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:29.8321073-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:29.8325053-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:29.8327184-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:29.8329106-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:30.0573663-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:30.0576994-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:30.0578871-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:30.0580488-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:30.2947808-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:30.2951018-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:30.2952647-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:30.2954252-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:30.5085185-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:30.5088978-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:30.5090967-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:30.5092819-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:30.7408504-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:30.7411880-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:30.7413749-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:30.7415793-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:30.9759171-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:30.9762555-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:30.9764690-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:30.9766521-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:31.1938395-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:31.1941676-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:31.1943539-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:31.1945725-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:31.4112282-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:31.4116818-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:31.4119861-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:31.4122709-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:31.6187036-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:31.6190037-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:31.6191758-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:31.6193435-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:31.8493079-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:31.8498328-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:31.8500776-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:31.8502798-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:32.0858724-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:32.0861407-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:32.0863428-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:32.0865333-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:39.6446522-05:00 GameInitializer.Initialize: start
+2025-12-13T00:15:39.7545760-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:15:39.8946865-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:15:39.9310032-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:15:39.9318693-05:00 ColorScheme.Initialize: start
+2025-12-13T00:15:39.9337323-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:15:39.9344063-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:15:39.9346249-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:15:39.9419241-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:15:39.9433181-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:15:39.9442141-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:15:39.9444318-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:15:39.9446578-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:15:39.9452806-05:00 LoadGeneralSettings: start
+2025-12-13T00:15:39.9630980-05:00 LoadGeneralSettings: done
+2025-12-13T00:15:40.2739054-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:21:34.7807076-05:00 GameInitializer.Initialize: start
+2025-12-13T00:21:34.8801176-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:21:35.0249227-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:21:35.0640641-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:21:35.0648559-05:00 ColorScheme.Initialize: start
+2025-12-13T00:21:35.0668167-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:21:35.0674453-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:21:35.0676282-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:21:35.0736574-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:21:35.0751065-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:21:35.0759770-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:21:35.0762190-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:21:35.0764392-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:21:35.0771631-05:00 LoadGeneralSettings: start
+2025-12-13T00:21:35.0953360-05:00 LoadGeneralSettings: done
+2025-12-13T00:21:35.4220748-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:23:15.6242942-05:00 GameInitializer.Initialize: start
+2025-12-13T00:23:15.7230950-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:23:15.8676771-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:23:15.9044954-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:23:15.9054330-05:00 ColorScheme.Initialize: start
+2025-12-13T00:23:15.9073778-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:23:15.9080774-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:23:15.9082984-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:23:15.9154576-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:23:15.9170983-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:23:15.9181532-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:23:15.9183990-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:23:15.9185723-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:23:15.9191896-05:00 LoadGeneralSettings: start
+2025-12-13T00:23:15.9372759-05:00 LoadGeneralSettings: done
+2025-12-13T00:23:16.2594930-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:24:21.4109078-05:00 GameInitializer.Initialize: start
+2025-12-13T00:24:21.5082547-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:24:21.6563678-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:24:21.6967691-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:24:21.6977577-05:00 ColorScheme.Initialize: start
+2025-12-13T00:24:21.6998889-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:24:21.7006751-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:24:21.7009154-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:24:21.7089582-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:24:21.7107543-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:24:21.7121104-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:24:21.7124904-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:24:21.7127260-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:24:21.7135209-05:00 LoadGeneralSettings: start
+2025-12-13T00:24:21.7339919-05:00 LoadGeneralSettings: done
+2025-12-13T00:24:22.0656880-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:25:54.1110765-05:00 GameInitializer.Initialize: start
+2025-12-13T00:25:54.2158944-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:25:54.3683305-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:25:54.4053380-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:25:54.4061265-05:00 ColorScheme.Initialize: start
+2025-12-13T00:25:54.4078078-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:25:54.4085135-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:25:54.4087416-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:25:54.4164034-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:25:54.4180168-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:25:54.4189584-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:25:54.4191459-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:25:54.4193543-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:25:54.4199750-05:00 LoadGeneralSettings: start
+2025-12-13T00:25:54.4395880-05:00 LoadGeneralSettings: done
+2025-12-13T00:25:54.7741975-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:27:00.0711716-05:00 GameInitializer.Initialize: start
+2025-12-13T00:27:00.1777488-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:27:00.3232843-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:27:00.3636598-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:27:00.3646082-05:00 ColorScheme.Initialize: start
+2025-12-13T00:27:00.3665289-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:27:00.3671971-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:27:00.3674101-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:27:00.3748591-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:27:00.3765755-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:27:00.3777977-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:27:00.3779968-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:27:00.3781878-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:27:00.3787748-05:00 LoadGeneralSettings: start
+2025-12-13T00:27:00.3964306-05:00 LoadGeneralSettings: done
+2025-12-13T00:27:00.7242596-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:27:48.0725400-05:00 GameInitializer.Initialize: start
+2025-12-13T00:27:48.1693993-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:27:48.3143264-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:27:48.3566753-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:27:48.3577569-05:00 ColorScheme.Initialize: start
+2025-12-13T00:27:48.3598393-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:27:48.3606011-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:27:48.3608200-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:27:48.3692455-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:27:48.3710595-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:27:48.3722507-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:27:48.3724702-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:27:48.3726880-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:27:48.3733347-05:00 LoadGeneralSettings: start
+2025-12-13T00:27:48.3924036-05:00 LoadGeneralSettings: done
+2025-12-13T00:27:48.7268633-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:28:20.6646846-05:00 GameInitializer.Initialize: start
+2025-12-13T00:28:20.7734690-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:28:20.9159683-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:28:20.9569906-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:28:20.9579655-05:00 ColorScheme.Initialize: start
+2025-12-13T00:28:20.9598550-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:28:20.9605399-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:28:20.9607780-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:28:20.9684910-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:28:20.9702524-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:28:20.9713808-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:28:20.9716087-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:28:20.9718440-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:28:20.9724620-05:00 LoadGeneralSettings: start
+2025-12-13T00:28:20.9894338-05:00 LoadGeneralSettings: done
+2025-12-13T00:28:21.3056986-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:28:55.1398758-05:00 GameInitializer.Initialize: start
+2025-12-13T00:28:55.2411266-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:28:55.3891431-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:28:55.4260994-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:28:55.4269964-05:00 ColorScheme.Initialize: start
+2025-12-13T00:28:55.4287554-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:28:55.4294329-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:28:55.4296656-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:28:55.4376359-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:28:55.4394044-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:28:55.4405114-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:28:55.4407503-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:28:55.4409956-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:28:55.4417639-05:00 LoadGeneralSettings: start
+2025-12-13T00:28:55.4590312-05:00 LoadGeneralSettings: done
+2025-12-13T00:28:55.7932207-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:30:12.4174449-05:00 GameInitializer.Initialize: start
+2025-12-13T00:30:12.5212498-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:30:12.6731725-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:30:12.7159434-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:30:12.7171638-05:00 ColorScheme.Initialize: start
+2025-12-13T00:30:12.7193469-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:30:12.7201176-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:30:12.7203720-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:30:12.7289185-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:30:12.7310559-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:30:12.7322060-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:30:12.7324644-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:30:12.7327916-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:30:12.7336398-05:00 LoadGeneralSettings: start
+2025-12-13T00:30:12.7509129-05:00 LoadGeneralSettings: done
+2025-12-13T00:30:13.0802389-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:31:35.8232620-05:00 GameInitializer.Initialize: start
+2025-12-13T00:31:35.8996544-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:31:36.0305112-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:31:36.0601261-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:31:36.0608286-05:00 ColorScheme.Initialize: start
+2025-12-13T00:31:36.0622346-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:31:36.0627916-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:31:36.0629829-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:31:36.0683483-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:31:36.0695914-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:31:36.0704517-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:31:36.0706190-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:31:36.0707606-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:31:36.0712283-05:00 LoadGeneralSettings: start
+2025-12-13T00:31:36.0841277-05:00 LoadGeneralSettings: done
+2025-12-13T00:31:36.3950069-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:33:00.2466358-05:00 GameInitializer.Initialize: start
+2025-12-13T00:33:00.3425466-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:33:00.4859340-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:33:00.5245989-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:33:00.5253624-05:00 ColorScheme.Initialize: start
+2025-12-13T00:33:00.5273097-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:33:00.5279372-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:33:00.5281277-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:33:00.5353348-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:33:00.5368674-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:33:00.5377568-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:33:00.5379803-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:33:00.5381616-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:33:00.5387056-05:00 LoadGeneralSettings: start
+2025-12-13T00:33:00.5549425-05:00 LoadGeneralSettings: done
+2025-12-13T00:33:00.8833567-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:34:11.4474209-05:00 GameInitializer.Initialize: start
+2025-12-13T00:34:11.5317301-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:34:11.6647097-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:34:11.6973436-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:34:11.6982923-05:00 ColorScheme.Initialize: start
+2025-12-13T00:34:11.6998874-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:34:11.7005580-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:34:11.7007855-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:34:11.7076708-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:34:11.7090289-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:34:11.7099638-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:34:11.7101344-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:34:11.7103027-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:34:11.7107891-05:00 LoadGeneralSettings: start
+2025-12-13T00:34:11.7246631-05:00 LoadGeneralSettings: done
+2025-12-13T00:34:12.0198411-05:00 GameInitializer.Initialize: complete
+2025-12-13T00:39:06.9020896-05:00 GameInitializer.Initialize: start
+2025-12-13T00:39:06.9720540-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-13T00:39:07.1005316-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-13T00:39:07.1307536-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-13T00:39:07.1314432-05:00 ColorScheme.Initialize: start
+2025-12-13T00:39:07.1329114-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-13T00:39:07.1335327-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-13T00:39:07.1337241-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-13T00:39:07.1402964-05:00 ColorScheme.LoadFromStore: orders
+2025-12-13T00:39:07.1415953-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-13T00:39:07.1425748-05:00 ColorScheme.ApplySideEffects: done
+2025-12-13T00:39:07.1427618-05:00 ColorScheme.Initialize: complete
+2025-12-13T00:39:07.1429170-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-13T00:39:07.1434970-05:00 LoadGeneralSettings: start
+2025-12-13T00:39:07.1575967-05:00 LoadGeneralSettings: done
+2025-12-13T00:39:07.4267401-05:00 GameInitializer.Initialize: complete

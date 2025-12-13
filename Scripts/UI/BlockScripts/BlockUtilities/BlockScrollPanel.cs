@@ -27,9 +27,6 @@ namespace op.io.UI.BlockScripts.BlockUtilities
         private Point _lastMousePosition;
         private Texture2D _pixelTexture;
 
-        private static readonly Color TrackColor = new(24, 24, 24, 220);
-        private static readonly Color ThumbColor = new(95, 95, 95, 255);
-        private static readonly Color ThumbHoverColor = new(136, 136, 136, 255);
         private static readonly Dictionary<int, Texture2D> _cornerTextures = new();
 
         public float ScrollOffset => _scrollOffset;
@@ -87,12 +84,12 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             }
 
             EnsurePixelTexture(spriteBatch.GraphicsDevice);
-            FillRoundedRect(spriteBatch, _trackBounds, TrackColor, TrackCornerRadius);
+            FillRoundedRect(spriteBatch, _trackBounds, ColorPalette.ScrollTrack, TrackCornerRadius);
 
             if (_thumbBounds.Width > 0 && _thumbBounds.Height > 0)
             {
                 bool hovered = _thumbBounds.Contains(_lastMousePosition);
-                Color thumbColor = hovered || _draggingThumb ? ThumbHoverColor : ThumbColor;
+                Color thumbColor = hovered || _draggingThumb ? ColorPalette.ScrollThumbHover : ColorPalette.ScrollThumb;
                 FillRoundedRect(spriteBatch, _thumbBounds, thumbColor, ThumbCornerRadius);
             }
         }

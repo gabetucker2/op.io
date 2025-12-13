@@ -8,8 +8,6 @@ namespace op.io.UI.BlockScripts.BlockUtilities
     {
         private static Texture2D _indicatorTexture;
         private const int IndicatorDiameter = 10;
-        private static readonly Color ActiveColor = new(72, 201, 115);
-        private static readonly Color InactiveColor = new(192, 57, 43);
 
         public static bool TryDrawBooleanIndicator(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, float lineY, bool state)
         {
@@ -26,7 +24,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             int indicatorX = Math.Max(contentBounds.X, contentBounds.Right - IndicatorDiameter - 4);
             int indicatorY = (int)(lineY + ((lineHeight - IndicatorDiameter) / 2f));
             Rectangle indicatorBounds = new(indicatorX, indicatorY, IndicatorDiameter, IndicatorDiameter);
-            Color fill = state ? ActiveColor : InactiveColor;
+            Color fill = state ? ColorPalette.IndicatorActive : ColorPalette.IndicatorInactive;
             spriteBatch.Draw(_indicatorTexture, indicatorBounds, fill);
             return true;
         }

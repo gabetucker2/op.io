@@ -8,6 +8,12 @@ namespace op.io
 {
     public static class ActionHandler
     {
+        private const bool ExitHotkeyEnabled = true;
+        private const float ExitConfirmWindow = 1.0f;
+        private static bool _exitPending;
+        private static float _exitPendingTime;
+        private static float _lastExitSuppressLogTime;
+
         public static void Tickwise_CheckActions()
         {
             // Suppress gameplay actions while the keybind overlay is active so captured keys (e.g., Escape) don't trigger game exits.
@@ -17,10 +23,32 @@ namespace op.io
             }
 
             // Exit Action
-            if (InputManager.IsInputActive("Exit"))
+            if (ExitHotkeyEnabled && InputManager.IsInputActive("Exit"))
             {
-                DebugLogger.PrintUI("Exit action triggered. Calling GameCloser.");
-                Exit.CloseGame();
+                float now = Core.GAMETIME;
+                if (_exitPending && (now - _exitPendingTime) <= ExitConfirmWindow)
+                {
+                    DebugLogger.PrintUI("Exit confirmed. Calling GameCloser.");
+                    Exit.CloseGame();
+                }
+                else
+                {
+                    _exitPending = true;
+                    _exitPendingTime = now;
+                    DebugLogger.PrintUI("Exit requested. Press the Exit key again to confirm.");
+                }
+            }
+            else if (!ExitHotkeyEnabled && InputManager.IsInputActive("Exit"))
+            {
+                if (Core.GAMETIME - _lastExitSuppressLogTime > 1.0f)
+                {
+                    _lastExitSuppressLogTime = Core.GAMETIME;
+                    DebugLogger.PrintUI("Exit hotkey suppressed to keep the session running.");
+                }
+            }
+            else if (_exitPending && (Core.GAMETIME - _exitPendingTime) > ExitConfirmWindow)
+            {
+                _exitPending = false;
             }
 
             // ReturnCursorToPlayer Handling

@@ -68,19 +68,19 @@ namespace op.io
         private static SpriteFont _fontMonospaceNeonItalic;
         private static readonly Dictionary<(FontFamilyKey, FontVariant), UIFont> _variantFonts = new();
 
-        public static readonly Color ScreenBackground = new(18, 18, 18);
-        public static readonly Color BlockBackground = new(26, 26, 26);
-        public static readonly Color BlockBorder = new(48, 48, 48);
-        public static readonly Color HeaderBackground = new(35, 35, 35);
-        public static readonly Color TextColor = new(226, 226, 226);
-        public static readonly Color MutedTextColor = new(160, 160, 160);
-        public static readonly Color AccentColor = new(110, 142, 255);
-        public static readonly Color AccentMuted = new(110, 142, 255, 70);
-        public static readonly Color OverlayBackground = new(24, 24, 24, 230);
-        public static readonly Color ResizeBarColor = new(58, 58, 58, 210);
-        public static readonly Color ResizeBarHoverColor = new(110, 142, 255, 150);
-        public static readonly Color ResizeBarActiveColor = new(110, 142, 255, 220);
-        public static readonly Color DragBarHoverTint = new(26, 26, 26, 120);
+        public static Color ScreenBackground => ColorPalette.ScreenBackground;
+        public static Color BlockBackground => ColorPalette.BlockBackground;
+        public static Color BlockBorder => ColorPalette.BlockBorder;
+        public static Color HeaderBackground => ColorPalette.HeaderBackground;
+        public static Color TextColor => ColorPalette.TextPrimary;
+        public static Color MutedTextColor => ColorPalette.TextMuted;
+        public static Color AccentColor => ColorPalette.Accent;
+        public static Color AccentMuted => ColorPalette.AccentSoft;
+        public static Color OverlayBackground => ColorPalette.OverlayBackground;
+        public static Color ResizeBarColor => ColorPalette.ResizeBar;
+        public static Color ResizeBarHoverColor => ColorPalette.ResizeBarHover;
+        public static Color ResizeBarActiveColor => ColorPalette.ResizeBarActive;
+        public static Color DragBarHoverTint => ColorPalette.DragBarHoverTint;
 
         public static void EnsureFontsLoaded(ContentManager content)
         {

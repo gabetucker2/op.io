@@ -11,6 +11,12 @@ namespace op.io
         private static KeyboardState _previousKeyboardState;
         private static MouseState _previousMouseState;
 
+        private static bool _startupSnapshotCaptured;
+        private static readonly HashSet<Keys> _startupHeldKeys = new();
+        private const float StartupIgnoreSeconds = 1.0f;
+        private const int StartupIgnoreFrames = 5;
+        private static int _frameCounter;
+
         private static readonly Dictionary<Keys, bool> _triggerStates = [];
         private static readonly Dictionary<string, bool> _mouseSwitchStates = [];
         private static readonly Dictionary<Keys, bool> _keySwitchStates = [];
@@ -45,6 +51,7 @@ namespace op.io
         // Cache cooldown values to avoid redundant loading
         private static float? _cachedTriggerCooldown = null;
         private static float? _cachedSwitchCooldown = null;
+        private static bool _hasPreviousState;
 
         public static void InitializeControlStates()
         {
@@ -169,6 +176,8 @@ namespace op.io
 
         public static bool IsKeyTriggered(Keys key)
         {
+            EnsurePreviousState();
+
             if (Core.Instance.Player == null)
             {
                 DebugLogger.PrintError("Player instance is null. Cannot check TriggerCooldown.");
@@ -192,6 +201,30 @@ namespace op.io
             bool wasPreviouslyPressed = _previousKeyboardState.IsKeyDown(key);
             bool isCooldownPassed = (Core.GAMETIME - _lastKeyTriggerTime[key]) >= _cachedTriggerCooldown.Value;
 
+            bool withinStartup = _frameCounter < StartupIgnoreFrames || Core.GAMETIME < StartupIgnoreSeconds;
+
+            if ((withinStartup && isCurrentlyPressed) && !_startupHeldKeys.Contains(key))
+            {
+                _startupHeldKeys.Add(key);
+            }
+
+            if (_startupHeldKeys.Contains(key))
+            {
+                if (!isCurrentlyPressed)
+                {
+                    _startupHeldKeys.Remove(key);
+                    if (withinStartup)
+                    {
+                        return false;
+                    }
+                }
+
+                if (isCurrentlyPressed)
+                {
+                    return false;
+                }
+            }
+
             // Trigger on key release (was down, now up) after cooldown
             if (!isCurrentlyPressed && wasPreviouslyPressed && isCooldownPassed)
             {
@@ -209,6 +242,8 @@ namespace op.io
 
         public static bool IsMouseButtonTriggered(string mouseKey)
         {
+            EnsurePreviousState();
+
             MouseState currentMouseState = Mouse.GetState();
 
             if (!_lastMouseTriggerTime.ContainsKey(mouseKey))
@@ -273,6 +308,8 @@ namespace op.io
 
         public static bool IsMouseButtonSwitch(string mouseKey)
         {
+            EnsurePreviousState();
+
             MouseState currentMouseState = Mouse.GetState();
 
             if (!_mouseSwitchStates.ContainsKey(mouseKey))
@@ -327,6 +364,8 @@ namespace op.io
 
         public static bool IsKeySwitch(Keys key)
         {
+            EnsurePreviousState();
+
             KeyboardState current = Keyboard.GetState();
 
             if (!_keySwitchStates.ContainsKey(key))
@@ -335,6 +374,25 @@ namespace op.io
                 _lastKeySwitchTime[key] = 0;
 
             bool isReleased = !current.IsKeyDown(key) && _previousKeyboardState.IsKeyDown(key);
+            bool withinStartup = Core.GAMETIME < StartupIgnoreSeconds;
+
+            if ((withinStartup && current.IsKeyDown(key)) && !_startupHeldKeys.Contains(key))
+            {
+                _startupHeldKeys.Add(key);
+            }
+
+            if (_startupHeldKeys.Contains(key))
+            {
+                if (!current.IsKeyDown(key))
+                {
+                    _startupHeldKeys.Remove(key);
+                    if (withinStartup)
+                    {
+                        return _keySwitchStates[key];
+                    }
+                }
+                return _keySwitchStates[key];
+            }
 
             // If any registered combo that uses this key is currently held, treat the key as part of the chord so its solo switch cannot toggle.
             if (!_comboActiveKeys.Contains(key) && current.IsKeyDown(key) && (IsKeyPartOfHeldCombo(key) || IsKeyComboPartnerHeld(key, current)))
@@ -404,7 +462,7 @@ namespace op.io
             }
         }
 
-        public static void BeginFrame() { }
+        public static void BeginFrame() => EnsurePreviousState();
 
         private static void NotifySwitchStateFromInput(string inputKey, bool state)
         {
@@ -774,10 +832,40 @@ namespace op.io
         {
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
+            _hasPreviousState = true;
+
+            _frameCounter++;
+
             if (_comboBreakGuard.Count > 0)
             {
                 ClearReleasedComboGuards();
             }
+        }
+
+        private static void EnsurePreviousState()
+        {
+            if (_hasPreviousState)
+            {
+                return;
+            }
+
+            _previousKeyboardState = Keyboard.GetState();
+            _previousMouseState = Mouse.GetState();
+
+            if (!_startupSnapshotCaptured)
+            {
+                Keys[] held = _previousKeyboardState.GetPressedKeys();
+                if (held != null)
+                {
+                    foreach (Keys key in held)
+                    {
+                        _startupHeldKeys.Add(key);
+                    }
+                }
+                _startupSnapshotCaptured = true;
+            }
+
+            _hasPreviousState = true;
         }
 
         private static void ClearReleasedComboGuards()

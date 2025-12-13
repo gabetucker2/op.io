@@ -8,6 +8,7 @@ namespace op.io
         Game,
         Transparent,
         Blank,
+        ColorScheme,
         Controls,
         Notes,
         Backend,

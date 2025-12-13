@@ -48,14 +48,6 @@ namespace op.io.UI.BlockScripts.Blocks
         private static bool _rebindUnbindHovered;
         private static bool _rebindPendingUnbind;
 
-        private static readonly Color HoverRowColor = new(38, 38, 38, 180);
-        private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
-        private static readonly Color DropIndicatorColor = new(110, 142, 255, 90);
-        private static readonly Color TypeToggleIdleFill = new(38, 38, 38, 140);
-        private static readonly Color TypeToggleHoverFill = new(68, 92, 160, 200);
-        private static readonly Color TypeToggleActiveFill = new(68, 92, 160, 230);
-        private static readonly Color RebindScrimColor = new(8, 8, 8, 190);
-        private static readonly Color WarningColor = new(240, 196, 64);
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
         private const int ValueHighlightPadding = 2;
@@ -250,7 +242,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
                 {
-                    FillRect(spriteBatch, _dragState.DropIndicatorBounds, DropIndicatorColor);
+                    FillRect(spriteBatch, _dragState.DropIndicatorBounds, ColorPalette.DropIndicator);
                 }
 
                 DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont, blockLocked);
@@ -382,7 +374,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (ShouldHighlightRow(row, blockLocked))
             {
-                FillRect(spriteBatch, bounds, HoverRowColor);
+                FillRect(spriteBatch, bounds, ColorPalette.RowHover);
             }
         }
 
@@ -394,7 +386,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            FillRect(spriteBatch, dragBounds, DraggingRowBackground);
+            FillRect(spriteBatch, dragBounds, ColorPalette.RowDragging);
 
             KeybindDisplayRow row = _dragState.DraggingSnapshot;
             row.Bounds = dragBounds;
@@ -411,10 +403,10 @@ namespace op.io.UI.BlockScripts.Blocks
             if (showToggle)
             {
                 bool hovered = string.Equals(_hoveredTypeKey, row.Action, StringComparison.OrdinalIgnoreCase);
-                Color fill = row.InputType == InputType.Trigger && row.TriggerAutoFire ? TypeToggleActiveFill : TypeToggleIdleFill;
+                Color fill = row.InputType == InputType.Trigger && row.TriggerAutoFire ? ColorPalette.ToggleActive : ColorPalette.ToggleIdle;
                 if (hovered)
                 {
-                    fill = TypeToggleHoverFill;
+                    fill = ColorPalette.ToggleHover;
                 }
 
                 FillRect(spriteBatch, row.TypeToggleBounds, fill);
@@ -452,7 +444,7 @@ namespace op.io.UI.BlockScripts.Blocks
             if (!blockLocked && keyValueBounds != Rectangle.Empty)
             {
                 bool keyHovered = string.Equals(_hoveredKeyAction, row.Action, StringComparison.OrdinalIgnoreCase);
-                Color fill = keyHovered ? TypeToggleHoverFill : TypeToggleIdleFill;
+                Color fill = keyHovered ? ColorPalette.ToggleHover : ColorPalette.ToggleIdle;
                 FillRect(spriteBatch, keyValueBounds, fill);
             }
             regularFont.DrawString(spriteBatch, value, new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
@@ -844,7 +836,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            FillRect(spriteBatch, viewport, RebindScrimColor);
+            FillRect(spriteBatch, viewport, ColorPalette.RebindScrim);
             FillRect(spriteBatch, _rebindModalBounds, UIStyle.BlockBackground);
             DrawRectOutline(spriteBatch, _rebindModalBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
@@ -881,7 +873,7 @@ namespace op.io.UI.BlockScripts.Blocks
             if (!string.IsNullOrWhiteSpace(_rebindConflictWarning))
             {
                 textY += lineHeight + 4f;
-                bodyFont.DrawString(spriteBatch, _rebindConflictWarning, new Vector2(textX, textY), WarningColor);
+                bodyFont.DrawString(spriteBatch, _rebindConflictWarning, new Vector2(textX, textY), ColorPalette.Warning);
             }
 
             UIButtonRenderer.Draw(spriteBatch, _rebindUnbindButtonBounds, "Unbind", UIButtonRenderer.ButtonStyle.Grey, _rebindUnbindHovered);

@@ -30,10 +30,6 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
 
-        private static readonly Color HoverRowColor = new(38, 38, 38, 180);
-        private static readonly Color DraggingRowBackground = new(24, 24, 24, 220);
-        private static readonly Color DropIndicatorColor = new(110, 142, 255, 90);
-
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Backend);
@@ -180,7 +176,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
                 {
-                    FillRect(spriteBatch, _dragState.DropIndicatorBounds, DropIndicatorColor);
+                    FillRect(spriteBatch, _dragState.DropIndicatorBounds, ColorPalette.DropIndicator);
                 }
 
                 DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont);
@@ -408,7 +404,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (!_dragState.IsDragging && string.Equals(_hoveredRowKey, rowKey, StringComparison.OrdinalIgnoreCase))
             {
-                FillRect(spriteBatch, bounds, HoverRowColor);
+                FillRect(spriteBatch, bounds, ColorPalette.RowHover);
             }
         }
 
@@ -420,7 +416,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            FillRect(spriteBatch, dragBounds, DraggingRowBackground);
+            FillRect(spriteBatch, dragBounds, ColorPalette.RowDragging);
 
             BackendVariable row = _dragState.DraggingSnapshot;
             row.Bounds = dragBounds;

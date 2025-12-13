@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 
@@ -8,6 +9,7 @@ namespace op.io
     {
         public static void Initialize()
         {
+            SafeLog("GameInitializer.Initialize: start");
             DebugLogger.Print("Initializing game...");
             _transparentWindowHandle = IntPtr.Zero;
             _clickThroughEnabled = false;
@@ -20,10 +22,24 @@ namespace op.io
             }
 
             // Ensure the database is initialized before loading settings
+            SafeLog("GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase");
             DatabaseInitializer.InitializeDatabase();
+            SafeLog("GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied");
             ControlKeyMigrations.EnsureApplied();
+            try
+            {
+                SafeLog("GameInitializer.Initialize: ColorScheme.Initialize");
+                ColorScheme.Initialize();
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"ColorScheme initialization failed; falling back to defaults. {ex.Message}");
+                SafeLog($"GameInitializer.Initialize: ColorScheme.Initialize failed: {ex.Message}");
+                ColorScheme.InitializeWithDefaultsOnly();
+            }
 
             // Load general settings BEFORE initializing anything else
+            SafeLog("GameInitializer.Initialize: LoadGeneralSettings");
             LoadGeneralSettings();
 
             // Load control switch states from the database
@@ -103,6 +119,7 @@ namespace op.io
             PhysicsManager.Initialize();
 
             DebugLogger.Print("Game initialization complete.");
+            SafeLog("GameInitializer.Initialize: complete");
         }
 
         public static void RefreshTransparencyKey()
@@ -124,10 +141,11 @@ namespace op.io
         private static void LoadGeneralSettings()
         {
             DebugLogger.PrintDatabase("Loading general settings...");
+            SafeLog("LoadGeneralSettings: start");
 
             try
             {
-                Core.Instance.BackgroundColor = DatabaseFetch.GetColor("GeneralSettings", "SettingKey", "BackgroundColor");
+                Core.Instance.BackgroundColor = ColorPalette.GameBackground;
 
                 string modeStr = DatabaseFetch.GetValue<string>("GeneralSettings", "Value", "SettingKey", "WindowMode");
                 if (!Enum.TryParse(modeStr, true, out WindowMode mode))
@@ -157,10 +175,12 @@ namespace op.io
                 DebugLogger.PrintDatabase(
                     $"Loaded general settings: BackgroundColor={Core.Instance.BackgroundColor}, Viewport={Core.Instance.ViewportWidth}x{Core.Instance.ViewportHeight}, Mode={Core.Instance.WindowMode}, VSync={Core.Instance.VSyncEnabled}, FixedTimeStep={Core.Instance.UseFixedTimeStep}, FPS={Core.Instance.TargetFrameRate}"
                 );
+                SafeLog("LoadGeneralSettings: done");
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to load general settings: {ex.Message}");
+                SafeLog($"LoadGeneralSettings: failed {ex.Message}");
             }
         }
 
@@ -246,6 +266,18 @@ namespace op.io
             }
         }
 
+        private static void SafeLog(string message)
+        {
+            try
+            {
+                File.AppendAllText("run_output.txt", $"{DateTime.Now:O} {message}{Environment.NewLine}");
+            }
+            catch
+            {
+                // Ignore logging errors
+            }
+        }
+
         private static void ForceSetWindowClickThrough(bool enable)
         {
             long styles = GetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE);
@@ -299,4 +331,3 @@ namespace op.io
         }
     }
 }
-

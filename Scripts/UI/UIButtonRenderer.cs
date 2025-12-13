@@ -17,11 +17,6 @@ namespace op.io
 
         private static Texture2D _pixelTexture;
 
-        private static readonly Color GreyFill = new(34, 34, 34, 230);
-        private static readonly Color GreyHoverFill = new(52, 52, 52, 240);
-        private static readonly Color BlueFill = new(58, 78, 150, 235);
-        private static readonly Color BlueHoverFill = new(86, 116, 204, 240);
-
         public static bool IsHovered(Rectangle bounds, Point pointer) =>
             bounds != Rectangle.Empty && bounds.Contains(pointer);
 
@@ -67,14 +62,14 @@ namespace op.io
         {
             Color baseFill = fillOverride ?? style switch
             {
-                ButtonStyle.Blue => BlueFill,
-                _ => GreyFill
+                ButtonStyle.Blue => ColorPalette.ButtonPrimary,
+                _ => ColorPalette.ButtonNeutral
             };
 
             Color hoverFill = hoverFillOverride ?? style switch
             {
-                ButtonStyle.Blue => BlueHoverFill,
-                _ => GreyHoverFill
+                ButtonStyle.Blue => ColorPalette.ButtonPrimaryHover,
+                _ => ColorPalette.ButtonNeutralHover
             };
 
             Color selected = isHovered ? hoverFill : baseFill;

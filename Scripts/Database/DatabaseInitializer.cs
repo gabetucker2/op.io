@@ -89,7 +89,7 @@ namespace op.io
         {
             try
             {
-                BlockDataStore.EnsureTables(connection, DockBlockKind.Controls, DockBlockKind.Backend, DockBlockKind.Specs);
+                BlockDataStore.EnsureTables(connection, DockBlockKind.Controls, DockBlockKind.Backend, DockBlockKind.Specs, DockBlockKind.ColorScheme);
                 DebugLogger.PrintDatabase("Ensured block tables for lock/order persistence.");
             }
             catch (Exception ex)

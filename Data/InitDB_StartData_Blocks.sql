@@ -28,7 +28,6 @@ INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('HoldInputs',
 -----------------------------------------------------------------------
 INSERT OR REPLACE INTO BlockBackend (RowKey, IsLocked) VALUES ('BlockLock', 1); -- default locked state stored at block-level
 INSERT OR REPLACE INTO BlockBackend (RowKey, RenderOrder) VALUES ('FreezeGameInputs', 1);
-INSERT OR REPLACE INTO BlockBackend (RowKey, RenderOrder) VALUES ('HoldInputsFrozen', 2);
 
 -----------------------------------------------------------------------
 -- Specs block

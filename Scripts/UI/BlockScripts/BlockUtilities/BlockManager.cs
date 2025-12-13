@@ -14,6 +14,7 @@ namespace op.io
         private const string GameBlockKey = "game";
         private const string BlankBlockKey = "blank";
         private const string TransparentBlockKey = "transparent";
+        private const string ColorSchemeBlockKey = "colors";
         private const string ControlsBlockKey = "controls";
         private const string NotesBlockKey = "notes";
         private const string BackendBlockKey = "backend";
@@ -321,6 +322,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(BlankBlockKey, BlankBlock.BlockTitle, DockBlockKind.Blank, BlockMenuControlMode.Count, 0, 10, 1));
             _blockMenuEntries.Add(new BlockMenuEntry(TransparentBlockKey, TransparentBlock.BlockTitle, DockBlockKind.Transparent, BlockMenuControlMode.Count, 0, 10, 1));
             _blockMenuEntries.Add(new BlockMenuEntry(GameBlockKey, GameBlock.BlockTitle, DockBlockKind.Game, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlsBlockKey, ControlsBlock.BlockTitle, DockBlockKind.Controls, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: true));
@@ -367,6 +369,7 @@ namespace op.io
             List<BlockNode> blankNodes = GetBlockNodesByKind(DockBlockKind.Blank);
             List<BlockNode> transparentNodes = GetBlockNodesByKind(DockBlockKind.Transparent);
             BlockNode gameNode = GetBlockNodesByKind(DockBlockKind.Game).FirstOrDefault();
+            BlockNode colorNode = GetBlockNodesByKind(DockBlockKind.ColorScheme).FirstOrDefault();
             BlockNode controlsNode = GetBlockNodesByKind(DockBlockKind.Controls).FirstOrDefault();
             BlockNode notesNode = GetBlockNodesByKind(DockBlockKind.Notes).FirstOrDefault();
             BlockNode backendNode = GetBlockNodesByKind(DockBlockKind.Backend).FirstOrDefault();
@@ -381,7 +384,8 @@ namespace op.io
             DockNode leftColumn = CombineNodes(blankAndTransparent, gameNode, DockSplitOrientation.Horizontal, 0.36f);
             DockNode controlsAndNotes = CombineNodes(controlsNode, notesNode, DockSplitOrientation.Horizontal, 0.5f);
             DockNode backendAndSpecs = CombineNodes(backendNode, specsNode, DockSplitOrientation.Horizontal, 0.58f);
-            DockNode rightColumn = CombineNodes(controlsAndNotes, backendAndSpecs, DockSplitOrientation.Horizontal, 0.72f);
+            DockNode paletteBackend = CombineNodes(colorNode, backendAndSpecs, DockSplitOrientation.Horizontal, 0.42f);
+            DockNode rightColumn = CombineNodes(controlsAndNotes, paletteBackend, DockSplitOrientation.Horizontal, 0.68f);
 
             return CombineNodes(leftColumn, rightColumn, DockSplitOrientation.Vertical, 0.67f);
         }
@@ -480,6 +484,7 @@ namespace op.io
                 DockBlockKind.Game => (GameBlock.MinWidth, GameBlock.MinHeight),
                 DockBlockKind.Transparent => (TransparentBlock.MinWidth, TransparentBlock.MinHeight),
                 DockBlockKind.Blank => (BlankBlock.MinWidth, BlankBlock.MinHeight),
+                DockBlockKind.ColorScheme => (ColorSchemeBlock.MinWidth, ColorSchemeBlock.MinHeight),
                 DockBlockKind.Controls => (ControlsBlock.MinWidth, ControlsBlock.MinHeight),
                 DockBlockKind.Notes => (NotesBlock.MinWidth, NotesBlock.MinHeight),
                 DockBlockKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
@@ -970,6 +975,7 @@ namespace op.io
             }
 
             return block.Kind == DockBlockKind.Controls ||
+                block.Kind == DockBlockKind.ColorScheme ||
                 block.Kind == DockBlockKind.Backend ||
                 block.Kind == DockBlockKind.Specs;
         }
@@ -1836,8 +1842,8 @@ namespace op.io
 
         private static void DrawBlockCloseButton(SpriteBatch spriteBatch, Rectangle bounds, bool hovered)
         {
-            Color background = hovered ? new Color(140, 32, 32, 240) : new Color(80, 20, 20, 220);
-            Color border = hovered ? new Color(220, 72, 72) : new Color(160, 40, 40);
+            Color background = hovered ? ColorPalette.DangerHoverBackground : ColorPalette.DangerBackground;
+            Color border = hovered ? ColorPalette.DangerHoverBorder : ColorPalette.DangerBorder;
             DrawRect(spriteBatch, bounds, background);
             DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
 
@@ -1852,13 +1858,15 @@ namespace op.io
             Vector2 glyphPosition = new(
                 bounds.X + (bounds.Width - glyphSize.X) / 2f,
                 bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
-            Color glyphColor = hovered ? Color.White : Color.OrangeRed;
+            Color glyphColor = hovered ? ColorPalette.CloseGlyphHover : ColorPalette.CloseGlyph;
             glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
         }
 
         private static void DrawLockToggleButton(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered)
         {
-            Color background = isLocked ? new Color(38, 38, 38, hovered ? 240 : 220) : new Color(68, 92, 160, hovered ? 250 : 230);
+            Color background = isLocked
+                ? (hovered ? ColorPalette.LockLockedHoverFill : ColorPalette.LockLockedFill)
+                : (hovered ? ColorPalette.LockUnlockedHoverFill : ColorPalette.LockUnlockedFill);
             Color border = isLocked ? (hovered ? UIStyle.AccentColor : UIStyle.BlockBorder) : UIStyle.AccentColor;
             DrawRect(spriteBatch, bounds, background);
             DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
@@ -1933,6 +1941,9 @@ namespace op.io
                 case DockBlockKind.Blank:
                     BlankBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.ColorScheme:
+                    ColorSchemeBlock.Draw(spriteBatch, contentBounds);
+                    break;
                 case DockBlockKind.Controls:
                     ControlsBlock.Draw(spriteBatch, contentBounds);
                     break;
@@ -1974,6 +1985,9 @@ namespace op.io
                 {
                     case DockBlockKind.Notes:
                         NotesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
+                    case DockBlockKind.ColorScheme:
+                        ColorSchemeBlock.Update(gameTime, contentBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState);
                         break;
                     case DockBlockKind.Controls:
                         ControlsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
@@ -2110,9 +2124,9 @@ namespace op.io
             }
 
             bool hovered = UIButtonRenderer.IsHovered(_overlayDismissBounds, _mousePosition);
-            Color background = new(64, 24, 24, 240);
-            Color hoverBackground = new(90, 36, 36, 240);
-            Color border = new(150, 40, 40);
+            Color background = ColorPalette.DangerOverlayBackground;
+            Color hoverBackground = ColorPalette.DangerOverlayHoverBackground;
+            Color border = ColorPalette.DangerOverlayBorder;
             UIButtonRenderer.Draw(
                 spriteBatch,
                 _overlayDismissBounds,
@@ -2120,7 +2134,7 @@ namespace op.io
                 UIButtonRenderer.ButtonStyle.Grey,
                 hovered,
                 isDisabled: false,
-                textColorOverride: Color.OrangeRed,
+                textColorOverride: hovered ? ColorPalette.CloseGlyphHover : ColorPalette.CloseGlyph,
                 fillOverride: background,
                 hoverFillOverride: hoverBackground,
                 borderOverride: border);
@@ -3318,5 +3332,3 @@ namespace op.io
         }
     }
 }
-
-

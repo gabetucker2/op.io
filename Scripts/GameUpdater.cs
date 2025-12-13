@@ -13,6 +13,9 @@ namespace op.io
 
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
+            // Prime previous input snapshots so the first frame doesn't register phantom releases.
+            InputTypeManager.BeginFrame();
+
             // Centralized switch polling
             SwitchStateScanner.Tick();
 

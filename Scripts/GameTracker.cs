@@ -13,7 +13,6 @@ namespace op.io
         };
 
         public static bool FreezeGameInputs { get; internal set; }
-        public static bool HoldInputsFrozen => InputManager.IsHoldLatchActive;
 
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {
