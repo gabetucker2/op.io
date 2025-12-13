@@ -1,0 +1,707 @@
+Log created at 2025-12-13T01:33:32.5240066-05:00
+[DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
+[DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 146
+[DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 146
+[DEFERRED OUTPUT] [DATABASE] Created new database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::CreateDatabaseIfNotExists @ Line 169
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DEFERRED OUTPUT] [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: InitializeDatabase, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Executed successfully: InitDB_Structure_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DEFERRED OUTPUT] [DATABASE] Executed successfully: InitDB_Structure_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DEFERRED OUTPUT] [DATABASE] Database structure scripts loaded successfully. | DatabaseInitializer.cs::LoadStructureScripts @ Line 85
+[DEFERRED OUTPUT] [DATABASE] Ensured block tables for lock/order persistence. | DatabaseInitializer.cs::EnsureBlockTables @ Line 93
+[DEFERRED OUTPUT] [DATABASE] Verified table exists: GameObjects | DatabaseInitializer.cs::VerifyTablesExistence @ Line 128
+[DEFERRED OUTPUT] [DATABASE] Verified table exists: Agents | DatabaseInitializer.cs::VerifyTablesExistence @ Line 128
+[DEFERRED OUTPUT] [DATABASE] Verified table exists: FarmData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 128
+[DEFERRED OUTPUT] [DATABASE] Verified table exists: MapData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 128
+[DEFERRED OUTPUT] [DATABASE] Executed successfully: InitDB_StartData_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DEFERRED OUTPUT] [DATABASE] Executed successfully: InitDB_StartData_Blocks.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DEFERRED OUTPUT] [DATABASE] Executed successfully: InitDB_StartData_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DEFERRED OUTPUT] [DATABASE] Database initialization complete. | DatabaseInitializer.cs::InitializeDatabase @ Line 72
+[DEFERRED OUTPUT] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DEFERRED OUTPUT] [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT SettingKey FROM ControlKey ORDER BY RenderOrder, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 16 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @settingKey: TransparentTabBlocking | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @settingKey: HoldInputs | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DEFERRED OUTPUT] [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: BackgroundColor_R | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: BackgroundColor_G | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: BackgroundColor_B | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: BackgroundColor_A | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [GENERAL] Retrieved color from GeneralSettings -> {R:20 G:20 B:25 A:255} | DatabaseFetch.cs::GetColor @ Line 147
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DEFERRED OUTPUT] [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DEFERRED OUTPUT] [DATABASE] Loading general settings... | GameInitializer.cs::LoadGeneralSettings @ Line 143
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: WindowMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: ViewportWidth | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: ViewportHeight | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: VSync | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: FixedTimeStep | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: TargetFrameRate | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DEFERRED OUTPUT] [DATABASE]   @value: NumLogFiles | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Loaded general settings: BackgroundColor={R:20 G:20 B:25 A:255}, Viewport=1400x1400, Mode=BorderedWindowed, VSync=False, FixedTimeStep=False, FPS=240 | GameInitializer.cs::LoadGeneralSettings @ Line 175
+[DEFERRED OUTPUT] [DATABASE] Loading control switch states... | ControlStateManager.cs::LoadControlSwitchStates @ Line 153
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT SettingKey, SwitchStartState, InputType FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch'); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing Crouch switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: Crouch = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing BlockMenu switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: BlockMenu = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing DockingMode switch with default state from database: 1 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: DockingMode = ON | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing DebugMode switch with default state from database: 1 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: DebugMode = ON | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing AllowGameInputFreeze switch with default state from database: 1 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: AllowGameInputFreeze = ON | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing TransparentTabBlocking switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: TransparentTabBlocking = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DEFERRED OUTPUT] [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DEFERRED OUTPUT] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEFERRED OUTPUT] [GENERAL] Initializing HoldInputs switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 68
+[DEFERRED OUTPUT] [DATABASE] Loaded switch state: HoldInputs = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 181
+[DEFERRED OUTPUT] [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch'); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DEFERRED OUTPUT] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DEFERRED OUTPUT] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DEFERRED OUTPUT] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DEFERRED OUTPUT] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DEFERRED OUTPUT] [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEFERRED OUTPUT] [DATABASE] Setting starting debug mode to switch value: 1 | DebugModeHandler.cs::get_DEBUGENABLED @ Line 24
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'Crouch' (LeftControl) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'BlockMenu' (Shift + X) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DockingMode' (V) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'DebugMode' (Shift + B) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'AllowGameInputFreeze' (Shift + C) to ON. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'TransparentTabBlocking' (Shift + V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Initialized switch state for 'HoldInputs' (M) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 112
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 512
+[DEFERRED OUTPUT] [DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 512
+[DEFERRED OUTPUT] [DEBUG] Initializing console... | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 31
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 84
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[GAMEOBJECT] Initializing GameObjects... | GameObjectInitializer.cs::Initialize @ Line 12
+[GAMEOBJECT] Initializing MapObjects... | GameObjectInitializer.cs::InitializeMapObjects @ Line 28
+[GAMEOBJECT] Loading map objects from database... | MapObjectLoader.cs::LoadMapObjects @ Line 13
+[DATABASE] Executing query: SELECT g.ID, g.Name, g.Type, g.PositionX, g.PositionY, g.Rotation, g.Width, g.Height, g.Sides, g.FillR, g.FillG, g.FillB, g.FillA, g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth, g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics, g.Shape FROM MapData s INNER JOIN GameObjects g ON s.ID = g.ID | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 3 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 3 map objects. | MapObjectLoader.cs::LoadMapObjects @ Line 23
+[DEBUG] Loaded map object ID=2. | MapObjectLoader.cs::LoadMapObjects @ Line 34
+[DEBUG] Loaded map object ID=3. | MapObjectLoader.cs::LoadMapObjects @ Line 34
+[DEBUG] Loaded map object ID=4. | MapObjectLoader.cs::LoadMapObjects @ Line 34
+[GAMEOBJECT] MapObjects loaded: 3 total | GameObjectInitializer.cs::InitializeMapObjects @ Line 36
+[GAMEOBJECT] Initializing Farms... | GameObjectInitializer.cs::InitializeFarms @ Line 53
+[GAMEOBJECT] Loading farm prototypes from database... | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 16
+[DATABASE] Executing query:  |                     SELECT |                         g.ID, |                         g.Name, |                         g.Type, |                         g.PositionX, |                         g.PositionY, |                         g.Rotation, |                         g.Width, |                         g.Height, |                         g.Sides, |                         g.FillR, g.FillG, g.FillB, g.FillA, |                         g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |                         g.OutlineWidth, |                         g.IsCollidable, |                         g.IsDestructible, |                         g.Mass, |                         g.StaticPhysics, |                         g.Shape, |                         f.Count |                     FROM GameObjects g |                     INNER JOIN FarmData f ON g.ID = f.ID |                     WHERE g.Type = 'Prototype'; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 4 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 4 farm prototypes. | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 51
+[GAMEOBJECT] Farm Prototype: ID=5, Name=Triangle, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototype: ID=6, Name=Square, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototype: ID=7, Name=Pentagon, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototype: ID=8, Name=Octagon, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototypes loaded: 4 | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 75
+[DATABASE] Loading farm data from database... | FarmDataLoader.cs::LoadFarmData @ Line 31
+[DATABASE] Executing query: SELECT ID, Count FROM FarmData | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 4 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Loaded 4 farm data entries. | FarmDataLoader.cs::LoadFarmData @ Line 43
+[GAMEOBJECT] Farm Prototypes loaded: 4 | GameObjectInitializer.cs::InitializeFarms @ Line 60
+[GAMEOBJECT] Farm Data loaded: 4 | GameObjectInitializer.cs::InitializeFarms @ Line 63
+[GAMEOBJECT] Farm Prototype: ID=5, Name=Triangle, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 68
+[GAMEOBJECT] Farm Prototype: ID=6, Name=Square, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 68
+[GAMEOBJECT] Farm Prototype: ID=7, Name=Pentagon, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 68
+[GAMEOBJECT] Farm Prototype: ID=8, Name=Octagon, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 68
+[GAMEOBJECT] Processing prototype: Triangle, ID: 5. Farms to instantiate: 15 | GameObjectInitializer.cs::InstantiateFarms @ Line 107
+[GAMEOBJECT] Instantiating 15 farms for prototype Triangle (ID=5) | GameObjectInitializer.cs::InstantiateFarms @ Line 115
+[GAMEOBJECT] Instantiating farm #0 for prototype: Triangle, ID: 5 | GameObjectInitializer.cs::InstantiateFarms @ Line 127
+[GAMEOBJECT] Processing prototype: Square, ID: 6. Farms to instantiate: 10 | GameObjectInitializer.cs::InstantiateFarms @ Line 107
+[GAMEOBJECT] Instantiating 10 farms for prototype Square (ID=6) | GameObjectInitializer.cs::InstantiateFarms @ Line 115
+[GAMEOBJECT] Instantiating farm #0 for prototype: Square, ID: 6 | GameObjectInitializer.cs::InstantiateFarms @ Line 127
+[GAMEOBJECT] Processing prototype: Pentagon, ID: 7. Farms to instantiate: 4 | GameObjectInitializer.cs::InstantiateFarms @ Line 107
+[GAMEOBJECT] Instantiating 4 farms for prototype Pentagon (ID=7) | GameObjectInitializer.cs::InstantiateFarms @ Line 115
+[GAMEOBJECT] Instantiating farm #0 for prototype: Pentagon, ID: 7 | GameObjectInitializer.cs::InstantiateFarms @ Line 127
+[GAMEOBJECT] Processing prototype: Octagon, ID: 8. Farms to instantiate: 2 | GameObjectInitializer.cs::InstantiateFarms @ Line 107
+[GAMEOBJECT] Instantiating 2 farms for prototype Octagon (ID=8) | GameObjectInitializer.cs::InstantiateFarms @ Line 115
+[GAMEOBJECT] Instantiating farm #0 for prototype: Octagon, ID: 8 | GameObjectInitializer.cs::InstantiateFarms @ Line 127
+[GAMEOBJECT] Farm instantiation completed. Total iterations across all prototypes: 31, Total farms created: 31 | GameObjectInitializer.cs::InstantiateFarms @ Line 133
+[GAMEOBJECT] Farms instantiated: 31 | GameObjectInitializer.cs::InitializeFarms @ Line 75
+[GAMEOBJECT] Farms loaded into game: 31 total | GameObjectInitializer.cs::InitializeFarms @ Line 80
+[GAMEOBJECT] Initializing Agents... | GameObjectInitializer.cs::InitializeAgents @ Line 169
+[GAMEOBJECT] Loading all Agents from database... | AgentLoader.cs::LoadAgents @ Line 64
+[DATABASE] Executing query:  |             SELECT  |             g.ID, |             g.Name, |             g.Type, |             g.PositionX, |             g.PositionY, |             g.Rotation,        -- Ensure this is included for rotation |             g.Width, |             g.Height, |             g.Sides, |             g.FillR, g.FillG, g.FillB, g.FillA, |             g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |             g.OutlineWidth, |             g.IsCollidable, |             g.IsDestructible, |             g.Mass, |             g.StaticPhysics, |             g.Shape, s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed |             FROM Agents s |             INNER JOIN GameObjects g ON s.ID = g.ID; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Retrieved 1 rows from Agents + GameObjects. | AgentLoader.cs::LoadAgents @ Line 79
+[DATABASE] Row keys: ID, Name, Type, PositionX, PositionY, Rotation, Width, Height, Sides, FillR, FillG, FillB, FillA, OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth, IsCollidable, IsDestructible, Mass, StaticPhysics, Shape, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed | AgentLoader.cs::LoadAgents @ Line 83
+[PLAYER] Agent created with TriggerCooldown: 0, SwitchCooldown: 0 | Agent.cs::.ctor @ Line 113
+[GAMEOBJECT] Loaded Agent ID=1, Pos={X:100 Y:100}, Shape=Circle | AgentLoader.cs::LoadAgents @ Line 89
+[GAMEOBJECT] Total agents loaded: 1 | AgentLoader.cs::LoadAgents @ Line 97
+[GAMEOBJECT] Core player set: ID=1, Pos={X:100 Y:100}, Shape=Circle | GameObjectInitializer.cs::InitializeAgents @ Line 181
+[GAMEOBJECT] Agents loaded: 1 total | GameObjectInitializer.cs::InitializeAgents @ Line 183
+[GAMEOBJECT] Initialization complete. Total GameObjects: 35, StaticObjects: 3 | GameObjectInitializer.cs::Initialize @ Line 21
+[DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 45
+[DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, MetaControl, LockMode FROM ControlKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 16 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PHYSICS] Initializing PhysicsManager... | PhysicsManager.cs::Initialize @ Line 24
+[PHYSICS] PhysicsManager initialization complete. | PhysicsManager.cs::Initialize @ Line 26
+[GENERAL] Game initialization complete. | GameInitializer.cs::Initialize @ Line 121
+[GENERAL] SpriteBatch initialized successfully. | GameRenderer.cs::LoadGraphics @ Line 26
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_R | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_G | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_B | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_A | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleRadius | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEBUG] DebugRenderer initialized with color {R:255 G:0 B:0 A:255} and radius 3 | DebugRenderer.cs::Initialize @ Line 42
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[GENERAL] GameRenderer: Graphics and GameObjects loaded successfully. | GameRenderer.cs::LoadGraphics @ Line 49
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: TriggerCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PLAYER] TriggerCooldown loaded: 0.5 | Agent.cs::LoadTriggerCooldown @ Line 126
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PLAYER] SwitchCooldown loaded: 0.1 | Agent.cs::LoadSwitchCooldown @ Line 146
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 16 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 63
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[UI] [ResizeBarStart] Handle[Horizontal] Depth=2 Bounds={X:938 Y:472 Width:462 Height:8} Node=Split(Horizontal, ratio=0.500, bounds={X:938 Y:0 Width:462 Height:952}) First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:476}) Second=Block(id=notes, bounds={X:938 Y:476 Width:462 Height:476}) Mouse={X:1040 Y:474} | BlockManager.cs::UpdateResizeBarState @ Line 588
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.500, bounds={X:938 Y:0 Width:462 Height:952}) Prev=0.500 New=0.498 RelativePos=474 Bounds={X:938 Y:0 Width:462 Height:952} Mouse={X:1040 Y:474} First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:476}) Second=Block(id=notes, bounds={X:938 Y:476 Width:462 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.498, bounds={X:938 Y:0 Width:462 Height:952}) Prev=0.498 New=0.499 RelativePos=475 Bounds={X:938 Y:0 Width:462 Height:952} Mouse={X:1041 Y:475} First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:474}) Second=Block(id=notes, bounds={X:938 Y:474 Width:462 Height:478}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.499, bounds={X:938 Y:0 Width:462 Height:952}) Prev=0.499 New=0.503 RelativePos=479 Bounds={X:938 Y:0 Width:462 Height:952} Mouse={X:1042 Y:479} First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:475}) Second=Block(id=notes, bounds={X:938 Y:475 Width:462 Height:477}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.503, bounds={X:938 Y:0 Width:462 Height:952}) Prev=0.503 New=0.508 RelativePos=484 Bounds={X:938 Y:0 Width:462 Height:952} Mouse={X:1043 Y:484} First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:479}) Second=Block(id=notes, bounds={X:938 Y:479 Width:462 Height:473}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.508, bounds={X:938 Y:0 Width:462 Height:952}) Prev=0.508 New=0.513 RelativePos=488 Bounds={X:938 Y:0 Width:462 Height:952} Mouse={X:1044 Y:488} First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:484}) Second=Block(id=notes, bounds={X:938 Y:484 Width:462 Height:468}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.513, bounds={X:938 Y:0 Width:462 Height:952}) Prev=0.513 New=0.529 RelativePos=504 Bounds={X:938 Y:0 Width:462 Height:952} Mouse={X:1044 Y:504} First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:488}) Second=Block(id=notes, bounds={X:938 Y:488 Width:462 Height:464}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarEnd] Handle[Horizontal] Depth=2 Bounds={X:938 Y:500 Width:462 Height:8} Node=Split(Horizontal, ratio=0.529, bounds={X:938 Y:0 Width:462 Height:952}) First=Block(id=controls, bounds={X:938 Y:0 Width:462 Height:504}) Second=Block(id=notes, bounds={X:938 Y:504 Width:462 Height:448}) | BlockManager.cs::UpdateResizeBarState @ Line 560
+[UI] [ResizeLayoutDelta] Controls: {X:938 Y:0 Width:462 Height:476} -> {X:938 Y:0 Width:462 Height:504} | Notes: {X:938 Y:476 Width:462 Height:476} -> {X:938 Y:504 Width:462 Height:448} | BlockManager.cs::LogResizeBlockDeltas @ Line 3009
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to False from True | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[UI] [ResizeBarStart] Handle[Horizontal] Depth=1 Bounds={X:938 Y:948 Width:462 Height:8} Node=Split(Horizontal, ratio=0.680, bounds={X:938 Y:0 Width:462 Height:1400}) First=Split(Horizontal, ratio=0.529, bounds={X:938 Y:0 Width:462 Height:952}) Second=Split(Horizontal, ratio=0.420, bounds={X:938 Y:952 Width:462 Height:448}) Mouse={X:1116 Y:948} | BlockManager.cs::UpdateResizeBarState @ Line 588
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.680, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.680 New=0.677 RelativePos=948 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1116 Y:948} First=Split(Horizontal, ratio=0.529, bounds={X:938 Y:0 Width:462 Height:952}) Second=Split(Horizontal, ratio=0.420, bounds={X:938 Y:952 Width:462 Height:448}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.677, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.677 New=0.676 RelativePos=947 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1116 Y:947} First=Split(Horizontal, ratio=0.532, bounds={X:938 Y:0 Width:462 Height:948}) Second=Split(Horizontal, ratio=0.425, bounds={X:938 Y:948 Width:462 Height:452}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.676, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.676 New=0.672 RelativePos=941 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1116 Y:941} First=Split(Horizontal, ratio=0.532, bounds={X:938 Y:0 Width:462 Height:947}) Second=Split(Horizontal, ratio=0.426, bounds={X:938 Y:947 Width:462 Height:453}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.672, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.672 New=0.663 RelativePos=928 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1117 Y:928} First=Split(Horizontal, ratio=0.536, bounds={X:938 Y:0 Width:462 Height:941}) Second=Split(Horizontal, ratio=0.434, bounds={X:938 Y:941 Width:462 Height:459}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.663, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.663 New=0.654 RelativePos=915 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1119 Y:915} First=Split(Horizontal, ratio=0.543, bounds={X:938 Y:0 Width:462 Height:928}) Second=Split(Horizontal, ratio=0.449, bounds={X:938 Y:928 Width:462 Height:472}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.654, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.654 New=0.639 RelativePos=894 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1123 Y:894} First=Split(Horizontal, ratio=0.551, bounds={X:938 Y:0 Width:462 Height:915}) Second=Split(Horizontal, ratio=0.464, bounds={X:938 Y:915 Width:462 Height:485}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.639, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.639 New=0.626 RelativePos=877 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1128 Y:877} First=Split(Horizontal, ratio=0.564, bounds={X:938 Y:0 Width:462 Height:894}) Second=Split(Horizontal, ratio=0.486, bounds={X:938 Y:894 Width:462 Height:506}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.626, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.626 New=0.617 RelativePos=864 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1132 Y:864} First=Split(Horizontal, ratio=0.575, bounds={X:938 Y:0 Width:462 Height:877}) Second=Split(Horizontal, ratio=0.503, bounds={X:938 Y:877 Width:462 Height:523}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.617, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.617 New=0.608 RelativePos=851 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1133 Y:851} First=Split(Horizontal, ratio=0.583, bounds={X:938 Y:0 Width:462 Height:864}) Second=Split(Horizontal, ratio=0.515, bounds={X:938 Y:864 Width:462 Height:536}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.608, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.608 New=0.602 RelativePos=843 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1134 Y:843} First=Split(Horizontal, ratio=0.592, bounds={X:938 Y:0 Width:462 Height:851}) Second=Split(Horizontal, ratio=0.526, bounds={X:938 Y:851 Width:462 Height:549}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.602, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.602 New=0.596 RelativePos=834 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1135 Y:834} First=Split(Horizontal, ratio=0.598, bounds={X:938 Y:0 Width:462 Height:843}) Second=Split(Horizontal, ratio=0.533, bounds={X:938 Y:843 Width:462 Height:557}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.596, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.596 New=0.585 RelativePos=819 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1135 Y:819} First=Split(Horizontal, ratio=0.604, bounds={X:938 Y:0 Width:462 Height:834}) Second=Split(Horizontal, ratio=0.541, bounds={X:938 Y:834 Width:462 Height:566}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.585, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.585 New=0.579 RelativePos=810 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1136 Y:810} First=Split(Horizontal, ratio=0.615, bounds={X:938 Y:0 Width:462 Height:819}) Second=Split(Horizontal, ratio=0.552, bounds={X:938 Y:819 Width:462 Height:581}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.579, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.579 New=0.571 RelativePos=800 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1137 Y:800} First=Split(Horizontal, ratio=0.622, bounds={X:938 Y:0 Width:462 Height:810}) Second=Split(Horizontal, ratio=0.559, bounds={X:938 Y:810 Width:462 Height:590}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.571, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.571 New=0.565 RelativePos=791 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1138 Y:791} First=Split(Horizontal, ratio=0.630, bounds={X:938 Y:0 Width:462 Height:800}) Second=Split(Horizontal, ratio=0.567, bounds={X:938 Y:800 Width:462 Height:600}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.565, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.565 New=0.556 RelativePos=778 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1139 Y:778} First=Split(Horizontal, ratio=0.637, bounds={X:938 Y:0 Width:462 Height:791}) Second=Split(Horizontal, ratio=0.573, bounds={X:938 Y:791 Width:462 Height:609}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.556, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.556 New=0.548 RelativePos=767 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1140 Y:767} First=Split(Horizontal, ratio=0.648, bounds={X:938 Y:0 Width:462 Height:778}) Second=Split(Horizontal, ratio=0.582, bounds={X:938 Y:778 Width:462 Height:622}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.548, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.548 New=0.533 RelativePos=746 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1142 Y:746} First=Split(Horizontal, ratio=0.657, bounds={X:938 Y:0 Width:462 Height:767}) Second=Split(Horizontal, ratio=0.589, bounds={X:938 Y:767 Width:462 Height:633}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.533, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.533 New=0.525 RelativePos=735 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1142 Y:735} First=Split(Horizontal, ratio=0.676, bounds={X:938 Y:0 Width:462 Height:746}) Second=Split(Horizontal, ratio=0.602, bounds={X:938 Y:746 Width:462 Height:654}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.525, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.525 New=0.521 RelativePos=729 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1142 Y:729} First=Split(Horizontal, ratio=0.686, bounds={X:938 Y:0 Width:462 Height:735}) Second=Split(Horizontal, ratio=0.609, bounds={X:938 Y:735 Width:462 Height:665}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.521, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.521 New=0.519 RelativePos=727 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1142 Y:727} First=Split(Horizontal, ratio=0.691, bounds={X:938 Y:0 Width:462 Height:729}) Second=Split(Horizontal, ratio=0.613, bounds={X:938 Y:729 Width:462 Height:671}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.519, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.519 New=0.519 RelativePos=726 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1142 Y:726} First=Split(Horizontal, ratio=0.693, bounds={X:938 Y:0 Width:462 Height:727}) Second=Split(Horizontal, ratio=0.614, bounds={X:938 Y:727 Width:462 Height:673}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.519, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.519 New=0.518 RelativePos=725 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1142 Y:725} First=Split(Horizontal, ratio=0.694, bounds={X:938 Y:0 Width:462 Height:726}) Second=Split(Horizontal, ratio=0.614, bounds={X:938 Y:726 Width:462 Height:674}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.518, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.518 New=0.514 RelativePos=720 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1143 Y:720} First=Split(Horizontal, ratio=0.695, bounds={X:938 Y:0 Width:462 Height:725}) Second=Split(Horizontal, ratio=0.615, bounds={X:938 Y:725 Width:462 Height:675}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.514, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.514 New=0.509 RelativePos=712 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1144 Y:712} First=Split(Horizontal, ratio=0.700, bounds={X:938 Y:0 Width:462 Height:720}) Second=Split(Horizontal, ratio=0.618, bounds={X:938 Y:720 Width:462 Height:680}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.509, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.509 New=0.504 RelativePos=706 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1144 Y:706} First=Split(Horizontal, ratio=0.708, bounds={X:938 Y:0 Width:462 Height:712}) Second=Split(Horizontal, ratio=0.622, bounds={X:938 Y:712 Width:462 Height:688}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.504, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.504 New=0.501 RelativePos=701 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:701} First=Split(Horizontal, ratio=0.714, bounds={X:938 Y:0 Width:462 Height:706}) Second=Split(Horizontal, ratio=0.625, bounds={X:938 Y:706 Width:462 Height:694}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.501, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.501 New=0.500 RelativePos=700 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:700} First=Split(Horizontal, ratio=0.719, bounds={X:938 Y:0 Width:462 Height:701}) Second=Split(Horizontal, ratio=0.628, bounds={X:938 Y:701 Width:462 Height:699}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.500, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.500 New=0.499 RelativePos=699 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:699} First=Split(Horizontal, ratio=0.720, bounds={X:938 Y:0 Width:462 Height:700}) Second=Split(Horizontal, ratio=0.629, bounds={X:938 Y:700 Width:462 Height:700}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.499, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.499 New=0.499 RelativePos=698 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:698} First=Split(Horizontal, ratio=0.721, bounds={X:938 Y:0 Width:462 Height:699}) Second=Split(Horizontal, ratio=0.629, bounds={X:938 Y:699 Width:462 Height:701}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.499, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.499 New=0.497 RelativePos=696 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:696} First=Split(Horizontal, ratio=0.722, bounds={X:938 Y:0 Width:462 Height:698}) Second=Split(Horizontal, ratio=0.630, bounds={X:938 Y:698 Width:462 Height:702}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.497, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.497 New=0.496 RelativePos=695 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:695} First=Split(Horizontal, ratio=0.724, bounds={X:938 Y:0 Width:462 Height:696}) Second=Split(Horizontal, ratio=0.631, bounds={X:938 Y:696 Width:462 Height:704}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.496, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.496 New=0.499 RelativePos=698 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:698} First=Split(Horizontal, ratio=0.725, bounds={X:938 Y:0 Width:462 Height:695}) Second=Split(Horizontal, ratio=0.631, bounds={X:938 Y:695 Width:462 Height:705}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.499, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.499 New=0.502 RelativePos=703 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:703} First=Split(Horizontal, ratio=0.722, bounds={X:938 Y:0 Width:462 Height:698}) Second=Split(Horizontal, ratio=0.630, bounds={X:938 Y:698 Width:462 Height:702}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.502, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.502 New=0.506 RelativePos=708 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:708} First=Split(Horizontal, ratio=0.717, bounds={X:938 Y:0 Width:462 Height:703}) Second=Split(Horizontal, ratio=0.627, bounds={X:938 Y:703 Width:462 Height:697}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.506, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.506 New=0.510 RelativePos=714 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:714} First=Split(Horizontal, ratio=0.712, bounds={X:938 Y:0 Width:462 Height:708}) Second=Split(Horizontal, ratio=0.624, bounds={X:938 Y:708 Width:462 Height:692}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.510, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.510 New=0.514 RelativePos=720 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1146 Y:720} First=Split(Horizontal, ratio=0.706, bounds={X:938 Y:0 Width:462 Height:714}) Second=Split(Horizontal, ratio=0.621, bounds={X:938 Y:714 Width:462 Height:686}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.514, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.514 New=0.526 RelativePos=737 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1147 Y:737} First=Split(Horizontal, ratio=0.700, bounds={X:938 Y:0 Width:462 Height:720}) Second=Split(Horizontal, ratio=0.618, bounds={X:938 Y:720 Width:462 Height:680}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.526, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.526 New=0.536 RelativePos=750 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1148 Y:750} First=Split(Horizontal, ratio=0.684, bounds={X:938 Y:0 Width:462 Height:737}) Second=Split(Horizontal, ratio=0.608, bounds={X:938 Y:737 Width:462 Height:663}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.536, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.536 New=0.545 RelativePos=763 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1150 Y:763} First=Split(Horizontal, ratio=0.672, bounds={X:938 Y:0 Width:462 Height:750}) Second=Split(Horizontal, ratio=0.600, bounds={X:938 Y:750 Width:462 Height:650}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.545, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.545 New=0.555 RelativePos=777 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1151 Y:777} First=Split(Horizontal, ratio=0.661, bounds={X:938 Y:0 Width:462 Height:763}) Second=Split(Horizontal, ratio=0.592, bounds={X:938 Y:763 Width:462 Height:637}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.555, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.555 New=0.569 RelativePos=797 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1152 Y:797} First=Split(Horizontal, ratio=0.649, bounds={X:938 Y:0 Width:462 Height:777}) Second=Split(Horizontal, ratio=0.583, bounds={X:938 Y:777 Width:462 Height:623}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.569, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.569 New=0.579 RelativePos=810 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1154 Y:810} First=Split(Horizontal, ratio=0.632, bounds={X:938 Y:0 Width:462 Height:797}) Second=Split(Horizontal, ratio=0.569, bounds={X:938 Y:797 Width:462 Height:603}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.579, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.579 New=0.591 RelativePos=827 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1155 Y:827} First=Split(Horizontal, ratio=0.622, bounds={X:938 Y:0 Width:462 Height:810}) Second=Split(Horizontal, ratio=0.559, bounds={X:938 Y:810 Width:462 Height:590}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.591, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.591 New=0.596 RelativePos=834 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1156 Y:834} First=Split(Horizontal, ratio=0.609, bounds={X:938 Y:0 Width:462 Height:827}) Second=Split(Horizontal, ratio=0.546, bounds={X:938 Y:827 Width:462 Height:573}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.596, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.596 New=0.604 RelativePos=846 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1157 Y:846} First=Split(Horizontal, ratio=0.604, bounds={X:938 Y:0 Width:462 Height:834}) Second=Split(Horizontal, ratio=0.541, bounds={X:938 Y:834 Width:462 Height:566}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.604, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.604 New=0.609 RelativePos=852 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1157 Y:852} First=Split(Horizontal, ratio=0.596, bounds={X:938 Y:0 Width:462 Height:846}) Second=Split(Horizontal, ratio=0.531, bounds={X:938 Y:846 Width:462 Height:554}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.609, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.609 New=0.612 RelativePos=857 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1157 Y:857} First=Split(Horizontal, ratio=0.592, bounds={X:938 Y:0 Width:462 Height:852}) Second=Split(Horizontal, ratio=0.526, bounds={X:938 Y:852 Width:462 Height:548}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.612, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.612 New=0.615 RelativePos=861 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1157 Y:861} First=Split(Horizontal, ratio=0.588, bounds={X:938 Y:0 Width:462 Height:857}) Second=Split(Horizontal, ratio=0.521, bounds={X:938 Y:857 Width:462 Height:543}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.615, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.615 New=0.617 RelativePos=864 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1158 Y:864} First=Split(Horizontal, ratio=0.585, bounds={X:938 Y:0 Width:462 Height:861}) Second=Split(Horizontal, ratio=0.518, bounds={X:938 Y:861 Width:462 Height:539}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.617, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.617 New=0.619 RelativePos=866 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1158 Y:866} First=Split(Horizontal, ratio=0.583, bounds={X:938 Y:0 Width:462 Height:864}) Second=Split(Horizontal, ratio=0.515, bounds={X:938 Y:864 Width:462 Height:536}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.619, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.619 New=0.621 RelativePos=870 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1158 Y:870} First=Split(Horizontal, ratio=0.582, bounds={X:938 Y:0 Width:462 Height:866}) Second=Split(Horizontal, ratio=0.513, bounds={X:938 Y:866 Width:462 Height:534}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.621, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.621 New=0.624 RelativePos=874 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1159 Y:874} First=Split(Horizontal, ratio=0.579, bounds={X:938 Y:0 Width:462 Height:870}) Second=Split(Horizontal, ratio=0.509, bounds={X:938 Y:870 Width:462 Height:530}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.624, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.624 New=0.628 RelativePos=879 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1160 Y:879} First=Split(Horizontal, ratio=0.577, bounds={X:938 Y:0 Width:462 Height:874}) Second=Split(Horizontal, ratio=0.506, bounds={X:938 Y:874 Width:462 Height:526}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.628, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.628 New=0.632 RelativePos=885 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1161 Y:885} First=Split(Horizontal, ratio=0.573, bounds={X:938 Y:0 Width:462 Height:879}) Second=Split(Horizontal, ratio=0.501, bounds={X:938 Y:879 Width:462 Height:521}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.632, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.632 New=0.634 RelativePos=888 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1162 Y:888} First=Split(Horizontal, ratio=0.569, bounds={X:938 Y:0 Width:462 Height:885}) Second=Split(Horizontal, ratio=0.495, bounds={X:938 Y:885 Width:462 Height:515}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.634, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.634 New=0.637 RelativePos=892 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1163 Y:892} First=Split(Horizontal, ratio=0.568, bounds={X:938 Y:0 Width:462 Height:888}) Second=Split(Horizontal, ratio=0.492, bounds={X:938 Y:888 Width:462 Height:512}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.637, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.637 New=0.641 RelativePos=897 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1163 Y:897} First=Split(Horizontal, ratio=0.565, bounds={X:938 Y:0 Width:462 Height:892}) Second=Split(Horizontal, ratio=0.488, bounds={X:938 Y:892 Width:462 Height:508}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.641, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.641 New=0.646 RelativePos=905 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1166 Y:905} First=Split(Horizontal, ratio=0.562, bounds={X:938 Y:0 Width:462 Height:897}) Second=Split(Horizontal, ratio=0.483, bounds={X:938 Y:897 Width:462 Height:503}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.646, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.646 New=0.649 RelativePos=908 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1166 Y:908} First=Split(Horizontal, ratio=0.557, bounds={X:938 Y:0 Width:462 Height:905}) Second=Split(Horizontal, ratio=0.475, bounds={X:938 Y:905 Width:462 Height:495}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.649, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.649 New=0.649 RelativePos=909 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1167 Y:909} First=Split(Horizontal, ratio=0.555, bounds={X:938 Y:0 Width:462 Height:908}) Second=Split(Horizontal, ratio=0.472, bounds={X:938 Y:908 Width:462 Height:492}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
+[UI] [ResizeBarEnd] Handle[Horizontal] Depth=1 Bounds={X:938 Y:905 Width:462 Height:8} Node=Split(Horizontal, ratio=0.649, bounds={X:938 Y:0 Width:462 Height:1400}) First=Split(Horizontal, ratio=0.554, bounds={X:938 Y:0 Width:462 Height:909}) Second=Split(Horizontal, ratio=0.470, bounds={X:938 Y:909 Width:462 Height:491}) | BlockManager.cs::UpdateResizeBarState @ Line 560
+[UI] [ResizeLayoutDelta] Color Scheme: {X:938 Y:952 Width:462 Height:188} -> {X:938 Y:909 Width:462 Height:231} | Notes: {X:938 Y:504 Width:462 Height:448} -> {X:938 Y:504 Width:462 Height:405} | BlockManager.cs::LogResizeBlockDeltas @ Line 3009
+[UI] Exit requested. Press the Exit key again to confirm. | ActionHandler.cs::Tickwise_CheckActions @ Line 38
+[UI] Exit confirmed. Calling GameCloser. | ActionHandler.cs::Tickwise_CheckActions @ Line 31
+[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'BlockMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'HoldInputs' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103

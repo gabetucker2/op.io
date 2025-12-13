@@ -1743,9 +1743,7 @@ namespace op.io
 
             if (_draggingBlock != null)
             {
-                Rectangle floating = new(_mousePosition.X - _dragOffset.X, _mousePosition.Y - _dragOffset.Y, _draggingStartBounds.Width, _draggingStartBounds.Height);
-                DrawRect(spriteBatch, floating, UIStyle.BlockBackground * 0.75f);
-                DrawRectOutline(spriteBatch, floating, UIStyle.AccentColor * 0.8f, UIStyle.DragOutlineThickness);
+                DrawFloatingBlockPreview(spriteBatch, dragBarHeight);
             }
 
             if (_dropPreview.HasValue)
@@ -1924,6 +1922,27 @@ namespace op.io
 
                 DrawRect(spriteBatch, bounds, color);
             }
+        }
+
+        private static void DrawFloatingBlockPreview(SpriteBatch spriteBatch, int dragBarHeight)
+        {
+            Rectangle floating = new(_mousePosition.X - _dragOffset.X, _mousePosition.Y - _dragOffset.Y, _draggingStartBounds.Width, _draggingStartBounds.Height);
+            if (floating.Width <= 0 || floating.Height <= 0)
+            {
+                return;
+            }
+
+            DrawRect(spriteBatch, floating, UIStyle.BlockBackground * 0.75f);
+
+            if (dragBarHeight > 0)
+            {
+                int headerHeight = Math.Min(dragBarHeight, floating.Height);
+                Rectangle header = new(floating.X, floating.Y, floating.Width, headerHeight);
+                DrawRect(spriteBatch, header, UIStyle.HeaderBackground * 0.95f);
+                DrawRectOutline(spriteBatch, header, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+            }
+
+            DrawRectOutline(spriteBatch, floating, UIStyle.AccentColor * 0.8f, UIStyle.DragOutlineThickness);
         }
 
         private static void DrawBlockContent(SpriteBatch spriteBatch, DockBlock block, int dragBarHeight)

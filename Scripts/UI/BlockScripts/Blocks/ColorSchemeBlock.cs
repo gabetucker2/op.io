@@ -178,19 +178,19 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void EnsureRows()
         {
+            Dictionary<string, ColorRow> existing = _rows.ToDictionary(r => r.Key, r => r, StringComparer.OrdinalIgnoreCase);
+
             _rows.Clear();
             foreach (ColorOption option in ColorScheme.GetOrderedOptions())
             {
-                _rows.Add(new ColorRow
-                {
-                    Role = option.Role,
-                    Key = option.Key,
-                    Label = option.Label,
-                    Category = option.Category,
-                    Value = option.Value,
-                    Bounds = Rectangle.Empty,
-                    IsDragging = false
-                });
+                ColorRow row = existing.TryGetValue(option.Key, out ColorRow cached) ? cached : default;
+                row.Role = option.Role;
+                row.Key = option.Key;
+                row.Label = option.Label;
+                row.Category = option.Category;
+                row.Value = option.Value;
+                row.IsDragging = false;
+                _rows.Add(row);
             }
         }
 
@@ -698,24 +698,44 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void BuildEditorLayout(Rectangle contentBounds)
         {
-            int overlayWidth = Math.Min(Math.Max(320, contentBounds.Width - 20), 540);
-            int overlayHeight = Math.Min(Math.Max(280, contentBounds.Height - 20), 440);
+            int maxOverlayWidth = Math.Max(0, contentBounds.Width - (EditorPadding * 2));
+            int maxOverlayHeight = Math.Max(0, contentBounds.Height - (EditorPadding * 2));
+
+            int desiredWidth = Math.Clamp(contentBounds.Width - 20, 320, 540);
+            int desiredHeight = Math.Clamp(contentBounds.Height - 20, 280, 440);
+
+            int overlayWidth = Math.Max(0, Math.Min(desiredWidth, maxOverlayWidth));
+            int overlayHeight = Math.Max(0, Math.Min(desiredHeight, maxOverlayHeight));
+
+            if (overlayWidth <= 0 || overlayHeight <= 0)
+            {
+                _editor.Bounds = Rectangle.Empty;
+                _editor.WheelBounds = Rectangle.Empty;
+                _editor.SliderBounds = Rectangle.Empty;
+                _editor.PreviewBounds = Rectangle.Empty;
+                _editor.HexBounds = Rectangle.Empty;
+                _editor.ApplyBounds = Rectangle.Empty;
+                _editor.CancelBounds = Rectangle.Empty;
+                return;
+            }
 
             int overlayX = contentBounds.X + (contentBounds.Width - overlayWidth) / 2;
             int overlayY = contentBounds.Y + (contentBounds.Height - overlayHeight) / 2;
             _editor.Bounds = new Rectangle(overlayX, overlayY, overlayWidth, overlayHeight);
 
-            int wheelSize = Math.Clamp(Math.Min(overlayWidth - 180, overlayHeight - 120), WheelMinSize, WheelMaxSize);
+            int availableWheel = Math.Min(overlayWidth - 180, overlayHeight - 120);
+            int wheelSize = Math.Min(WheelMaxSize, Math.Max(0, availableWheel));
             int wheelX = overlayX + EditorPadding;
             int wheelY = overlayY + 48;
             _editor.WheelBounds = new Rectangle(wheelX, wheelY, wheelSize, wheelSize);
             _editor.SliderBounds = new Rectangle(_editor.WheelBounds.Right + SliderMargin, wheelY, SliderWidth, wheelSize);
 
-            int previewWidth = 120;
-            _editor.PreviewBounds = new Rectangle(_editor.SliderBounds.Right + SliderMargin, wheelY, previewWidth, 36);
+            int previewWidth = Math.Max(0, Math.Min(120, overlayWidth - (_editor.SliderBounds.Right - overlayX) - (EditorPadding * 2)));
+            _editor.PreviewBounds = previewWidth > 0 ? new Rectangle(_editor.SliderBounds.Right + SliderMargin, wheelY, previewWidth, 36) : Rectangle.Empty;
 
             int hexY = _editor.WheelBounds.Bottom + EditorPadding;
-            _editor.HexBounds = new Rectangle(overlayX + EditorPadding, hexY, overlayWidth - (EditorPadding * 2), 30);
+            int hexWidth = Math.Max(0, overlayWidth - (EditorPadding * 2));
+            _editor.HexBounds = new Rectangle(overlayX + EditorPadding, hexY, hexWidth, 30);
 
             int buttonsY = _editor.Bounds.Bottom - ButtonHeight - EditorPadding;
             _editor.ApplyBounds = new Rectangle(_editor.Bounds.Right - ButtonWidth - EditorPadding, buttonsY, ButtonWidth, ButtonHeight);

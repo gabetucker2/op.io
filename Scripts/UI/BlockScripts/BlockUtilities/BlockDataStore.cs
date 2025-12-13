@@ -181,7 +181,7 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
                 using var command = new SQLiteCommand($"SELECT IsLocked FROM {tableName} WHERE RowKey = @lockKey LIMIT 1;", connection);
                 command.Parameters.AddWithValue("@lockKey", LockRowKey);
                 object result = command.ExecuteScalar();
-                return DecodeBool(result, false);
+                return DecodeBool(result, IsLockedByDefault(blockKind));
             }
             catch (Exception ex)
             {
@@ -359,8 +359,10 @@ CREATE TABLE IF NOT EXISTS {tableName} (
                 MigrateLegacyTable(targetConnection, blockKind, tableName);
                 MigrateLegacyLockRow(targetConnection, tableName);
 
-                using var ensureLockRow = new SQLiteCommand($"INSERT OR IGNORE INTO {tableName} (RowKey, IsLocked) VALUES (@lockKey, 0);", targetConnection);
+                int defaultLockValue = IsLockedByDefault(blockKind) ? 1 : 0;
+                using var ensureLockRow = new SQLiteCommand($"INSERT OR IGNORE INTO {tableName} (RowKey, IsLocked) VALUES (@lockKey, @isLocked);", targetConnection);
                 ensureLockRow.Parameters.AddWithValue("@lockKey", LockRowKey);
+                ensureLockRow.Parameters.AddWithValue("@isLocked", defaultLockValue);
                 ensureLockRow.ExecuteNonQuery();
 
                 _tableReady[tableName] = true;
@@ -566,6 +568,11 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
         private static string NormalizeRowKey(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static bool IsLockedByDefault(DockBlockKind blockKind)
+        {
+            return blockKind == DockBlockKind.ColorScheme;
         }
 
         private static int DecodeInt(object rawValue, int fallback)
