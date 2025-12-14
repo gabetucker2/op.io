@@ -48,10 +48,10 @@ INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SprintSpeedMultiplier',
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CrouchSpeedMultiplier', '0.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('TriggerCooldown', '0.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.1');
+INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CursorFollowDeadzonePixels', '10');
 
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '25');
 
 ---------------------------------------------------------------------------------------------------------------------------
-
 
 

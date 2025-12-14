@@ -1,4 +1,4 @@
-Log created at 2025-12-14T14:04:23.3610117-05:00
+Log created at 2025-12-14T15:10:29.4679806-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 146
@@ -379,6 +379,8 @@ Log created at 2025-12-14T14:04:23.3610117-05:00
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
@@ -498,8 +500,6 @@ Log created at 2025-12-14T14:04:23.3610117-05:00
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
-[PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
@@ -515,6 +515,8 @@ Log created at 2025-12-14T14:04:23.3610117-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @whereValue LIMIT 1; with whereValue: CursorFollowDeadzonePixels | DatabaseFetch.cs::GetSetting @ Line 40
+[DATABASE] Successfully retrieved setting 'CursorFollowDeadzonePixels' from 'ControlSettings'. | DatabaseFetch.cs::GetSetting @ Line 49
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
@@ -524,6 +526,10 @@ Log created at 2025-12-14T14:04:23.3610117-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: SprintSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [UI] Exit hotkey triggered. Closing game. | ActionHandler.cs::Tickwise_CheckActions @ Line 23
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82

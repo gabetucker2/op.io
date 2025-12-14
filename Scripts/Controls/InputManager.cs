@@ -10,6 +10,8 @@ namespace op.io
     {
         private const string BlockMenuKey = ControlKeyMigrations.BlockMenuKey;
         private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
+        private const string CursorFollowDeadzoneSettingKey = "CursorFollowDeadzonePixels";
+        private const float CursorFollowDeadzoneDefaultPixels = 3f;
 
         // Dictionary to store control key mappings (keyboard and mouse, including combos)
         private static readonly Dictionary<string, ControlBinding> _controlBindings = new(StringComparer.OrdinalIgnoreCase);
@@ -20,6 +22,7 @@ namespace op.io
         private static float _holdLatchRotation;
         internal static bool IsHoldLatchActive => _holdLatchEnabled;
         private static bool _isControlKeyLoaded = false;
+        private static float _cursorFollowDeadzonePixels = -1f;
         private static readonly Dictionary<string, Keys[]> _modifierAliases = new(StringComparer.OrdinalIgnoreCase)
         {
             ["Shift"] = new[] { Keys.LeftShift, Keys.RightShift },
@@ -133,15 +136,24 @@ namespace op.io
             KeyboardState state = Keyboard.GetState();
             Vector2 direction = Vector2.Zero;
 
-            if (!(IsInputActive("MoveTowardsCursor") && IsInputActive("MoveAwayFromCursor")) && (IsInputActive("MoveTowardsCursor") || IsInputActive("MoveAwayFromCursor")))
+            bool moveTowardsCursor = IsInputActive("MoveTowardsCursor");
+            bool moveAwayFromCursor = IsInputActive("MoveAwayFromCursor");
+            bool bothCursorMovesActive = moveTowardsCursor && moveAwayFromCursor;
+
+            if (!bothCursorMovesActive && (moveTowardsCursor || moveAwayFromCursor))
             {
+                if (moveTowardsCursor && !IsCursorOutsideFollowDeadzone())
+                {
+                    moveTowardsCursor = false;
+                }
+
                 float rotation = Core.Instance.Player.Rotation;
-                if (IsInputActive("MoveTowardsCursor"))
+                if (moveTowardsCursor)
                 {
                     direction.X += MathF.Cos(rotation);
                     direction.Y += MathF.Sin(rotation);
                 }
-                if (IsInputActive("MoveAwayFromCursor"))
+                if (moveAwayFromCursor)
                 {
                     direction.X -= MathF.Cos(rotation);
                     direction.Y -= MathF.Sin(rotation);
@@ -176,6 +188,43 @@ namespace op.io
             }
 
             return multiplier;
+        }
+
+        private static bool IsCursorOutsideFollowDeadzone()
+        {
+            if (Core.Instance?.Player == null)
+            {
+                return true;
+            }
+
+            float deadzone = GetCursorFollowDeadzonePixels();
+            Vector2 cursorPosition = MouseFunctions.GetMousePosition();
+            Vector2 playerPosition = Core.Instance.Player.Position;
+            float distanceSquared = Vector2.DistanceSquared(cursorPosition, playerPosition);
+            return distanceSquared >= deadzone * deadzone;
+        }
+
+        private static float GetCursorFollowDeadzonePixels()
+        {
+            if (_cursorFollowDeadzonePixels > 0)
+            {
+                return _cursorFollowDeadzonePixels;
+            }
+
+            float configured = DatabaseFetch.GetSetting(
+                "ControlSettings",
+                "Value",
+                "SettingKey",
+                CursorFollowDeadzoneSettingKey,
+                CursorFollowDeadzoneDefaultPixels);
+
+            if (configured <= 0)
+            {
+                configured = CursorFollowDeadzoneDefaultPixels;
+            }
+
+            _cursorFollowDeadzonePixels = configured;
+            return _cursorFollowDeadzonePixels;
         }
 
         // Check if a specific input action is active
