@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.BlockUtilities;
+using op.io;
 
 namespace op.io.UI.BlockScripts.Blocks
 {
@@ -18,8 +19,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int SwatchPadding = 8;
         private const int RowVerticalPadding = 6;
         private const int EditorPadding = 14;
-        private const int WheelMinSize = 200;
-        private const int WheelMaxSize = 380;
+        private const int WheelMinSize = 180;
+        private const int WheelMaxSize = 320;
         private const int WheelMinSizeCompact = 64;
         private const int WheelToPreviewGap = 14;
         private const int PreviewHeight = 36;
@@ -34,6 +35,10 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int HexInputHeight = 30;
         private const int LockIndicatorSize = 12;
         private const int LockIndicatorSpacing = 6;
+        private const int EditorMinWidth = 320;
+        private const int EditorMaxWidth = 560;
+        private const int EditorMinHeight = 360;
+        private const int EditorMaxHeight = 620;
 
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly List<ColorRow> _rows = new();
@@ -50,12 +55,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private static ColorEditorState _editor;
         private static KeyboardState _previousKeyboardState;
         private static Point _lastMousePosition;
+        private static Rectangle _lastContentBounds;
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             ColorScheme.Initialize();
             EnsureRows();
             EnsureLineHeight();
+            _lastContentBounds = contentBounds;
             float contentHeight = Math.Max(0f, _rows.Count * _lineHeight);
             _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
 
@@ -111,16 +118,17 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 bool hasRow = TryGetRow(_hoveredRowKey, out ColorRow hoveredRow);
                 bool lockedRow = hasRow && hoveredRow.IsLocked;
-                bool clickedHex = hasRow && hoveredRow.HexBounds != Rectangle.Empty && hoveredRow.HexBounds.Contains(mouseState.Position);
+                bool clickedHex = hasRow && !lockedRow && hoveredRow.HexBounds != Rectangle.Empty && hoveredRow.HexBounds.Contains(mouseState.Position);
                 bool clickedSwatch = hasRow &&
+                    !lockedRow &&
                     hoveredRow.Bounds != Rectangle.Empty &&
                     GetSwatchBounds(hoveredRow.Bounds).Contains(mouseState.Position);
 
-                if (clickedHex && (!lockedRow || !blockLocked))
+                if (clickedHex)
                 {
                     BeginEdit(_hoveredRowKey, focusHexInput: true);
                 }
-                else if (clickedSwatch && (!lockedRow || !blockLocked))
+                else if (clickedSwatch)
                 {
                     BeginEdit(_hoveredRowKey);
                 }
@@ -128,7 +136,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     // dragging handled by BlockDragState
                 }
-                else if (!string.IsNullOrWhiteSpace(_hoveredRowKey) && (!lockedRow || !blockLocked))
+                else if (!string.IsNullOrWhiteSpace(_hoveredRowKey) && !lockedRow)
                 {
                     BeginEdit(_hoveredRowKey);
                 }
@@ -148,6 +156,7 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureRows();
             EnsurePixel(spriteBatch);
             EnsureLineHeight();
+            _lastContentBounds = contentBounds;
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -201,11 +210,18 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             _scrollPanel.Draw(spriteBatch);
+        }
 
-            if (_editor.IsActive)
+        public static void DrawOverlay(SpriteBatch spriteBatch, Rectangle layoutBounds)
+        {
+            if (spriteBatch == null || !_editor.IsActive)
             {
-                DrawEditor(spriteBatch, contentBounds);
+                return;
             }
+
+            Rectangle overlaySpace = layoutBounds != Rectangle.Empty ? layoutBounds : _lastContentBounds;
+            overlaySpace = GetEditorViewport(overlaySpace);
+            DrawEditor(spriteBatch, overlaySpace);
         }
 
         private static void EnsureRows()
@@ -426,6 +442,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            if (target.IsLocked)
+            {
+                return;
+            }
+
             _editor = new ColorEditorState
             {
                 IsActive = true,
@@ -460,7 +481,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            BuildEditorLayout(contentBounds);
+            Rectangle overlayBounds = GetEditorViewport(contentBounds);
+            BuildEditorLayout(overlayBounds);
             if (_editor.HexBounds == Rectangle.Empty)
             {
                 _editor.HexFocused = false;
@@ -567,14 +589,14 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawEditor(SpriteBatch spriteBatch, Rectangle contentBounds)
+        private static void DrawEditor(SpriteBatch spriteBatch, Rectangle overlayBounds)
         {
             if (!_editor.IsActive)
             {
                 return;
             }
 
-            BuildEditorLayout(contentBounds);
+            BuildEditorLayout(overlayBounds);
             EnsurePixel(spriteBatch);
             EnsureColorWheelTexture(spriteBatch.GraphicsDevice, _editor.WheelBounds.Width);
 
@@ -867,16 +889,13 @@ namespace op.io.UI.BlockScripts.Blocks
             return current.IsKeyDown(key) && !previous.IsKeyDown(key);
         }
 
-        private static void BuildEditorLayout(Rectangle contentBounds)
+        private static void BuildEditorLayout(Rectangle availableBounds)
         {
-            int maxOverlayWidth = Math.Max(0, contentBounds.Width - (EditorPadding * 2));
-            int maxOverlayHeight = Math.Max(0, contentBounds.Height - (EditorPadding * 2));
+            int desiredWidth = Math.Clamp(availableBounds.Width - 40, EditorMinWidth, EditorMaxWidth);
+            int desiredHeight = Math.Clamp(availableBounds.Height - 80, EditorMinHeight, EditorMaxHeight);
 
-            int desiredWidth = Math.Clamp(contentBounds.Width - 20, 400, 720);
-            int desiredHeight = Math.Clamp(contentBounds.Height - 20, 420, 720);
-
-            int overlayWidth = Math.Max(0, Math.Min(desiredWidth, maxOverlayWidth));
-            int overlayHeight = Math.Max(0, Math.Min(desiredHeight, maxOverlayHeight));
+            int overlayWidth = Math.Clamp(desiredWidth, EditorMinWidth, EditorMaxWidth);
+            int overlayHeight = Math.Clamp(desiredHeight, EditorMinHeight, EditorMaxHeight);
 
             if (overlayWidth <= 0 || overlayHeight <= 0)
             {
@@ -890,8 +909,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            int overlayX = contentBounds.X + (contentBounds.Width - overlayWidth) / 2;
-            int overlayY = contentBounds.Y + (contentBounds.Height - overlayHeight) / 2;
+            int overlayX = availableBounds.X + (availableBounds.Width - overlayWidth) / 2;
+            int overlayY = availableBounds.Y + (availableBounds.Height - overlayHeight) / 2;
             _editor.Bounds = new Rectangle(overlayX, overlayY, overlayWidth, overlayHeight);
 
             int wheelTopOffset = 48;
@@ -934,6 +953,21 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _editor.ApplyBounds = new Rectangle(_editor.Bounds.Right - ButtonWidth - EditorPadding, buttonsY, ButtonWidth, ButtonHeight);
             _editor.CancelBounds = new Rectangle(_editor.ApplyBounds.X - ButtonWidth - 12, buttonsY, ButtonWidth, ButtonHeight);
+        }
+
+        private static Rectangle GetEditorViewport(Rectangle fallbackBounds)
+        {
+            GraphicsDevice device = Core.Instance?.GraphicsDevice;
+            if (device != null)
+            {
+                Rectangle viewport = device.Viewport.Bounds;
+                if (viewport.Width > 0 && viewport.Height > 0)
+                {
+                    return viewport;
+                }
+            }
+
+            return fallbackBounds;
         }
 
         private static void EnsurePixel(SpriteBatch spriteBatch)

@@ -261,6 +261,7 @@ namespace op.io
                 DrawBlocks(spriteBatch);
             }
 
+            ColorSchemeBlock.DrawOverlay(spriteBatch, _layoutBounds);
             DrawOverlayMenu(spriteBatch);
             ControlsBlock.DrawRebindOverlay(spriteBatch);
             spriteBatch.End();

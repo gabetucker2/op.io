@@ -1,4 +1,4 @@
-Log created at 2025-12-14T09:46:37.5440178-05:00
+Log created at 2025-12-14T11:59:20.4464361-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 146
@@ -379,8 +379,12 @@ Log created at 2025-12-14T09:46:37.5440178-05:00
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
-[PHYSICS] Destroying GameObject ID=21 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=21 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=20 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=20 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
@@ -530,14 +534,8 @@ Log created at 2025-12-14T09:46:37.5440178-05:00
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
-[UI] [ResizeBarStart] Handle[Horizontal] Depth=1 Bounds={X:938 Y:948 Width:462 Height:8} Node=Split(Horizontal, ratio=0.680, bounds={X:938 Y:0 Width:462 Height:1400}) First=Split(Horizontal, ratio=0.500, bounds={X:938 Y:0 Width:462 Height:952}) Second=Split(Horizontal, ratio=0.420, bounds={X:938 Y:952 Width:462 Height:448}) Mouse={X:1182 Y:947} | BlockManager.cs::UpdateResizeBarState @ Line 588
-[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.680, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.680 New=0.676 RelativePos=947 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1182 Y:947} First=Split(Horizontal, ratio=0.500, bounds={X:938 Y:0 Width:462 Height:952}) Second=Split(Horizontal, ratio=0.420, bounds={X:938 Y:952 Width:462 Height:448}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
-[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.676, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.676 New=0.657 RelativePos=920 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1185 Y:920} First=Split(Horizontal, ratio=0.503, bounds={X:938 Y:0 Width:462 Height:947}) Second=Split(Horizontal, ratio=0.426, bounds={X:938 Y:947 Width:462 Height:453}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
-[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.657, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.657 New=0.574 RelativePos=804 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1193 Y:804} First=Split(Horizontal, ratio=0.517, bounds={X:938 Y:0 Width:462 Height:920}) Second=Split(Horizontal, ratio=0.458, bounds={X:938 Y:920 Width:462 Height:480}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
-[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.574, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.574 New=0.507 RelativePos=710 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1195 Y:710} First=Split(Horizontal, ratio=0.592, bounds={X:938 Y:0 Width:462 Height:804}) Second=Split(Horizontal, ratio=0.564, bounds={X:938 Y:804 Width:462 Height:596}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
-[UI] [ResizeBarDrag] Ori=Horizontal Node=Split(Horizontal, ratio=0.507, bounds={X:938 Y:0 Width:462 Height:1400}) Prev=0.507 New=0.495 RelativePos=693 Bounds={X:938 Y:0 Width:462 Height:1400} Mouse={X:1195 Y:693} First=Split(Horizontal, ratio=0.670, bounds={X:938 Y:0 Width:462 Height:710}) Second=Split(Horizontal, ratio=0.623, bounds={X:938 Y:710 Width:462 Height:690}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1257
-[UI] [ResizeBarEnd] Handle[Horizontal] Depth=1 Bounds={X:938 Y:689 Width:462 Height:8} Node=Split(Horizontal, ratio=0.495, bounds={X:938 Y:0 Width:462 Height:1400}) First=Split(Horizontal, ratio=0.687, bounds={X:938 Y:0 Width:462 Height:693}) Second=Split(Horizontal, ratio=0.632, bounds={X:938 Y:693 Width:462 Height:707}) | BlockManager.cs::UpdateResizeBarState @ Line 560
-[UI] [ResizeLayoutDelta] Color Scheme: {X:938 Y:952 Width:462 Height:188} -> {X:938 Y:693 Width:462 Height:447} | Notes: {X:938 Y:476 Width:462 Height:476} -> {X:938 Y:476 Width:462 Height:217} | BlockManager.cs::LogResizeBlockDeltas @ Line 3028
+[PHYSICS] Destroying GameObject ID=18 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=18 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] Exit hotkey triggered. Closing game. | ActionHandler.cs::Tickwise_CheckActions @ Line 23
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
