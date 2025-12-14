@@ -46,13 +46,13 @@ namespace op.io
         public static Color IndicatorActive => ColorScheme.GetColor(ColorRole.IndicatorActive);
         public static Color IndicatorInactive => ColorScheme.GetColor(ColorRole.IndicatorInactive);
 
-        public static Color DangerBackground => ColorScheme.GetColor(ColorRole.DangerBackground);
-        public static Color DangerHoverBackground => ColorScheme.GetColor(ColorRole.DangerHoverBackground);
-        public static Color DangerBorder => ColorScheme.GetColor(ColorRole.DangerBorder);
-        public static Color DangerHoverBorder => ColorScheme.GetColor(ColorRole.DangerHoverBorder);
-        public static Color DangerOverlayBackground => ColorScheme.GetColor(ColorRole.DangerOverlayBackground);
-        public static Color DangerOverlayHoverBackground => ColorScheme.GetColor(ColorRole.DangerOverlayHoverBackground);
-        public static Color DangerOverlayBorder => ColorScheme.GetColor(ColorRole.DangerOverlayBorder);
+        public static Color CloseBackground => ColorScheme.GetColor(ColorRole.CloseBackground);
+        public static Color CloseHoverBackground => ColorScheme.GetColor(ColorRole.CloseHoverBackground);
+        public static Color CloseBorder => ColorScheme.GetColor(ColorRole.CloseBorder);
+        public static Color CloseHoverBorder => ColorScheme.GetColor(ColorRole.CloseHoverBorder);
+        public static Color CloseOverlayBackground => ColorScheme.GetColor(ColorRole.CloseOverlayBackground);
+        public static Color CloseOverlayHoverBackground => ColorScheme.GetColor(ColorRole.CloseOverlayHoverBackground);
+        public static Color CloseOverlayBorder => ColorScheme.GetColor(ColorRole.CloseOverlayBorder);
 
         public static Color LockLockedFill => ColorScheme.GetColor(ColorRole.LockLockedFill);
         public static Color LockLockedHoverFill => ColorScheme.GetColor(ColorRole.LockLockedHoverFill);

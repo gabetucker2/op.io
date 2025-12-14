@@ -18,12 +18,22 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int SwatchPadding = 8;
         private const int RowVerticalPadding = 6;
         private const int EditorPadding = 14;
-        private const int WheelMinSize = 160;
-        private const int WheelMaxSize = 260;
+        private const int WheelMinSize = 200;
+        private const int WheelMaxSize = 380;
+        private const int WheelMinSizeCompact = 64;
+        private const int WheelToPreviewGap = 14;
+        private const int PreviewHeight = 36;
+        private const int PreviewMinHeight = 20;
+        private const int PreviewToHexGap = 10;
+        private const int PreviewLabelAllowance = 14;
+        private const int HexMinHeight = 18;
         private const int SliderWidth = 14;
         private const int SliderMargin = 10;
         private const int ButtonHeight = 30;
         private const int ButtonWidth = 100;
+        private const int HexInputHeight = 30;
+        private const int LockIndicatorSize = 12;
+        private const int LockIndicatorSpacing = 6;
 
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly List<ColorRow> _rows = new();
@@ -46,7 +56,6 @@ namespace op.io.UI.BlockScripts.Blocks
             ColorScheme.Initialize();
             EnsureRows();
             EnsureLineHeight();
-
             float contentHeight = Math.Max(0f, _rows.Count * _lineHeight);
             _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
 
@@ -57,6 +66,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             UpdateRowBounds(listBounds);
+            UIStyle.UIFont valueFont = UIStyle.FontTech;
+            UpdateHexBounds(valueFont);
 
             bool leftDown = mouseState.LeftButton == ButtonState.Pressed;
             bool leftDownPrev = previousMouseState.LeftButton == ButtonState.Pressed;
@@ -68,6 +79,11 @@ namespace op.io.UI.BlockScripts.Blocks
             if (blockLocked && _dragState.IsDragging)
             {
                 _dragState.Reset();
+            }
+
+            if (blockLocked && _editor.IsActive)
+            {
+                CloseEditor(applyChanges: false);
             }
 
             if (_editor.IsActive)
@@ -93,11 +109,26 @@ namespace op.io.UI.BlockScripts.Blocks
             }
             else if (!blockLocked && pointerInsideList && leftClickStarted)
             {
-                if (_dragState.TryStartDrag(_rows, _hoveredRowKey, mouseState))
+                bool hasRow = TryGetRow(_hoveredRowKey, out ColorRow hoveredRow);
+                bool lockedRow = hasRow && hoveredRow.IsLocked;
+                bool clickedHex = hasRow && hoveredRow.HexBounds != Rectangle.Empty && hoveredRow.HexBounds.Contains(mouseState.Position);
+                bool clickedSwatch = hasRow &&
+                    hoveredRow.Bounds != Rectangle.Empty &&
+                    GetSwatchBounds(hoveredRow.Bounds).Contains(mouseState.Position);
+
+                if (clickedHex && (!lockedRow || !blockLocked))
+                {
+                    BeginEdit(_hoveredRowKey, focusHexInput: true);
+                }
+                else if (clickedSwatch && (!lockedRow || !blockLocked))
+                {
+                    BeginEdit(_hoveredRowKey);
+                }
+                else if (_dragState.TryStartDrag(_rows, _hoveredRowKey, mouseState))
                 {
                     // dragging handled by BlockDragState
                 }
-                else if (!string.IsNullOrWhiteSpace(_hoveredRowKey))
+                else if (!string.IsNullOrWhiteSpace(_hoveredRowKey) && (!lockedRow || !blockLocked))
                 {
                     BeginEdit(_hoveredRowKey);
                 }
@@ -154,15 +185,16 @@ namespace op.io.UI.BlockScripts.Blocks
                 bool isDraggingRow = _dragState.IsDragging && string.Equals(row.Key, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
                 if (!isDraggingRow)
                 {
-                    DrawRow(spriteBatch, row, labelFont, valueFont);
+                    DrawRow(spriteBatch, row, labelFont, valueFont, listBounds);
                 }
             }
 
             if (_dragState.IsDragging && _dragState.HasSnapshot)
             {
-                if (_dragState.DropIndicatorBounds != Rectangle.Empty)
+                Rectangle dropIndicator = Rectangle.Intersect(_dragState.DropIndicatorBounds, listBounds);
+                if (dropIndicator.Width > 0 && dropIndicator.Height > 0)
                 {
-                    FillRect(spriteBatch, _dragState.DropIndicatorBounds, ColorPalette.DropIndicator);
+                    FillRect(spriteBatch, dropIndicator, ColorPalette.DropIndicator);
                 }
 
                 DrawDraggingRow(spriteBatch, _dragState.DraggingSnapshot, labelFont, valueFont, listBounds, lineHeight);
@@ -189,7 +221,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 row.Label = option.Label;
                 row.Category = option.Category;
                 row.Value = option.Value;
+                row.IsLocked = option.IsLocked;
                 row.IsDragging = false;
+                row.HexBounds = Rectangle.Empty;
                 _rows.Add(row);
             }
         }
@@ -240,7 +274,7 @@ namespace op.io.UI.BlockScripts.Blocks
             return null;
         }
 
-        private static void DrawRow(SpriteBatch spriteBatch, ColorRow row, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont)
+        private static void DrawRow(SpriteBatch spriteBatch, ColorRow row, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont, Rectangle viewport)
         {
             Rectangle bounds = row.Bounds;
             if (bounds == Rectangle.Empty)
@@ -248,28 +282,61 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            Rectangle visibleBounds = Rectangle.Intersect(bounds, viewport);
+            if (visibleBounds.Width <= 0 || visibleBounds.Height <= 0)
+            {
+                return;
+            }
+
             bool hovered = string.Equals(_hoveredRowKey, row.Key, StringComparison.OrdinalIgnoreCase);
             Color background = hovered ? ColorPalette.RowHover : UIStyle.BlockBackground;
-            FillRect(spriteBatch, bounds, background);
+            FillRect(spriteBatch, visibleBounds, background);
 
-            Rectangle swatch = GetSwatchBounds(bounds);
-            FillRect(spriteBatch, swatch, row.Value);
-            DrawRectOutline(spriteBatch, swatch, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+            Rectangle swatch = GetSwatchBounds(visibleBounds);
+            swatch = Rectangle.Intersect(swatch, viewport);
+            if (swatch.Width > 0 && swatch.Height > 0)
+            {
+                FillRect(spriteBatch, swatch, row.Value);
+                DrawRectOutline(spriteBatch, swatch, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+            }
 
-            float textY = bounds.Y + (bounds.Height - labelFont.LineHeight) / 2f;
-            Vector2 labelPos = new(swatch.Right + SwatchPadding, textY);
+            int swatchRight = swatch.Width > 0 && swatch.Height > 0 ? swatch.Right : visibleBounds.X;
+            float textY = visibleBounds.Y + (visibleBounds.Height - labelFont.LineHeight) / 2f;
+            float labelX = swatchRight + SwatchPadding;
+            if (row.IsLocked)
+            {
+                Rectangle lockBounds = GetLockIndicatorBounds(visibleBounds, labelX);
+                DrawLockIndicator(spriteBatch, lockBounds);
+                labelX += lockBounds.Width + LockIndicatorSpacing;
+            }
+
+            Vector2 labelPos = new(labelX, textY);
             labelFont.DrawString(spriteBatch, row.Label, labelPos, UIStyle.TextColor);
 
             string hex = ColorScheme.ToHex(row.Value);
             Vector2 hexSize = valueFont.MeasureString(hex);
-            float hexY = bounds.Y + (bounds.Height - hexSize.Y) / 2f;
-            Vector2 hexPos = new(bounds.Right - hexSize.X - SwatchPadding, hexY);
+            float hexY = visibleBounds.Y + (visibleBounds.Height - hexSize.Y) / 2f;
+            Rectangle hexBounds = row.HexBounds != Rectangle.Empty ? row.HexBounds : new Rectangle(
+                (int)MathF.Floor(visibleBounds.Right - hexSize.X - SwatchPadding),
+                (int)MathF.Floor(hexY),
+                (int)MathF.Ceiling(hexSize.X),
+                (int)MathF.Ceiling(hexSize.Y));
+
+            bool isHexFocused = _editor.IsActive && _editor.HexFocused && _editor.Role == row.Role;
+            if (isHexFocused)
+            {
+                Rectangle padded = hexBounds;
+                padded.Inflate(4, 2);
+                FillRect(spriteBatch, padded, ColorPalette.DropIndicator);
+            }
+
+            Vector2 hexPos = new(hexBounds.X, hexBounds.Y);
             valueFont.DrawString(spriteBatch, hex, hexPos, UIStyle.MutedTextColor);
         }
 
         private static void DrawDraggingRow(SpriteBatch spriteBatch, ColorRow snapshot, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont, Rectangle listBounds, float lineHeight)
         {
-            Rectangle dragBounds = _dragState.GetDragBounds(listBounds, lineHeight);
+            Rectangle dragBounds = Rectangle.Intersect(_dragState.GetDragBounds(listBounds, lineHeight), listBounds);
             if (dragBounds == Rectangle.Empty)
             {
                 return;
@@ -277,7 +344,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             FillRect(spriteBatch, dragBounds, ColorPalette.RowDragging);
             snapshot.Bounds = dragBounds;
-            DrawRow(spriteBatch, snapshot, labelFont, valueFont);
+            DrawRow(spriteBatch, snapshot, labelFont, valueFont, listBounds);
         }
 
         private static Rectangle GetSwatchBounds(Rectangle rowBounds)
@@ -287,15 +354,78 @@ namespace op.io.UI.BlockScripts.Blocks
             return new Rectangle(rowBounds.X + SwatchPadding, swatchY, size, size);
         }
 
-        private static void BeginEdit(string rowKey)
+        private static void UpdateHexBounds(UIStyle.UIFont valueFont)
         {
-            ColorRow? row = _rows.FirstOrDefault(r => string.Equals(r.Key, rowKey, StringComparison.OrdinalIgnoreCase));
-            if (!row.HasValue)
+            if (!valueFont.IsAvailable)
             {
                 return;
             }
 
-            ColorRow target = row.Value;
+            for (int i = 0; i < _rows.Count; i++)
+            {
+                ColorRow row = _rows[i];
+                if (row.Bounds == Rectangle.Empty)
+                {
+                    continue;
+                }
+
+                Rectangle hexBounds = ComputeHexBounds(row, valueFont);
+                row.HexBounds = hexBounds;
+                _rows[i] = row;
+            }
+        }
+
+        private static Rectangle ComputeHexBounds(ColorRow row, UIStyle.UIFont valueFont)
+        {
+            if (!valueFont.IsAvailable || row.Bounds == Rectangle.Empty)
+            {
+                return Rectangle.Empty;
+            }
+
+            string hex = ColorScheme.ToHex(row.Value);
+            Vector2 hexSize = valueFont.MeasureString(hex);
+            float hexY = row.Bounds.Y + (row.Bounds.Height - hexSize.Y) / 2f;
+            return new Rectangle(
+                (int)MathF.Floor(row.Bounds.Right - hexSize.X - SwatchPadding),
+                (int)MathF.Floor(hexY),
+                (int)MathF.Ceiling(hexSize.X),
+                (int)MathF.Ceiling(hexSize.Y));
+        }
+
+        private static Rectangle GetLockIndicatorBounds(Rectangle rowBounds, float startX)
+        {
+            int targetSize = Math.Min(LockIndicatorSize, Math.Max(8, rowBounds.Height - (RowVerticalPadding * 2)));
+            int indicatorY = rowBounds.Y + (rowBounds.Height - targetSize) / 2;
+            return new Rectangle((int)MathF.Round(startX), indicatorY, targetSize, targetSize);
+        }
+
+        private static void DrawLockIndicator(SpriteBatch spriteBatch, Rectangle bounds)
+        {
+            if (_pixel == null || spriteBatch == null || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            FillRect(spriteBatch, bounds, ColorPalette.LockLockedFill);
+            DrawRectOutline(spriteBatch, bounds, UIStyle.BlockBorder, 1);
+
+            UIStyle.UIFont techFont = UIStyle.FontTech;
+            if (techFont.IsAvailable)
+            {
+                const string glyph = "L";
+                Vector2 size = techFont.MeasureString(glyph);
+                Vector2 pos = new(bounds.X + (bounds.Width - size.X) / 2f, bounds.Y + (bounds.Height - size.Y) / 2f);
+                techFont.DrawString(spriteBatch, glyph, pos, UIStyle.TextColor);
+            }
+        }
+
+        private static void BeginEdit(string rowKey, bool focusHexInput = false)
+        {
+            if (!TryGetRow(rowKey, out ColorRow target))
+            {
+                return;
+            }
+
             _editor = new ColorEditorState
             {
                 IsActive = true,
@@ -304,7 +434,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 WorkingColor = target.Value,
                 OriginalColor = target.Value,
                 HexBuffer = ColorScheme.ToHex(target.Value),
-                HexFocused = false
+                HexFocused = focusHexInput,
+                HexFreshFocus = focusHexInput,
+                ReadyForOutsideClose = false
             };
 
             SetEditorColor(target.Value);
@@ -329,45 +461,62 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             BuildEditorLayout(contentBounds);
+            if (_editor.HexBounds == Rectangle.Empty)
+            {
+                _editor.HexFocused = false;
+            }
             bool leftDown = mouseState.LeftButton == ButtonState.Pressed;
             bool leftDownPrev = previousMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickStarted = leftDown && !leftDownPrev;
             bool leftClickReleased = !leftDown && leftDownPrev;
             Point pointer = mouseState.Position;
 
+            if (!leftDown)
+            {
+                _editor.ReadyForOutsideClose = true;
+            }
+
             if (leftClickStarted)
             {
-                if (_editor.WheelBounds.Contains(pointer) && TryUpdateWheel(pointer))
-                {
-                    _editor.DraggingWheel = true;
-                }
-                else if (_editor.SliderBounds.Contains(pointer))
-                {
-                    UpdateValueFromPointer(pointer);
-                    _editor.DraggingValue = true;
-                }
-                else if (_editor.HexBounds.Contains(pointer))
-                {
-                    _editor.HexFocused = true;
-                }
-                else if (_editor.ApplyBounds.Contains(pointer))
+                if (_editor.ApplyBounds.Contains(pointer))
                 {
                     CloseEditor(applyChanges: true);
                     return;
                 }
-                else if (_editor.CancelBounds.Contains(pointer))
+
+                if (_editor.CancelBounds.Contains(pointer))
                 {
                     CloseEditor(applyChanges: false);
                     return;
                 }
-                else if (!_editor.Bounds.Contains(pointer))
+
+                if (!_editor.Bounds.Contains(pointer) && _editor.ReadyForOutsideClose)
                 {
                     CloseEditor(applyChanges: false);
                     return;
+                }
+
+                if (_editor.WheelBounds.Contains(pointer) && TryUpdateWheel(pointer))
+                {
+                    _editor.HexFocused = false;
+                    _editor.DraggingWheel = true;
+                }
+                else if (_editor.SliderBounds.Contains(pointer))
+                {
+                    _editor.HexFocused = false;
+                    UpdateValueFromPointer(pointer);
+                    _editor.DraggingValue = true;
+                }
+                else if (_editor.HexBounds != Rectangle.Empty && _editor.HexBounds.Contains(pointer))
+                {
+                    bool wasFocused = _editor.HexFocused;
+                    _editor.HexFocused = true;
+                    _editor.HexFreshFocus = !wasFocused;
                 }
                 else
                 {
                     _editor.HexFocused = false;
+                    _editor.HexFreshFocus = false;
                 }
             }
 
@@ -383,6 +532,20 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (leftClickReleased)
             {
+                _editor.ReadyForOutsideClose = true;
+
+                if (_editor.ApplyBounds.Contains(pointer))
+                {
+                    CloseEditor(applyChanges: true);
+                    return;
+                }
+
+                if (_editor.CancelBounds.Contains(pointer))
+                {
+                    CloseEditor(applyChanges: false);
+                    return;
+                }
+
                 _editor.DraggingWheel = false;
                 _editor.DraggingValue = false;
             }
@@ -477,8 +640,9 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             Color background = _editor.HexFocused ? ColorPalette.BlockBackground * 1.2f : ColorPalette.BlockBackground;
+            Color border = _editor.HexFocused ? UIStyle.AccentColor : UIStyle.BlockBorder;
             DrawRect(spriteBatch, hex, background);
-            DrawRectOutline(spriteBatch, hex, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+            DrawRectOutline(spriteBatch, hex, border, UIStyle.BlockBorderThickness);
 
             string text = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? "#RRGGBBAA" : _editor.HexBuffer;
             Color textColor = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
@@ -626,6 +790,12 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void AppendHexCharacter(char c)
         {
             string buffer = _editor.HexBuffer ?? string.Empty;
+            if (_editor.HexFreshFocus)
+            {
+                buffer = "#";
+                _editor.HexFreshFocus = false;
+            }
+
             if (string.IsNullOrWhiteSpace(buffer))
             {
                 buffer = "#";
@@ -648,6 +818,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void TrimHexCharacter()
         {
             string buffer = _editor.HexBuffer ?? string.Empty;
+            _editor.HexFreshFocus = false;
             if (string.IsNullOrEmpty(buffer))
             {
                 return;
@@ -701,8 +872,8 @@ namespace op.io.UI.BlockScripts.Blocks
             int maxOverlayWidth = Math.Max(0, contentBounds.Width - (EditorPadding * 2));
             int maxOverlayHeight = Math.Max(0, contentBounds.Height - (EditorPadding * 2));
 
-            int desiredWidth = Math.Clamp(contentBounds.Width - 20, 320, 540);
-            int desiredHeight = Math.Clamp(contentBounds.Height - 20, 280, 440);
+            int desiredWidth = Math.Clamp(contentBounds.Width - 20, 400, 720);
+            int desiredHeight = Math.Clamp(contentBounds.Height - 20, 420, 720);
 
             int overlayWidth = Math.Max(0, Math.Min(desiredWidth, maxOverlayWidth));
             int overlayHeight = Math.Max(0, Math.Min(desiredHeight, maxOverlayHeight));
@@ -723,21 +894,44 @@ namespace op.io.UI.BlockScripts.Blocks
             int overlayY = contentBounds.Y + (contentBounds.Height - overlayHeight) / 2;
             _editor.Bounds = new Rectangle(overlayX, overlayY, overlayWidth, overlayHeight);
 
-            int availableWheel = Math.Min(overlayWidth - 180, overlayHeight - 120);
-            int wheelSize = Math.Min(WheelMaxSize, Math.Max(0, availableWheel));
+            int wheelTopOffset = 48;
+            int contentWidth = Math.Max(0, overlayWidth - (EditorPadding * 2));
+            int wheelWidthSpace = Math.Max(0, contentWidth - (SliderWidth + SliderMargin));
+
+            int buttonsY = _editor.Bounds.Bottom - ButtonHeight - EditorPadding;
+            int availableHeight = Math.Max(0, buttonsY - wheelTopOffset);
+            int minimumReservedBelowWheel = WheelToPreviewGap + PreviewMinHeight + PreviewLabelAllowance + PreviewToHexGap + HexMinHeight;
+            int wheelHeightBudget = Math.Max(WheelMinSizeCompact, availableHeight - minimumReservedBelowWheel);
+
+            int wheelSize = Math.Min(WheelMaxSize, Math.Min(wheelWidthSpace, wheelHeightBudget));
+            if (wheelSize <= 0 && wheelWidthSpace > 0)
+            {
+                wheelSize = Math.Min(WheelMinSizeCompact, wheelWidthSpace);
+            }
+            else if (wheelSize < WheelMinSize && wheelWidthSpace >= WheelMinSize && wheelHeightBudget >= WheelMinSize)
+            {
+                wheelSize = Math.Min(WheelMaxSize, WheelMinSize);
+            }
+
             int wheelX = overlayX + EditorPadding;
-            int wheelY = overlayY + 48;
+            int wheelY = overlayY + wheelTopOffset;
             _editor.WheelBounds = new Rectangle(wheelX, wheelY, wheelSize, wheelSize);
             _editor.SliderBounds = new Rectangle(_editor.WheelBounds.Right + SliderMargin, wheelY, SliderWidth, wheelSize);
 
-            int previewWidth = Math.Max(0, Math.Min(120, overlayWidth - (_editor.SliderBounds.Right - overlayX) - (EditorPadding * 2)));
-            _editor.PreviewBounds = previewWidth > 0 ? new Rectangle(_editor.SliderBounds.Right + SliderMargin, wheelY, previewWidth, 36) : Rectangle.Empty;
+            int previewY = _editor.WheelBounds.Bottom + WheelToPreviewGap;
+            int previewWidth = contentWidth;
+            int previewHeightBudget = Math.Max(0, availableHeight - wheelSize - PreviewLabelAllowance - PreviewToHexGap - HexMinHeight - WheelToPreviewGap);
+            int previewHeight = Math.Min(PreviewHeight, Math.Max(PreviewMinHeight, previewHeightBudget));
+            previewHeight = Math.Max(0, Math.Min(previewHeight, previewHeightBudget));
+            _editor.PreviewBounds = previewWidth > 0 && previewHeight > 0 ? new Rectangle(overlayX + EditorPadding, previewY, previewWidth, previewHeight) : Rectangle.Empty;
 
-            int hexY = _editor.WheelBounds.Bottom + EditorPadding;
-            int hexWidth = Math.Max(0, overlayWidth - (EditorPadding * 2));
-            _editor.HexBounds = new Rectangle(overlayX + EditorPadding, hexY, hexWidth, 30);
+            int hexY = previewY + previewHeight + PreviewLabelAllowance + PreviewToHexGap;
+            int hexWidth = contentWidth;
+            int maxHexHeight = Math.Max(0, buttonsY - hexY);
+            int hexHeight = Math.Min(HexInputHeight, Math.Max(HexMinHeight, maxHexHeight));
+            hexHeight = Math.Max(0, Math.Min(hexHeight, maxHexHeight));
+            _editor.HexBounds = hexHeight > 0 ? new Rectangle(overlayX + EditorPadding, hexY, hexWidth, hexHeight) : Rectangle.Empty;
 
-            int buttonsY = _editor.Bounds.Bottom - ButtonHeight - EditorPadding;
             _editor.ApplyBounds = new Rectangle(_editor.Bounds.Right - ButtonWidth - EditorPadding, buttonsY, ButtonWidth, ButtonHeight);
             _editor.CancelBounds = new Rectangle(_editor.ApplyBounds.X - ButtonWidth - 12, buttonsY, ButtonWidth, ButtonHeight);
         }
@@ -834,6 +1028,26 @@ namespace op.io.UI.BlockScripts.Blocks
             ColorScheme.UpdateOrder(order);
         }
 
+        private static bool TryGetRow(string rowKey, out ColorRow row)
+        {
+            row = default;
+            if (string.IsNullOrWhiteSpace(rowKey))
+            {
+                return false;
+            }
+
+            foreach (ColorRow candidate in _rows)
+            {
+                if (string.Equals(candidate.Key, rowKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    row = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static void ToHsv(Color color, out float h, out float s, out float v)
         {
             float r = color.R / 255f;
@@ -922,7 +1136,9 @@ namespace op.io.UI.BlockScripts.Blocks
             public string Category;
             public Color Value;
             public Rectangle Bounds;
+            public Rectangle HexBounds;
             public bool IsDragging;
+            public bool IsLocked;
         }
 
         private struct ColorEditorState
@@ -934,12 +1150,14 @@ namespace op.io.UI.BlockScripts.Blocks
             public Color OriginalColor;
             public string HexBuffer;
             public bool HexFocused;
+            public bool HexFreshFocus;
             public bool DraggingWheel;
             public bool DraggingValue;
             public float Hue;
             public float Saturation;
             public float Value;
             public byte Alpha;
+            public bool ReadyForOutsideClose;
             public Rectangle Bounds;
             public Rectangle WheelBounds;
             public Rectangle SliderBounds;

@@ -41,13 +41,13 @@ namespace op.io
         ScrollThumbHover,
         IndicatorActive,
         IndicatorInactive,
-        DangerBackground,
-        DangerHoverBackground,
-        DangerBorder,
-        DangerHoverBorder,
-        DangerOverlayBackground,
-        DangerOverlayHoverBackground,
-        DangerOverlayBorder,
+        CloseBackground,
+        CloseHoverBackground,
+        CloseBorder,
+        CloseHoverBorder,
+        CloseOverlayBackground,
+        CloseOverlayHoverBackground,
+        CloseOverlayBorder,
         LockLockedFill,
         LockLockedHoverFill,
         LockUnlockedFill,
@@ -58,7 +58,7 @@ namespace op.io
 
     public sealed class ColorOption
     {
-        public ColorOption(ColorRole role, string label, string category, Color defaultColor, string description = null)
+        public ColorOption(ColorRole role, string label, string category, Color defaultColor, string description = null, bool isLockedByDefault = false)
         {
             Role = role;
             Label = label ?? role.ToString();
@@ -66,6 +66,8 @@ namespace op.io
             DefaultColor = defaultColor;
             Description = description ?? string.Empty;
             Value = defaultColor;
+            DefaultLocked = isLockedByDefault;
+            IsLocked = isLockedByDefault;
         }
 
         public ColorRole Role { get; }
@@ -75,10 +77,17 @@ namespace op.io
         public string Description { get; }
         public Color DefaultColor { get; }
         public Color Value { get; private set; }
+        public bool IsLocked { get; private set; }
+        public bool DefaultLocked { get; }
 
         public void Set(Color color)
         {
             Value = color;
+        }
+
+        public void SetLock(bool isLocked)
+        {
+            IsLocked = isLocked;
         }
     }
 
@@ -92,6 +101,16 @@ namespace op.io
         private static readonly List<ColorRole> _orderedRoles = new();
         private static bool _initialized;
         private static bool _importedLegacyBackground;
+        private static readonly Dictionary<string, ColorRole> _legacyRoleMappings = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "DangerBackground", ColorRole.CloseBackground },
+            { "DangerHoverBackground", ColorRole.CloseHoverBackground },
+            { "DangerBorder", ColorRole.CloseBorder },
+            { "DangerHoverBorder", ColorRole.CloseHoverBorder },
+            { "DangerOverlayBackground", ColorRole.CloseOverlayBackground },
+            { "DangerOverlayHoverBackground", ColorRole.CloseOverlayHoverBackground },
+            { "DangerOverlayBorder", ColorRole.CloseOverlayBorder }
+        };
 
         public static void Initialize()
         {
@@ -262,8 +281,8 @@ namespace op.io
             _orderedRoles.Clear();
 
             // System / engine colors
-            Add(new ColorOption(ColorRole.TransparentWindowKey, "Transparent window key", "System", new Color(255, 105, 180), "Window chroma key"));
-            Add(new ColorOption(ColorRole.DefaultFallback, "Default fallback", "System", new Color(255, 105, 179), "Used as a last-resort color when lookups fail."));
+            Add(new ColorOption(ColorRole.TransparentWindowKey, "Transparent window key", "System", new Color(255, 105, 180), "Window chroma key", isLockedByDefault: true));
+            Add(new ColorOption(ColorRole.DefaultFallback, "Default fallback", "System", new Color(255, 105, 179), "Used as a last-resort color when lookups fail.", isLockedByDefault: true));
             Add(new ColorOption(ColorRole.GameBackground, "Game background", "System", new Color(20, 20, 25), "Backbuffer clear color."));
 
             // UI layout
@@ -309,15 +328,15 @@ namespace op.io
             Add(new ColorOption(ColorRole.IndicatorActive, "Indicator active", "Indicators", new Color(72, 201, 115)));
             Add(new ColorOption(ColorRole.IndicatorInactive, "Indicator inactive", "Indicators", new Color(192, 57, 43)));
 
-            // Danger/dismiss
-            Add(new ColorOption(ColorRole.DangerBackground, "Danger background", "Danger", new Color(80, 20, 20, 220)));
-            Add(new ColorOption(ColorRole.DangerHoverBackground, "Danger hover background", "Danger", new Color(140, 32, 32, 240)));
-            Add(new ColorOption(ColorRole.DangerBorder, "Danger border", "Danger", new Color(160, 40, 40)));
-            Add(new ColorOption(ColorRole.DangerHoverBorder, "Danger hover border", "Danger", new Color(220, 72, 72)));
+            // Close buttons
+            Add(new ColorOption(ColorRole.CloseBackground, "Close button background", "Close button", new Color(80, 20, 20, 220)));
+            Add(new ColorOption(ColorRole.CloseHoverBackground, "Close button hover background", "Close button", new Color(140, 32, 32, 240)));
+            Add(new ColorOption(ColorRole.CloseBorder, "Close button border", "Close button", new Color(160, 40, 40)));
+            Add(new ColorOption(ColorRole.CloseHoverBorder, "Close button hover border", "Close button", new Color(220, 72, 72)));
 
-            Add(new ColorOption(ColorRole.DangerOverlayBackground, "Danger overlay background", "Danger", new Color(64, 24, 24, 240)));
-            Add(new ColorOption(ColorRole.DangerOverlayHoverBackground, "Danger overlay hover", "Danger", new Color(90, 36, 36, 240)));
-            Add(new ColorOption(ColorRole.DangerOverlayBorder, "Danger overlay border", "Danger", new Color(150, 40, 40)));
+            Add(new ColorOption(ColorRole.CloseOverlayBackground, "Close overlay background", "Close overlay", new Color(64, 24, 24, 240)));
+            Add(new ColorOption(ColorRole.CloseOverlayHoverBackground, "Close overlay hover", "Close overlay", new Color(90, 36, 36, 240)));
+            Add(new ColorOption(ColorRole.CloseOverlayBorder, "Close overlay border", "Close overlay", new Color(150, 40, 40)));
 
             // Lock glyphs
             Add(new ColorOption(ColorRole.LockLockedFill, "Lock fill (locked)", "Locks", new Color(38, 38, 38, 220)));
@@ -346,11 +365,12 @@ namespace op.io
             SafeLog("ColorScheme.LoadFromStore: EnsureTables done");
 
             Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            Dictionary<string, bool> storedLocks = BlockDataStore.LoadRowLocks(DockBlockKind.ColorScheme);
             if (storedData.Count > 0)
             {
                 foreach (var pair in storedData)
                 {
-                    if (Enum.TryParse(pair.Key, out ColorRole role) && _options.TryGetValue(role, out ColorOption option))
+                    if (TryMapRole(pair.Key, out ColorRole targetRole) && _options.TryGetValue(targetRole, out ColorOption option))
                     {
                         if (TryParseHex(pair.Value, out Color parsed))
                         {
@@ -364,18 +384,56 @@ namespace op.io
                 ImportLegacyBackgroundIfNeeded();
             }
 
+            SafeLog("ColorScheme.LoadFromStore: locks");
+            Dictionary<ColorRole, bool> resolvedLocks = new();
+            foreach (var pair in storedLocks)
+            {
+                if (TryMapRole(pair.Key, out ColorRole role))
+                {
+                    resolvedLocks[role] = pair.Value;
+                }
+            }
+
+            foreach (ColorRole role in _options.Keys.ToList())
+            {
+                if (!_options.TryGetValue(role, out ColorOption option))
+                {
+                    continue;
+                }
+
+                bool storedLock = resolvedLocks.TryGetValue(role, out bool lockValue) && lockValue;
+                option.SetLock(option.DefaultLocked || storedLock);
+            }
+
             SafeLog("ColorScheme.LoadFromStore: orders");
             Dictionary<string, int> storedOrders = BlockDataStore.LoadRowOrders(DockBlockKind.ColorScheme);
             if (storedOrders.Count > 0)
             {
                 List<ColorRole> ordered = storedOrders
                     .OrderBy(kvp => kvp.Value)
-                    .Select(kvp => Enum.TryParse(kvp.Key, out ColorRole role) ? role : (ColorRole?)null)
+                    .Select(kvp => TryMapRole(kvp.Key, out ColorRole role) ? role : (ColorRole?)null)
                     .Where(r => r.HasValue)
                     .Select(r => r.Value)
                     .ToList();
                 UpdateOrder(ordered, persist: false);
             }
+        }
+
+        private static bool TryMapRole(string key, out ColorRole role)
+        {
+            role = default;
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return false;
+            }
+
+            if (_legacyRoleMappings.TryGetValue(key, out ColorRole legacyMapped))
+            {
+                role = legacyMapped;
+                return true;
+            }
+
+            return Enum.TryParse(key, out role);
         }
 
         private static void ImportLegacyBackgroundIfNeeded()

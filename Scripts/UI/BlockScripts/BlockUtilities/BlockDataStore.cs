@@ -289,6 +289,54 @@ ON CONFLICT(RowKey) DO UPDATE SET RenderOrder = excluded.RenderOrder;", connecti
             }
         }
 
+        public static Dictionary<string, bool> LoadRowLocks(DockBlockKind blockKind)
+        {
+            SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
+            if (connection == null)
+            {
+                return new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            try
+            {
+                EnsureTable(blockKind, connection);
+                string tableName = GetTableName(blockKind);
+
+                string sql = $"SELECT RowKey, IsLocked FROM {tableName} WHERE RowKey <> @lockKey;";
+                using var command = new SQLiteCommand(sql, connection);
+                command.Parameters.AddWithValue("@lockKey", LockRowKey);
+
+                using SQLiteDataReader reader = command.ExecuteReader();
+                Dictionary<string, bool> locks = new(StringComparer.OrdinalIgnoreCase);
+
+                while (reader.Read())
+                {
+                    string rowKey = NormalizeRowKey(blockKind, reader["RowKey"]?.ToString());
+                    if (string.IsNullOrWhiteSpace(rowKey))
+                    {
+                        continue;
+                    }
+
+                    bool isLocked = DecodeBool(reader["IsLocked"], fallback: false);
+                    locks[rowKey] = isLocked;
+                }
+
+                return locks;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load block row locks for {blockKind}: {ex.Message}");
+                return new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                if (disposeConnection)
+                {
+                    DatabaseManager.CloseConnection(connection);
+                }
+            }
+        }
+
         public static void SetRowData(DockBlockKind blockKind, string rowKey, string rowData)
         {
             if (string.IsNullOrWhiteSpace(rowKey))

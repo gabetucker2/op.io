@@ -1840,8 +1840,8 @@ namespace op.io
 
         private static void DrawBlockCloseButton(SpriteBatch spriteBatch, Rectangle bounds, bool hovered)
         {
-            Color background = hovered ? ColorPalette.DangerHoverBackground : ColorPalette.DangerBackground;
-            Color border = hovered ? ColorPalette.DangerHoverBorder : ColorPalette.DangerBorder;
+            Color background = hovered ? ColorPalette.CloseHoverBackground : ColorPalette.CloseBackground;
+            Color border = hovered ? ColorPalette.CloseHoverBorder : ColorPalette.CloseBorder;
             DrawRect(spriteBatch, bounds, background);
             DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
 
@@ -2143,9 +2143,9 @@ namespace op.io
             }
 
             bool hovered = UIButtonRenderer.IsHovered(_overlayDismissBounds, _mousePosition);
-            Color background = ColorPalette.DangerOverlayBackground;
-            Color hoverBackground = ColorPalette.DangerOverlayHoverBackground;
-            Color border = ColorPalette.DangerOverlayBorder;
+            Color background = ColorPalette.CloseOverlayBackground;
+            Color hoverBackground = ColorPalette.CloseOverlayHoverBackground;
+            Color border = ColorPalette.CloseOverlayBorder;
             UIButtonRenderer.Draw(
                 spriteBatch,
                 _overlayDismissBounds,
