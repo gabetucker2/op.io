@@ -2587,7 +2587,7 @@ namespace op.io
 
         public static bool IsBlockMenuOpen() => _overlayMenuVisible;
 
-        public static bool IsInputBlocked() => _overlayMenuVisible || ControlsBlock.IsRebindOverlayOpen();
+        public static bool IsInputBlocked() => _overlayMenuVisible || ControlsBlock.IsRebindOverlayOpen() || ColorSchemeBlock.IsEditorOpen;
 
         public static bool IsCursorWithinGameBlock()
         {

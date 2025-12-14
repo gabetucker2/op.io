@@ -1,4 +1,4 @@
-Log created at 2025-12-14T10:37:30.8987153-05:00
+Log created at 2025-12-14T12:56:37.2357714-05:00
 [DEFERRED OUTPUT] [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
 [DEFERRED OUTPUT] [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
 [DEFERRED OUTPUT] [DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 146
@@ -379,10 +379,10 @@ Log created at 2025-12-14T10:37:30.8987153-05:00
 [DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
-[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
-[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
-[PHYSICS] Destroying GameObject ID=22 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=22 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=17 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=17 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=19 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=19 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
@@ -503,3 +503,76 @@ Log created at 2025-12-14T10:37:30.8987153-05:00
 [DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 78
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 55
+[UI] [ResizeBarStart] Handle[Vertical] Depth=3 Bounds={X:1165 Y:476 Width:8 Height:476} Node=Split(Vertical, ratio=0.500, bounds={X:938 Y:476 Width:462 Height:476}) First=Block(id=colors, bounds={X:938 Y:476 Width:231 Height:476}) Second=Block(id=notes, bounds={X:1169 Y:476 Width:231 Height:476}) Mouse={X:1171 Y:546} | BlockManager.cs::UpdateResizeBarState @ Line 589
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.500, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.500 New=0.504 RelativePos=233 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1171 Y:546} First=Block(id=colors, bounds={X:938 Y:476 Width:231 Height:476}) Second=Block(id=notes, bounds={X:1169 Y:476 Width:231 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.504, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.504 New=0.506 RelativePos=234 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1172 Y:546} First=Block(id=colors, bounds={X:938 Y:476 Width:233 Height:476}) Second=Block(id=notes, bounds={X:1171 Y:476 Width:229 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.506, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.506 New=0.532 RelativePos=246 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1184 Y:550} First=Block(id=colors, bounds={X:938 Y:476 Width:234 Height:476}) Second=Block(id=notes, bounds={X:1172 Y:476 Width:228 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.532, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.532 New=0.591 RelativePos=273 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1211 Y:553} First=Block(id=colors, bounds={X:938 Y:476 Width:246 Height:476}) Second=Block(id=notes, bounds={X:1184 Y:476 Width:216 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.591, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.591 New=0.667 RelativePos=308 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1246 Y:557} First=Block(id=colors, bounds={X:938 Y:476 Width:273 Height:476}) Second=Block(id=notes, bounds={X:1211 Y:476 Width:189 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.667, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.667 New=0.712 RelativePos=329 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1267 Y:560} First=Block(id=colors, bounds={X:938 Y:476 Width:308 Height:476}) Second=Block(id=notes, bounds={X:1246 Y:476 Width:154 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.712, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.712 New=0.714 RelativePos=330 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1268 Y:561} First=Block(id=colors, bounds={X:938 Y:476 Width:329 Height:476}) Second=Block(id=notes, bounds={X:1267 Y:476 Width:133 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.714, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.714 New=0.729 RelativePos=337 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1275 Y:562} First=Block(id=colors, bounds={X:938 Y:476 Width:330 Height:476}) Second=Block(id=notes, bounds={X:1268 Y:476 Width:132 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.729, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.729 New=0.740 RelativePos=342 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1280 Y:564} First=Block(id=colors, bounds={X:938 Y:476 Width:337 Height:476}) Second=Block(id=notes, bounds={X:1275 Y:476 Width:125 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.740, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.740 New=0.760 RelativePos=351 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1289 Y:566} First=Block(id=colors, bounds={X:938 Y:476 Width:342 Height:476}) Second=Block(id=notes, bounds={X:1280 Y:476 Width:120 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarDrag] Ori=Vertical Node=Split(Vertical, ratio=0.760, bounds={X:938 Y:476 Width:462 Height:476}) Prev=0.760 New=0.777 RelativePos=359 Bounds={X:938 Y:476 Width:462 Height:476} Mouse={X:1297 Y:568} First=Block(id=colors, bounds={X:938 Y:476 Width:351 Height:476}) Second=Block(id=notes, bounds={X:1289 Y:476 Width:111 Height:476}) | BlockManager.cs::ApplyResizeBarDragInternal @ Line 1258
+[UI] [ResizeBarEnd] Handle[Vertical] Depth=3 Bounds={X:1293 Y:476 Width:8 Height:476} Node=Split(Vertical, ratio=0.777, bounds={X:938 Y:476 Width:462 Height:476}) First=Block(id=colors, bounds={X:938 Y:476 Width:359 Height:476}) Second=Block(id=notes, bounds={X:1297 Y:476 Width:103 Height:476}) | BlockManager.cs::UpdateResizeBarState @ Line 561
+[UI] [ResizeLayoutDelta] Color Scheme: {X:938 Y:476 Width:231 Height:476} -> {X:938 Y:476 Width:359 Height:476} | Notes: {X:1169 Y:476 Width:231 Height:476} -> {X:1297 Y:476 Width:103 Height:476} | BlockManager.cs::LogResizeBlockDeltas @ Line 3029
+[UI] Exit hotkey triggered. Closing game. | ActionHandler.cs::Tickwise_CheckActions @ Line 23
+[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'BlockMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'HoldInputs' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103

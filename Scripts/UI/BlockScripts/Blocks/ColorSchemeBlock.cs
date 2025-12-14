@@ -57,6 +57,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Point _lastMousePosition;
         private static Rectangle _lastContentBounds;
 
+        public static bool IsEditorOpen => _editor.IsActive;
+
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             ColorScheme.Initialize();
@@ -329,7 +331,7 @@ namespace op.io.UI.BlockScripts.Blocks
             Vector2 labelPos = new(labelX, textY);
             labelFont.DrawString(spriteBatch, row.Label, labelPos, UIStyle.TextColor);
 
-            string hex = ColorScheme.ToHex(row.Value);
+            string hex = ColorScheme.ToHex(row.Value, includeAlpha: false);
             Vector2 hexSize = valueFont.MeasureString(hex);
             float hexY = visibleBounds.Y + (visibleBounds.Height - hexSize.Y) / 2f;
             Rectangle hexBounds = row.HexBounds != Rectangle.Empty ? row.HexBounds : new Rectangle(
@@ -398,7 +400,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return Rectangle.Empty;
             }
 
-            string hex = ColorScheme.ToHex(row.Value);
+            string hex = ColorScheme.ToHex(row.Value, includeAlpha: false);
             Vector2 hexSize = valueFont.MeasureString(hex);
             float hexY = row.Bounds.Y + (row.Bounds.Height - hexSize.Y) / 2f;
             return new Rectangle(
@@ -454,7 +456,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 Label = target.Label,
                 WorkingColor = target.Value,
                 OriginalColor = target.Value,
-                HexBuffer = ColorScheme.ToHex(target.Value),
+                HexBuffer = ColorScheme.ToHex(target.Value, includeAlpha: false),
                 HexFocused = focusHexInput,
                 HexFreshFocus = focusHexInput,
                 ReadyForOutsideClose = false
@@ -666,7 +668,7 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawRect(spriteBatch, hex, background);
             DrawRectOutline(spriteBatch, hex, border, UIStyle.BlockBorderThickness);
 
-            string text = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? "#RRGGBBAA" : _editor.HexBuffer;
+            string text = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? "#RRGGBB" : _editor.HexBuffer;
             Color textColor = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
             Vector2 size = font.MeasureString(text);
             Vector2 pos = new(hex.X + 8, hex.Y + (hex.Height - size.Y) / 2f);
@@ -790,14 +792,22 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (ColorScheme.TryParseHex(_editor.HexBuffer, out Color parsed))
             {
-                SetEditorColor(parsed);
+                string trimmed = (_editor.HexBuffer ?? string.Empty).Trim();
+                if (trimmed.StartsWith("#", StringComparison.Ordinal))
+                {
+                    trimmed = trimmed[1..];
+                }
+
+                byte alpha = trimmed.Length == 8 ? parsed.A : _editor.Alpha;
+                Color merged = new(parsed.R, parsed.G, parsed.B, alpha);
+                SetEditorColor(merged);
             }
         }
 
         private static void SetEditorColor(Color color)
         {
             _editor.WorkingColor = color;
-            _editor.HexBuffer = ColorScheme.ToHex(color);
+            _editor.HexBuffer = ColorScheme.ToHex(color, includeAlpha: false);
             _editor.Alpha = color.A;
             ToHsv(color, out _editor.Hue, out _editor.Saturation, out _editor.Value);
         }
@@ -806,7 +816,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             Color color = FromHsv(_editor.Hue, _editor.Saturation, _editor.Value, _editor.Alpha);
             _editor.WorkingColor = color;
-            _editor.HexBuffer = ColorScheme.ToHex(color);
+            _editor.HexBuffer = ColorScheme.ToHex(color, includeAlpha: false);
         }
 
         private static void AppendHexCharacter(char c)
@@ -828,7 +838,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 buffer = "#" + buffer;
             }
 
-            if (buffer.Length >= 9)
+            if (buffer.Length >= 7)
             {
                 _editor.HexBuffer = buffer;
                 return;
