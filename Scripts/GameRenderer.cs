@@ -56,10 +56,8 @@ namespace op.io
             Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
 
-            foreach (GameObject gameObject in Core.Instance.GameObjects)
-            {
-                ShapeManager.Instance.DrawShapes(Core.Instance.SpriteBatch);
-            }
+            // Draw all shapes once; ShapeManager already iterates registered objects.
+            ShapeManager.Instance.DrawShapes(Core.Instance.SpriteBatch);
 
             // Render debug direction line last to ensure visibility
             if (DebugModeHandler.DEBUGENABLED)
