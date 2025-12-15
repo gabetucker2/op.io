@@ -378,6 +378,64 @@ ON CONFLICT(RowKey) DO UPDATE SET {RowDataColumnName} = excluded.{RowDataColumnN
             }
         }
 
+        public static void DeleteRows(DockBlockKind blockKind, IReadOnlyCollection<string> rowKeys)
+        {
+            if (rowKeys == null || rowKeys.Count == 0)
+            {
+                return;
+            }
+
+            SQLiteConnection connection = OpenConnection(null, out bool disposeConnection);
+            if (connection == null)
+            {
+                return;
+            }
+
+            try
+            {
+                EnsureTable(blockKind, connection);
+                string tableName = GetTableName(blockKind);
+
+                List<string> normalized = new();
+                foreach (string key in rowKeys)
+                {
+                    string normalizedKey = NormalizeRowKey(blockKind, key);
+                    if (string.IsNullOrWhiteSpace(normalizedKey) ||
+                        normalizedKey.Equals(LockRowKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    normalized.Add(normalizedKey);
+                }
+
+                if (normalized.Count == 0)
+                {
+                    return;
+                }
+
+                string placeholders = string.Join(", ", normalized.Select((_, i) => $"@row{i}"));
+                using var command = new SQLiteCommand($"DELETE FROM {tableName} WHERE RowKey IN ({placeholders});", connection);
+                for (int i = 0; i < normalized.Count; i++)
+                {
+                    command.Parameters.AddWithValue($"@row{i}", normalized[i]);
+                }
+
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to delete block rows for {blockKind}: {ex.Message}");
+            }
+            finally
+            {
+                if (disposeConnection)
+                {
+                    DatabaseManager.CloseConnection(connection);
+                }
+            }
+        }
+
         private static void EnsureTable(DockBlockKind blockKind, SQLiteConnection connection = null)
         {
             string tableName = GetTableName(blockKind);
@@ -622,7 +680,8 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
 
         private static bool IsLockedByDefault(DockBlockKind blockKind)
         {
-            return blockKind == DockBlockKind.ColorScheme;
+            return blockKind == DockBlockKind.ColorScheme ||
+                blockKind == DockBlockKind.Notes;
         }
 
         private static int DecodeInt(object rawValue, int fallback)

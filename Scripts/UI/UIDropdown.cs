@@ -114,7 +114,7 @@ namespace op.io
             return selectionChangedId != null;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, bool drawOptions = true)
         {
             if (spriteBatch == null || Bounds == Rectangle.Empty || !HasOptions)
             {
@@ -142,10 +142,27 @@ namespace op.io
 
             DrawCaret(spriteBatch, font);
 
-            if (_isOpen)
+            if (_isOpen && drawOptions)
             {
                 DrawOptions(spriteBatch, font);
             }
+        }
+
+        public void DrawOptionsOverlay(SpriteBatch spriteBatch)
+        {
+            if (spriteBatch == null || Bounds == Rectangle.Empty || !HasOptions || !_isOpen)
+            {
+                return;
+            }
+
+            UIStyle.UIFont font = UIStyle.FontBody;
+            if (!font.IsAvailable)
+            {
+                return;
+            }
+
+            EnsurePixel(spriteBatch.GraphicsDevice ?? Core.Instance?.GraphicsDevice);
+            DrawOptions(spriteBatch, font);
         }
 
         public void Close()

@@ -65,7 +65,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Rectangle _schemeToolbarBounds;
         private static Rectangle _saveSchemeBounds;
         private static Rectangle _newSchemeBounds;
-        private static Rectangle _loadSchemeBounds;
+        private static Rectangle _deleteSchemeBounds;
         private static string _selectedSchemeName = ColorScheme.DefaultSchemeName;
         private static bool _schemeListDirty = true;
         private static SchemePromptState _schemePrompt;
@@ -127,6 +127,11 @@ namespace op.io.UI.BlockScripts.Blocks
             if (dropdownChanged && !string.IsNullOrWhiteSpace(newlySelected))
             {
                 _selectedSchemeName = newlySelected;
+                if (TryLoadSelectedScheme())
+                {
+                    EnsureRows();
+                    _schemeListDirty = true;
+                }
             }
 
             if (!blockLocked && leftClickReleased)
@@ -146,9 +151,9 @@ namespace op.io.UI.BlockScripts.Blocks
                     _previousKeyboardState = keyboardState;
                     return;
                 }
-                else if (_loadSchemeBounds.Contains(mouseState.Position))
+                else if (_deleteSchemeBounds.Contains(mouseState.Position))
                 {
-                    if (TryLoadSelectedScheme())
+                    if (TryDeleteSelectedScheme())
                     {
                         EnsureRows();
                         _schemeListDirty = true;
@@ -251,6 +256,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
                 (placeholderFont.IsAvailable ? placeholderFont : labelFont).DrawString(spriteBatch, placeholder, pos, UIStyle.MutedTextColor);
                 _scrollPanel.Draw(spriteBatch);
+                _schemeDropdown.DrawOptionsOverlay(spriteBatch);
                 return;
             }
 
@@ -277,6 +283,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             _scrollPanel.Draw(spriteBatch);
+            _schemeDropdown.DrawOptionsOverlay(spriteBatch);
         }
 
         public static void DrawOverlay(SpriteBatch spriteBatch, Rectangle layoutBounds)
@@ -343,7 +350,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             int buttonY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - SchemeButtonHeight) / 2;
             int x = _schemeToolbarBounds.Right - SchemeButtonWidth;
-            _loadSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
+            _deleteSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
             x -= SchemeControlSpacing + SchemeButtonWidth;
             _newSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
             x -= SchemeControlSpacing + SchemeButtonWidth;
@@ -394,6 +401,36 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return loaded;
+        }
+
+        private static bool TryDeleteSelectedScheme()
+        {
+            string target = string.IsNullOrWhiteSpace(_selectedSchemeName) ? ColorScheme.ActiveSchemeName : _selectedSchemeName;
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return false;
+            }
+
+            bool deleted = ColorScheme.DeleteScheme(target);
+            if (!deleted)
+            {
+                return false;
+            }
+
+            IReadOnlyList<string> schemes = ColorScheme.GetAvailableSchemeNames();
+            string next = schemes.FirstOrDefault(name => !string.Equals(name, target, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(next))
+            {
+                next = schemes.FirstOrDefault();
+            }
+
+            _selectedSchemeName = next;
+            if (!string.IsNullOrWhiteSpace(_selectedSchemeName))
+            {
+                ColorScheme.TryLoadScheme(_selectedSchemeName);
+            }
+
+            return true;
         }
 
         private static void EnsureLineHeight()
@@ -452,15 +489,15 @@ namespace op.io.UI.BlockScripts.Blocks
             FillRect(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBackground * 1.05f);
             DrawRectOutline(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
-            _schemeDropdown.Draw(spriteBatch);
+            _schemeDropdown.Draw(spriteBatch, drawOptions: false);
 
-            bool saveHovered = UIButtonRenderer.IsHovered(_saveSchemeBounds, _lastMousePosition);
-            bool newHovered = UIButtonRenderer.IsHovered(_newSchemeBounds, _lastMousePosition);
-            bool loadHovered = UIButtonRenderer.IsHovered(_loadSchemeBounds, _lastMousePosition);
+            bool saveHovered = !blockLocked && UIButtonRenderer.IsHovered(_saveSchemeBounds, _lastMousePosition);
+            bool newHovered = !blockLocked && UIButtonRenderer.IsHovered(_newSchemeBounds, _lastMousePosition);
+            bool deleteHovered = !blockLocked && UIButtonRenderer.IsHovered(_deleteSchemeBounds, _lastMousePosition);
 
             UIButtonRenderer.Draw(spriteBatch, _saveSchemeBounds, "Save", UIButtonRenderer.ButtonStyle.Grey, saveHovered, blockLocked);
             UIButtonRenderer.Draw(spriteBatch, _newSchemeBounds, "New", UIButtonRenderer.ButtonStyle.Grey, newHovered, blockLocked);
-            UIButtonRenderer.Draw(spriteBatch, _loadSchemeBounds, "Load", UIButtonRenderer.ButtonStyle.Blue, loadHovered, blockLocked);
+            UIButtonRenderer.Draw(spriteBatch, _deleteSchemeBounds, "Delete", UIButtonRenderer.ButtonStyle.Grey, deleteHovered, blockLocked);
         }
 
         private static void DrawRow(SpriteBatch spriteBatch, ColorRow row, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont, Rectangle viewport)

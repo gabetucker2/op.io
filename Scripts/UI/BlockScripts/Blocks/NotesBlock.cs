@@ -2,10 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using op.io;
 using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io.UI.BlockScripts.Blocks
@@ -36,6 +38,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ButtonWidth = 84;
         private const int ButtonHeight = 26;
         private const int ButtonSpacing = 8;
+        private const int DropdownMinWidth = 140;
+        private const int DropdownMaxWidth = 260;
         private const int ContentSpacing = 12;
         private const int TextPadding = 6;
         private const int OverlayPadding = 10;
@@ -52,10 +56,12 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly List<LineLayout> LineCache = new();
         private static readonly StringBuilder MeasureBuffer = new();
         private static readonly StringBuilder NoteContent = new();
+        private static readonly UIDropdown NoteDropdown = new();
 
         private static Rectangle CommandBarBounds;
         private static Rectangle TextViewportBounds;
         private static Rectangle OverlayBounds;
+        private static Rectangle NoteDropdownBounds;
 
         private static OverlayMode ActiveOverlay = OverlayMode.None;
         private static bool NoteListDirty = true;
@@ -89,14 +95,44 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureNoteDirectory();
             EnsureNoteList();
             UpdateLayout(contentBounds);
+            EnsureNoteDropdownOptions();
+            NoteDropdown.Bounds = NoteDropdownBounds;
+
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Notes);
+            if (blockLocked && ActiveOverlay != OverlayMode.None)
+            {
+                ActiveOverlay = OverlayMode.None;
+                OverlayHoverIndex = -1;
+            }
+
+            KeyboardState keyboardState = Keyboard.GetState();
+            if (blockLocked)
+            {
+                NoteDropdown.Close();
+            }
 
             LastMouseState = mouseState;
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             Point mousePoint = mouseState.Position;
 
-            bool commandHandled = HandleCommandBarClick(mousePoint, leftClickStarted);
+            string selectedNote = null;
+            bool dropdownChanged = false;
+            if (!blockLocked)
+            {
+                dropdownChanged = NoteDropdown.Update(mouseState, previousMouseState, keyboardState, PreviousKeyboardState, out selectedNote, isDisabled: blockLocked);
+            }
+            if (dropdownChanged && !string.IsNullOrWhiteSpace(selectedNote))
+            {
+                NoteFileEntry match = NoteFiles.FirstOrDefault(n => string.Equals(n.DisplayName, selectedNote, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrWhiteSpace(match.DisplayName))
+                {
+                    LoadNote(match);
+                }
+            }
 
-            if (ActiveOverlay != OverlayMode.None)
+            bool commandHandled = !blockLocked && HandleCommandBarClick(mousePoint, leftClickStarted);
+
+            if (!blockLocked && ActiveOverlay != OverlayMode.None)
             {
                 HandleOverlayInteraction(mousePoint, leftClickStarted, commandHandled);
             }
@@ -105,7 +141,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 OverlayHoverIndex = -1;
             }
 
-            bool textAreaClicked = leftClickStarted
+            bool textAreaClicked = !blockLocked
+                && leftClickStarted
                 && HasActiveNote
                 && TextViewportBounds != Rectangle.Empty
                 && TextViewportBounds.Contains(mousePoint);
@@ -122,9 +159,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
 
-            bool editingEnabled = BlockManager.BlockHasFocus(DockBlockKind.Notes) && HasActiveNote;
+            bool editingEnabled = !blockLocked && BlockManager.BlockHasFocus(DockBlockKind.Notes) && HasActiveNote;
 
-            KeyboardState keyboardState = Keyboard.GetState();
             if (editingEnabled)
             {
                 HandleTextAreaMouse(mousePoint, leftClickStarted);
@@ -158,25 +194,35 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Notes);
+            if (blockLocked && ActiveOverlay != OverlayMode.None)
+            {
+                ActiveOverlay = OverlayMode.None;
+                OverlayHoverIndex = -1;
+            }
+
             EnsurePixel(spriteBatch);
             EnsureNoteList();
             UpdateLayout(contentBounds);
 
-            DrawCommandBar(spriteBatch, labelFont);
+            DrawCommandBar(spriteBatch, labelFont, blockLocked);
 
-            if (ActiveOverlay != OverlayMode.None)
+            if (!blockLocked && ActiveOverlay != OverlayMode.None)
             {
-                DrawOverlayList(spriteBatch, headerFont, labelFont);
+                DrawOverlayList(spriteBatch, headerFont, labelFont, blockLocked);
             }
 
             if (!HasActiveNote)
             {
                 DrawPlaceholder(spriteBatch, placeholderFont);
-                return;
+            }
+            else
+            {
+                EnsureLineCache();
+                DrawEditor(spriteBatch, bodyFont);
             }
 
-            EnsureLineCache();
-            DrawEditor(spriteBatch, bodyFont);
+            NoteDropdown.DrawOptionsOverlay(spriteBatch);
         }
         private static void EnsureNoteDirectory()
         {
@@ -213,6 +259,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 CommandBounds[i] = new Rectangle(buttonX, buttonY, ButtonWidth, ButtonHeight);
                 buttonX += ButtonWidth + ButtonSpacing;
             }
+
+            int availableWidth = CommandBarBounds.Width - (buttonX - CommandBarBounds.X) - (ButtonSpacing * 2);
+            int dropdownWidth = Math.Clamp(availableWidth, DropdownMinWidth, DropdownMaxWidth);
+            int dropdownHeight = ButtonHeight;
+            int dropdownY = CommandBarBounds.Y + (CommandBarHeight - dropdownHeight) / 2;
+            NoteDropdownBounds = dropdownWidth > 0
+                ? new Rectangle(buttonX, dropdownY, dropdownWidth, dropdownHeight)
+                : Rectangle.Empty;
 
             OverlayBounds = Rectangle.Empty;
             int overlaySpace = 0;
@@ -942,24 +996,43 @@ namespace op.io.UI.BlockScripts.Blocks
 
             LineCacheDirty = false;
         }
-        private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
+
+        private static void EnsureNoteDropdownOptions()
+        {
+            List<UIDropdown.Option> options = new(NoteFiles.Count + 1);
+            foreach (NoteFileEntry entry in NoteFiles)
+            {
+                string label = string.IsNullOrWhiteSpace(entry.DisplayName) ? "Note" : entry.DisplayName;
+                options.Add(new UIDropdown.Option(entry.DisplayName, label));
+            }
+
+            if (HasActiveNote && !options.Any(o => string.Equals(o.Id, ActiveNoteName, StringComparison.OrdinalIgnoreCase)))
+            {
+                options.Insert(0, new UIDropdown.Option(ActiveNoteName, ActiveNoteName));
+            }
+
+            string desired = HasActiveNote ? ActiveNoteName : options.FirstOrDefault().Id;
+            NoteDropdown.SetOptions(options, desired);
+        }
+        private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font, bool blockLocked)
         {
             FillRect(spriteBatch, CommandBarBounds, UIStyle.DragBarBackground);
             DrawRect(spriteBatch, CommandBarBounds, UIStyle.BlockBorder);
 
             for (int i = 0; i < CommandOrder.Length; i++)
             {
-                DrawButton(spriteBatch, font, CommandOrder[i], CommandBounds[i]);
+                DrawButton(spriteBatch, font, CommandOrder[i], CommandBounds[i], blockLocked);
             }
 
+            DrawNoteDropdown(spriteBatch, font, blockLocked);
             DrawActiveNoteLabel(spriteBatch, font);
             DrawStatus(spriteBatch, font);
         }
 
-        private static void DrawButton(SpriteBatch spriteBatch, UIStyle.UIFont font, NotesCommand command, Rectangle bounds)
+        private static void DrawButton(SpriteBatch spriteBatch, UIStyle.UIFont font, NotesCommand command, Rectangle bounds, bool blockLocked)
         {
-            bool disabled = IsButtonDisabled(command);
-            bool hovered = UIButtonRenderer.IsHovered(bounds, LastMouseState.Position);
+            bool disabled = blockLocked || IsButtonDisabled(command);
+            bool hovered = !blockLocked && UIButtonRenderer.IsHovered(bounds, LastMouseState.Position);
             bool isActiveOverlay = command switch
             {
                 NotesCommand.Open => ActiveOverlay == OverlayMode.Open,
@@ -969,6 +1042,33 @@ namespace op.io.UI.BlockScripts.Blocks
 
             UIButtonRenderer.ButtonStyle style = isActiveOverlay ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey;
             UIButtonRenderer.Draw(spriteBatch, bounds, command.ToString(), style, hovered, disabled);
+        }
+
+        private static void DrawNoteDropdown(SpriteBatch spriteBatch, UIStyle.UIFont font, bool blockLocked)
+        {
+            if (NoteDropdownBounds == Rectangle.Empty || spriteBatch == null)
+            {
+                return;
+            }
+
+            if (NoteDropdown.HasOptions)
+            {
+                NoteDropdown.Draw(spriteBatch, drawOptions: false);
+            }
+            else
+            {
+                FillRect(spriteBatch, NoteDropdownBounds, UIStyle.BlockBackground);
+                DrawRect(spriteBatch, NoteDropdownBounds, UIStyle.BlockBorder);
+                string placeholder = "No saved notes";
+                Vector2 size = font.MeasureString(placeholder);
+                Vector2 pos = new(NoteDropdownBounds.X + 8, NoteDropdownBounds.Y + (NoteDropdownBounds.Height - size.Y) / 2f);
+                font.DrawString(spriteBatch, placeholder, pos, UIStyle.MutedTextColor);
+            }
+
+            if (blockLocked)
+            {
+                FillRect(spriteBatch, NoteDropdownBounds, UIStyle.BlockBackground * 0.45f);
+            }
         }
 
         private static void DrawActiveNoteLabel(SpriteBatch spriteBatch, UIStyle.UIFont font)
@@ -1000,9 +1100,9 @@ namespace op.io.UI.BlockScripts.Blocks
             font.DrawString(spriteBatch, StatusMessage, position, UIStyle.TextColor);
         }
 
-        private static void DrawOverlayList(SpriteBatch spriteBatch, UIStyle.UIFont headerFont, UIStyle.UIFont rowFont)
+        private static void DrawOverlayList(SpriteBatch spriteBatch, UIStyle.UIFont headerFont, UIStyle.UIFont rowFont, bool blockLocked)
         {
-            if (OverlayBounds == Rectangle.Empty)
+            if (blockLocked || OverlayBounds == Rectangle.Empty)
             {
                 return;
             }

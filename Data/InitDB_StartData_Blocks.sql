@@ -104,7 +104,7 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked)
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('CloseGlyphHover', '#FFFFFFFF', 46, 0);
 
 -- Named color schemes (stored in RowData only; RenderOrder is left null)
-INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('__ActiveScheme', 'DefaultScheme');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('__ActiveScheme', 'DarkMode');
 
 -- Default (dark) palette snapshot
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DefaultScheme::TransparentWindowKey', '#FF69B4FF');

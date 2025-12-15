@@ -977,6 +977,7 @@ namespace op.io
 
             return block.Kind == DockBlockKind.Controls ||
                 block.Kind == DockBlockKind.ColorScheme ||
+                block.Kind == DockBlockKind.Notes ||
                 block.Kind == DockBlockKind.Backend ||
                 block.Kind == DockBlockKind.Specs;
         }

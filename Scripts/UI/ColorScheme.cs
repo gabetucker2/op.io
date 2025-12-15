@@ -283,6 +283,45 @@ namespace op.io
             return true;
         }
 
+        public static bool DeleteScheme(string schemeName)
+        {
+            EnsureInitialized();
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return false;
+            }
+
+            if (string.Equals(normalized, DefaultSchemeName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalized, LightSchemeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            List<string> rowsToDelete = storedData.Keys
+                .Where(k => TryParseSchemeRowKey(k, out string scheme, out _) && scheme.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (rowsToDelete.Count == 0)
+            {
+                return false;
+            }
+
+            BlockDataStore.DeleteRows(DockBlockKind.ColorScheme, rowsToDelete);
+
+            bool wasActive = string.Equals(_activeSchemeName, normalized, StringComparison.OrdinalIgnoreCase);
+            if (wasActive)
+            {
+                string fallback = ResolveFallbackScheme(normalized);
+                _activeSchemeName = fallback;
+                PersistActiveSchemeName(_activeSchemeName);
+                TryLoadScheme(_activeSchemeName, persistActive: false, applySideEffects: true);
+            }
+
+            return true;
+        }
+
         public static bool TryLoadScheme(string schemeName, bool persistActive = true, bool applySideEffects = true)
         {
             EnsureInitialized();
@@ -800,6 +839,29 @@ namespace op.io
             }
 
             BlockDataStore.SetRowData(DockBlockKind.ColorScheme, ActiveSchemeRowKey, normalized);
+        }
+
+        private static string ResolveFallbackScheme(string deletedName)
+        {
+            Dictionary<string, string> remainingData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase)
+            {
+                DefaultSchemeName,
+                LightSchemeName
+            };
+
+            foreach (string key in remainingData.Keys)
+            {
+                if (TryParseSchemeRowKey(key, out string scheme, out _))
+                {
+                    names.Add(scheme);
+                }
+            }
+
+            return names
+                .Where(name => !string.Equals(name, deletedName, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault() ?? DefaultSchemeName;
         }
 
         private static void ApplySideEffects()
