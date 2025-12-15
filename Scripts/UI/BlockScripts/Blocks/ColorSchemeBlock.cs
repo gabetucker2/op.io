@@ -39,6 +39,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int EditorMaxWidth = 560;
         private const int EditorMinHeight = 360;
         private const int EditorMaxHeight = 620;
+        private const int SchemeToolbarHeight = 44;
+        private const int SchemeButtonWidth = 88;
+        private const int SchemeButtonHeight = 28;
+        private const int SchemeDropdownHeight = 30;
+        private const int SchemeControlSpacing = 10;
+        private const int SchemePromptWidth = 360;
+        private const int SchemePromptHeight = 180;
+        private const int SchemePromptPadding = 16;
 
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly List<ColorRow> _rows = new();
@@ -53,6 +61,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private static float _lineHeight;
         private static string _hoveredRowKey;
         private static ColorEditorState _editor;
+        private static readonly UIDropdown _schemeDropdown = new();
+        private static Rectangle _schemeToolbarBounds;
+        private static Rectangle _saveSchemeBounds;
+        private static Rectangle _newSchemeBounds;
+        private static Rectangle _loadSchemeBounds;
+        private static string _selectedSchemeName = ColorScheme.DefaultSchemeName;
+        private static bool _schemeListDirty = true;
+        private static SchemePromptState _schemePrompt;
         private static KeyboardState _previousKeyboardState;
         private static Point _lastMousePosition;
         private static Rectangle _lastContentBounds;
@@ -62,16 +78,20 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             ColorScheme.Initialize();
+            EnsureSchemeOptions();
             EnsureRows();
             EnsureLineHeight();
             _lastContentBounds = contentBounds;
+            UpdateToolbarLayout(contentBounds);
+
+            Rectangle listContentBounds = GetListContentBounds(contentBounds);
             float contentHeight = Math.Max(0f, _rows.Count * _lineHeight);
-            _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
+            _scrollPanel.Update(listContentBounds, contentHeight, mouseState, previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
             {
-                listBounds = contentBounds;
+                listBounds = listContentBounds;
             }
 
             UpdateRowBounds(listBounds);
@@ -85,6 +105,14 @@ namespace op.io.UI.BlockScripts.Blocks
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
+            if (_schemePrompt.IsOpen)
+            {
+                UpdateSchemePrompt(mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                _lastMousePosition = mouseState.Position;
+                _previousKeyboardState = keyboardState;
+                return;
+            }
+
             if (blockLocked && _dragState.IsDragging)
             {
                 _dragState.Reset();
@@ -93,6 +121,39 @@ namespace op.io.UI.BlockScripts.Blocks
             if (blockLocked && _editor.IsActive)
             {
                 CloseEditor(applyChanges: false);
+            }
+
+            bool dropdownChanged = _schemeDropdown.Update(mouseState, previousMouseState, keyboardState, previousKeyboardState, out string newlySelected, isDisabled: blockLocked);
+            if (dropdownChanged && !string.IsNullOrWhiteSpace(newlySelected))
+            {
+                _selectedSchemeName = newlySelected;
+            }
+
+            if (!blockLocked && leftClickReleased)
+            {
+                if (_saveSchemeBounds.Contains(mouseState.Position))
+                {
+                    if (TrySaveSelectedScheme())
+                    {
+                        _schemeListDirty = true;
+                    }
+                }
+                else if (_newSchemeBounds.Contains(mouseState.Position))
+                {
+                    CloseEditor(applyChanges: false);
+                    OpenSchemePrompt();
+                    _lastMousePosition = mouseState.Position;
+                    _previousKeyboardState = keyboardState;
+                    return;
+                }
+                else if (_loadSchemeBounds.Contains(mouseState.Position))
+                {
+                    if (TryLoadSelectedScheme())
+                    {
+                        EnsureRows();
+                        _schemeListDirty = true;
+                    }
+                }
             }
 
             if (_editor.IsActive)
@@ -159,21 +220,25 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsurePixel(spriteBatch);
             EnsureLineHeight();
             _lastContentBounds = contentBounds;
+            UpdateToolbarLayout(contentBounds);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
             {
-                listBounds = contentBounds;
+                listBounds = GetListContentBounds(contentBounds);
             }
 
             UIStyle.UIFont labelFont = UIStyle.FontBody;
             UIStyle.UIFont valueFont = UIStyle.FontTech;
             UIStyle.UIFont placeholderFont = UIStyle.FontH2;
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
 
             if (!labelFont.IsAvailable || !valueFont.IsAvailable)
             {
                 return;
             }
+
+            DrawSchemeToolbar(spriteBatch, blockLocked);
 
             if (_rows.Count == 0)
             {
@@ -216,12 +281,23 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static void DrawOverlay(SpriteBatch spriteBatch, Rectangle layoutBounds)
         {
-            if (spriteBatch == null || !_editor.IsActive)
+            if (spriteBatch == null)
             {
                 return;
             }
 
             Rectangle overlaySpace = layoutBounds != Rectangle.Empty ? layoutBounds : _lastContentBounds;
+            if (_schemePrompt.IsOpen)
+            {
+                DrawSchemePrompt(spriteBatch, overlaySpace);
+                return;
+            }
+
+            if (!_editor.IsActive)
+            {
+                return;
+            }
+
             overlaySpace = GetEditorViewport(overlaySpace);
             DrawEditor(spriteBatch, overlaySpace);
         }
@@ -244,6 +320,80 @@ namespace op.io.UI.BlockScripts.Blocks
                 row.HexBounds = Rectangle.Empty;
                 _rows.Add(row);
             }
+        }
+
+        private static void EnsureSchemeOptions()
+        {
+            if (!_schemeListDirty && _schemeDropdown.HasOptions)
+            {
+                return;
+            }
+
+            IReadOnlyList<string> schemes = ColorScheme.GetAvailableSchemeNames();
+            IEnumerable<UIDropdown.Option> options = schemes.Select(name => new UIDropdown.Option(name, name));
+            string desired = !string.IsNullOrWhiteSpace(_selectedSchemeName) ? _selectedSchemeName : ColorScheme.ActiveSchemeName;
+            _schemeDropdown.SetOptions(options, desired);
+            _selectedSchemeName = _schemeDropdown.HasOptions ? (_schemeDropdown.SelectedId ?? ColorScheme.ActiveSchemeName) : ColorScheme.ActiveSchemeName;
+            _schemeListDirty = false;
+        }
+
+        private static void UpdateToolbarLayout(Rectangle contentBounds)
+        {
+            _schemeToolbarBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, SchemeToolbarHeight);
+
+            int buttonY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - SchemeButtonHeight) / 2;
+            int x = _schemeToolbarBounds.Right - SchemeButtonWidth;
+            _loadSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
+            x -= SchemeControlSpacing + SchemeButtonWidth;
+            _newSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
+            x -= SchemeControlSpacing + SchemeButtonWidth;
+            _saveSchemeBounds = new Rectangle(Math.Max(_schemeToolbarBounds.X, x), buttonY, SchemeButtonWidth, SchemeButtonHeight);
+
+            int dropdownWidth = Math.Max(160, _saveSchemeBounds.X - SchemeControlSpacing - _schemeToolbarBounds.X);
+            int dropdownHeight = SchemeDropdownHeight;
+            int dropdownY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - dropdownHeight) / 2;
+            _schemeDropdown.Bounds = new Rectangle(_schemeToolbarBounds.X, dropdownY, dropdownWidth, dropdownHeight);
+        }
+
+        private static Rectangle GetListContentBounds(Rectangle contentBounds)
+        {
+            int listY = contentBounds.Y + SchemeToolbarHeight;
+            int listHeight = Math.Max(0, contentBounds.Height - SchemeToolbarHeight);
+            return new Rectangle(contentBounds.X, listY, contentBounds.Width, listHeight);
+        }
+
+        private static bool TrySaveSelectedScheme()
+        {
+            string target = string.IsNullOrWhiteSpace(_selectedSchemeName) ? ColorScheme.ActiveSchemeName : _selectedSchemeName;
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return false;
+            }
+
+            bool saved = ColorScheme.SaveCurrentScheme(target, makeActive: true);
+            if (saved)
+            {
+                _selectedSchemeName = ColorScheme.ActiveSchemeName;
+            }
+
+            return saved;
+        }
+
+        private static bool TryLoadSelectedScheme()
+        {
+            string target = string.IsNullOrWhiteSpace(_selectedSchemeName) ? ColorScheme.ActiveSchemeName : _selectedSchemeName;
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return false;
+            }
+
+            bool loaded = ColorScheme.TryLoadScheme(target);
+            if (loaded)
+            {
+                _selectedSchemeName = ColorScheme.ActiveSchemeName;
+            }
+
+            return loaded;
         }
 
         private static void EnsureLineHeight()
@@ -290,6 +440,27 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return null;
+        }
+
+        private static void DrawSchemeToolbar(SpriteBatch spriteBatch, bool blockLocked)
+        {
+            if (spriteBatch == null || _schemeToolbarBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            FillRect(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBackground * 1.05f);
+            DrawRectOutline(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+
+            _schemeDropdown.Draw(spriteBatch);
+
+            bool saveHovered = UIButtonRenderer.IsHovered(_saveSchemeBounds, _lastMousePosition);
+            bool newHovered = UIButtonRenderer.IsHovered(_newSchemeBounds, _lastMousePosition);
+            bool loadHovered = UIButtonRenderer.IsHovered(_loadSchemeBounds, _lastMousePosition);
+
+            UIButtonRenderer.Draw(spriteBatch, _saveSchemeBounds, "Save", UIButtonRenderer.ButtonStyle.Grey, saveHovered, blockLocked);
+            UIButtonRenderer.Draw(spriteBatch, _newSchemeBounds, "New", UIButtonRenderer.ButtonStyle.Grey, newHovered, blockLocked);
+            UIButtonRenderer.Draw(spriteBatch, _loadSchemeBounds, "Load", UIButtonRenderer.ButtonStyle.Blue, loadHovered, blockLocked);
         }
 
         private static void DrawRow(SpriteBatch spriteBatch, ColorRow row, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont, Rectangle viewport)
@@ -681,6 +852,62 @@ namespace op.io.UI.BlockScripts.Blocks
             UIButtonRenderer.Draw(spriteBatch, _editor.CancelBounds, "Cancel", UIButtonRenderer.ButtonStyle.Grey, UIButtonRenderer.IsHovered(_editor.CancelBounds, _lastMousePosition));
         }
 
+        private static void DrawSchemePrompt(SpriteBatch spriteBatch, Rectangle overlaySpace)
+        {
+            if (!_schemePrompt.IsOpen || spriteBatch == null)
+            {
+                return;
+            }
+
+            EnsurePixel(spriteBatch);
+            Rectangle viewport = GetEditorViewport(overlaySpace);
+            BuildSchemePromptLayout(viewport);
+
+            FillRect(spriteBatch, viewport, ColorPalette.RebindScrim);
+
+            Rectangle dialog = _schemePrompt.Bounds;
+            if (dialog == Rectangle.Empty)
+            {
+                return;
+            }
+
+            FillRect(spriteBatch, dialog, UIStyle.BlockBackground);
+            DrawRectOutline(spriteBatch, dialog, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            UIStyle.UIFont bodyFont = UIStyle.FontBody;
+            UIStyle.UIFont inputFont = UIStyle.FontTech;
+            if (!headerFont.IsAvailable || !bodyFont.IsAvailable || !inputFont.IsAvailable)
+            {
+                return;
+            }
+
+            string title = "Save color scheme";
+            Vector2 titleSize = headerFont.MeasureString(title);
+            Vector2 titlePos = new(dialog.X + (dialog.Width - titleSize.X) / 2f, dialog.Y + SchemePromptPadding);
+            headerFont.DrawString(spriteBatch, title, titlePos, UIStyle.TextColor);
+
+            string helper = "Name this scheme to store current colors.";
+            Vector2 helperPos = new(dialog.X + SchemePromptPadding, titlePos.Y + titleSize.Y + 6f);
+            bodyFont.DrawString(spriteBatch, helper, helperPos, UIStyle.MutedTextColor);
+
+            Rectangle input = _schemePrompt.InputBounds;
+            FillRect(spriteBatch, input, UIStyle.BlockBackground * 1.1f);
+            DrawRectOutline(spriteBatch, input, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+
+            string text = string.IsNullOrWhiteSpace(_schemePrompt.Buffer) ? "Scheme name" : _schemePrompt.Buffer;
+            Color textColor = string.IsNullOrWhiteSpace(_schemePrompt.Buffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
+            Vector2 textSize = inputFont.MeasureString(text);
+            Vector2 textPos = new(input.X + 8, input.Y + (input.Height - textSize.Y) / 2f);
+            inputFont.DrawString(spriteBatch, text, textPos, textColor);
+
+            bool saveHovered = UIButtonRenderer.IsHovered(_schemePrompt.ConfirmBounds, _lastMousePosition);
+            bool cancelHovered = UIButtonRenderer.IsHovered(_schemePrompt.CancelBounds, _lastMousePosition);
+            bool disableSave = string.IsNullOrWhiteSpace(_schemePrompt.Buffer);
+            UIButtonRenderer.Draw(spriteBatch, _schemePrompt.ConfirmBounds, "Save", UIButtonRenderer.ButtonStyle.Blue, saveHovered, disableSave);
+            UIButtonRenderer.Draw(spriteBatch, _schemePrompt.CancelBounds, "Cancel", UIButtonRenderer.ButtonStyle.Grey, cancelHovered);
+        }
+
         private static void DrawWheelIndicator(SpriteBatch spriteBatch)
         {
             Rectangle wheel = _editor.WheelBounds;
@@ -897,6 +1124,170 @@ namespace op.io.UI.BlockScripts.Blocks
         private static bool WasKeyPressed(KeyboardState current, KeyboardState previous, Keys key)
         {
             return current.IsKeyDown(key) && !previous.IsKeyDown(key);
+        }
+
+        private static void OpenSchemePrompt()
+        {
+            _schemeDropdown.Close();
+            _schemePrompt = new SchemePromptState
+            {
+                IsOpen = true,
+                Buffer = string.Empty
+            };
+            BuildSchemePromptLayout(_lastContentBounds);
+        }
+
+        private static void CloseSchemePrompt()
+        {
+            _schemePrompt = default;
+        }
+
+        private static void BuildSchemePromptLayout(Rectangle overlaySpace)
+        {
+            Rectangle viewport = GetEditorViewport(overlaySpace);
+            int width = Math.Min(SchemePromptWidth, Math.Max(120, viewport.Width - (SchemePromptPadding * 2)));
+            int height = Math.Min(SchemePromptHeight, Math.Max(120, viewport.Height - (SchemePromptPadding * 2)));
+
+            int x = viewport.X + (viewport.Width - width) / 2;
+            int y = viewport.Y + (viewport.Height - height) / 2;
+            _schemePrompt.Bounds = new Rectangle(x, y, width, height);
+
+            int inputWidth = width - (SchemePromptPadding * 2);
+            int inputHeight = HexInputHeight;
+            int inputY = y + SchemePromptPadding + 44;
+            _schemePrompt.InputBounds = new Rectangle(x + SchemePromptPadding, inputY, inputWidth, inputHeight);
+
+            int buttonsY = _schemePrompt.InputBounds.Bottom + SchemePromptPadding;
+            int buttonWidth = Math.Max(40, (inputWidth - SchemeControlSpacing) / 2);
+            _schemePrompt.ConfirmBounds = new Rectangle(x + SchemePromptPadding, buttonsY, buttonWidth, SchemeButtonHeight);
+            _schemePrompt.CancelBounds = new Rectangle(_schemePrompt.ConfirmBounds.Right + SchemeControlSpacing, buttonsY, buttonWidth, SchemeButtonHeight);
+        }
+
+        private static void UpdateSchemePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        {
+            if (!_schemePrompt.IsOpen)
+            {
+                return;
+            }
+
+            BuildSchemePromptLayout(_lastContentBounds);
+
+            bool leftReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+
+            if (leftReleased)
+            {
+                if (_schemePrompt.ConfirmBounds.Contains(mouseState.Position))
+                {
+                    CommitSchemePrompt();
+                    return;
+                }
+
+                if (_schemePrompt.CancelBounds.Contains(mouseState.Position))
+                {
+                    CloseSchemePrompt();
+                    return;
+                }
+            }
+
+            if (WasKeyPressed(keyboardState, previousKeyboardState, Keys.Enter))
+            {
+                CommitSchemePrompt();
+                return;
+            }
+
+            if (WasKeyPressed(keyboardState, previousKeyboardState, Keys.Escape))
+            {
+                CloseSchemePrompt();
+                return;
+            }
+
+            HandleSchemeNameInput(keyboardState, previousKeyboardState);
+        }
+
+        private static void HandleSchemeNameInput(KeyboardState current, KeyboardState previous)
+        {
+            bool shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
+
+            foreach (Keys key in current.GetPressedKeys())
+            {
+                if (previous.IsKeyDown(key))
+                {
+                    continue;
+                }
+
+                if (key == Keys.Back)
+                {
+                    if (!string.IsNullOrEmpty(_schemePrompt.Buffer))
+                    {
+                        _schemePrompt.Buffer = _schemePrompt.Buffer[..^1];
+                    }
+                }
+                else if (TryConvertToSchemeChar(key, shift, out char value))
+                {
+                    _schemePrompt.Buffer += value;
+                }
+            }
+        }
+
+        private static bool TryConvertToSchemeChar(Keys key, bool shift, out char value)
+        {
+            value = default;
+
+            if (key is >= Keys.A and <= Keys.Z)
+            {
+                char baseChar = (char)('a' + (key - Keys.A));
+                value = shift ? char.ToUpperInvariant(baseChar) : baseChar;
+                return true;
+            }
+
+            if (key is >= Keys.D0 and <= Keys.D9)
+            {
+                value = (char)('0' + (key - Keys.D0));
+                return true;
+            }
+
+            if (key is >= Keys.NumPad0 and <= Keys.NumPad9)
+            {
+                value = (char)('0' + (key - Keys.NumPad0));
+                return true;
+            }
+
+            if (key == Keys.Space)
+            {
+                value = ' ';
+                return true;
+            }
+
+            if (key == Keys.OemMinus || key == Keys.Subtract)
+            {
+                value = shift ? '_' : '-';
+                return true;
+            }
+
+            if (key == Keys.OemPeriod)
+            {
+                value = '.';
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void CommitSchemePrompt()
+        {
+            string name = _schemePrompt.Buffer?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            if (ColorScheme.SaveCurrentScheme(name, makeActive: true))
+            {
+                _selectedSchemeName = ColorScheme.ActiveSchemeName;
+                _schemeListDirty = true;
+            }
+
+            CloseSchemePrompt();
         }
 
         private static void BuildEditorLayout(Rectangle availableBounds)
@@ -1209,6 +1600,16 @@ namespace op.io.UI.BlockScripts.Blocks
             public Rectangle ApplyBounds;
             public Rectangle CancelBounds;
             public Rectangle PreviewBounds;
+        }
+
+        private struct SchemePromptState
+        {
+            public bool IsOpen;
+            public string Buffer;
+            public Rectangle Bounds;
+            public Rectangle InputBounds;
+            public Rectangle ConfirmBounds;
+            public Rectangle CancelBounds;
         }
     }
 }

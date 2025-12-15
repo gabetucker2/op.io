@@ -101,6 +101,12 @@ namespace op.io
         private static readonly List<ColorRole> _orderedRoles = new();
         private static bool _initialized;
         private static bool _importedLegacyBackground;
+        private const string ActiveSchemeRowKey = "__ActiveScheme";
+        private const string SchemePrefix = "Scheme:";
+        private const string SchemeDelimiter = "::";
+        public const string DefaultSchemeName = "DefaultScheme";
+        public const string LightSchemeName = "LightMode";
+        private static string _activeSchemeName = DefaultSchemeName;
         private static readonly Dictionary<string, ColorRole> _legacyRoleMappings = new(StringComparer.OrdinalIgnoreCase)
         {
             { "DangerBackground", ColorRole.CloseBackground },
@@ -143,6 +149,15 @@ namespace op.io
             SeedDefaults();
             _initialized = true;
             ApplySideEffects();
+        }
+
+        public static string ActiveSchemeName
+        {
+            get
+            {
+                EnsureInitialized();
+                return _activeSchemeName;
+            }
         }
 
         public static IReadOnlyList<ColorOption> GetOrderedOptions()
@@ -224,6 +239,91 @@ namespace op.io
             }
         }
 
+        public static IReadOnlyList<string> GetAvailableSchemeNames()
+        {
+            EnsureInitialized();
+            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(_activeSchemeName))
+            {
+                names.Add(_activeSchemeName);
+            }
+
+            names.Add(DefaultSchemeName);
+
+            Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            foreach (string rowKey in storedData.Keys)
+            {
+                if (TryParseSchemeRowKey(rowKey, out string schemeName, out _))
+                {
+                    names.Add(schemeName);
+                }
+            }
+
+            return names.OrderBy(n => n).ToList();
+        }
+
+        public static bool SaveCurrentScheme(string schemeName, bool makeActive = true)
+        {
+            EnsureInitialized();
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return false;
+            }
+
+            Dictionary<ColorRole, Color> palette = CaptureCurrentPalette();
+            SaveSchemePalette(normalized, palette);
+
+            if (makeActive)
+            {
+                _activeSchemeName = normalized;
+                PersistActiveSchemeName(normalized);
+            }
+
+            return true;
+        }
+
+        public static bool TryLoadScheme(string schemeName, bool persistActive = true, bool applySideEffects = true)
+        {
+            EnsureInitialized();
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return false;
+            }
+
+            if (!TryReadSchemeColors(normalized, out Dictionary<ColorRole, Color> palette))
+            {
+                return false;
+            }
+
+            foreach (var pair in palette)
+            {
+                if (_options.TryGetValue(pair.Key, out ColorOption option))
+                {
+                    option.Set(pair.Value);
+                }
+            }
+
+            if (persistActive)
+            {
+                foreach (var pair in palette)
+                {
+                    SaveColor(pair.Key, pair.Value);
+                }
+
+                PersistActiveSchemeName(normalized);
+                _activeSchemeName = normalized;
+            }
+
+            if (applySideEffects)
+            {
+                ApplySideEffects();
+            }
+
+            return true;
+        }
+
         public static bool TryParseHex(string value, out Color color)
         {
             color = default;
@@ -281,6 +381,7 @@ namespace op.io
 
         private static void SeedDefaults()
         {
+            _activeSchemeName = DefaultSchemeName;
             _options.Clear();
             _orderedRoles.Clear();
 
@@ -369,11 +470,17 @@ namespace op.io
             SafeLog("ColorScheme.LoadFromStore: EnsureTables done");
 
             Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            string storedActiveScheme = ResolveActiveSchemeName(storedData);
             Dictionary<string, bool> storedLocks = BlockDataStore.LoadRowLocks(DockBlockKind.ColorScheme);
             if (storedData.Count > 0)
             {
                 foreach (var pair in storedData)
                 {
+                    if (string.Equals(pair.Key, ActiveSchemeRowKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     if (TryMapRole(pair.Key, out ColorRole targetRole) && _options.TryGetValue(targetRole, out ColorOption option))
                     {
                         if (TryParseHex(pair.Value, out Color parsed))
@@ -421,6 +528,52 @@ namespace op.io
                     .ToList();
                 UpdateOrder(ordered, persist: false);
             }
+
+            if (!string.IsNullOrWhiteSpace(storedActiveScheme))
+            {
+                _activeSchemeName = storedActiveScheme;
+            }
+
+            if (!TryLoadScheme(_activeSchemeName, persistActive: false, applySideEffects: false))
+            {
+                _activeSchemeName = DefaultSchemeName;
+            }
+
+            EnsureDefaultSchemesSeeded();
+        }
+
+        private static string ResolveActiveSchemeName(Dictionary<string, string> storedData)
+        {
+            if (storedData == null)
+            {
+                return null;
+            }
+
+            if (storedData.TryGetValue(ActiveSchemeRowKey, out string rawName) && !string.IsNullOrWhiteSpace(rawName))
+            {
+                return NormalizeSchemeName(rawName);
+            }
+
+            return null;
+        }
+
+        private static void EnsureDefaultSchemesSeeded()
+        {
+            try
+            {
+                EnsureNamedSchemeExists(DefaultSchemeName, CaptureCurrentPalette());
+                EnsureNamedSchemeExists(LightSchemeName, GetLightModeDefaults());
+                if (string.IsNullOrWhiteSpace(_activeSchemeName))
+                {
+                    _activeSchemeName = DefaultSchemeName;
+                }
+
+                PersistActiveSchemeName(_activeSchemeName);
+            }
+            catch (Exception ex)
+            {
+                SafeLog($"EnsureDefaultSchemesSeeded failed: {ex.Message}");
+            }
         }
 
         private static bool TryMapRole(string key, out ColorRole role)
@@ -461,6 +614,192 @@ namespace op.io
             }
 
             _importedLegacyBackground = true;
+        }
+
+        private static void EnsureNamedSchemeExists(string schemeName, IDictionary<ColorRole, Color> palette)
+        {
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized) || palette == null)
+            {
+                return;
+            }
+
+            if (TryReadSchemeColors(normalized, out Dictionary<ColorRole, Color> existing) && existing.Count > 0)
+            {
+                return;
+            }
+
+            SaveSchemePalette(normalized, palette);
+        }
+
+        private static Dictionary<ColorRole, Color> CaptureCurrentPalette()
+        {
+            Dictionary<ColorRole, Color> palette = new();
+            foreach (var pair in _options)
+            {
+                palette[pair.Key] = pair.Value.Value;
+            }
+
+            return palette;
+        }
+
+        private static Dictionary<ColorRole, Color> GetLightModeDefaults()
+        {
+            return new Dictionary<ColorRole, Color>
+            {
+                { ColorRole.TransparentWindowKey, new Color(255, 105, 180) },
+                { ColorRole.DefaultFallback, new Color(255, 105, 179) },
+                { ColorRole.GameBackground, new Color(245, 245, 248) },
+                { ColorRole.ScreenBackground, new Color(250, 250, 252) },
+                { ColorRole.BlockBackground, new Color(255, 255, 255) },
+                { ColorRole.BlockBorder, new Color(215, 218, 226) },
+                { ColorRole.DragBarBackground, new Color(240, 242, 248) },
+                { ColorRole.TextPrimary, new Color(32, 36, 48) },
+                { ColorRole.TextMuted, new Color(96, 104, 128) },
+                { ColorRole.Accent, new Color(74, 108, 210) },
+                { ColorRole.AccentSoft, new Color(74, 108, 210, 60) },
+                { ColorRole.OverlayBackground, new Color(240, 240, 245, 230) },
+                { ColorRole.DragBarHoverTint, new Color(226, 230, 240, 160) },
+                { ColorRole.ResizeEdge, new Color(210, 214, 222, 210) },
+                { ColorRole.ResizeEdgeHover, new Color(74, 108, 210, 150) },
+                { ColorRole.ResizeEdgeActive, new Color(74, 108, 210, 220) },
+                { ColorRole.ButtonNeutral, new Color(246, 247, 250, 255) },
+                { ColorRole.ButtonNeutralHover, new Color(232, 236, 244, 255) },
+                { ColorRole.ButtonPrimary, new Color(74, 108, 210, 235) },
+                { ColorRole.ButtonPrimaryHover, new Color(92, 126, 230, 240) },
+                { ColorRole.RowHover, new Color(236, 240, 248, 200) },
+                { ColorRole.RowDragging, new Color(226, 230, 240, 240) },
+                { ColorRole.DropIndicator, new Color(74, 108, 210, 110) },
+                { ColorRole.ToggleIdle, new Color(232, 236, 244, 190) },
+                { ColorRole.ToggleHover, new Color(74, 108, 210, 200) },
+                { ColorRole.ToggleActive, new Color(74, 108, 210, 230) },
+                { ColorRole.RebindScrim, new Color(240, 240, 245, 190) },
+                { ColorRole.Warning, new Color(200, 160, 32) },
+                { ColorRole.ScrollTrack, new Color(232, 236, 244, 220) },
+                { ColorRole.ScrollThumb, new Color(180, 184, 195, 255) },
+                { ColorRole.ScrollThumbHover, new Color(160, 168, 182, 255) },
+                { ColorRole.IndicatorActive, new Color(38, 160, 75) },
+                { ColorRole.IndicatorInactive, new Color(210, 70, 56) },
+                { ColorRole.CloseBackground, new Color(255, 232, 232, 240) },
+                { ColorRole.CloseHoverBackground, new Color(255, 220, 220, 255) },
+                { ColorRole.CloseBorder, new Color(220, 140, 140) },
+                { ColorRole.CloseHoverBorder, new Color(240, 120, 120) },
+                { ColorRole.CloseOverlayBackground, new Color(255, 236, 236, 245) },
+                { ColorRole.CloseOverlayHoverBackground, new Color(250, 222, 222, 245) },
+                { ColorRole.CloseOverlayBorder, new Color(220, 140, 140) },
+                { ColorRole.LockLockedFill, new Color(230, 230, 235, 230) },
+                { ColorRole.LockLockedHoverFill, new Color(226, 226, 232, 240) },
+                { ColorRole.LockUnlockedFill, new Color(74, 108, 210, 230) },
+                { ColorRole.LockUnlockedHoverFill, new Color(74, 108, 210, 245) },
+                { ColorRole.CloseGlyph, new Color(200, 70, 52) },
+                { ColorRole.CloseGlyphHover, new Color(255, 255, 255) }
+            };
+        }
+
+        private static bool TryReadSchemeColors(string schemeName, out Dictionary<ColorRole, Color> palette)
+        {
+            palette = new Dictionary<ColorRole, Color>();
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return false;
+            }
+
+            Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            foreach (var pair in storedData)
+            {
+                if (TryParseSchemeRowKey(pair.Key, out string name, out ColorRole role) &&
+                    name.Equals(normalized, StringComparison.OrdinalIgnoreCase) &&
+                    TryParseHex(pair.Value, out Color parsed))
+                {
+                    palette[role] = parsed;
+                }
+            }
+
+            if (palette.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (ColorRole role in _options.Keys)
+            {
+                if (!palette.ContainsKey(role))
+                {
+                    palette[role] = _options[role].Value;
+                }
+            }
+
+            return true;
+        }
+
+        private static void SaveSchemePalette(string schemeName, IDictionary<ColorRole, Color> palette)
+        {
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized) || palette == null)
+            {
+                return;
+            }
+
+            foreach (var pair in palette)
+            {
+                string rowKey = EncodeSchemeRowKey(normalized, pair.Key);
+                BlockDataStore.SetRowData(DockBlockKind.ColorScheme, rowKey, ToHex(pair.Value));
+            }
+        }
+
+        private static string NormalizeSchemeName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            string trimmed = value.Trim();
+            trimmed = trimmed.Replace(SchemeDelimiter, "-").Replace(":", "-");
+            return trimmed;
+        }
+
+        private static string EncodeSchemeRowKey(string schemeName, ColorRole role)
+        {
+            return $"{SchemePrefix}{schemeName}{SchemeDelimiter}{role}";
+        }
+
+        private static bool TryParseSchemeRowKey(string key, out string schemeName, out ColorRole role)
+        {
+            schemeName = null;
+            role = default;
+            if (string.IsNullOrWhiteSpace(key) || !key.StartsWith(SchemePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string remainder = key[SchemePrefix.Length..];
+            int separatorIndex = remainder.IndexOf(SchemeDelimiter, StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                return false;
+            }
+
+            string name = remainder[..separatorIndex];
+            string roleKey = remainder[(separatorIndex + SchemeDelimiter.Length)..];
+            if (Enum.TryParse(roleKey, out role))
+            {
+                schemeName = name;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void PersistActiveSchemeName(string schemeName)
+        {
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return;
+            }
+
+            BlockDataStore.SetRowData(DockBlockKind.ColorScheme, ActiveSchemeRowKey, normalized);
         }
 
         private static void ApplySideEffects()

@@ -51,7 +51,8 @@ namespace op.io.UI.BlockScripts.BlockUtilities
                 EnsureTable(blockKind, connection);
 
                 string tableName = GetTableName(blockKind);
-                string sql = $"SELECT RowKey, RenderOrder FROM {tableName} WHERE RowKey <> @lockKey ORDER BY RenderOrder ASC, RowKey ASC;";
+                string orderFilter = blockKind == DockBlockKind.ColorScheme ? " AND RenderOrder IS NOT NULL" : string.Empty;
+                string sql = $"SELECT RowKey, RenderOrder FROM {tableName} WHERE RowKey <> @lockKey{orderFilter} ORDER BY RenderOrder ASC, RowKey ASC;";
 
                 using var command = new SQLiteCommand(sql, connection);
                 command.Parameters.AddWithValue("@lockKey", LockRowKey);
@@ -115,7 +116,8 @@ namespace op.io.UI.BlockScripts.BlockUtilities
                         normalizedKeys.Add(normalizedKey);
                     }
 
-                    if (normalizedKeys.Count > 0)
+                    bool shouldDeleteMissing = blockKind != DockBlockKind.ColorScheme;
+                    if (shouldDeleteMissing && normalizedKeys.Count > 0)
                     {
                         // Remove rows that are no longer present, but keep the lock row intact.
                         string placeholders = string.Join(", ", normalizedKeys.Select((_, i) => $"@row{i}"));
