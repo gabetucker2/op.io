@@ -53,5 +53,3 @@ INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CursorFollowDeadzonePix
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '25');
 
 ---------------------------------------------------------------------------------------------------------------------------
-
-

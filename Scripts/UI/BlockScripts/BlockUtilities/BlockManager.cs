@@ -53,11 +53,11 @@ namespace op.io
         private static Rectangle _overlayDismissBounds;
         private static Rectangle _overlayOpenAllBounds;
         private static Rectangle _overlayCloseAllBounds;
-        private static readonly List<ResizeBar> _resizeBars = [];
-        private static ResizeBar? _hoveredResizeBar;
-        private static ResizeBar? _activeResizeBar;
-        private static ResizeBar? _activeResizeBarSnapTarget;
-        private static int? _activeResizeBarSnapCoordinate;
+        private static readonly List<ResizeEdge> _resizeEdges = [];
+        private static ResizeEdge? _hoveredResizeEdge;
+        private static ResizeEdge? _activeResizeEdge;
+        private static ResizeEdge? _activeResizeEdgeSnapTarget;
+        private static int? _activeResizeEdgeSnapCoordinate;
         private static readonly List<CornerHandle> _cornerHandles = [];
         private static CornerHandle? _hoveredCornerHandle;
         private static CornerHandle? _activeCornerHandle;
@@ -99,7 +99,7 @@ namespace op.io
                 if (!_dockingModeEnabled)
                 {
                     CollapseInteractions();
-                    ClearResizeBars();
+                    ClearResizeEdges();
                     MarkLayoutDirty();
                 }
                 else
@@ -171,7 +171,7 @@ namespace op.io
             {
                 // Evaluate corners first so clicks on intersections start a dual-axis drag instead of being swallowed by a single edge.
                 bool resizingBlocks = allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                    UpdateResizeBarState(leftClickStarted, leftClickHeld, leftClickReleased));
+                    UpdateResizeEdgeState(leftClickStarted, leftClickHeld, leftClickReleased));
                 if (!resizingBlocks)
                 {
                     UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
@@ -493,7 +493,7 @@ namespace op.io
                 _ => (defaultMin, defaultMin)
             };
 
-            // Keep at least the drag bar height so we can detect when a header is being pushed;
+            // Keep at least the drag bar height so we can detect when a drag bar is being pushed;
             // overflow gets propagated to neighboring resize edges instead of hard-clamping.
             int clampedWidth = Math.Max(width, UIStyle.MinBlockSize);
             int clampedHeight = Math.Max(height, UIStyle.DragBarHeight);
@@ -538,59 +538,59 @@ namespace op.io
             UIStyle.EnsureFontsLoaded(Core.Instance?.Content);
         }
 
-        private static bool UpdateResizeBarState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
+        private static bool UpdateResizeEdgeState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
         {
-            if (!AnyBlockVisible() || _resizeBars.Count == 0)
+            if (!AnyBlockVisible() || _resizeEdges.Count == 0)
             {
-                _hoveredResizeBar = null;
+                _hoveredResizeEdge = null;
                 if (!leftClickHeld)
                 {
-                    _activeResizeBar = null;
-                    ClearResizeBarSnap();
+                    _activeResizeEdge = null;
+                    ClearResizeEdgeSnap();
                 }
 
                 return false;
             }
 
-            if (_activeResizeBar.HasValue)
+            if (_activeResizeEdge.HasValue)
             {
                 if (!leftClickHeld || leftClickReleased)
                 {
-                    if (_activeResizeBar.HasValue)
+                    if (_activeResizeEdge.HasValue)
                     {
-                        DebugLogger.PrintUI($"[ResizeBarEnd] {DescribeResizeBar(_activeResizeBar.Value)}");
+                        DebugLogger.PrintUI($"[ResizeEdgeEnd] {DescribeResizeEdge(_activeResizeEdge.Value)}");
                     }
                     LogResizeBlockDeltas();
-                    _activeResizeBar = null;
-                    ClearResizeBarSnap();
+                    _activeResizeEdge = null;
+                    ClearResizeEdgeSnap();
                     return false;
                 }
 
-                ApplyResizeBarDrag(_activeResizeBar.Value, _mousePosition);
+                ApplyResizeEdgeDrag(_activeResizeEdge.Value, _mousePosition);
 
                 // If we're snapped to another handle, move that handle in lockstep so both edges nudge together.
-                if (_activeResizeBarSnapTarget.HasValue && _activeResizeBarSnapCoordinate.HasValue)
+                if (_activeResizeEdgeSnapTarget.HasValue && _activeResizeEdgeSnapCoordinate.HasValue)
                 {
-                    ResizeBar snapTarget = _activeResizeBarSnapTarget.Value;
+                    ResizeEdge snapTarget = _activeResizeEdgeSnapTarget.Value;
                     Point snappedPosition = snapTarget.Orientation == DockSplitOrientation.Vertical
-                        ? new Point(_activeResizeBarSnapCoordinate.Value, _mousePosition.Y)
-                        : new Point(_mousePosition.X, _activeResizeBarSnapCoordinate.Value);
-                    ApplyResizeBarDrag(snapTarget, snappedPosition);
+                        ? new Point(_activeResizeEdgeSnapCoordinate.Value, _mousePosition.Y)
+                        : new Point(_mousePosition.X, _activeResizeEdgeSnapCoordinate.Value);
+                    ApplyResizeEdgeDrag(snapTarget, snappedPosition);
                 }
 
                 return true;
             }
 
-            ResizeBar? hovered = HitTestResizeBar(_mousePosition);
-            _hoveredResizeBar = hovered;
+            ResizeEdge? hovered = HitTestResizeEdge(_mousePosition);
+            _hoveredResizeEdge = hovered;
 
             if (hovered.HasValue && leftClickStarted)
             {
-                DebugLogger.PrintUI($"[ResizeBarStart] {DescribeResizeBar(hovered.Value)} Mouse={_mousePosition}");
+                DebugLogger.PrintUI($"[ResizeEdgeStart] {DescribeResizeEdge(hovered.Value)} Mouse={_mousePosition}");
                 CaptureBlockBoundsForResize();
-                _activeResizeBar = hovered;
-                ClearResizeBarSnap();
-                ApplyResizeBarDrag(hovered.Value, _mousePosition);
+                _activeResizeEdge = hovered;
+                ClearResizeEdgeSnap();
+                ApplyResizeEdgeDrag(hovered.Value, _mousePosition);
                 return true;
             }
 
@@ -679,7 +679,7 @@ namespace op.io
                 }
             }
 
-            DockBlock dragBarHover = HitTestDragBarBlock(_mousePosition, excludeHeaderButtons: true);
+            DockBlock dragBarHover = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true);
             _hoveredDragBarId = dragBarHover?.Id;
 
             DockBlock dragBarHit = null;
@@ -832,7 +832,7 @@ namespace op.io
             _blockLockStates[block.Id] = storedLock;
         }
 
-        private static DockBlock HitTestDragBarBlock(Point position, bool excludeHeaderButtons = false)
+        private static DockBlock HitTestDragBarBlock(Point position, bool excludeDragBarButtons = false)
         {
             int dragBarHeight = GetActiveDragBarHeight();
             if (dragBarHeight <= 0)
@@ -853,7 +853,7 @@ namespace op.io
                     continue;
                 }
 
-                if (excludeHeaderButtons && IsPointOnHeaderButton(block, dragBarHeight, position))
+                if (excludeDragBarButtons && IsPointOnDragBarButton(block, dragBarHeight, position))
                 {
                     continue;
                 }
@@ -914,26 +914,26 @@ namespace op.io
             return null;
         }
 
-        private static bool IsPointOnHeaderButton(DockBlock block, int dragBarHeight, Point position)
+        private static bool IsPointOnDragBarButton(DockBlock block, int dragBarHeight, Point position)
         {
-            GetHeaderButtonBounds(block, dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds);
             return (lockBounds != Rectangle.Empty && lockBounds.Contains(position)) ||
                 (closeBounds != Rectangle.Empty && closeBounds.Contains(position));
         }
 
         private static Rectangle GetCloseButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetHeaderButtonBounds(block, dragBarHeight, out _, out Rectangle closeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out Rectangle closeBounds);
             return closeBounds;
         }
 
         private static Rectangle GetLockButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetHeaderButtonBounds(block, dragBarHeight, out Rectangle lockBounds, out _);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle lockBounds, out _);
             return lockBounds;
         }
 
-        private static void GetHeaderButtonBounds(DockBlock block, int dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds)
+        private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds)
         {
             lockBounds = Rectangle.Empty;
             closeBounds = Rectangle.Empty;
@@ -1158,16 +1158,16 @@ namespace op.io
             return null;
         }
 
-        private static ResizeBar? HitTestResizeBar(Point position)
+        private static ResizeEdge? HitTestResizeEdge(Point position)
         {
             // When handles overlap (e.g., nested splits near each other), pick the one whose center
             // is closest to the cursor along the resize axis, breaking ties by depth so nested layouts
             // still feel precise without stealing drags meant for a parent boundary.
-            ResizeBar? best = null;
+            ResizeEdge? best = null;
             int bestDepth = -1;
             int bestDistance = int.MaxValue;
 
-            foreach (ResizeBar handle in _resizeBars)
+            foreach (ResizeEdge handle in _resizeEdges)
             {
                 Rectangle hitBounds = handle.Bounds;
                 hitBounds.Inflate(2, 2);
@@ -1176,7 +1176,7 @@ namespace op.io
                     continue;
                 }
 
-                int axisCenter = GetResizeBarAxisCenter(handle);
+                int axisCenter = GetResizeEdgeAxisCenter(handle);
                 int axisDistance = handle.Orientation == DockSplitOrientation.Vertical
                     ? Math.Abs(position.X - axisCenter)
                     : Math.Abs(position.Y - axisCenter);
@@ -1194,7 +1194,7 @@ namespace op.io
             return best;
         }
 
-        private static void ApplyResizeBarDrag(ResizeBar handle, Point position)
+        private static void ApplyResizeEdgeDrag(ResizeEdge handle, Point position)
         {
             if (handle.Node == null)
             {
@@ -1204,16 +1204,16 @@ namespace op.io
             // Avoid propagating loops when we nudge neighboring handles.
             if (_isPropagatingResize)
             {
-                position = GetResizeBarPosition(handle, position);
-                ApplyResizeBarDragInternal(handle, position, allowPropagation: false);
+                position = GetResizeEdgePosition(handle, position);
+                ApplyResizeEdgeDragInternal(handle, position, allowPropagation: false);
                 return;
             }
 
-            position = GetResizeBarPosition(handle, position);
-            ApplyResizeBarDragInternal(handle, position, allowPropagation: true);
+            position = GetResizeEdgePosition(handle, position);
+            ApplyResizeEdgeDragInternal(handle, position, allowPropagation: true);
         }
 
-        private static void ApplyResizeBarDragInternal(ResizeBar handle, Point position, bool allowPropagation)
+        private static void ApplyResizeEdgeDragInternal(ResizeEdge handle, Point position, bool allowPropagation)
         {
             Rectangle bounds = handle.Node.Bounds;
             if (bounds.Width <= 0 || bounds.Height <= 0)
@@ -1232,8 +1232,8 @@ namespace op.io
             int minSecond = handle.Node.Orientation == DockSplitOrientation.Vertical
                 ? handle.Node.Second?.GetMinWidth() ?? 0
                 : handle.Node.Second?.GetMinHeight() ?? 0;
-            ResizeBar? snapPartner = _activeResizeBarSnapTarget.HasValue && _activeResizeBarSnapTarget.Value.Orientation == handle.Orientation
-                ? _activeResizeBarSnapTarget
+            ResizeEdge? snapPartner = _activeResizeEdgeSnapTarget.HasValue && _activeResizeEdgeSnapTarget.Value.Orientation == handle.Orientation
+                ? _activeResizeEdgeSnapTarget
                 : null;
 
             if (handle.Orientation == DockSplitOrientation.Vertical)
@@ -1255,7 +1255,7 @@ namespace op.io
             {
                 string firstDesc = DescribeNode(handle.Node.First);
                 string secondDesc = DescribeNode(handle.Node.Second);
-                DebugLogger.PrintUI($"[ResizeBarDrag] Ori={handle.Orientation} Node={DescribeNode(handle.Node)} Prev={previousRatio:F3} New={newRatio:F3} RelativePos={(handle.Orientation == DockSplitOrientation.Vertical ? position.X - bounds.X : position.Y - bounds.Y)} Bounds={bounds} Mouse={position} First={firstDesc} Second={secondDesc}");
+                DebugLogger.PrintUI($"[ResizeEdgeDrag] Ori={handle.Orientation} Node={DescribeNode(handle.Node)} Prev={previousRatio:F3} New={newRatio:F3} RelativePos={(handle.Orientation == DockSplitOrientation.Vertical ? position.X - bounds.X : position.Y - bounds.Y)} Bounds={bounds} Mouse={position} First={firstDesc} Second={secondDesc}");
                 handle.Node.SplitRatio = newRatio;
 
                 int totalSpan = handle.Orientation == DockSplitOrientation.Vertical ? bounds.Width : bounds.Height;
@@ -1276,29 +1276,29 @@ namespace op.io
                 if (axisPositionRaw < minClamp)
                 {
                     int overflow = minClamp - axisPositionRaw;
-                    NudgeNearestResizeBar(handle, overflow, negativeDirection: true, snapPartner);
+                    NudgeNearestResizeEdge(handle, overflow, negativeDirection: true, snapPartner);
                 }
                 else if (axisPositionRaw > maxClamp)
                 {
                     int overflow = axisPositionRaw - maxClamp;
-                    NudgeNearestResizeBar(handle, overflow, negativeDirection: false, snapPartner);
+                    NudgeNearestResizeEdge(handle, overflow, negativeDirection: false, snapPartner);
                 }
             }
         }
 
-        private static void NudgeNearestResizeBar(ResizeBar source, int amount, bool negativeDirection, ResizeBar? preferred = null)
+        private static void NudgeNearestResizeEdge(ResizeEdge source, int amount, bool negativeDirection, ResizeEdge? preferred = null)
         {
             if (amount <= 0)
             {
                 return;
             }
 
-            ResizeBar? best = preferred;
+            ResizeEdge? best = preferred;
             int bestDistance = int.MaxValue;
 
-            foreach (ResizeBar other in _resizeBars)
+            foreach (ResizeEdge other in _resizeEdges)
             {
-                if (ResizeBarsEqual(other, source) || other.Orientation != source.Orientation)
+                if (ResizeEdgesEqual(other, source) || other.Orientation != source.Orientation)
                 {
                     continue;
                 }
@@ -1342,7 +1342,7 @@ namespace op.io
                 return;
             }
 
-            ResizeBar target = best.Value;
+            ResizeEdge target = best.Value;
             int signedAmount = negativeDirection ? -amount : amount;
             Point targetPosition = target.Orientation == DockSplitOrientation.Vertical
                 ? new Point(target.Bounds.Center.X + signedAmount, target.Bounds.Center.Y)
@@ -1351,7 +1351,7 @@ namespace op.io
             _isPropagatingResize = true;
             try
             {
-                ApplyResizeBarDragInternal(target, targetPosition, allowPropagation: false);
+                ApplyResizeEdgeDragInternal(target, targetPosition, allowPropagation: false);
             }
             finally
             {
@@ -1362,25 +1362,25 @@ namespace op.io
         private static void ApplyCornerHandleDrag(CornerHandle corner, Point position)
         {
             Point snapped = GetCornerDragPosition(corner, position);
-            ApplyResizeBarDrag(corner.VerticalHandle, snapped);
-            ApplyResizeBarDrag(corner.HorizontalHandle, snapped);
+            ApplyResizeEdgeDrag(corner.VerticalHandle, snapped);
+            ApplyResizeEdgeDrag(corner.HorizontalHandle, snapped);
 
             // If two corners started the drag already snapped together, move the paired corner in lockstep.
             if (_activeCornerHandle.HasValue && CornerEquals(corner, _activeCornerHandle.Value) && _activeCornerLinkedHandle.HasValue)
             {
-                ApplyResizeBarDrag(_activeCornerLinkedHandle.Value.VerticalHandle, snapped);
-                ApplyResizeBarDrag(_activeCornerLinkedHandle.Value.HorizontalHandle, snapped);
+                ApplyResizeEdgeDrag(_activeCornerLinkedHandle.Value.VerticalHandle, snapped);
+                ApplyResizeEdgeDrag(_activeCornerLinkedHandle.Value.HorizontalHandle, snapped);
             }
         }
 
-        private static Point GetResizeBarPosition(ResizeBar handle, Point position)
+        private static Point GetResizeEdgePosition(ResizeEdge handle, Point position)
         {
-            if (!_activeResizeBar.HasValue || !ResizeBarsEqual(handle, _activeResizeBar.Value))
+            if (!_activeResizeEdge.HasValue || !ResizeEdgesEqual(handle, _activeResizeEdge.Value))
             {
                 return position;
             }
 
-            int? snapCoordinate = GetResizeBarSnapCoordinate(handle, position);
+            int? snapCoordinate = GetResizeEdgeSnapCoordinate(handle, position);
             if (!snapCoordinate.HasValue)
             {
                 return position;
@@ -1394,53 +1394,53 @@ namespace op.io
             return new Point(position.X, snapCoordinate.Value);
         }
 
-        private static int? GetResizeBarSnapCoordinate(ResizeBar handle, Point position)
+        private static int? GetResizeEdgeSnapCoordinate(ResizeEdge handle, Point position)
         {
             int axisPosition = handle.Orientation == DockSplitOrientation.Vertical ? position.X : position.Y;
-            ResizeBar? candidate = FindResizeBarSnapTarget(handle, axisPosition, CornerSnapDistance);
+            ResizeEdge? candidate = FindResizeEdgeSnapTarget(handle, axisPosition, CornerSnapDistance);
 
             if (candidate.HasValue)
             {
-                int targetCoordinate = GetResizeBarAxisCenter(candidate.Value);
-                _activeResizeBarSnapTarget = candidate.Value;
-                _activeResizeBarSnapCoordinate = targetCoordinate;
+                int targetCoordinate = GetResizeEdgeAxisCenter(candidate.Value);
+                _activeResizeEdgeSnapTarget = candidate.Value;
+                _activeResizeEdgeSnapCoordinate = targetCoordinate;
                 return targetCoordinate;
             }
 
-            if (_activeResizeBarSnapCoordinate.HasValue)
+            if (_activeResizeEdgeSnapCoordinate.HasValue)
             {
-                int releaseDistance = GetResizeBarReleaseDistance();
-                int distance = Math.Abs(axisPosition - _activeResizeBarSnapCoordinate.Value);
+                int releaseDistance = GetResizeEdgeReleaseDistance();
+                int distance = Math.Abs(axisPosition - _activeResizeEdgeSnapCoordinate.Value);
                 if (distance <= releaseDistance)
                 {
-                    return _activeResizeBarSnapCoordinate.Value;
+                    return _activeResizeEdgeSnapCoordinate.Value;
                 }
 
-                ClearResizeBarSnap();
+                ClearResizeEdgeSnap();
             }
 
             return null;
         }
 
-        private static ResizeBar? FindResizeBarSnapTarget(ResizeBar handle, int axisPosition, int threshold)
+        private static ResizeEdge? FindResizeEdgeSnapTarget(ResizeEdge handle, int axisPosition, int threshold)
         {
-            if (_resizeBars.Count <= 1 || threshold <= 0)
+            if (_resizeEdges.Count <= 1 || threshold <= 0)
             {
                 return null;
             }
 
             int snapDistance = Math.Max(1, threshold);
             int bestDistance = snapDistance;
-            ResizeBar? bestHandle = null;
+            ResizeEdge? bestHandle = null;
 
-            foreach (ResizeBar other in _resizeBars)
+            foreach (ResizeEdge other in _resizeEdges)
             {
-                if (ResizeBarsEqual(other, handle) || other.Orientation != handle.Orientation)
+                if (ResizeEdgesEqual(other, handle) || other.Orientation != handle.Orientation)
                 {
                     continue;
                 }
 
-                int otherCoordinate = GetResizeBarAxisCenter(other);
+                int otherCoordinate = GetResizeEdgeAxisCenter(other);
                 int distance = Math.Abs(otherCoordinate - axisPosition);
                 if (distance < bestDistance)
                 {
@@ -1452,14 +1452,14 @@ namespace op.io
             return bestHandle;
         }
 
-        private static int GetResizeBarAxisCenter(ResizeBar handle)
+        private static int GetResizeEdgeAxisCenter(ResizeEdge handle)
         {
             return handle.Orientation == DockSplitOrientation.Vertical
                 ? handle.Bounds.Center.X
                 : handle.Bounds.Center.Y;
         }
 
-        private static int GetResizeBarReleaseDistance()
+        private static int GetResizeEdgeReleaseDistance()
         {
             int baseDistance = Math.Max(CornerSnapDistance * 2, CornerSnapDistance + 12);
             return Math.Max(baseDistance, 1);
@@ -1738,7 +1738,7 @@ namespace op.io
 
             if (showDockingChrome)
             {
-                DrawResizeBars(spriteBatch);
+                DrawResizeEdges(spriteBatch);
                 DrawCornerHandles(spriteBatch);
             }
 
@@ -1754,36 +1754,36 @@ namespace op.io
             }
         }
 
-        private static void DrawResizeBars(SpriteBatch spriteBatch)
+        private static void DrawResizeEdges(SpriteBatch spriteBatch)
         {
-            if (_resizeBars.Count == 0)
+            if (_resizeEdges.Count == 0)
             {
                 return;
             }
 
-            foreach (ResizeBar handle in _resizeBars)
+            foreach (ResizeEdge handle in _resizeEdges)
             {
-                Color color = UIStyle.ResizeBarColor;
-                bool isActive = _activeResizeBar.HasValue && ReferenceEquals(handle.Node, _activeResizeBar.Value.Node);
-                bool isHovered = _hoveredResizeBar.HasValue && ReferenceEquals(handle.Node, _hoveredResizeBar.Value.Node);
+                Color color = UIStyle.ResizeEdgeColor;
+                bool isActive = _activeResizeEdge.HasValue && ReferenceEquals(handle.Node, _activeResizeEdge.Value.Node);
+                bool isHovered = _hoveredResizeEdge.HasValue && ReferenceEquals(handle.Node, _hoveredResizeEdge.Value.Node);
 
-                if (!isActive && _activeCornerHandle.HasValue && CornerContainsResizeBar(_activeCornerHandle.Value, handle))
+                if (!isActive && _activeCornerHandle.HasValue && CornerContainsResizeEdge(_activeCornerHandle.Value, handle))
                 {
                     isActive = true;
                 }
 
-                if (!isHovered && _hoveredCornerHandle.HasValue && CornerContainsResizeBar(_hoveredCornerHandle.Value, handle))
+                if (!isHovered && _hoveredCornerHandle.HasValue && CornerContainsResizeEdge(_hoveredCornerHandle.Value, handle))
                 {
                     isHovered = true;
                 }
 
                 if (isActive)
                 {
-                    color = UIStyle.ResizeBarActiveColor;
+                    color = UIStyle.ResizeEdgeActiveColor;
                 }
                 else if (isHovered)
                 {
-                    color = UIStyle.ResizeBarHoverColor;
+                    color = UIStyle.ResizeEdgeHoverColor;
                 }
 
                 DrawRect(spriteBatch, handle.Bounds, color);
@@ -1807,22 +1807,22 @@ namespace op.io
                 return;
             }
 
-            DrawRect(spriteBatch, dragBar, UIStyle.HeaderBackground);
+            DrawRect(spriteBatch, dragBar, UIStyle.DragBarBackground);
             bool dragBarHovered = string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal);
-            GetHeaderButtonBounds(block, dragBarHeight, out Rectangle lockButtonBounds, out Rectangle closeButtonBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle lockButtonBounds, out Rectangle closeButtonBounds);
 
             if (dragBarHovered)
             {
                 DrawRect(spriteBatch, dragBar, UIStyle.DragBarHoverTint);
             }
 
-            UIStyle.UIFont headerFont = UIStyle.FontH2;
-            if (headerFont.IsAvailable)
+            UIStyle.UIFont dragBarFont = UIStyle.FontH2;
+            if (dragBarFont.IsAvailable)
             {
-                Vector2 textSize = headerFont.MeasureString(block.Title);
+                Vector2 textSize = dragBarFont.MeasureString(block.Title);
                 float textY = dragBar.Bottom - textSize.Y + 3f;
                 Vector2 textPosition = new Vector2(dragBar.X + 12, textY);
-                headerFont.DrawString(spriteBatch, block.Title, textPosition, UIStyle.TextColor);
+                dragBarFont.DrawString(spriteBatch, block.Title, textPosition, UIStyle.TextColor);
             }
 
             if (lockButtonBounds != Rectangle.Empty)
@@ -1903,13 +1903,13 @@ namespace op.io
 
             foreach (CornerHandle corner in _cornerHandles)
             {
-                Color color = UIStyle.ResizeBarColor;
+                Color color = UIStyle.ResizeEdgeColor;
                 Rectangle bounds = corner.Bounds;
 
                 bool isActiveCorner = _activeCornerHandle.HasValue && CornerEquals(corner, _activeCornerHandle.Value);
                 if (isActiveCorner)
                 {
-                    color = UIStyle.ResizeBarActiveColor;
+                    color = UIStyle.ResizeEdgeActiveColor;
 
                     if (_activeCornerSnapPosition.HasValue)
                     {
@@ -1918,7 +1918,7 @@ namespace op.io
                 }
                 else if (_hoveredCornerHandle.HasValue && CornerEquals(corner, _hoveredCornerHandle.Value))
                 {
-                    color = UIStyle.ResizeBarHoverColor;
+                    color = UIStyle.ResizeEdgeHoverColor;
                 }
 
                 DrawRect(spriteBatch, bounds, color);
@@ -1937,10 +1937,10 @@ namespace op.io
 
             if (dragBarHeight > 0)
             {
-                int headerHeight = Math.Min(dragBarHeight, floating.Height);
-                Rectangle header = new(floating.X, floating.Y, floating.Width, headerHeight);
-                DrawRect(spriteBatch, header, UIStyle.HeaderBackground * 0.95f);
-                DrawRectOutline(spriteBatch, header, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+                int dragBarPreviewHeight = Math.Min(dragBarHeight, floating.Height);
+                Rectangle dragBarPreview = new(floating.X, floating.Y, floating.Width, dragBarPreviewHeight);
+                DrawRect(spriteBatch, dragBarPreview, UIStyle.DragBarBackground * 0.95f);
+                DrawRectOutline(spriteBatch, dragBarPreview, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
             }
 
             DrawRectOutline(spriteBatch, floating, UIStyle.AccentColor * 0.8f, UIStyle.DragOutlineThickness);
@@ -2102,9 +2102,9 @@ namespace op.io
             _draggingBlock = null;
             _dropPreview = null;
             _hoveredDragBarId = null;
-            _hoveredResizeBar = null;
-            _activeResizeBar = null;
-            ClearResizeBarSnap();
+            _hoveredResizeEdge = null;
+            _activeResizeEdge = null;
+            ClearResizeEdgeSnap();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
             _activeCornerLinkedHandle = null;
@@ -2130,10 +2130,10 @@ namespace op.io
             _activeCornerSnapLockY = false;
         }
 
-        private static void ClearResizeBarSnap()
+        private static void ClearResizeEdgeSnap()
         {
-            _activeResizeBarSnapTarget = null;
-            _activeResizeBarSnapCoordinate = null;
+            _activeResizeEdgeSnapTarget = null;
+            _activeResizeEdgeSnapCoordinate = null;
         }
 
         private static void DrawOverlayDismissButton(SpriteBatch spriteBatch)
@@ -2666,7 +2666,7 @@ namespace op.io
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
             if (graphicsDevice == null)
             {
-                ClearResizeBars();
+                ClearResizeEdges();
                 return;
             }
 
@@ -2681,7 +2681,7 @@ namespace op.io
             {
                 if (!DockingModeEnabled)
                 {
-                    ClearResizeBars();
+                    ClearResizeEdges();
                 }
 
                 return;
@@ -2692,11 +2692,11 @@ namespace op.io
 
             if (DockingModeEnabled)
             {
-                RebuildResizeBars();
+                RebuildResizeEdges();
             }
             else
             {
-                ClearResizeBars();
+                ClearResizeEdges();
             }
 
             _gameContentBounds = Rectangle.Empty;
@@ -2714,39 +2714,39 @@ namespace op.io
             _layoutDirty = true;
         }
 
-        private static void RebuildResizeBars()
+        private static void RebuildResizeEdges()
         {
             if (_rootNode == null || !AnyBlockVisible())
             {
-                ClearResizeBars();
+                ClearResizeEdges();
                 return;
             }
 
-            _resizeBars.Clear();
-            CollectResizeBars(_rootNode, 0);
+            _resizeEdges.Clear();
+            CollectResizeEdges(_rootNode, 0);
             RebuildCornerHandles();
 
-            if (_hoveredResizeBar.HasValue)
+            if (_hoveredResizeEdge.HasValue)
             {
-                _hoveredResizeBar = FindResizeBarForNode(_hoveredResizeBar.Value.Node);
+                _hoveredResizeEdge = FindResizeEdgeForNode(_hoveredResizeEdge.Value.Node);
             }
 
-            if (_activeResizeBar.HasValue)
+            if (_activeResizeEdge.HasValue)
             {
-                _activeResizeBar = FindResizeBarForNode(_activeResizeBar.Value.Node);
+                _activeResizeEdge = FindResizeEdgeForNode(_activeResizeEdge.Value.Node);
             }
 
-            if (_activeResizeBarSnapTarget.HasValue)
+            if (_activeResizeEdgeSnapTarget.HasValue)
             {
-                ResizeBar? refreshed = FindResizeBarForNode(_activeResizeBarSnapTarget.Value.Node);
-                if (refreshed.HasValue && refreshed.Value.Orientation == _activeResizeBarSnapTarget.Value.Orientation)
+                ResizeEdge? refreshed = FindResizeEdgeForNode(_activeResizeEdgeSnapTarget.Value.Node);
+                if (refreshed.HasValue && refreshed.Value.Orientation == _activeResizeEdgeSnapTarget.Value.Orientation)
                 {
-                    _activeResizeBarSnapTarget = refreshed;
-                    _activeResizeBarSnapCoordinate = GetResizeBarAxisCenter(refreshed.Value);
+                    _activeResizeEdgeSnapTarget = refreshed;
+                    _activeResizeEdgeSnapCoordinate = GetResizeEdgeAxisCenter(refreshed.Value);
                 }
                 else
                 {
-                    ClearResizeBarSnap();
+                    ClearResizeEdgeSnap();
                 }
             }
 
@@ -2811,7 +2811,7 @@ namespace op.io
             }
         }
 
-        private static void CollectResizeBars(DockNode node, int depth)
+        private static void CollectResizeEdges(DockNode node, int depth)
         {
             if (node is not SplitNode split)
             {
@@ -2823,44 +2823,44 @@ namespace op.io
 
             if (firstVisible && secondVisible)
             {
-                Rectangle handleBounds = GetResizeBarBounds(split);
+                Rectangle handleBounds = GetResizeEdgeBounds(split);
                 if (handleBounds.Width > 0 && handleBounds.Height > 0)
                 {
-                    _resizeBars.Add(new ResizeBar(split, split.Orientation, handleBounds, depth));
+                    _resizeEdges.Add(new ResizeEdge(split, split.Orientation, handleBounds, depth));
                 }
             }
 
             if (split.First != null)
             {
-                CollectResizeBars(split.First, depth + 1);
+                CollectResizeEdges(split.First, depth + 1);
             }
 
             if (split.Second != null)
             {
-                CollectResizeBars(split.Second, depth + 1);
+                CollectResizeEdges(split.Second, depth + 1);
             }
         }
 
         private static void RebuildCornerHandles()
         {
             _cornerHandles.Clear();
-            if (_resizeBars.Count == 0)
+            if (_resizeEdges.Count == 0)
             {
                 return;
             }
 
-            // Keep corner targets tight to the actual intersection so dragging a nearby bar
+            // Keep corner targets tight to the actual intersection so dragging a nearby edge
             // doesn't accidentally activate a combined corner resize.
             int inflate = 0;
 
-            foreach (ResizeBar vertical in _resizeBars)
+            foreach (ResizeEdge vertical in _resizeEdges)
             {
                 if (vertical.Orientation != DockSplitOrientation.Vertical)
                 {
                     continue;
                 }
 
-                foreach (ResizeBar horizontal in _resizeBars)
+                foreach (ResizeEdge horizontal in _resizeEdges)
                 {
                     if (horizontal.Orientation != DockSplitOrientation.Horizontal)
                     {
@@ -2880,7 +2880,7 @@ namespace op.io
             }
         }
 
-        private static Rectangle GetResizeBarBounds(SplitNode split)
+        private static Rectangle GetResizeEdgeBounds(SplitNode split)
         {
             if (split == null)
             {
@@ -2893,7 +2893,7 @@ namespace op.io
                 return Rectangle.Empty;
             }
 
-            int thickness = Math.Max(2, UIStyle.ResizeBarThickness);
+            int thickness = Math.Max(2, UIStyle.ResizeEdgeThickness);
             if (split.Orientation == DockSplitOrientation.Vertical)
             {
                 int centerX = split.First.Bounds.Right;
@@ -2912,14 +2912,14 @@ namespace op.io
             }
         }
 
-        private static ResizeBar? FindResizeBarForNode(SplitNode node)
+        private static ResizeEdge? FindResizeEdgeForNode(SplitNode node)
         {
             if (node == null)
             {
                 return null;
             }
 
-            foreach (ResizeBar handle in _resizeBars)
+            foreach (ResizeEdge handle in _resizeEdges)
             {
                 if (ReferenceEquals(handle.Node, node))
                 {
@@ -2976,13 +2976,13 @@ namespace op.io
                 corner.HorizontalHandle.Bounds.Center.Y);
         }
 
-        private static bool CornerContainsResizeBar(CornerHandle corner, ResizeBar handle)
+        private static bool CornerContainsResizeEdge(CornerHandle corner, ResizeEdge handle)
         {
             return ReferenceEquals(corner.VerticalHandle.Node, handle.Node) ||
                    ReferenceEquals(corner.HorizontalHandle.Node, handle.Node);
         }
 
-        private static bool ResizeBarsEqual(ResizeBar a, ResizeBar b)
+        private static bool ResizeEdgesEqual(ResizeEdge a, ResizeEdge b)
         {
             return ReferenceEquals(a.Node, b.Node) && a.Orientation == b.Orientation;
         }
@@ -3049,22 +3049,22 @@ namespace op.io
             return node?.GetType()?.Name ?? "null";
         }
 
-        private static string DescribeResizeBar(ResizeBar handle)
+        private static string DescribeResizeEdge(ResizeEdge edge)
         {
-            return $"Handle[{handle.Orientation}] Depth={handle.Depth} Bounds={handle.Bounds} Node={DescribeNode(handle.Node)} First={DescribeNode(handle.Node?.First)} Second={DescribeNode(handle.Node?.Second)}";
+            return $"Edge[{edge.Orientation}] Depth={edge.Depth} Bounds={edge.Bounds} Node={DescribeNode(edge.Node)} First={DescribeNode(edge.Node?.First)} Second={DescribeNode(edge.Node?.Second)}";
         }
 
         private static string DescribeCornerHandle(CornerHandle corner)
         {
-            return $"Corner V={DescribeResizeBar(corner.VerticalHandle)} H={DescribeResizeBar(corner.HorizontalHandle)} Bounds={corner.Bounds}";
+            return $"Corner V={DescribeResizeEdge(corner.VerticalHandle)} H={DescribeResizeEdge(corner.HorizontalHandle)} Bounds={corner.Bounds}";
         }
 
-        private static void ClearResizeBars()
+        private static void ClearResizeEdges()
         {
-            _resizeBars.Clear();
-            _hoveredResizeBar = null;
-            _activeResizeBar = null;
-            ClearResizeBarSnap();
+            _resizeEdges.Clear();
+            _hoveredResizeEdge = null;
+            _activeResizeEdge = null;
+            ClearResizeEdgeSnap();
             _cornerHandles.Clear();
             _hoveredCornerHandle = null;
             _activeCornerHandle = null;
@@ -3297,9 +3297,9 @@ namespace op.io
             public Rectangle PlusBounds { get; }
         }
 
-        private readonly struct ResizeBar
+        private readonly struct ResizeEdge
         {
-            public ResizeBar(SplitNode node, DockSplitOrientation orientation, Rectangle bounds, int depth)
+            public ResizeEdge(SplitNode node, DockSplitOrientation orientation, Rectangle bounds, int depth)
             {
                 Node = node;
                 Orientation = orientation;
@@ -3315,15 +3315,15 @@ namespace op.io
 
         private readonly struct CornerHandle
         {
-            public CornerHandle(ResizeBar verticalHandle, ResizeBar horizontalHandle, Rectangle bounds)
+            public CornerHandle(ResizeEdge verticalHandle, ResizeEdge horizontalHandle, Rectangle bounds)
             {
                 VerticalHandle = verticalHandle;
                 HorizontalHandle = horizontalHandle;
                 Bounds = bounds;
             }
 
-            public ResizeBar VerticalHandle { get; }
-            public ResizeBar HorizontalHandle { get; }
+            public ResizeEdge VerticalHandle { get; }
+            public ResizeEdge HorizontalHandle { get; }
             public Rectangle Bounds { get; }
         }
 

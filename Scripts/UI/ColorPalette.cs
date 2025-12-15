@@ -13,16 +13,16 @@ namespace op.io
         public static Color ScreenBackground => ColorScheme.GetColor(ColorRole.ScreenBackground);
         public static Color BlockBackground => ColorScheme.GetColor(ColorRole.BlockBackground);
         public static Color BlockBorder => ColorScheme.GetColor(ColorRole.BlockBorder);
-        public static Color HeaderBackground => ColorScheme.GetColor(ColorRole.HeaderBackground);
+        public static Color DragBarBackground => ColorScheme.GetColor(ColorRole.DragBarBackground);
         public static Color TextPrimary => ColorScheme.GetColor(ColorRole.TextPrimary);
         public static Color TextMuted => ColorScheme.GetColor(ColorRole.TextMuted);
         public static Color Accent => ColorScheme.GetColor(ColorRole.Accent);
         public static Color AccentSoft => ColorScheme.GetColor(ColorRole.AccentSoft);
         public static Color OverlayBackground => ColorScheme.GetColor(ColorRole.OverlayBackground);
         public static Color DragBarHoverTint => ColorScheme.GetColor(ColorRole.DragBarHoverTint);
-        public static Color ResizeBar => ColorScheme.GetColor(ColorRole.ResizeBar);
-        public static Color ResizeBarHover => ColorScheme.GetColor(ColorRole.ResizeBarHover);
-        public static Color ResizeBarActive => ColorScheme.GetColor(ColorRole.ResizeBarActive);
+        public static Color ResizeEdge => ColorScheme.GetColor(ColorRole.ResizeEdge);
+        public static Color ResizeEdgeHover => ColorScheme.GetColor(ColorRole.ResizeEdgeHover);
+        public static Color ResizeEdgeActive => ColorScheme.GetColor(ColorRole.ResizeEdgeActive);
 
         public static Color ButtonNeutral => ColorScheme.GetColor(ColorRole.ButtonNeutral);
         public static Color ButtonNeutralHover => ColorScheme.GetColor(ColorRole.ButtonNeutralHover);

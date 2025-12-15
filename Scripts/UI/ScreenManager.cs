@@ -50,7 +50,7 @@ namespace op.io
             }
 
             game.Graphics.ApplyChanges();
-            GameInitializer.ApplyWindowCaptionColor(UIStyle.HeaderBackground);
+            GameInitializer.ApplyWindowCaptionColor(UIStyle.DragBarBackground);
             GameInitializer.RefreshTransparencyKey();
             DebugLogger.PrintUI($"Applied WindowMode: {game.WindowMode}, Resolution: {game.ViewportWidth}x{game.ViewportHeight}");
         }

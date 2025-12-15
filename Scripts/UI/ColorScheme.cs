@@ -14,16 +14,16 @@ namespace op.io
         ScreenBackground,
         BlockBackground,
         BlockBorder,
-        HeaderBackground,
+        DragBarBackground,
         TextPrimary,
         TextMuted,
         Accent,
         AccentSoft,
         OverlayBackground,
         DragBarHoverTint,
-        ResizeBar,
-        ResizeBarHover,
-        ResizeBarActive,
+        ResizeEdge,
+        ResizeEdgeHover,
+        ResizeEdgeActive,
         ButtonNeutral,
         ButtonNeutralHover,
         ButtonPrimary,
@@ -109,7 +109,11 @@ namespace op.io
             { "DangerHoverBorder", ColorRole.CloseHoverBorder },
             { "DangerOverlayBackground", ColorRole.CloseOverlayBackground },
             { "DangerOverlayHoverBackground", ColorRole.CloseOverlayHoverBackground },
-            { "DangerOverlayBorder", ColorRole.CloseOverlayBorder }
+            { "DangerOverlayBorder", ColorRole.CloseOverlayBorder },
+            { "HeaderBackground", ColorRole.DragBarBackground },
+            { "ResizeBar", ColorRole.ResizeEdge },
+            { "ResizeBarHover", ColorRole.ResizeEdgeHover },
+            { "ResizeBarActive", ColorRole.ResizeEdgeActive }
         };
 
         public static void Initialize()
@@ -289,7 +293,7 @@ namespace op.io
             Add(new ColorOption(ColorRole.ScreenBackground, "Screen background", "UI", new Color(18, 18, 18)));
             Add(new ColorOption(ColorRole.BlockBackground, "Block background", "UI", new Color(26, 26, 26)));
             Add(new ColorOption(ColorRole.BlockBorder, "Block border", "UI", new Color(48, 48, 48)));
-            Add(new ColorOption(ColorRole.HeaderBackground, "Header background", "UI", new Color(35, 35, 35)));
+            Add(new ColorOption(ColorRole.DragBarBackground, "Drag bar background", "UI", new Color(35, 35, 35)));
             Add(new ColorOption(ColorRole.TextPrimary, "Text primary", "UI", new Color(226, 226, 226)));
             Add(new ColorOption(ColorRole.TextMuted, "Text muted", "UI", new Color(160, 160, 160)));
             Add(new ColorOption(ColorRole.Accent, "Accent", "UI", new Color(110, 142, 255)));
@@ -297,9 +301,9 @@ namespace op.io
             Add(new ColorOption(ColorRole.OverlayBackground, "Overlay background", "UI", new Color(24, 24, 24, 230)));
             Add(new ColorOption(ColorRole.DragBarHoverTint, "Drag bar hover tint", "UI", new Color(26, 26, 26, 120)));
 
-            Add(new ColorOption(ColorRole.ResizeBar, "Resize bar", "UI", new Color(58, 58, 58, 210)));
-            Add(new ColorOption(ColorRole.ResizeBarHover, "Resize bar hover", "UI", new Color(110, 142, 255, 150)));
-            Add(new ColorOption(ColorRole.ResizeBarActive, "Resize bar active", "UI", new Color(110, 142, 255, 220)));
+            Add(new ColorOption(ColorRole.ResizeEdge, "Resize edge", "UI", new Color(58, 58, 58, 210)));
+            Add(new ColorOption(ColorRole.ResizeEdgeHover, "Resize edge hover", "UI", new Color(110, 142, 255, 150)));
+            Add(new ColorOption(ColorRole.ResizeEdgeActive, "Resize edge active", "UI", new Color(110, 142, 255, 220)));
 
             // Buttons
             Add(new ColorOption(ColorRole.ButtonNeutral, "Button neutral", "Buttons", new Color(34, 34, 34, 230)));

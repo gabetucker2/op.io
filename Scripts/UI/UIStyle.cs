@@ -14,7 +14,7 @@ namespace op.io
         public const int DragBarHeight = 32;
         public const int MinBlockSize = 10;
         public const float DropEdgeThreshold = 0.28f;
-        public const int ResizeBarThickness = 8;
+        public const int ResizeEdgeThickness = 8;
         public const int BlockBorderThickness = 1;
         public const int DragOutlineThickness = 2;
 
@@ -71,15 +71,15 @@ namespace op.io
         public static Color ScreenBackground => ColorPalette.ScreenBackground;
         public static Color BlockBackground => ColorPalette.BlockBackground;
         public static Color BlockBorder => ColorPalette.BlockBorder;
-        public static Color HeaderBackground => ColorPalette.HeaderBackground;
+        public static Color DragBarBackground => ColorPalette.DragBarBackground;
         public static Color TextColor => ColorPalette.TextPrimary;
         public static Color MutedTextColor => ColorPalette.TextMuted;
         public static Color AccentColor => ColorPalette.Accent;
         public static Color AccentMuted => ColorPalette.AccentSoft;
         public static Color OverlayBackground => ColorPalette.OverlayBackground;
-        public static Color ResizeBarColor => ColorPalette.ResizeBar;
-        public static Color ResizeBarHoverColor => ColorPalette.ResizeBarHover;
-        public static Color ResizeBarActiveColor => ColorPalette.ResizeBarActive;
+        public static Color ResizeEdgeColor => ColorPalette.ResizeEdge;
+        public static Color ResizeEdgeHoverColor => ColorPalette.ResizeEdgeHover;
+        public static Color ResizeEdgeActiveColor => ColorPalette.ResizeEdgeActive;
         public static Color DragBarHoverTint => ColorPalette.DragBarHoverTint;
 
         public static void EnsureFontsLoaded(ContentManager content)

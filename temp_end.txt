@@ -21,9 +21,9 @@
             public Rectangle Bounds { get; }
         }
 
-        private readonly struct ResizeBar
+        private readonly struct ResizeEdge
         {
-            public ResizeBar(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
+            public ResizeEdge(SplitNode node, DockSplitOrientation orientation, Rectangle bounds)
             {
                 Node = node;
                 Orientation = orientation;
@@ -37,15 +37,15 @@
 
         private readonly struct CornerHandle
         {
-            public CornerHandle(ResizeBar verticalHandle, ResizeBar horizontalHandle, Rectangle bounds)
+            public CornerHandle(ResizeEdge verticalHandle, ResizeEdge horizontalHandle, Rectangle bounds)
             {
                 VerticalHandle = verticalHandle;
                 HorizontalHandle = horizontalHandle;
                 Bounds = bounds;
             }
 
-            public ResizeBar VerticalHandle { get; }
-            public ResizeBar HorizontalHandle { get; }
+            public ResizeEdge VerticalHandle { get; }
+            public ResizeEdge HorizontalHandle { get; }
             public Rectangle Bounds { get; }
         }
 

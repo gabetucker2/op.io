@@ -944,7 +944,7 @@ namespace op.io.UI.BlockScripts.Blocks
         }
         private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
-            FillRect(spriteBatch, CommandBarBounds, UIStyle.HeaderBackground);
+            FillRect(spriteBatch, CommandBarBounds, UIStyle.DragBarBackground);
             DrawRect(spriteBatch, CommandBarBounds, UIStyle.BlockBorder);
 
             for (int i = 0; i < CommandOrder.Length; i++)

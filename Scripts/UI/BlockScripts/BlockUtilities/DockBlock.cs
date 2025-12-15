@@ -38,10 +38,10 @@ namespace op.io
             return new Rectangle(Bounds.X, Bounds.Y, Bounds.Width, Math.Max(0, Math.Min(dragBarHeight, Bounds.Height)));
         }
 
-        public Rectangle GetContentBounds(int headerHeight, int padding)
+        public Rectangle GetContentBounds(int dragBarHeight, int padding)
         {
-            int contentY = Bounds.Y + headerHeight + padding;
-            int contentHeight = Bounds.Height - headerHeight - (padding * 2);
+            int contentY = Bounds.Y + dragBarHeight + padding;
+            int contentHeight = Bounds.Height - dragBarHeight - (padding * 2);
             if (contentHeight < 0)
             {
                 contentHeight = 0;
