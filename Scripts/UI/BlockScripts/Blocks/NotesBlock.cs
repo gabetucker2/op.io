@@ -44,8 +44,6 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ButtonWidth = ButtonHeight;
         private const int ButtonSpacing = 8;
         private const int ContentSpacing = 12;
-        private const int StatusBarHeight = 22;
-        private const int StatusBarPadding = 6;
         private const int TextPadding = 6;
         private const int OverlayPadding = 10;
         private const int OverlayHeaderHeight = 28;
@@ -62,13 +60,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private const float SavePromptHelperSpacing = 10f;
         private const float SavePromptFallbackTitleHeight = 26f;
         private const float SavePromptFallbackHelperHeight = 20f;
+        private const string LastNoteRowKey = "__LastNote";
 
         private static readonly string ProjectRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
         private static readonly string NotesDirectory = Path.Combine(ProjectRoot, "UserNotes");
         private static readonly NotesCommand[] CommandOrder = new[]
         {
-            NotesCommand.New,
             NotesCommand.Save,
+            NotesCommand.New,
             NotesCommand.Rename,
             NotesCommand.Delete
         };
@@ -92,6 +91,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private static bool NoteListDirty = true;
         private static bool LineCacheDirty = true;
         private static bool DefaultNoteEnsured;
+        private static bool LastNoteRestored;
+        private static string PreferredNoteId;
 
         private static string ActiveNoteName;
         private static string ActiveNotePath;
@@ -127,6 +128,7 @@ namespace op.io.UI.BlockScripts.Blocks
             double elapsedSeconds = Math.Max(gameTime.ElapsedGameTime.TotalSeconds, 0d);
             EnsureNoteDirectory();
             EnsureNoteList();
+            EnsureLastNoteOpen();
             UpdateLayout(contentBounds);
             LastContentBounds = contentBounds;
             EnsureNoteDropdownOptions();
@@ -321,7 +323,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void UpdateLayout(Rectangle contentBounds)
         {
             CommandBarBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, CommandBarHeight);
-            StatusBounds = new Rectangle(contentBounds.X, CommandBarBounds.Bottom, contentBounds.Width, StatusBarHeight);
+            StatusBounds = BlockStatusBarRenderer.CalculateBounds(contentBounds, CommandBarBounds);
 
             int totalButtonsWidth = CommandOrder.Length * ButtonWidth + Math.Max(0, (CommandOrder.Length - 1) * ButtonSpacing);
             int dropdownHeight = ButtonHeight;
@@ -345,7 +347,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             OverlayBounds = Rectangle.Empty;
             int overlaySpace = 0;
-            int afterStatusY = StatusBounds.Bottom + ContentSpacing;
+            int afterStatusY = (StatusBounds == Rectangle.Empty ? CommandBarBounds.Bottom : StatusBounds.Bottom) + ContentSpacing;
             int availableHeight = Math.Max(0, contentBounds.Height - (afterStatusY - contentBounds.Y));
             if (ActiveOverlay != OverlayMode.None && availableHeight > 0)
             {
@@ -976,6 +978,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 ActiveNoteSaved = true;
                 IsDirty = false;
                 NoteListDirty = true;
+                PersistLastOpenedNote(ActiveNoteName);
                 SetStatusMessage($"Saved '{noteName}'.");
             }
             catch (Exception ex)
@@ -1149,6 +1152,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 ActiveNoteName = noteName;
                 ActiveNotePath = targetPath;
                 NoteListDirty = true;
+                PersistLastOpenedNote(ActiveNoteName);
 
                 string status = pathUnchanged
                     ? "Name unchanged."
@@ -1282,6 +1286,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 IsDirty = false;
                 ActiveOverlay = OverlayMode.None;
                 VerticalAnchor = -1;
+                PersistLastOpenedNote(entry.DisplayName);
                 if (announce)
                 {
                     SetStatusMessage($"Opened '{entry.DisplayName}'.");
@@ -1358,6 +1363,7 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureNoteList();
             if (NoteFiles.Count == 0)
             {
+                ClearLastNotePreference();
                 if (!string.IsNullOrWhiteSpace(prefixStatus))
                 {
                     SetStatusMessage(prefixStatus);
@@ -1410,6 +1416,79 @@ namespace op.io.UI.BlockScripts.Blocks
             finally
             {
                 NoteListDirty = false;
+            }
+        }
+
+        private static void EnsureLastNoteOpen()
+        {
+            if (HasActiveNote || LastNoteRestored)
+            {
+                return;
+            }
+
+            LastNoteRestored = true;
+            PreferredNoteId ??= LoadLastNoteId();
+            if (string.IsNullOrWhiteSpace(PreferredNoteId) || NoteFiles.Count == 0)
+            {
+                return;
+            }
+
+            NoteFileEntry entry = NoteFiles.FirstOrDefault(n => string.Equals(n.DisplayName, PreferredNoteId, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(entry.DisplayName))
+            {
+                return;
+            }
+
+            LoadNote(entry, announce: false);
+            DefaultNoteEnsured = true;
+        }
+
+        private static string LoadLastNoteId()
+        {
+            try
+            {
+                Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.Notes);
+                if (data.TryGetValue(LastNoteRowKey, out string stored) && !string.IsNullOrWhiteSpace(stored))
+                {
+                    return stored.Trim();
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load last opened note: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private static void PersistLastOpenedNote(string noteName)
+        {
+            if (string.IsNullOrWhiteSpace(noteName))
+            {
+                return;
+            }
+
+            PreferredNoteId = noteName.Trim();
+            try
+            {
+                BlockDataStore.SetRowData(DockBlockKind.Notes, LastNoteRowKey, PreferredNoteId);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to persist last opened note: {ex.Message}");
+            }
+        }
+
+        private static void ClearLastNotePreference()
+        {
+            PreferredNoteId = null;
+            try
+            {
+                BlockDataStore.SetRowData(DockBlockKind.Notes, LastNoteRowKey, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to clear last opened note: {ex.Message}");
             }
         }
 
@@ -1473,7 +1552,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 options.Insert(0, new UIDropdown.Option(ActiveNoteName, ActiveNoteName));
             }
 
-            string desired = HasActiveNote ? ActiveNoteName : options.FirstOrDefault().Id;
+            string desired = HasActiveNote
+                ? ActiveNoteName
+                : (!string.IsNullOrWhiteSpace(PreferredNoteId) ? PreferredNoteId : options.FirstOrDefault().Id);
             NoteDropdown.SetOptions(options, desired);
         }
 
@@ -1578,35 +1659,34 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void DrawStatusBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
-            if (StatusBounds == Rectangle.Empty || spriteBatch == null)
+            if (!TryGetStatusLabel(out string message, out Color color))
             {
                 return;
             }
 
-            FillRect(spriteBatch, StatusBounds, UIStyle.BlockBackground);
-            DrawRect(spriteBatch, StatusBounds, UIStyle.BlockBorder);
-            DrawStatus(spriteBatch, font);
+            BlockStatusBarRenderer.Draw(spriteBatch, StatusBounds, font, message, color);
         }
 
-        private static void DrawStatus(SpriteBatch spriteBatch, UIStyle.UIFont font)
+        private static bool TryGetStatusLabel(out string message, out Color color)
         {
-            string message = StatusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(StatusMessage)
-                ? StatusMessage
-                : HasActiveNote
-                    ? (IsDirty ? $"{ActiveNoteName} *" : ActiveNoteName)
-                    : "No note selected";
-            if (string.IsNullOrWhiteSpace(message))
+            bool hasStatus = StatusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(StatusMessage);
+            if (hasStatus)
             {
-                return;
+                message = StatusMessage;
+                color = UIStyle.TextColor;
+                return true;
             }
 
-            Color color = (StatusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(StatusMessage)) || HasActiveNote
-                ? UIStyle.TextColor
-                : UIStyle.MutedTextColor;
+            if (HasActiveNote)
+            {
+                message = $"Active: {ActiveNoteName}{(IsDirty ? " *" : string.Empty)}";
+                color = UIStyle.TextColor;
+                return true;
+            }
 
-            Vector2 textSize = font.MeasureString(message);
-            Vector2 position = new(StatusBounds.X + StatusBarPadding, StatusBounds.Y + (StatusBounds.Height - textSize.Y) / 2f);
-            font.DrawString(spriteBatch, message, position, color);
+            message = "No note selected";
+            color = UIStyle.MutedTextColor;
+            return true;
         }
 
         private static void DrawOverlayList(SpriteBatch spriteBatch, UIStyle.UIFont headerFont, UIStyle.UIFont rowFont, bool blockLocked)
