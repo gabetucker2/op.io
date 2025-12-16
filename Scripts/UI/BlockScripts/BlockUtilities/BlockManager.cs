@@ -74,6 +74,7 @@ namespace op.io
         private static readonly List<BlockMenuEntry> _blockMenuEntries = [];
         private static readonly List<OverlayMenuRow> _overlayRows = [];
         private static BlockMenuEntry _activeNumericEntry;
+        private static readonly KeyRepeatTracker OverlayInputRepeater = new();
         private static Dictionary<string, Rectangle> _resizeStartBlockBounds;
 
         public static bool IsBlockLocked(DockBlockKind blockKind)
@@ -129,6 +130,7 @@ namespace op.io
             EnsureFocusedBlockValid();
             UpdateLayoutCache();
             EnsureSurfaceResources(Core.Instance.GraphicsDevice);
+            double elapsedSeconds = Math.Max(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d, 0d);
 
             MouseState mouseState = Mouse.GetState();
             KeyboardState keyboardState = Keyboard.GetState();
@@ -163,7 +165,7 @@ namespace op.io
             }
             else if (_overlayMenuVisible)
             {
-                UpdateOverlayKeyboardInput(keyboardState);
+                UpdateOverlayKeyboardInput(keyboardState, elapsedSeconds);
                 UpdateOverlayInteractions(leftClickStarted);
                 ClearDockingInteractions();
             }
@@ -2338,6 +2340,7 @@ namespace op.io
 
             entry.IsEditing = true;
             entry.InputBuffer = string.IsNullOrWhiteSpace(entry.InputBuffer) ? entry.Count.ToString() : entry.InputBuffer;
+            OverlayInputRepeater.Reset();
         }
 
         private static void ClearActiveNumericEntry()
@@ -2349,6 +2352,7 @@ namespace op.io
             }
 
             _activeNumericEntry = null;
+            OverlayInputRepeater.Reset();
         }
 
         private static void ClearOverlayEditingState()
@@ -2363,60 +2367,58 @@ namespace op.io
             }
 
             _activeNumericEntry = null;
+            OverlayInputRepeater.Reset();
         }
 
-        private static void UpdateOverlayKeyboardInput(KeyboardState keyboardState)
+        private static void UpdateOverlayKeyboardInput(KeyboardState keyboardState, double elapsedSeconds)
         {
             if (!_overlayMenuVisible || _activeNumericEntry == null)
             {
+                OverlayInputRepeater.Reset();
                 return;
             }
 
             BlockMenuEntry entry = _activeNumericEntry;
             bool changed = false;
 
-            if (WasKeyPressed(keyboardState, Keys.Back))
+            foreach (Keys key in OverlayInputRepeater.GetKeysWithRepeat(keyboardState, _previousKeyboardState, elapsedSeconds))
             {
-                if (!string.IsNullOrEmpty(entry.InputBuffer))
+                switch (key)
                 {
-                    entry.InputBuffer = entry.InputBuffer[..^1];
-                }
-                else
-                {
-                    entry.InputBuffer = string.Empty;
-                }
+                    case Keys.Back:
+                        if (!string.IsNullOrEmpty(entry.InputBuffer))
+                        {
+                            entry.InputBuffer = entry.InputBuffer[..^1];
+                        }
+                        else
+                        {
+                            entry.InputBuffer = string.Empty;
+                        }
 
-                changed = true;
-            }
-
-            if (WasKeyPressed(keyboardState, Keys.Delete))
-            {
-                entry.InputBuffer = string.Empty;
-                changed = true;
-            }
-
-            if (WasKeyPressed(keyboardState, Keys.Enter))
-            {
-                ApplyNumericBuffer(entry);
-                ClearActiveNumericEntry();
-                return;
-            }
-
-            if (WasKeyPressed(keyboardState, Keys.Escape))
-            {
-                entry.InputBuffer = entry.Count.ToString();
-                ClearActiveNumericEntry();
-                return;
-            }
-
-            for (int digit = 0; digit <= 9; digit++)
-            {
-                Keys mainKey = (Keys)((int)Keys.D0 + digit);
-                Keys numpadKey = (Keys)((int)Keys.NumPad0 + digit);
-                if (WasKeyPressed(keyboardState, mainKey) || WasKeyPressed(keyboardState, numpadKey))
-                {
-                    AppendDigit(entry, digit);
-                    changed = true;
+                        changed = true;
+                        break;
+                    case Keys.Delete:
+                        entry.InputBuffer = string.Empty;
+                        changed = true;
+                        break;
+                    case Keys.Enter:
+                        ApplyNumericBuffer(entry);
+                        ClearActiveNumericEntry();
+                        OverlayInputRepeater.Reset();
+                        return;
+                    case Keys.Escape:
+                        entry.InputBuffer = entry.Count.ToString();
+                        ClearActiveNumericEntry();
+                        OverlayInputRepeater.Reset();
+                        return;
+                    default:
+                        if ((key >= Keys.D0 && key <= Keys.D9) || (key >= Keys.NumPad0 && key <= Keys.NumPad9))
+                        {
+                            int digit = key >= Keys.D0 && key <= Keys.D9 ? key - Keys.D0 : key - Keys.NumPad0;
+                            AppendDigit(entry, digit);
+                            changed = true;
+                        }
+                        break;
                 }
             }
 
@@ -2424,11 +2426,6 @@ namespace op.io
             {
                 ApplyNumericBuffer(entry);
             }
-        }
-
-        private static bool WasKeyPressed(KeyboardState current, Keys key)
-        {
-            return current.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
         }
 
         private static void AppendDigit(BlockMenuEntry entry, int digit)

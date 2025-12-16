@@ -58,6 +58,62 @@ namespace op.io
             font.DrawString(spriteBatch, label, textPosition, textColor);
         }
 
+        public static void DrawIcon(
+            SpriteBatch spriteBatch,
+            Rectangle bounds,
+            Texture2D icon,
+            ButtonStyle style,
+            bool isHovered,
+            bool isDisabled = false,
+            Color? iconColorOverride = null,
+            Color? fillOverride = null,
+            Color? hoverFillOverride = null,
+            Color? borderOverride = null)
+        {
+            if (spriteBatch == null || bounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            EnsurePixelTexture(spriteBatch.GraphicsDevice ?? Core.Instance?.GraphicsDevice);
+
+            Color fill = GetFillColor(style, isHovered, isDisabled, fillOverride, hoverFillOverride);
+            Color border = GetBorderColor(style, isDisabled, borderOverride);
+            Color iconColor = iconColorOverride ?? Color.White;
+            if (isDisabled)
+            {
+                iconColor *= 0.6f;
+            }
+
+            FillRect(spriteBatch, bounds, fill);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+
+            if (icon == null || icon.IsDisposed)
+            {
+                return;
+            }
+
+            int padding = Math.Max(4, Math.Min(bounds.Width, bounds.Height) / 6);
+            int availableWidth = Math.Max(0, bounds.Width - (padding * 2));
+            int availableHeight = Math.Max(0, bounds.Height - (padding * 2));
+            if (availableWidth <= 0 || availableHeight <= 0 || icon.Width <= 0 || icon.Height <= 0)
+            {
+                return;
+            }
+
+            float scale = Math.Min(availableWidth / (float)icon.Width, availableHeight / (float)icon.Height);
+            scale = Math.Min(scale, 2f);
+            if (scale <= 0f)
+            {
+                return;
+            }
+
+            Vector2 size = new(icon.Width * scale, icon.Height * scale);
+            Vector2 position = new(bounds.X + (bounds.Width - size.X) / 2f, bounds.Y + (bounds.Height - size.Y) / 2f);
+
+            spriteBatch.Draw(icon, position, null, iconColor, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        }
+
         private static Color GetFillColor(ButtonStyle style, bool isHovered, bool isDisabled, Color? fillOverride, Color? hoverFillOverride)
         {
             Color baseFill = fillOverride ?? style switch

@@ -40,12 +40,12 @@ namespace op.io.UI.BlockScripts.Blocks
         }
 
         private const int CommandBarHeight = 36;
-        private const int ButtonWidth = 84;
         private const int ButtonHeight = 26;
+        private const int ButtonWidth = ButtonHeight;
         private const int ButtonSpacing = 8;
-        private const int DropdownMinWidth = 140;
-        private const int DropdownMaxWidth = 260;
         private const int ContentSpacing = 12;
+        private const int StatusBarHeight = 22;
+        private const int StatusBarPadding = 6;
         private const int TextPadding = 6;
         private const int OverlayPadding = 10;
         private const int OverlayHeaderHeight = 28;
@@ -58,18 +58,31 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int SavePromptInputHeight = 28;
         private const int SavePromptButtonHeight = 28;
         private const int SavePromptButtonSpacing = 10;
+        private const float SavePromptTitleSpacing = 6f;
+        private const float SavePromptHelperSpacing = 10f;
+        private const float SavePromptFallbackTitleHeight = 26f;
+        private const float SavePromptFallbackHelperHeight = 20f;
 
         private static readonly string ProjectRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
         private static readonly string NotesDirectory = Path.Combine(ProjectRoot, "UserNotes");
-        private static readonly NotesCommand[] CommandOrder = (NotesCommand[])Enum.GetValues(typeof(NotesCommand));
+        private static readonly NotesCommand[] CommandOrder = new[]
+        {
+            NotesCommand.New,
+            NotesCommand.Save,
+            NotesCommand.Rename,
+            NotesCommand.Delete
+        };
         private static readonly Rectangle[] CommandBounds = new Rectangle[CommandOrder.Length];
         private static readonly List<NoteFileEntry> NoteFiles = new();
         private static readonly List<LineLayout> LineCache = new();
         private static readonly StringBuilder MeasureBuffer = new();
         private static readonly StringBuilder NoteContent = new();
         private static readonly UIDropdown NoteDropdown = new();
+        private static readonly KeyRepeatTracker TextInputRepeater = new();
+        private static readonly KeyRepeatTracker SavePromptRepeater = new();
 
         private static Rectangle CommandBarBounds;
+        private static Rectangle StatusBounds;
         private static Rectangle TextViewportBounds;
         private static Rectangle OverlayBounds;
         private static Rectangle NoteDropdownBounds;
@@ -78,6 +91,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static OverlayMode ActiveOverlay = OverlayMode.None;
         private static bool NoteListDirty = true;
         private static bool LineCacheDirty = true;
+        private static bool DefaultNoteEnsured;
 
         private static string ActiveNoteName;
         private static string ActiveNotePath;
@@ -98,6 +112,10 @@ namespace op.io.UI.BlockScripts.Blocks
         private static SavePromptState SavePrompt;
 
         private static Texture2D PixelTexture;
+        private static Texture2D IconNew;
+        private static Texture2D IconSave;
+        private static Texture2D IconRename;
+        private static Texture2D IconDelete;
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
@@ -106,12 +124,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            double elapsedSeconds = Math.Max(gameTime.ElapsedGameTime.TotalSeconds, 0d);
             EnsureNoteDirectory();
             EnsureNoteList();
             UpdateLayout(contentBounds);
             LastContentBounds = contentBounds;
             EnsureNoteDropdownOptions();
             NoteDropdown.Bounds = NoteDropdownBounds;
+            EnsureDefaultNoteOpen();
 
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Notes);
             if (blockLocked && ActiveOverlay != OverlayMode.None)
@@ -133,7 +153,8 @@ namespace op.io.UI.BlockScripts.Blocks
             LastMouseState = mouseState;
             if (SavePrompt.IsOpen)
             {
-                UpdateSavePrompt(mouseState, previousMouseState, keyboardState, PreviousKeyboardState);
+                TextInputRepeater.Reset();
+                UpdateSavePrompt(mouseState, previousMouseState, keyboardState, PreviousKeyboardState, elapsedSeconds);
                 UpdateStatusTimer(gameTime);
                 PreviousKeyboardState = keyboardState;
                 return;
@@ -191,11 +212,12 @@ namespace op.io.UI.BlockScripts.Blocks
             if (editingEnabled)
             {
                 HandleTextAreaMouse(mousePoint, leftClickStarted);
-                HandleTyping(keyboardState);
+                HandleTyping(keyboardState, PreviousKeyboardState, elapsedSeconds);
             }
             else
             {
                 VerticalAnchor = -1;
+                TextInputRepeater.Reset();
             }
 
             UpdateCursorBlink(gameTime, editingEnabled);
@@ -230,9 +252,11 @@ namespace op.io.UI.BlockScripts.Blocks
 
             EnsurePixel(spriteBatch);
             EnsureNoteList();
+            EnsureCommandIcons();
             UpdateLayout(contentBounds);
 
             DrawCommandBar(spriteBatch, labelFont, blockLocked);
+            DrawStatusBar(spriteBatch, labelFont);
 
             if (!blockLocked && ActiveOverlay != OverlayMode.None)
             {
@@ -276,11 +300,42 @@ namespace op.io.UI.BlockScripts.Blocks
             PixelTexture.SetData(new[] { Color.White });
         }
 
+        private static void EnsureCommandIcons()
+        {
+            IconNew = EnsureIcon(IconNew, "Icon_New.png");
+            IconSave = EnsureIcon(IconSave, "Icon_Save.png");
+            IconRename = EnsureIcon(IconRename, "Icon_Rename.png");
+            IconDelete = EnsureIcon(IconDelete, "Icon_Delete.png");
+        }
+
+        private static Texture2D EnsureIcon(Texture2D icon, string fileName)
+        {
+            if (icon != null && !icon.IsDisposed)
+            {
+                return icon;
+            }
+
+            return BlockIconProvider.GetIcon(fileName);
+        }
+
         private static void UpdateLayout(Rectangle contentBounds)
         {
             CommandBarBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, CommandBarHeight);
+            StatusBounds = new Rectangle(contentBounds.X, CommandBarBounds.Bottom, contentBounds.Width, StatusBarHeight);
 
-            int buttonX = CommandBarBounds.X + ButtonSpacing;
+            int totalButtonsWidth = CommandOrder.Length * ButtonWidth + Math.Max(0, (CommandOrder.Length - 1) * ButtonSpacing);
+            int dropdownHeight = ButtonHeight;
+            int dropdownY = CommandBarBounds.Y + (CommandBarHeight - dropdownHeight) / 2;
+
+            int availableDropdown = CommandBarBounds.Width - (ButtonSpacing * 3 + totalButtonsWidth);
+            int dropdownWidth = Math.Max(0, availableDropdown);
+
+            int dropdownX = CommandBarBounds.X + ButtonSpacing;
+            NoteDropdownBounds = dropdownWidth > 0
+                ? new Rectangle(dropdownX, dropdownY, dropdownWidth, dropdownHeight)
+                : Rectangle.Empty;
+
+            int buttonX = dropdownX + (dropdownWidth > 0 ? dropdownWidth + ButtonSpacing : 0);
             int buttonY = CommandBarBounds.Y + (CommandBarHeight - ButtonHeight) / 2;
             for (int i = 0; i < CommandOrder.Length; i++)
             {
@@ -288,27 +343,20 @@ namespace op.io.UI.BlockScripts.Blocks
                 buttonX += ButtonWidth + ButtonSpacing;
             }
 
-            int availableWidth = CommandBarBounds.Width - (buttonX - CommandBarBounds.X) - (ButtonSpacing * 2);
-            int dropdownWidth = Math.Clamp(availableWidth, DropdownMinWidth, DropdownMaxWidth);
-            int dropdownHeight = ButtonHeight;
-            int dropdownY = CommandBarBounds.Y + (CommandBarHeight - dropdownHeight) / 2;
-            NoteDropdownBounds = dropdownWidth > 0
-                ? new Rectangle(buttonX, dropdownY, dropdownWidth, dropdownHeight)
-                : Rectangle.Empty;
-
             OverlayBounds = Rectangle.Empty;
             int overlaySpace = 0;
-            int availableHeight = Math.Max(0, contentBounds.Height - CommandBarHeight - ContentSpacing);
+            int afterStatusY = StatusBounds.Bottom + ContentSpacing;
+            int availableHeight = Math.Max(0, contentBounds.Height - (afterStatusY - contentBounds.Y));
             if (ActiveOverlay != OverlayMode.None && availableHeight > 0)
             {
                 int overlayHeight = Math.Min(220, availableHeight);
                 overlayHeight = Math.Max(Math.Min(overlayHeight, availableHeight), Math.Min(availableHeight, 140));
                 overlayHeight = Math.Max(0, overlayHeight);
-                OverlayBounds = new Rectangle(contentBounds.X, CommandBarBounds.Bottom + ContentSpacing / 2, contentBounds.Width, overlayHeight);
+                OverlayBounds = new Rectangle(contentBounds.X, afterStatusY, contentBounds.Width, overlayHeight);
                 overlaySpace = overlayHeight + ContentSpacing;
             }
 
-            int textY = CommandBarBounds.Bottom + ContentSpacing + overlaySpace;
+            int textY = afterStatusY + overlaySpace;
             int textHeight = Math.Max(0, contentBounds.Bottom - textY);
             TextViewportBounds = new Rectangle(contentBounds.X, textY, contentBounds.Width, textHeight);
         }
@@ -484,7 +532,7 @@ namespace op.io.UI.BlockScripts.Blocks
             for (int i = 0; i < text.Length; i++)
             {
                 MeasureBuffer.Append(text[i]);
-                float width = font.MeasureString(MeasureBuffer).X;
+                float width = TextSpacingHelper.MeasureWithWideSpaces(font, MeasureBuffer).X;
                 if (width >= relativeX)
                 {
                     float deltaLeft = relativeX - previousWidth;
@@ -499,22 +547,18 @@ namespace op.io.UI.BlockScripts.Blocks
             MeasureBuffer.Clear();
             return text.Length;
         }
-        private static void HandleTyping(KeyboardState keyboardState)
+        private static void HandleTyping(KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
         {
-            var pressed = keyboardState.GetPressedKeys();
             bool shift = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
             bool control = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
 
-            foreach (Keys key in pressed)
+            foreach (Keys key in TextInputRepeater.GetKeysWithRepeat(keyboardState, previousKeyboardState, elapsedSeconds))
             {
-                if (PreviousKeyboardState.IsKeyDown(key))
-                {
-                    continue;
-                }
+                bool newPress = !previousKeyboardState.IsKeyDown(key);
 
                 if (control)
                 {
-                    if (key == Keys.S)
+                    if (key == Keys.S && newPress)
                     {
                         SaveActiveNote();
                     }
@@ -946,6 +990,7 @@ namespace op.io.UI.BlockScripts.Blocks
             NoteDropdown.Close();
             ActiveOverlay = OverlayMode.None;
             OverlayHoverIndex = -1;
+            SavePromptRepeater.Reset();
             SavePrompt = new SavePromptState
             {
                 IsOpen = true,
@@ -958,12 +1003,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void CloseSavePrompt()
         {
             SavePrompt = default;
+            SavePromptRepeater.Reset();
         }
 
-        private static void UpdateSavePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        private static void UpdateSavePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
         {
             if (!SavePrompt.IsOpen)
             {
+                SavePromptRepeater.Reset();
                 return;
             }
 
@@ -997,7 +1044,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            HandleSavePromptInput(keyboardState, previousKeyboardState);
+            HandleSavePromptInput(keyboardState, previousKeyboardState, elapsedSeconds);
         }
 
         private static void BuildSavePromptLayout(Rectangle contentBounds)
@@ -1020,8 +1067,14 @@ namespace op.io.UI.BlockScripts.Blocks
             int y = viewport.Y + (viewport.Height - height) / 2;
             SavePrompt.Bounds = new Rectangle(x, y, width, height);
 
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            UIStyle.UIFont bodyFont = UIStyle.FontBody;
+            float headerHeight = headerFont.IsAvailable ? headerFont.LineHeight : SavePromptFallbackTitleHeight;
+            float helperHeight = bodyFont.IsAvailable ? bodyFont.LineHeight : SavePromptFallbackHelperHeight;
+            int introHeight = (int)Math.Ceiling(headerHeight + SavePromptTitleSpacing + helperHeight + SavePromptHelperSpacing);
+
             int inputWidth = Math.Max(60, width - (SavePromptPadding * 2));
-            int inputY = y + SavePromptPadding + 40;
+            int inputY = y + SavePromptPadding + introHeight;
             SavePrompt.InputBounds = new Rectangle(x + SavePromptPadding, inputY, inputWidth, SavePromptInputHeight);
 
             int buttonsY = SavePrompt.InputBounds.Bottom + SavePromptPadding;
@@ -1109,17 +1162,12 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void HandleSavePromptInput(KeyboardState current, KeyboardState previous)
+        private static void HandleSavePromptInput(KeyboardState current, KeyboardState previous, double elapsedSeconds)
         {
             bool shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
 
-            foreach (Keys key in current.GetPressedKeys())
+            foreach (Keys key in SavePromptRepeater.GetKeysWithRepeat(current, previous, elapsedSeconds))
             {
-                if (previous.IsKeyDown(key))
-                {
-                    continue;
-                }
-
                 if (key == Keys.Back)
                 {
                     if (!string.IsNullOrEmpty(SavePrompt.Buffer))
@@ -1428,19 +1476,43 @@ namespace op.io.UI.BlockScripts.Blocks
             string desired = HasActiveNote ? ActiveNoteName : options.FirstOrDefault().Id;
             NoteDropdown.SetOptions(options, desired);
         }
+
+        private static void EnsureDefaultNoteOpen()
+        {
+            if (DefaultNoteEnsured || HasActiveNote)
+            {
+                return;
+            }
+
+            DefaultNoteEnsured = true;
+
+            if (!NoteDropdown.HasOptions || NoteFiles.Count == 0)
+            {
+                return;
+            }
+
+            string targetId = NoteDropdown.SelectedId ?? NoteFiles[0].DisplayName;
+            NoteFileEntry entry = NoteFiles.FirstOrDefault(n => string.Equals(n.DisplayName, targetId, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(entry.DisplayName) && NoteFiles.Count > 0)
+            {
+                entry = NoteFiles[0];
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.DisplayName))
+            {
+                LoadNote(entry, announce: false);
+            }
+        }
         private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font, bool blockLocked)
         {
             FillRect(spriteBatch, CommandBarBounds, UIStyle.DragBarBackground);
             DrawRect(spriteBatch, CommandBarBounds, UIStyle.BlockBorder);
 
+            DrawNoteDropdown(spriteBatch, font, blockLocked);
             for (int i = 0; i < CommandOrder.Length; i++)
             {
                 DrawButton(spriteBatch, font, CommandOrder[i], CommandBounds[i], blockLocked);
             }
-
-            DrawNoteDropdown(spriteBatch, font, blockLocked);
-            DrawActiveNoteLabel(spriteBatch, font);
-            DrawStatus(spriteBatch, font);
         }
 
         private static void DrawButton(SpriteBatch spriteBatch, UIStyle.UIFont font, NotesCommand command, Rectangle bounds, bool blockLocked)
@@ -1454,7 +1526,27 @@ namespace op.io.UI.BlockScripts.Blocks
             };
 
             UIButtonRenderer.ButtonStyle style = isActiveOverlay ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey;
-            UIButtonRenderer.Draw(spriteBatch, bounds, command.ToString(), style, hovered, disabled);
+            Texture2D icon = GetCommandIcon(command);
+            if (icon != null && !icon.IsDisposed)
+            {
+                UIButtonRenderer.DrawIcon(spriteBatch, bounds, icon, style, hovered, disabled);
+            }
+            else
+            {
+                UIButtonRenderer.Draw(spriteBatch, bounds, command.ToString(), style, hovered, disabled);
+            }
+        }
+
+        private static Texture2D GetCommandIcon(NotesCommand command)
+        {
+            return command switch
+            {
+                NotesCommand.New => IconNew,
+                NotesCommand.Save => IconSave,
+                NotesCommand.Rename => IconRename,
+                NotesCommand.Delete => IconDelete,
+                _ => null
+            };
         }
 
         private static void DrawNoteDropdown(SpriteBatch spriteBatch, UIStyle.UIFont font, bool blockLocked)
@@ -1484,33 +1576,37 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawActiveNoteLabel(SpriteBatch spriteBatch, UIStyle.UIFont font)
+        private static void DrawStatusBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
-            if (!HasActiveNote)
+            if (StatusBounds == Rectangle.Empty || spriteBatch == null)
             {
-                string label = "No note selected";
-                Vector2 size = font.MeasureString(label);
-                Vector2 position = new(CommandBarBounds.Right - size.X - ButtonSpacing, CommandBarBounds.Y + (CommandBarHeight - size.Y) / 2f);
-                font.DrawString(spriteBatch, label, position, UIStyle.MutedTextColor);
                 return;
             }
 
-            string labelText = IsDirty ? $"{ActiveNoteName} *" : ActiveNoteName;
-            Vector2 textSize = font.MeasureString(labelText);
-            Vector2 textPosition = new(CommandBarBounds.Right - textSize.X - ButtonSpacing, CommandBarBounds.Y + (CommandBarHeight - textSize.Y) / 2f);
-            font.DrawString(spriteBatch, labelText, textPosition, UIStyle.TextColor);
+            FillRect(spriteBatch, StatusBounds, UIStyle.BlockBackground);
+            DrawRect(spriteBatch, StatusBounds, UIStyle.BlockBorder);
+            DrawStatus(spriteBatch, font);
         }
 
         private static void DrawStatus(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
-            if (StatusSecondsRemaining <= 0f || string.IsNullOrWhiteSpace(StatusMessage))
+            string message = StatusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(StatusMessage)
+                ? StatusMessage
+                : HasActiveNote
+                    ? (IsDirty ? $"{ActiveNoteName} *" : ActiveNoteName)
+                    : "No note selected";
+            if (string.IsNullOrWhiteSpace(message))
             {
                 return;
             }
 
-            Vector2 textSize = font.MeasureString(StatusMessage);
-            Vector2 position = new(CommandBarBounds.X + ButtonSpacing, CommandBarBounds.Bottom - textSize.Y - 4f);
-            font.DrawString(spriteBatch, StatusMessage, position, UIStyle.TextColor);
+            Color color = (StatusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(StatusMessage)) || HasActiveNote
+                ? UIStyle.TextColor
+                : UIStyle.MutedTextColor;
+
+            Vector2 textSize = font.MeasureString(message);
+            Vector2 position = new(StatusBounds.X + StatusBarPadding, StatusBounds.Y + (StatusBounds.Height - textSize.Y) / 2f);
+            font.DrawString(spriteBatch, message, position, color);
         }
 
         private static void DrawOverlayList(SpriteBatch spriteBatch, UIStyle.UIFont headerFont, UIStyle.UIFont rowFont, bool blockLocked)
@@ -1608,7 +1704,7 @@ namespace op.io.UI.BlockScripts.Blocks
             string helper = SavePrompt.Mode == NamePromptMode.Rename
                 ? "Choose a new name for this note."
                 : "Name this note to save it.";
-            Vector2 helperPos = new(dialog.X + SavePromptPadding, titlePos.Y + titleSize.Y + 6f);
+            Vector2 helperPos = new(dialog.X + SavePromptPadding, titlePos.Y + titleSize.Y + SavePromptTitleSpacing);
             bodyFont.DrawString(spriteBatch, helper, helperPos, UIStyle.MutedTextColor);
 
             Rectangle input = SavePrompt.InputBounds;
@@ -1617,9 +1713,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
             string text = string.IsNullOrWhiteSpace(SavePrompt.Buffer) ? "Note name" : SavePrompt.Buffer;
             Color textColor = string.IsNullOrWhiteSpace(SavePrompt.Buffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
-            Vector2 textSize = inputFont.MeasureString(text);
+            Vector2 textSize = TextSpacingHelper.MeasureWithWideSpaces(inputFont, text);
             Vector2 textPos = new(input.X + 8, input.Y + (input.Height - textSize.Y) / 2f);
-            inputFont.DrawString(spriteBatch, text, textPos, textColor);
+            TextSpacingHelper.DrawWithWideSpaces(inputFont, spriteBatch, text, textPos, textColor);
 
             bool saveHovered = UIButtonRenderer.IsHovered(SavePrompt.SaveBounds, LastMouseState.Position);
             bool cancelHovered = UIButtonRenderer.IsHovered(SavePrompt.CancelBounds, LastMouseState.Position);
@@ -1651,7 +1747,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 Vector2 position = new(TextViewportBounds.X + TextPadding, y);
                 if (!string.IsNullOrEmpty(layout.Text))
                 {
-                    font.DrawString(spriteBatch, layout.Text, position, UIStyle.TextColor);
+                    TextSpacingHelper.DrawWithWideSpaces(font, spriteBatch, layout.Text, position, UIStyle.TextColor);
                 }
 
                 y += lineHeight;
@@ -1680,7 +1776,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             string text = LineCache[line].Text ?? string.Empty;
             string prefix = column <= 0 ? string.Empty : text[..Math.Min(column, text.Length)];
-            float offsetX = font.MeasureString(prefix).X;
+            float offsetX = TextSpacingHelper.MeasureWithWideSpaces(font, prefix).X;
 
             Rectangle cursorRect = new(
                 (int)(TextViewportBounds.X + TextPadding + offsetX),
@@ -1702,11 +1798,11 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawRect(spriteBatch, TextViewportBounds, UIStyle.BlockBorder);
 
             const string placeholder = "Create a note";
-            Vector2 size = font.MeasureString(placeholder);
+            Vector2 size = TextSpacingHelper.MeasureWithWideSpaces(font, placeholder);
             Vector2 position = new(
                 TextViewportBounds.X + (TextViewportBounds.Width - size.X) / 2f,
                 TextViewportBounds.Y + (TextViewportBounds.Height - size.Y) / 2f);
-            font.DrawString(spriteBatch, placeholder, position, UIStyle.MutedTextColor);
+            TextSpacingHelper.DrawWithWideSpaces(font, spriteBatch, placeholder, position, UIStyle.MutedTextColor);
         }
 
         private static void FillRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)

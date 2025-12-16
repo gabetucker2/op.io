@@ -40,8 +40,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int EditorMinHeight = 360;
         private const int EditorMaxHeight = 620;
         private const int SchemeToolbarHeight = 44;
-        private const int SchemeButtonWidth = 88;
         private const int SchemeButtonHeight = 28;
+        private const int SchemeButtonWidth = SchemeButtonHeight;
         private const int SchemeDropdownHeight = 30;
         private const int SchemeControlSpacing = 10;
         private const int SchemePromptWidth = 360;
@@ -66,9 +66,14 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Rectangle _saveSchemeBounds;
         private static Rectangle _newSchemeBounds;
         private static Rectangle _deleteSchemeBounds;
+        private static Texture2D _saveIcon;
+        private static Texture2D _newIcon;
+        private static Texture2D _deleteIcon;
         private static string _selectedSchemeName = ColorScheme.DefaultSchemeName;
         private static bool _schemeListDirty = true;
         private static SchemePromptState _schemePrompt;
+        private static readonly KeyRepeatTracker HexInputRepeater = new();
+        private static readonly KeyRepeatTracker SchemePromptRepeater = new();
         private static KeyboardState _previousKeyboardState;
         private static Point _lastMousePosition;
         private static Rectangle _lastContentBounds;
@@ -77,6 +82,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
+            double elapsedSeconds = Math.Max(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d, 0d);
             ColorScheme.Initialize();
             EnsureSchemeOptions();
             EnsureRows();
@@ -107,7 +113,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (_schemePrompt.IsOpen)
             {
-                UpdateSchemePrompt(mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                UpdateSchemePrompt(mouseState, previousMouseState, keyboardState, previousKeyboardState, elapsedSeconds);
                 _lastMousePosition = mouseState.Position;
                 _previousKeyboardState = keyboardState;
                 return;
@@ -163,7 +169,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (_editor.IsActive)
             {
-                UpdateEditor(contentBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                UpdateEditor(contentBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState, elapsedSeconds);
                 _lastMousePosition = mouseState.Position;
                 _previousKeyboardState = keyboardState;
                 return;
@@ -224,6 +230,7 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureRows();
             EnsurePixel(spriteBatch);
             EnsureLineHeight();
+            EnsureSchemeIcons();
             _lastContentBounds = contentBounds;
             UpdateToolbarLayout(contentBounds);
 
@@ -356,10 +363,13 @@ namespace op.io.UI.BlockScripts.Blocks
             x -= SchemeControlSpacing + SchemeButtonWidth;
             _saveSchemeBounds = new Rectangle(Math.Max(_schemeToolbarBounds.X, x), buttonY, SchemeButtonWidth, SchemeButtonHeight);
 
-            int dropdownWidth = Math.Max(160, _saveSchemeBounds.X - SchemeControlSpacing - _schemeToolbarBounds.X);
+            int availableDropdown = _saveSchemeBounds.X - SchemeControlSpacing - _schemeToolbarBounds.X;
+            int dropdownWidth = Math.Max(0, availableDropdown);
             int dropdownHeight = SchemeDropdownHeight;
             int dropdownY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - dropdownHeight) / 2;
-            _schemeDropdown.Bounds = new Rectangle(_schemeToolbarBounds.X, dropdownY, dropdownWidth, dropdownHeight);
+            _schemeDropdown.Bounds = dropdownWidth > 0
+                ? new Rectangle(_schemeToolbarBounds.X, dropdownY, dropdownWidth, dropdownHeight)
+                : Rectangle.Empty;
         }
 
         private static Rectangle GetListContentBounds(Rectangle contentBounds)
@@ -448,6 +458,13 @@ namespace op.io.UI.BlockScripts.Blocks
             _lineHeight = MathF.Ceiling(Math.Max(labelHeight, valueHeight) + RowVerticalPadding);
         }
 
+        private static void EnsureSchemeIcons()
+        {
+            _saveIcon = EnsureIcon(_saveIcon, "Icon_Save.png");
+            _newIcon = EnsureIcon(_newIcon, "Icon_New.png");
+            _deleteIcon = EnsureIcon(_deleteIcon, "Icon_Delete.png");
+        }
+
         private static void UpdateRowBounds(Rectangle listBounds)
         {
             if (_lineHeight <= 0f || listBounds.Height <= 0)
@@ -486,6 +503,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            EnsureSchemeIcons();
             FillRect(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBackground * 1.05f);
             DrawRectOutline(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
@@ -495,9 +513,21 @@ namespace op.io.UI.BlockScripts.Blocks
             bool newHovered = !blockLocked && UIButtonRenderer.IsHovered(_newSchemeBounds, _lastMousePosition);
             bool deleteHovered = !blockLocked && UIButtonRenderer.IsHovered(_deleteSchemeBounds, _lastMousePosition);
 
-            UIButtonRenderer.Draw(spriteBatch, _saveSchemeBounds, "Save", UIButtonRenderer.ButtonStyle.Grey, saveHovered, blockLocked);
-            UIButtonRenderer.Draw(spriteBatch, _newSchemeBounds, "New", UIButtonRenderer.ButtonStyle.Grey, newHovered, blockLocked);
-            UIButtonRenderer.Draw(spriteBatch, _deleteSchemeBounds, "Delete", UIButtonRenderer.ButtonStyle.Grey, deleteHovered, blockLocked);
+            DrawSchemeButton(spriteBatch, _saveSchemeBounds, _saveIcon, "Save", saveHovered, blockLocked);
+            DrawSchemeButton(spriteBatch, _newSchemeBounds, _newIcon, "New", newHovered, blockLocked);
+            DrawSchemeButton(spriteBatch, _deleteSchemeBounds, _deleteIcon, "Delete", deleteHovered, blockLocked);
+        }
+
+        private static void DrawSchemeButton(SpriteBatch spriteBatch, Rectangle bounds, Texture2D icon, string fallbackLabel, bool isHovered, bool isDisabled)
+        {
+            if (icon != null && !icon.IsDisposed)
+            {
+                UIButtonRenderer.DrawIcon(spriteBatch, bounds, icon, UIButtonRenderer.ButtonStyle.Grey, isHovered, isDisabled);
+            }
+            else
+            {
+                UIButtonRenderer.Draw(spriteBatch, bounds, fallbackLabel, UIButtonRenderer.ButtonStyle.Grey, isHovered, isDisabled);
+            }
         }
 
         private static void DrawRow(SpriteBatch spriteBatch, ColorRow row, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont, Rectangle viewport)
@@ -557,7 +587,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             Vector2 hexPos = new(hexBounds.X, hexBounds.Y);
-            valueFont.DrawString(spriteBatch, hex, hexPos, UIStyle.MutedTextColor);
+            Color hexColor = (_editor.IsActive && _editor.Role == row.Role) ? Color.White : UIStyle.MutedTextColor;
+            valueFont.DrawString(spriteBatch, hex, hexPos, hexColor);
         }
 
         private static void DrawDraggingRow(SpriteBatch spriteBatch, ColorRow snapshot, UIStyle.UIFont labelFont, UIStyle.UIFont valueFont, Rectangle listBounds, float lineHeight)
@@ -682,9 +713,10 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             _editor = default;
+            HexInputRepeater.Reset();
         }
 
-        private static void UpdateEditor(Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        private static void UpdateEditor(Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
         {
             if (!_editor.IsActive)
             {
@@ -784,7 +816,11 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (_editor.HexFocused)
             {
-                HandleHexInput(keyboardState, previousKeyboardState);
+                HandleHexInput(keyboardState, previousKeyboardState, elapsedSeconds);
+            }
+            else
+            {
+                HexInputRepeater.Reset();
             }
 
             if (WasKeyPressed(keyboardState, previousKeyboardState, Keys.Enter))
@@ -934,9 +970,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
             string text = string.IsNullOrWhiteSpace(_schemePrompt.Buffer) ? "Scheme name" : _schemePrompt.Buffer;
             Color textColor = string.IsNullOrWhiteSpace(_schemePrompt.Buffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
-            Vector2 textSize = inputFont.MeasureString(text);
+            Vector2 textSize = TextSpacingHelper.MeasureWithWideSpaces(inputFont, text);
             Vector2 textPos = new(input.X + 8, input.Y + (input.Height - textSize.Y) / 2f);
-            inputFont.DrawString(spriteBatch, text, textPos, textColor);
+            TextSpacingHelper.DrawWithWideSpaces(inputFont, spriteBatch, text, textPos, textColor);
 
             bool saveHovered = UIButtonRenderer.IsHovered(_schemePrompt.ConfirmBounds, _lastMousePosition);
             bool cancelHovered = UIButtonRenderer.IsHovered(_schemePrompt.CancelBounds, _lastMousePosition);
@@ -1018,14 +1054,11 @@ namespace op.io.UI.BlockScripts.Blocks
             ApplyHsvToEditorColor();
         }
 
-        private static void HandleHexInput(KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        private static void HandleHexInput(KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
         {
-            foreach (Keys key in keyboardState.GetPressedKeys())
+            foreach (Keys key in HexInputRepeater.GetKeysWithRepeat(keyboardState, previousKeyboardState, elapsedSeconds))
             {
-                if (previousKeyboardState.IsKeyDown(key))
-                {
-                    continue;
-                }
+                bool newPress = !previousKeyboardState.IsKeyDown(key);
 
                 if (key == Keys.Back || key == Keys.Delete)
                 {
@@ -1035,13 +1068,19 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 if (key == Keys.Enter)
                 {
-                    ApplyHexBuffer();
+                    if (newPress)
+                    {
+                        ApplyHexBuffer();
+                    }
                     continue;
                 }
 
                 if (key == Keys.Escape)
                 {
-                    _editor.HexFocused = false;
+                    if (newPress)
+                    {
+                        _editor.HexFocused = false;
+                    }
                     continue;
                 }
 
@@ -1166,6 +1205,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void OpenSchemePrompt()
         {
             _schemeDropdown.Close();
+            SchemePromptRepeater.Reset();
             _schemePrompt = new SchemePromptState
             {
                 IsOpen = true,
@@ -1177,6 +1217,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void CloseSchemePrompt()
         {
             _schemePrompt = default;
+            SchemePromptRepeater.Reset();
         }
 
         private static void BuildSchemePromptLayout(Rectangle overlaySpace)
@@ -1200,10 +1241,11 @@ namespace op.io.UI.BlockScripts.Blocks
             _schemePrompt.CancelBounds = new Rectangle(_schemePrompt.ConfirmBounds.Right + SchemeControlSpacing, buttonsY, buttonWidth, SchemeButtonHeight);
         }
 
-        private static void UpdateSchemePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        private static void UpdateSchemePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
         {
             if (!_schemePrompt.IsOpen)
             {
+                SchemePromptRepeater.Reset();
                 return;
             }
 
@@ -1238,20 +1280,15 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            HandleSchemeNameInput(keyboardState, previousKeyboardState);
+            HandleSchemeNameInput(keyboardState, previousKeyboardState, elapsedSeconds);
         }
 
-        private static void HandleSchemeNameInput(KeyboardState current, KeyboardState previous)
+        private static void HandleSchemeNameInput(KeyboardState current, KeyboardState previous, double elapsedSeconds)
         {
             bool shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
 
-            foreach (Keys key in current.GetPressedKeys())
+            foreach (Keys key in SchemePromptRepeater.GetKeysWithRepeat(current, previous, elapsedSeconds))
             {
-                if (previous.IsKeyDown(key))
-                {
-                    continue;
-                }
-
                 if (key == Keys.Back)
                 {
                     if (!string.IsNullOrEmpty(_schemePrompt.Buffer))
@@ -1458,6 +1495,16 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _colorWheelTexture = new Texture2D(device, size, size);
             _colorWheelTexture.SetData(data);
+        }
+
+        private static Texture2D EnsureIcon(Texture2D icon, string fileName)
+        {
+            if (icon != null && !icon.IsDisposed)
+            {
+                return icon;
+            }
+
+            return BlockIconProvider.GetIcon(fileName);
         }
 
         private static void FillRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)
