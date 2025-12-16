@@ -104,7 +104,8 @@ namespace op.io
         private const string ActiveSchemeRowKey = "__ActiveScheme";
         private const string SchemePrefix = "Scheme:";
         private const string SchemeDelimiter = "::";
-        public const string DefaultSchemeName = "DefaultScheme";
+        public const string DefaultSchemeName = "DarkMode";
+        private const string LegacyDefaultSchemeName = "DefaultScheme";
         public const string LightSchemeName = "LightMode";
         private static string _activeSchemeName = DefaultSchemeName;
         private static readonly Dictionary<string, ColorRole> _legacyRoleMappings = new(StringComparer.OrdinalIgnoreCase)
@@ -795,6 +796,10 @@ namespace op.io
 
             string trimmed = value.Trim();
             trimmed = trimmed.Replace(SchemeDelimiter, "-").Replace(":", "-");
+            if (string.Equals(trimmed, LegacyDefaultSchemeName, StringComparison.OrdinalIgnoreCase))
+            {
+                trimmed = DefaultSchemeName;
+            }
             return trimmed;
         }
 
@@ -819,7 +824,12 @@ namespace op.io
                 return false;
             }
 
-            string name = remainder[..separatorIndex];
+            string name = NormalizeSchemeName(remainder[..separatorIndex]);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
             string roleKey = remainder[(separatorIndex + SchemeDelimiter.Length)..];
             if (Enum.TryParse(roleKey, out role))
             {

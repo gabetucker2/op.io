@@ -21,17 +21,22 @@ namespace op.io.UI.BlockScripts.Blocks
         private enum OverlayMode
         {
             None,
-            Open,
             Delete
         }
 
         private enum NotesCommand
         {
             New,
-            Open,
             Save,
+            Rename,
             Close,
             Delete
+        }
+
+        private enum NamePromptMode
+        {
+            Save,
+            Rename
         }
 
         private const int CommandBarHeight = 36;
@@ -47,6 +52,12 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int OverlayRowHeight = 28;
         private const double CursorBlinkInterval = 0.5;
         private const double StatusDurationSeconds = 4.0;
+        private const int SavePromptWidth = 360;
+        private const int SavePromptHeight = 170;
+        private const int SavePromptPadding = 16;
+        private const int SavePromptInputHeight = 28;
+        private const int SavePromptButtonHeight = 28;
+        private const int SavePromptButtonSpacing = 10;
 
         private static readonly string ProjectRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
         private static readonly string NotesDirectory = Path.Combine(ProjectRoot, "UserNotes");
@@ -62,6 +73,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Rectangle TextViewportBounds;
         private static Rectangle OverlayBounds;
         private static Rectangle NoteDropdownBounds;
+        private static Rectangle LastContentBounds;
 
         private static OverlayMode ActiveOverlay = OverlayMode.None;
         private static bool NoteListDirty = true;
@@ -69,6 +81,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static string ActiveNoteName;
         private static string ActiveNotePath;
+        private static bool ActiveNoteSaved;
         private static bool IsDirty;
         private static int CursorIndex;
         private static int VerticalAnchor = -1;
@@ -82,6 +95,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static KeyboardState PreviousKeyboardState;
         private static MouseState LastMouseState;
         private static int OverlayHoverIndex = -1;
+        private static SavePromptState SavePrompt;
 
         private static Texture2D PixelTexture;
 
@@ -95,6 +109,7 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureNoteDirectory();
             EnsureNoteList();
             UpdateLayout(contentBounds);
+            LastContentBounds = contentBounds;
             EnsureNoteDropdownOptions();
             NoteDropdown.Bounds = NoteDropdownBounds;
 
@@ -104,6 +119,10 @@ namespace op.io.UI.BlockScripts.Blocks
                 ActiveOverlay = OverlayMode.None;
                 OverlayHoverIndex = -1;
             }
+            if (blockLocked && SavePrompt.IsOpen)
+            {
+                CloseSavePrompt();
+            }
 
             KeyboardState keyboardState = Keyboard.GetState();
             if (blockLocked)
@@ -112,6 +131,14 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             LastMouseState = mouseState;
+            if (SavePrompt.IsOpen)
+            {
+                UpdateSavePrompt(mouseState, previousMouseState, keyboardState, PreviousKeyboardState);
+                UpdateStatusTimer(gameTime);
+                PreviousKeyboardState = keyboardState;
+                return;
+            }
+
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             Point mousePoint = mouseState.Position;
 
@@ -223,6 +250,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             NoteDropdown.DrawOptionsOverlay(spriteBatch);
+            DrawSavePrompt(spriteBatch, contentBounds);
         }
         private static void EnsureNoteDirectory()
         {
@@ -312,11 +340,11 @@ namespace op.io.UI.BlockScripts.Blocks
                     case NotesCommand.New:
                         BeginNewNote();
                         break;
-                    case NotesCommand.Open:
-                        ToggleOverlay(OverlayMode.Open);
-                        break;
                     case NotesCommand.Save:
                         SaveActiveNote();
+                        break;
+                    case NotesCommand.Rename:
+                        BeginRename();
                         break;
                     case NotesCommand.Close:
                         CloseNote();
@@ -342,11 +370,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 case NotesCommand.Close:
                     SetStatusMessage("No active note to close.");
                     break;
-                case NotesCommand.Open:
-                    SetStatusMessage("No saved notes yet.");
-                    break;
                 case NotesCommand.Delete:
                     SetStatusMessage("No saved notes to delete.");
+                    break;
+                case NotesCommand.Rename:
+                    SetStatusMessage("Open a note before renaming.");
                     break;
             }
         }
@@ -391,11 +419,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     if (leftClickStarted)
                     {
                         var entry = NoteFiles[index];
-                        if (ActiveOverlay == OverlayMode.Open)
-                        {
-                            LoadNote(entry);
-                        }
-                        else if (ActiveOverlay == OverlayMode.Delete)
+                        if (ActiveOverlay == OverlayMode.Delete)
                         {
                             DeleteNote(entry);
                         }
@@ -794,17 +818,19 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 NotesCommand.Save => !HasActiveNote,
                 NotesCommand.Close => !HasActiveNote,
-                NotesCommand.Open => NoteFiles.Count == 0,
                 NotesCommand.Delete => NoteFiles.Count == 0,
+                NotesCommand.Rename => !HasActiveNote,
                 _ => false
             };
         }
 
         private static void BeginNewNote()
         {
+            CloseSavePrompt();
             string fileName = GenerateDefaultNoteName();
             ActiveNoteName = fileName;
             ActiveNotePath = Path.Combine(NotesDirectory, $"{fileName}.txt");
+            ActiveNoteSaved = false;
             NoteContent.Clear();
             CursorIndex = 0;
             LineCacheDirty = true;
@@ -814,8 +840,21 @@ namespace op.io.UI.BlockScripts.Blocks
             SetStatusMessage($"Ready to edit '{fileName}'.");
         }
 
+        private static void ClearActiveNoteState()
+        {
+            ActiveNoteName = null;
+            ActiveNotePath = null;
+            ActiveNoteSaved = false;
+            NoteContent.Clear();
+            CursorIndex = 0;
+            LineCacheDirty = true;
+            IsDirty = false;
+            VerticalAnchor = -1;
+        }
+
         private static void CloseNote()
         {
+            CloseSavePrompt();
             if (!HasActiveNote)
             {
                 SetStatusMessage("No active note to close.");
@@ -823,14 +862,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             bool hadChanges = IsDirty;
-            ActiveNoteName = null;
-            ActiveNotePath = null;
-            NoteContent.Clear();
-            CursorIndex = 0;
-            LineCacheDirty = true;
-            IsDirty = false;
+            ClearActiveNoteState();
             ActiveOverlay = OverlayMode.None;
-            VerticalAnchor = -1;
             SetStatusMessage(hadChanges ? "Closed note without saving." : "Closed note.");
         }
 
@@ -855,25 +888,338 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            if (SavePrompt.IsOpen)
+            {
+                return;
+            }
+
+            if (!ActiveNoteSaved)
+            {
+                OpenNamePrompt(NamePromptMode.Save);
+                return;
+            }
+
+            PersistActiveNote(ActiveNoteName, ActiveNotePath);
+        }
+
+        private static void BeginRename()
+        {
+            if (!HasActiveNote)
+            {
+                SetStatusMessage("Open a note before renaming.");
+                return;
+            }
+
+            OpenNamePrompt(NamePromptMode.Rename);
+        }
+
+        private static void PersistActiveNote(string noteName, string targetPath)
+        {
+            if (string.IsNullOrWhiteSpace(noteName) || string.IsNullOrWhiteSpace(targetPath))
+            {
+                SetStatusMessage("Enter a name for the note.");
+                return;
+            }
+
             try
             {
                 Directory.CreateDirectory(NotesDirectory);
                 string normalized = NoteContent.ToString().Replace("\r\n", "\n").Replace("\r", "\n");
                 string fileText = normalized.Replace("\n", Environment.NewLine);
-                File.WriteAllText(ActiveNotePath, fileText, Encoding.UTF8);
+                File.WriteAllText(targetPath, fileText, Encoding.UTF8);
+                ActiveNoteName = noteName;
+                ActiveNotePath = targetPath;
+                ActiveNoteSaved = true;
                 IsDirty = false;
                 NoteListDirty = true;
-                SetStatusMessage($"Saved '{ActiveNoteName}'.");
+                SetStatusMessage($"Saved '{noteName}'.");
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to save note '{ActiveNotePath}': {ex.Message}");
+                DebugLogger.PrintError($"Failed to save note '{targetPath}': {ex.Message}");
                 SetStatusMessage("Failed to save note.");
             }
         }
 
-        private static void LoadNote(NoteFileEntry entry)
+        private static void OpenNamePrompt(NamePromptMode mode)
         {
+            NoteDropdown.Close();
+            ActiveOverlay = OverlayMode.None;
+            OverlayHoverIndex = -1;
+            SavePrompt = new SavePromptState
+            {
+                IsOpen = true,
+                Buffer = (ActiveNoteName ?? string.Empty).Trim(),
+                Mode = mode
+            };
+            BuildSavePromptLayout(LastContentBounds);
+        }
+
+        private static void CloseSavePrompt()
+        {
+            SavePrompt = default;
+        }
+
+        private static void UpdateSavePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        {
+            if (!SavePrompt.IsOpen)
+            {
+                return;
+            }
+
+            BuildSavePromptLayout(LastContentBounds);
+
+            bool leftReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+            if (leftReleased)
+            {
+                if (SavePrompt.SaveBounds.Contains(mouseState.Position))
+                {
+                    CommitSavePrompt();
+                    return;
+                }
+
+                if (SavePrompt.CancelBounds.Contains(mouseState.Position))
+                {
+                    CloseSavePrompt();
+                    return;
+                }
+            }
+
+            if (WasKeyPressed(keyboardState, previousKeyboardState, Keys.Enter))
+            {
+                CommitSavePrompt();
+                return;
+            }
+
+            if (WasKeyPressed(keyboardState, previousKeyboardState, Keys.Escape))
+            {
+                CloseSavePrompt();
+                return;
+            }
+
+            HandleSavePromptInput(keyboardState, previousKeyboardState);
+        }
+
+        private static void BuildSavePromptLayout(Rectangle contentBounds)
+        {
+            Rectangle viewport = contentBounds == Rectangle.Empty ? LastContentBounds : contentBounds;
+            if (viewport == Rectangle.Empty)
+            {
+                SavePrompt.Bounds = Rectangle.Empty;
+                SavePrompt.InputBounds = Rectangle.Empty;
+                SavePrompt.SaveBounds = Rectangle.Empty;
+                SavePrompt.CancelBounds = Rectangle.Empty;
+                return;
+            }
+
+            int maxWidth = Math.Max(120, viewport.Width - (SavePromptPadding * 2));
+            int maxHeight = Math.Max(140, viewport.Height - (SavePromptPadding * 2));
+            int width = Math.Min(SavePromptWidth, maxWidth);
+            int height = Math.Min(SavePromptHeight, maxHeight);
+            int x = viewport.X + (viewport.Width - width) / 2;
+            int y = viewport.Y + (viewport.Height - height) / 2;
+            SavePrompt.Bounds = new Rectangle(x, y, width, height);
+
+            int inputWidth = Math.Max(60, width - (SavePromptPadding * 2));
+            int inputY = y + SavePromptPadding + 40;
+            SavePrompt.InputBounds = new Rectangle(x + SavePromptPadding, inputY, inputWidth, SavePromptInputHeight);
+
+            int buttonsY = SavePrompt.InputBounds.Bottom + SavePromptPadding;
+            int buttonWidth = Math.Max(60, (inputWidth - SavePromptButtonSpacing) / 2);
+            SavePrompt.SaveBounds = new Rectangle(x + SavePromptPadding, buttonsY, buttonWidth, SavePromptButtonHeight);
+            SavePrompt.CancelBounds = new Rectangle(SavePrompt.SaveBounds.Right + SavePromptButtonSpacing, buttonsY, buttonWidth, SavePromptButtonHeight);
+        }
+
+        private static void CommitSavePrompt()
+        {
+            string sanitized = SanitizeNoteName(SavePrompt.Buffer);
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                SetStatusMessage("Enter a name for the note.");
+                return;
+            }
+
+            string targetPath = Path.Combine(NotesDirectory, $"{sanitized}.txt");
+            if (SavePrompt.Mode == NamePromptMode.Rename)
+            {
+                CommitRename(sanitized, targetPath);
+            }
+            else
+            {
+                CommitSave(sanitized, targetPath);
+            }
+        }
+
+        private static void CommitSave(string noteName, string targetPath)
+        {
+            bool targetExists = File.Exists(targetPath);
+            bool switchingTarget = !string.Equals(targetPath, ActiveNotePath, StringComparison.OrdinalIgnoreCase);
+            if (switchingTarget && targetExists)
+            {
+                SetStatusMessage("A note with that name already exists.");
+                return;
+            }
+
+            ActiveNoteName = noteName;
+            ActiveNotePath = targetPath;
+            CloseSavePrompt();
+            PersistActiveNote(ActiveNoteName, ActiveNotePath);
+        }
+
+        private static void CommitRename(string noteName, string targetPath)
+        {
+            if (!HasActiveNote)
+            {
+                SetStatusMessage("Open a note before renaming.");
+                return;
+            }
+
+            bool pathUnchanged = string.Equals(targetPath, ActiveNotePath, StringComparison.OrdinalIgnoreCase);
+            if (!pathUnchanged && File.Exists(targetPath))
+            {
+                SetStatusMessage("A note with that name already exists.");
+                return;
+            }
+
+            string previousName = ActiveNoteName;
+            string previousPath = ActiveNotePath;
+            CloseSavePrompt();
+
+            try
+            {
+                Directory.CreateDirectory(NotesDirectory);
+                if (!pathUnchanged && File.Exists(previousPath))
+                {
+                    File.Move(previousPath, targetPath);
+                }
+
+                ActiveNoteName = noteName;
+                ActiveNotePath = targetPath;
+                NoteListDirty = true;
+
+                string status = pathUnchanged
+                    ? "Name unchanged."
+                    : $"Renamed '{previousName}' to '{noteName}'.";
+                SetStatusMessage(status);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to rename note '{previousPath}' to '{targetPath}': {ex.Message}");
+                SetStatusMessage("Failed to rename note.");
+            }
+        }
+
+        private static void HandleSavePromptInput(KeyboardState current, KeyboardState previous)
+        {
+            bool shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
+
+            foreach (Keys key in current.GetPressedKeys())
+            {
+                if (previous.IsKeyDown(key))
+                {
+                    continue;
+                }
+
+                if (key == Keys.Back)
+                {
+                    if (!string.IsNullOrEmpty(SavePrompt.Buffer))
+                    {
+                        SavePrompt.Buffer = SavePrompt.Buffer[..^1];
+                    }
+                }
+                else if (TryConvertToNoteNameChar(key, shift, out char value))
+                {
+                    SavePrompt.Buffer += value;
+                }
+            }
+        }
+
+        private static bool TryConvertToNoteNameChar(Keys key, bool shift, out char value)
+        {
+            value = default;
+
+            if (key is >= Keys.A and <= Keys.Z)
+            {
+                char baseChar = (char)('a' + (key - Keys.A));
+                value = shift ? char.ToUpperInvariant(baseChar) : baseChar;
+                return true;
+            }
+
+            if (key is >= Keys.D0 and <= Keys.D9)
+            {
+                value = (char)('0' + (key - Keys.D0));
+                return true;
+            }
+
+            if (key is >= Keys.NumPad0 and <= Keys.NumPad9)
+            {
+                value = (char)('0' + (key - Keys.NumPad0));
+                return true;
+            }
+
+            if (key == Keys.Space)
+            {
+                value = ' ';
+                return true;
+            }
+
+            if (key == Keys.OemMinus || key == Keys.Subtract)
+            {
+                value = shift ? '_' : '-';
+                return true;
+            }
+
+            if (key == Keys.OemPeriod)
+            {
+                value = '.';
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string SanitizeNoteName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            string trimmed = name.Trim();
+            if (trimmed.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                trimmed = trimmed[..^4];
+            }
+
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            StringBuilder builder = new(trimmed.Length);
+            foreach (char ch in trimmed)
+            {
+                if (invalidChars.Contains(ch))
+                {
+                    continue;
+                }
+
+                builder.Append(ch);
+            }
+
+            string sanitized = builder.ToString().Trim();
+            while (sanitized.EndsWith(".", StringComparison.Ordinal))
+            {
+                sanitized = sanitized[..^1].TrimEnd();
+            }
+
+            return sanitized;
+        }
+
+        private static bool WasKeyPressed(KeyboardState current, KeyboardState previous, Keys key)
+        {
+            return current.IsKeyDown(key) && !previous.IsKeyDown(key);
+        }
+
+        private static void LoadNote(NoteFileEntry entry, bool announce = true)
+        {
+            CloseSavePrompt();
             try
             {
                 string text = File.ReadAllText(entry.FullPath, Encoding.UTF8);
@@ -882,12 +1228,16 @@ namespace op.io.UI.BlockScripts.Blocks
                 NoteContent.Append(text);
                 ActiveNoteName = entry.DisplayName;
                 ActiveNotePath = entry.FullPath;
+                ActiveNoteSaved = true;
                 CursorIndex = NoteContent.Length;
                 LineCacheDirty = true;
                 IsDirty = false;
                 ActiveOverlay = OverlayMode.None;
                 VerticalAnchor = -1;
-                SetStatusMessage($"Opened '{entry.DisplayName}'.");
+                if (announce)
+                {
+                    SetStatusMessage($"Opened '{entry.DisplayName}'.");
+                }
             }
             catch (Exception ex)
             {
@@ -898,6 +1248,8 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void DeleteNote(NoteFileEntry entry)
         {
+            CloseSavePrompt();
+            string nextNotePath = GetNextNotePath(entry.FullPath);
             try
             {
                 if (File.Exists(entry.FullPath))
@@ -907,17 +1259,79 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 if (HasActiveNote && string.Equals(ActiveNotePath, entry.FullPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    CloseNote();
+                    ClearActiveNoteState();
                 }
 
                 NoteListDirty = true;
                 ActiveOverlay = OverlayMode.None;
-                SetStatusMessage($"Deleted '{entry.DisplayName}'.");
+                string status = $"Deleted '{entry.DisplayName}'.";
+                if (!HasActiveNote)
+                {
+                    TryOpenNextAvailableNote(nextNotePath, status);
+                }
+                else
+                {
+                    SetStatusMessage(status);
+                }
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to delete note '{entry.FullPath}': {ex.Message}");
                 SetStatusMessage("Failed to delete note.");
+            }
+        }
+
+        private static string GetNextNotePath(string referencePath)
+        {
+            if (NoteFiles.Count == 0)
+            {
+                return null;
+            }
+
+            int index = NoteFiles.FindIndex(n => string.Equals(n.FullPath, referencePath, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                if (index + 1 < NoteFiles.Count)
+                {
+                    return NoteFiles[index + 1].FullPath;
+                }
+
+                if (index - 1 >= 0)
+                {
+                    return NoteFiles[index - 1].FullPath;
+                }
+            }
+
+            return NoteFiles[0].FullPath;
+        }
+
+        private static void TryOpenNextAvailableNote(string preferredPath, string prefixStatus)
+        {
+            EnsureNoteList();
+            if (NoteFiles.Count == 0)
+            {
+                if (!string.IsNullOrWhiteSpace(prefixStatus))
+                {
+                    SetStatusMessage(prefixStatus);
+                }
+
+                return;
+            }
+
+            NoteFileEntry next = NoteFiles.FirstOrDefault(n => string.Equals(n.FullPath, preferredPath, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(next.DisplayName))
+            {
+                next = NoteFiles[0];
+            }
+
+            LoadNote(next, announce: false);
+            if (!string.IsNullOrWhiteSpace(prefixStatus))
+            {
+                SetStatusMessage($"{prefixStatus} Opened '{next.DisplayName}'.");
+            }
+            else
+            {
+                SetStatusMessage($"Opened '{next.DisplayName}'.");
             }
         }
 
@@ -1035,7 +1449,6 @@ namespace op.io.UI.BlockScripts.Blocks
             bool hovered = !blockLocked && UIButtonRenderer.IsHovered(bounds, LastMouseState.Position);
             bool isActiveOverlay = command switch
             {
-                NotesCommand.Open => ActiveOverlay == OverlayMode.Open,
                 NotesCommand.Delete => ActiveOverlay == OverlayMode.Delete,
                 _ => false
             };
@@ -1110,7 +1523,7 @@ namespace op.io.UI.BlockScripts.Blocks
             FillRect(spriteBatch, OverlayBounds, UIStyle.BlockBackground);
             DrawRect(spriteBatch, OverlayBounds, UIStyle.BlockBorder);
 
-            string header = ActiveOverlay == OverlayMode.Delete ? "Select a note to delete" : "Select a note to open";
+            string header = "Select a note to delete";
             Vector2 headerSize = headerFont.MeasureString(header);
             Vector2 headerPosition = new(OverlayBounds.X + OverlayPadding, OverlayBounds.Y + (OverlayHeaderHeight - headerSize.Y) / 2f);
             headerFont.DrawString(spriteBatch, header, headerPosition, UIStyle.TextColor);
@@ -1151,6 +1564,69 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 rowY += OverlayRowHeight;
             }
+        }
+
+        private static void DrawSavePrompt(SpriteBatch spriteBatch, Rectangle contentBounds)
+        {
+            if (!SavePrompt.IsOpen || spriteBatch == null)
+            {
+                return;
+            }
+
+            EnsurePixel(spriteBatch);
+            Rectangle viewport = contentBounds == Rectangle.Empty ? LastContentBounds : contentBounds;
+            if (viewport == Rectangle.Empty)
+            {
+                return;
+            }
+
+            BuildSavePromptLayout(viewport);
+            FillRect(spriteBatch, viewport, ColorPalette.RebindScrim);
+
+            Rectangle dialog = SavePrompt.Bounds;
+            if (dialog == Rectangle.Empty)
+            {
+                return;
+            }
+
+            FillRect(spriteBatch, dialog, UIStyle.BlockBackground);
+            DrawRect(spriteBatch, dialog, UIStyle.BlockBorder);
+
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            UIStyle.UIFont bodyFont = UIStyle.FontBody;
+            UIStyle.UIFont inputFont = UIStyle.FontTech;
+            if (!headerFont.IsAvailable || !bodyFont.IsAvailable || !inputFont.IsAvailable)
+            {
+                return;
+            }
+
+            string title = SavePrompt.Mode == NamePromptMode.Rename ? "Rename note" : "Save note";
+            Vector2 titleSize = headerFont.MeasureString(title);
+            Vector2 titlePos = new(dialog.X + (dialog.Width - titleSize.X) / 2f, dialog.Y + SavePromptPadding);
+            headerFont.DrawString(spriteBatch, title, titlePos, UIStyle.TextColor);
+
+            string helper = SavePrompt.Mode == NamePromptMode.Rename
+                ? "Choose a new name for this note."
+                : "Name this note to save it.";
+            Vector2 helperPos = new(dialog.X + SavePromptPadding, titlePos.Y + titleSize.Y + 6f);
+            bodyFont.DrawString(spriteBatch, helper, helperPos, UIStyle.MutedTextColor);
+
+            Rectangle input = SavePrompt.InputBounds;
+            FillRect(spriteBatch, input, UIStyle.BlockBackground * 1.1f);
+            DrawRect(spriteBatch, input, UIStyle.BlockBorder);
+
+            string text = string.IsNullOrWhiteSpace(SavePrompt.Buffer) ? "Note name" : SavePrompt.Buffer;
+            Color textColor = string.IsNullOrWhiteSpace(SavePrompt.Buffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
+            Vector2 textSize = inputFont.MeasureString(text);
+            Vector2 textPos = new(input.X + 8, input.Y + (input.Height - textSize.Y) / 2f);
+            inputFont.DrawString(spriteBatch, text, textPos, textColor);
+
+            bool saveHovered = UIButtonRenderer.IsHovered(SavePrompt.SaveBounds, LastMouseState.Position);
+            bool cancelHovered = UIButtonRenderer.IsHovered(SavePrompt.CancelBounds, LastMouseState.Position);
+            bool disableSave = string.IsNullOrWhiteSpace(SavePrompt.Buffer);
+            string confirmLabel = SavePrompt.Mode == NamePromptMode.Rename ? "Rename" : "Save";
+            UIButtonRenderer.Draw(spriteBatch, SavePrompt.SaveBounds, confirmLabel, UIButtonRenderer.ButtonStyle.Blue, saveHovered, disableSave);
+            UIButtonRenderer.Draw(spriteBatch, SavePrompt.CancelBounds, "Cancel", UIButtonRenderer.ButtonStyle.Grey, cancelHovered);
         }
 
         private static void DrawEditor(SpriteBatch spriteBatch, UIStyle.UIFont font)
@@ -1259,6 +1735,17 @@ namespace op.io.UI.BlockScripts.Blocks
             spriteBatch.Draw(PixelTexture, bottom, color);
             spriteBatch.Draw(PixelTexture, left, color);
             spriteBatch.Draw(PixelTexture, right, color);
+        }
+
+        private struct SavePromptState
+        {
+            public bool IsOpen;
+            public string Buffer;
+            public NamePromptMode Mode;
+            public Rectangle Bounds;
+            public Rectangle InputBounds;
+            public Rectangle SaveBounds;
+            public Rectangle CancelBounds;
         }
 
         private readonly struct NoteFileEntry
