@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -14,8 +15,17 @@ namespace op.io
         [JsonPropertyName("panels")]
         public List<DockingSetupPanelGroup> Panels { get; set; } = new();
 
+        [JsonPropertyName("groupBars")]
+        public List<DockingSetupPanelGroup> GroupBars { get; set; } = new();
+
         [JsonPropertyName("layout")]
         public DockingSetupLayoutNode Layout { get; set; }
+
+        [JsonPropertyName("blockLocks")]
+        public Dictionary<string, bool> BlockLocks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        [JsonPropertyName("panelLocks")]
+        public Dictionary<string, bool> PanelLocks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     internal sealed class DockingSetupMenuEntry

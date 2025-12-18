@@ -59,6 +59,7 @@ namespace op.io
         private static readonly List<DockBlock> _orderedBlocks = [];
         private static readonly List<string> _orderedPanelIds = new();
         private static readonly Dictionary<string, bool> _blockLockStates = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, string> _lastNonDockingActiveByPanel = new(StringComparer.OrdinalIgnoreCase);
         private static DockNode _rootNode;
         private static Rectangle _cachedViewportBounds;
         private static Rectangle _layoutBounds;
@@ -347,6 +348,8 @@ namespace op.io
             _blockToPanel.Clear();
             _orderedBlocks.Clear();
             _orderedPanelIds.Clear();
+            _blockLockStates.Clear();
+            _lastNonDockingActiveByPanel.Clear();
             ClearDockingInteractions();
         }
 
@@ -423,7 +426,13 @@ namespace op.io
         private static DockingSetupDefinition BuildDockingSetupDefinition()
         {
             EnsureBlockMenuEntries();
-            DockingSetupDefinition setup = new();
+            List<DockingSetupPanelGroup> panelGroups = BuildPanelGroupDefinitions();
+            DockingSetupDefinition setup = new()
+            {
+                Version = 3,
+                Panels = panelGroups,
+                GroupBars = panelGroups.ToList()
+            };
 
             foreach (BlockMenuEntry entry in _blockMenuEntries)
             {
@@ -443,22 +452,23 @@ namespace op.io
                 setup.Menu.Add(menuEntry);
             }
 
-            foreach (string panelId in _orderedPanelIds)
+            setup.Layout = BuildLayoutDefinition(_rootNode);
+            CaptureDockingSetupLocks(setup);
+            return setup;
+        }
+
+        private static List<DockingSetupPanelGroup> BuildPanelGroupDefinitions()
+        {
+            List<DockingSetupPanelGroup> panelGroups = new();
+
+            foreach (PanelGroup group in EnumeratePanelGroupsInOrder())
             {
-                if (!_panelGroups.TryGetValue(panelId, out PanelGroup group) || group == null)
+                if (group?.Blocks == null || group.Blocks.Count == 0)
                 {
                     continue;
                 }
 
-                if (group.Blocks == null || group.Blocks.Count == 0)
-                {
-                    continue;
-                }
-
-                string activeId = string.IsNullOrWhiteSpace(group.ActiveBlockId)
-                    ? group.ActiveBlock?.Id
-                    : group.ActiveBlockId;
-
+                string activeId = ResolveActiveBlockId(group);
                 DockingSetupPanelGroup panelGroup = new()
                 {
                     Id = group.PanelId,
@@ -485,11 +495,133 @@ namespace op.io
                     panelGroup.Active = panelGroup.Blocks[0];
                 }
 
-                setup.Panels.Add(panelGroup);
+                panelGroups.Add(panelGroup);
             }
 
-            setup.Layout = BuildLayoutDefinition(_rootNode);
-            return setup;
+            return panelGroups;
+        }
+
+        private static string ResolveActiveBlockId(PanelGroup group)
+        {
+            if (group == null)
+            {
+                return null;
+            }
+
+            string activeId = group.ActiveBlockId;
+            if (!string.IsNullOrWhiteSpace(activeId) &&
+                _blocks.TryGetValue(activeId, out DockBlock activeBlock) &&
+                activeBlock != null &&
+                activeBlock.Kind != DockBlockKind.DockingSetups)
+            {
+                return activeId;
+            }
+
+            string remembered = GetLastNonDockingActive(group);
+            if (!string.IsNullOrWhiteSpace(remembered))
+            {
+                return remembered;
+            }
+
+            DockBlock firstNonDocking = group.Blocks.FirstOrDefault(b => b != null && b.Kind != DockBlockKind.DockingSetups);
+            if (firstNonDocking != null)
+            {
+                return firstNonDocking.Id;
+            }
+
+            if (!string.IsNullOrWhiteSpace(activeId))
+            {
+                return activeId;
+            }
+
+            return group.ActiveBlock?.Id ?? group.Blocks.FirstOrDefault()?.Id;
+        }
+
+        private static string GetLastNonDockingActive(PanelGroup group)
+        {
+            if (group == null || string.IsNullOrWhiteSpace(group.PanelId))
+            {
+                return null;
+            }
+
+            if (_lastNonDockingActiveByPanel.TryGetValue(group.PanelId, out string stored) &&
+                _blocks.TryGetValue(stored, out DockBlock storedBlock) &&
+                storedBlock != null &&
+                storedBlock.Kind != DockBlockKind.DockingSetups &&
+                group.Blocks.Any(b => string.Equals(b.Id, stored, StringComparison.OrdinalIgnoreCase)))
+            {
+                return stored;
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<PanelGroup> EnumeratePanelGroupsInOrder()
+        {
+            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string panelId in _orderedPanelIds)
+            {
+                if (!_panelGroups.TryGetValue(panelId, out PanelGroup group) || group == null || !seen.Add(group.PanelId))
+                {
+                    continue;
+                }
+
+                yield return group;
+            }
+
+            foreach (PanelGroup group in _panelGroups.Values)
+            {
+                if (group == null || !seen.Add(group.PanelId))
+                {
+                    continue;
+                }
+
+                yield return group;
+            }
+        }
+
+        private static IEnumerable<DockingSetupPanelGroup> GetPanelGroupsFromDefinition(DockingSetupDefinition setup)
+        {
+            if (setup == null)
+            {
+                return Enumerable.Empty<DockingSetupPanelGroup>();
+            }
+
+            if (setup.GroupBars != null && setup.GroupBars.Count > 0)
+            {
+                return setup.GroupBars;
+            }
+
+            return setup.Panels ?? Enumerable.Empty<DockingSetupPanelGroup>();
+        }
+
+        private static void CaptureDockingSetupLocks(DockingSetupDefinition setup)
+        {
+            if (setup == null)
+            {
+                return;
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || string.IsNullOrWhiteSpace(block.Id))
+                {
+                    continue;
+                }
+
+                setup.BlockLocks[block.Id] = IsBlockLockEnabled(block);
+            }
+
+            foreach (PanelGroup group in _panelGroups.Values)
+            {
+                if (group == null || string.IsNullOrWhiteSpace(group.PanelId))
+                {
+                    continue;
+                }
+
+                setup.PanelLocks[group.PanelId] = group.IsLocked;
+            }
         }
 
         private static DockingSetupLayoutNode BuildLayoutDefinition(DockNode node)
@@ -563,7 +695,8 @@ namespace op.io
             ResetBlockState();
             ApplyDockingSetupMenuState(setup.Menu);
             CreateBlocksFromMenuEntries();
-            ApplyDockingSetupPanelGroups(setup.Panels);
+            ApplyDockingSetupPanelGroups(GetPanelGroupsFromDefinition(setup));
+            ApplyDockingSetupLocks(setup);
 
             HashSet<string> visiblePanels = new(StringComparer.OrdinalIgnoreCase);
             _rootNode = BuildLayoutFromDefinition(setup.Layout, visiblePanels);
@@ -633,10 +766,20 @@ namespace op.io
                     continue;
                 }
 
-                string activeId = !string.IsNullOrWhiteSpace(group.Active) ? group.Active : group.Id;
+                List<string> orderedBlocks = group.Blocks?
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToList() ?? new List<string>();
+
+                string declaredActiveId = !string.IsNullOrWhiteSpace(group.Active) ? group.Active : group.Id;
+                string activeId = ResolveDefinitionActiveBlockId(group.Id, declaredActiveId, orderedBlocks);
                 if (string.IsNullOrWhiteSpace(activeId))
                 {
                     continue;
+                }
+
+                if (!orderedBlocks.Any(id => string.Equals(id, activeId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    orderedBlocks.Insert(0, activeId);
                 }
 
                 if (!_blocks.TryGetValue(activeId, out DockBlock activeBlock))
@@ -648,15 +791,6 @@ namespace op.io
                 if (targetGroup == null)
                 {
                     continue;
-                }
-
-                List<string> orderedBlocks = group.Blocks?
-                    .Where(id => !string.IsNullOrWhiteSpace(id))
-                    .ToList() ?? new List<string>();
-
-                if (!orderedBlocks.Any(id => string.Equals(id, activeId, StringComparison.OrdinalIgnoreCase)))
-                {
-                    orderedBlocks.Insert(0, activeId);
                 }
 
                 for (int i = 0; i < orderedBlocks.Count; i++)
@@ -707,6 +841,80 @@ namespace op.io
                 {
                     SetPanelActiveBlock(targetGroup, active);
                     MapBlockToPanel(active, targetGroup);
+                }
+            }
+        }
+
+        private static string ResolveDefinitionActiveBlockId(string panelId, string declaredActiveId, List<string> orderedBlocks)
+        {
+            if (string.IsNullOrWhiteSpace(declaredActiveId))
+            {
+                return null;
+            }
+
+            bool declaredIsDocking = string.Equals(declaredActiveId, DockingSetupsBlockKey, StringComparison.OrdinalIgnoreCase);
+            if (!declaredIsDocking)
+            {
+                return declaredActiveId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(panelId) &&
+                _lastNonDockingActiveByPanel.TryGetValue(panelId, out string rememberedId) &&
+                orderedBlocks.Any(id => string.Equals(id, rememberedId, StringComparison.OrdinalIgnoreCase)) &&
+                _blocks.TryGetValue(rememberedId, out DockBlock rememberedBlock) &&
+                rememberedBlock != null &&
+                rememberedBlock.Kind != DockBlockKind.DockingSetups)
+            {
+                return rememberedId;
+            }
+
+            foreach (string id in orderedBlocks)
+            {
+                if (_blocks.TryGetValue(id, out DockBlock block) && block != null && block.Kind != DockBlockKind.DockingSetups)
+                {
+                    return id;
+                }
+            }
+
+            return declaredActiveId;
+        }
+
+        private static void ApplyDockingSetupLocks(DockingSetupDefinition setup)
+        {
+            if (setup == null)
+            {
+                return;
+            }
+
+            if (setup.BlockLocks != null)
+            {
+                foreach (KeyValuePair<string, bool> pair in setup.BlockLocks)
+                {
+                    if (string.IsNullOrWhiteSpace(pair.Key))
+                    {
+                        continue;
+                    }
+
+                    if (_blocks.TryGetValue(pair.Key, out DockBlock block) && block != null)
+                    {
+                        SetBlockLock(block, pair.Value);
+                    }
+                }
+            }
+
+            if (setup.PanelLocks != null)
+            {
+                foreach (KeyValuePair<string, bool> pair in setup.PanelLocks)
+                {
+                    if (string.IsNullOrWhiteSpace(pair.Key))
+                    {
+                        continue;
+                    }
+
+                    if (_panelGroups.TryGetValue(pair.Key, out PanelGroup group) && group != null)
+                    {
+                        group.IsLocked = pair.Value;
+                    }
                 }
             }
         }
@@ -1277,7 +1485,23 @@ namespace op.io
             newActiveBlock.IsVisible = true;
             node.SetBlock(newActiveBlock);
             _blockNodes[newActiveBlock.Id] = node;
+            RememberLastNonDockingActive(group, newActiveBlock);
             return true;
+        }
+
+        private static void RememberLastNonDockingActive(PanelGroup group, DockBlock block)
+        {
+            if (group == null || block == null || string.IsNullOrWhiteSpace(group.PanelId))
+            {
+                return;
+            }
+
+            if (block.Kind == DockBlockKind.DockingSetups)
+            {
+                return;
+            }
+
+            _lastNonDockingActiveByPanel[group.PanelId] = block.Id;
         }
 
         private static void MapBlockToPanel(DockBlock block, PanelGroup group)
@@ -1448,6 +1672,7 @@ namespace op.io
                 _panelNodes.Remove(group.PanelId);
             }
 
+            _lastNonDockingActiveByPanel.Remove(group.PanelId);
             _panelGroups.Remove(group.PanelId);
             _orderedPanelIds.Remove(group.PanelId);
         }
@@ -1600,6 +1825,7 @@ namespace op.io
             _blockToPanel[id] = id;
             _orderedPanelIds.Add(id);
             EnsureBlockLockState(block);
+            RememberLastNonDockingActive(_panelGroups[id], block);
             return block;
         }
 
