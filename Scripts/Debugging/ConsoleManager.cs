@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace op.io
 {
@@ -153,7 +154,7 @@ namespace op.io
                 var standardInput = new StreamReader(stdin);
 
                 Console.SetOut(standardOutput);
-                Console.SetError(standardError);
+                Console.SetError(new ConsoleErrorLogForwarder(standardError));
                 Console.SetIn(standardInput);
 
                 return true;
@@ -176,6 +177,116 @@ namespace op.io
                 bool writeToFile = !log.WasPersistedToFile;
 
                 DebugLogger.PrintToConsole(logMessage, color, suppressionBehavior, writeToFile);
+            }
+        }
+
+        private sealed class ConsoleErrorLogForwarder : TextWriter
+        {
+            private readonly TextWriter _inner;
+            private readonly StringBuilder _buffer = new();
+
+            public ConsoleErrorLogForwarder(TextWriter inner)
+            {
+                _inner = inner ?? TextWriter.Null;
+            }
+
+            public override Encoding Encoding => _inner.Encoding;
+
+            public override void Write(char value)
+            {
+                _inner.Write(value);
+                if (value == '\n')
+                {
+                    FlushBuffer();
+                }
+                else if (value != '\r')
+                {
+                    _buffer.Append(value);
+                }
+            }
+
+            public override void Write(string value)
+            {
+                _inner.Write(value);
+                Append(value, flushImmediately: false);
+            }
+
+            public override void WriteLine(string value)
+            {
+                _inner.WriteLine(value);
+                Append(value, flushImmediately: true);
+            }
+
+            public override void Flush()
+            {
+                FlushBuffer();
+                _inner.Flush();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    FlushBuffer();
+                    _inner.Dispose();
+                }
+
+                base.Dispose(disposing);
+            }
+
+            private void Append(string value, bool flushImmediately)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    if (flushImmediately)
+                    {
+                        FlushBuffer();
+                    }
+
+                    return;
+                }
+
+                foreach (char c in value)
+                {
+                    if (c == '\r')
+                    {
+                        continue;
+                    }
+
+                    if (c == '\n')
+                    {
+                        FlushBuffer();
+                    }
+                    else
+                    {
+                        _buffer.Append(c);
+                    }
+                }
+
+                if (flushImmediately)
+                {
+                    FlushBuffer();
+                }
+            }
+
+            private void FlushBuffer()
+            {
+                if (_buffer.Length == 0)
+                {
+                    return;
+                }
+
+                string payload = _buffer.ToString();
+                _buffer.Clear();
+
+                try
+                {
+                    LogFileHandler.AppendLog($"[ConsoleError] {payload}");
+                }
+                catch
+                {
+                    // Swallow logging failures to avoid blocking console output.
+                }
             }
         }
 

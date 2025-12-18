@@ -11,7 +11,7 @@ namespace op.io
         internal const string HoldInputsKey = "HoldInputs";
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
         private static bool _applied;
-        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey];
+        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey];
 
         public static void EnsureApplied()
         {
@@ -32,6 +32,7 @@ namespace op.io
                 EnsureExitControl();
                 EnsureTransparentTabBlockingControl();
                 EnsureHoldInputsControl();
+                EnsureInspectModeControl();
                 EnsureLockModeColumn();
                 MigrateLegacySwitchType();
                 EnsureMetaControlColumn();
@@ -145,6 +146,23 @@ WHERE SettingKey = @legacyKey;";
             ControlKeyData.SetInputType(HoldInputsKey, "NoSaveSwitch");
             ControlKeyData.EnsureSwitchStartState(HoldInputsKey, 0);
             ControlKeyData.EnsureInputKey(HoldInputsKey, "M");
+        }
+
+        private static void EnsureInspectModeControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = InspectModeState.InspectModeKey,
+                InputKey = "Shift + I",
+                InputType = "NoSaveSwitch",
+                SwitchStartState = 0,
+                MetaControl = true,
+                RenderOrder = 17
+            });
+
+            ControlKeyData.SetInputType(InspectModeState.InspectModeKey, "NoSaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(InspectModeState.InspectModeKey, 0);
+            ControlKeyData.EnsureInputKey(InspectModeState.InspectModeKey, "Shift + I");
         }
 
         private static void EnsureCrouchUsesNoSaveSwitch()

@@ -207,4 +207,60 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightM
 -----------------------------------------------------------------------
 INSERT OR REPLACE INTO BlockDockingSetups (RowKey, IsLocked) VALUES ('BlockLock', 1); -- default locked state stored at block-level
 INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('__ActiveSetup', 'Default');
-INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '{"version":1,"menu":[{"kind":"Blank","mode":"Count","count":1,"visible":true},{"kind":"Transparent","mode":"Count","count":1,"visible":true},{"kind":"Game","mode":"Toggle","count":0,"visible":true},{"kind":"ColorScheme","mode":"Toggle","count":0,"visible":true},{"kind":"Controls","mode":"Toggle","count":0,"visible":true},{"kind":"Notes","mode":"Toggle","count":0,"visible":true},{"kind":"DockingSetups","mode":"Toggle","count":0,"visible":true},{"kind":"Backend","mode":"Toggle","count":0,"visible":true},{"kind":"Specs","mode":"Toggle","count":0,"visible":true}],"panels":[{"id":"colors","active":"colors","blocks":["colors","notes","dockingsetups"]},{"id":"game","active":"game","blocks":["game"]},{"id":"controls","active":"controls","blocks":["controls"]},{"id":"backend","active":"backend","blocks":["backend","specs"]},{"id":"blank","active":"blank","blocks":["blank"]},{"id":"transparent","active":"transparent","blocks":["transparent"]}],"layout":{"type":"Split","orientation":"Vertical","ratio":0.67,"first":{"type":"Split","orientation":"Horizontal","ratio":0.36,"first":{"type":"Split","orientation":"Vertical","ratio":0.5,"first":{"type":"Panel","panel":"transparent"},"second":{"type":"Panel","panel":"blank"}},"second":{"type":"Panel","panel":"game"}},"second":{"type":"Split","orientation":"Horizontal","ratio":0.68,"first":{"type":"Panel","panel":"controls"},"second":{"type":"Split","orientation":"Horizontal","ratio":0.42,"first":{"type":"Panel","panel":"colors"},"second":{"type":"Panel","panel":"backend"}}}}}');
+-- Make a group: { "id": "MyBlockGroup", ..., "blocks": ["block1", "block2", "block3"] },
+--  then end in: "first": { "type": "Panel", "panel": "MyBlockGroup" },
+--  so the group references the first block in the array
+INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '{
+  "version": 3,
+  "menu": [
+    { "kind": "Blank", "mode": "Count", "count": 1, "visible": true },
+    { "kind": "Transparent", "mode": "Count", "count": 1, "visible": true },
+    { "kind": "Game", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Properties", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "ColorScheme", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Controls", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Notes", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "DockingSetups", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Backend", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Specs", "mode": "Toggle", "count": 0, "visible": true }
+  ],
+  "panels": [
+    { "id": "colors", "active": "colors", "blocks": ["colors", "notes", "dockingsetups"] },
+    { "id": "game", "active": "game", "blocks": ["game"] },
+    { "id": "controls", "active": "controls", "blocks": ["controls"] },
+    { "id": "backend", "active": "backend", "blocks": ["backend", "specs"] },
+    { "id": "blank", "active": "blank", "blocks": ["blank"] },
+    { "id": "transparent", "active": "transparent", "blocks": ["transparent"] },
+    { "id": "properties", "active": "properties", "blocks": ["properties"] }
+  ],
+  "layout": {
+    "type": "Split",
+    "orientation": "Vertical",
+    "ratio": 0.67,
+    "first": {
+      "type": "Split",
+      "orientation": "Horizontal",
+      "ratio": 0.36,
+      "first": { "type": "Panel", "panel": "game" }
+    },
+    "second": {
+      "type": "Split",
+      "orientation": "Horizontal",
+      "ratio": 0.28,
+      "first": { "type": "Panel", "panel": "properties" },
+      "second": {
+        "type": "Split",
+        "orientation": "Horizontal",
+        "ratio": 0.58,
+        "first": { "type": "Panel", "panel": "controls" },
+        "second": {
+          "type": "Split",
+          "orientation": "Horizontal",
+          "ratio": 0.45,
+          "first": { "type": "Panel", "panel": "colors" },
+          "second": { "type": "Panel", "panel": "backend" }
+        }
+      }
+    }
+  }
+}');

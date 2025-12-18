@@ -29,6 +29,11 @@ namespace op.io
                 GameInitializer.SetWindowClickThrough(value);
             });
 
+            SwitchRegistry.RegisterConsumer(InspectModeState.InspectModeKey, value =>
+            {
+                InspectModeState.ApplyInspectModeState(value);
+            });
+
             SwitchRegistry.RegisterConsumer(ControlKeyMigrations.HoldInputsKey, value =>
             {
                 if (value)

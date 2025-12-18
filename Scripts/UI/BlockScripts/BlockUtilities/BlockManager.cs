@@ -16,6 +16,7 @@ namespace op.io
         private const string GameBlockKey = "game";
         private const string BlankBlockKey = "blank";
         private const string TransparentBlockKey = "transparent";
+        private const string PropertiesBlockKey = "properties";
         private const string ColorSchemeBlockKey = "colors";
         private const string ControlsBlockKey = "controls";
         private const string NotesBlockKey = "notes";
@@ -34,6 +35,7 @@ namespace op.io
         private const int TabVerticalPadding = 3;
         private const int TabCloseSize = 12;
         private const int TabLockSize = 18;
+        private const int TabUngroupSize = 18;
         private const int TabClosePadding = 8;
         private const int GroupBarDragGap = 24;
         private const int TabDragStartThreshold = 6;
@@ -1036,7 +1038,25 @@ namespace op.io
                     continue;
                 }
 
-                if (!visiblePanels.Contains(panelId))
+                if (visiblePanels.Contains(panelId))
+                {
+                    continue;
+                }
+
+                BlockMenuEntry entry = _blockMenuEntries.FirstOrDefault(e =>
+                    e != null && string.Equals(e.IdPrefix, panelId, StringComparison.OrdinalIgnoreCase));
+
+                bool shouldRemainVisible = entry != null &&
+                    entry.ControlMode == BlockMenuControlMode.Toggle &&
+                    entry.IsVisible;
+
+                if (shouldRemainVisible)
+                {
+                    block.IsVisible = true;
+                    visiblePanels.Add(panelId);
+                    EnsureBlockAttachedToLayout(block);
+                }
+                else
                 {
                     block.IsVisible = false;
                 }
@@ -1176,6 +1196,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(BlankBlockKey, BlankBlock.BlockTitle, DockBlockKind.Blank, BlockMenuControlMode.Count, 0, 10, 1));
             _blockMenuEntries.Add(new BlockMenuEntry(TransparentBlockKey, TransparentBlock.BlockTitle, DockBlockKind.Transparent, BlockMenuControlMode.Count, 0, 10, 1));
             _blockMenuEntries.Add(new BlockMenuEntry(GameBlockKey, GameBlock.BlockTitle, DockBlockKind.Game, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(PropertiesBlockKey, PropertiesBlock.BlockTitle, DockBlockKind.Properties, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlsBlockKey, ControlsBlock.BlockTitle, DockBlockKind.Controls, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: true));
@@ -1202,6 +1223,21 @@ namespace op.io
             }
 
             return string.Concat(prefix, index + 1);
+        }
+
+        private static string GetUniquePanelId(string seed)
+        {
+            string baseId = string.IsNullOrWhiteSpace(seed) ? "panel" : seed.Trim();
+            string candidate = baseId;
+            int suffix = 2;
+
+            while (_panelGroups.ContainsKey(candidate))
+            {
+                candidate = $"{baseId}-{suffix}";
+                suffix++;
+            }
+
+            return candidate;
         }
 
         private static string BuildBlockTitle(BlockMenuEntry entry, int index)
@@ -1298,6 +1334,7 @@ namespace op.io
             List<BlockNode> blankNodes = GetBlockNodesByKind(DockBlockKind.Blank);
             List<BlockNode> transparentNodes = GetBlockNodesByKind(DockBlockKind.Transparent);
             BlockNode gameNode = GetBlockNodesByKind(DockBlockKind.Game).FirstOrDefault();
+            BlockNode propertiesNode = GetBlockNodesByKind(DockBlockKind.Properties).FirstOrDefault();
             BlockNode colorNode = GetBlockNodesByKind(DockBlockKind.ColorScheme).FirstOrDefault();
             BlockNode controlsNode = GetBlockNodesByKind(DockBlockKind.Controls).FirstOrDefault();
             BlockNode notesNode = GetBlockNodesByKind(DockBlockKind.Notes).FirstOrDefault();
@@ -1314,7 +1351,8 @@ namespace op.io
             DockNode controlsAndNotes = CombineNodes(controlsNode, notesNode, DockSplitOrientation.Horizontal, 0.5f);
             DockNode backendAndSpecs = CombineNodes(backendNode, specsNode, DockSplitOrientation.Horizontal, 0.58f);
             DockNode paletteBackend = CombineNodes(colorNode, backendAndSpecs, DockSplitOrientation.Horizontal, 0.42f);
-            DockNode rightColumn = CombineNodes(controlsAndNotes, paletteBackend, DockSplitOrientation.Horizontal, 0.68f);
+            DockNode propertiesAndControls = CombineNodes(propertiesNode, controlsAndNotes, DockSplitOrientation.Horizontal, 0.26f);
+            DockNode rightColumn = CombineNodes(propertiesAndControls, paletteBackend, DockSplitOrientation.Horizontal, 0.7f);
 
             return CombineNodes(leftColumn, rightColumn, DockSplitOrientation.Vertical, 0.67f);
         }
@@ -1714,6 +1752,7 @@ namespace op.io
             bool panelLocked = IsPanelLocked(group);
             bool showLockButtons = DockingModeEnabled && !panelLocked;
             bool showCloseButtons = DockingModeEnabled && !panelLocked;
+            bool showUngroupButtons = showLockButtons && group.Blocks.Count > 1;
             int availableWidth = Math.Max(0, groupBarBounds.Width - (TabSpacing * Math.Max(0, group.Blocks.Count - 1)) - (TabHorizontalPadding * 2));
             int x = groupBarBounds.X + TabHorizontalPadding;
             int height = Math.Max(0, groupBarBounds.Height - (TabVerticalPadding * 2));
@@ -1732,6 +1771,10 @@ namespace op.io
                 {
                     minButtonWidth += TabLockSize + TabClosePadding;
                 }
+                if (showUngroupButtons)
+                {
+                    minButtonWidth += TabUngroupSize + TabClosePadding;
+                }
 
                 int measured = measuredText + minButtonWidth;
                 int targetWidth = Math.Max(minButtonWidth, Math.Max(fallbackWidth, Math.Min(measured, Math.Max(TabMinWidth, availableWidth))));
@@ -1745,7 +1788,8 @@ namespace op.io
                 Rectangle tabBounds = new(x, groupBarBounds.Y + TabVerticalPadding, targetWidth, Math.Max(0, height));
                 Rectangle closeBounds = showCloseButtons ? GetTabCloseBounds(tabBounds) : Rectangle.Empty;
                 Rectangle lockBounds = showLockButtons ? GetTabLockBounds(tabBounds, closeBounds) : Rectangle.Empty;
-                layout.Tabs.Add(new TabHitRegion(tabBlock.Id, tabBounds, lockBounds, closeBounds));
+                Rectangle ungroupBounds = showUngroupButtons ? GetTabUngroupBounds(tabBounds, lockBounds, closeBounds) : Rectangle.Empty;
+                layout.Tabs.Add(new TabHitRegion(tabBlock.Id, tabBounds, ungroupBounds, lockBounds, closeBounds));
                 x += targetWidth + TabSpacing;
                 if (x >= groupBarBounds.Right)
                 {
@@ -1787,6 +1831,31 @@ namespace op.io
 
             int lockY = tabBounds.Y + (tabBounds.Height - lockSize) / 2;
             return new Rectangle(lockX, lockY, lockSize, lockSize);
+        }
+
+        private static Rectangle GetTabUngroupBounds(Rectangle tabBounds, Rectangle lockBounds, Rectangle closeBounds)
+        {
+            if (tabBounds.Width <= 0 || tabBounds.Height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            Rectangle anchor = lockBounds == Rectangle.Empty ? closeBounds : lockBounds;
+            if (anchor == Rectangle.Empty)
+            {
+                return Rectangle.Empty;
+            }
+
+            int ungroupSize = Math.Min(TabUngroupSize, Math.Max(8, tabBounds.Height));
+            int ungroupX = anchor.X - TabClosePadding - ungroupSize;
+            int minX = tabBounds.X + TabHorizontalPadding;
+            if (ungroupX < minX)
+            {
+                return Rectangle.Empty;
+            }
+
+            int ungroupY = tabBounds.Y + (tabBounds.Height - ungroupSize) / 2;
+            return new Rectangle(ungroupX, ungroupY, ungroupSize, ungroupSize);
         }
 
         private static PanelGroupBarLayout GetGroupBarLayoutForGroup(PanelGroup group, DockBlock block, int dragBarHeight)
@@ -1837,6 +1906,7 @@ namespace op.io
                 DockBlockKind.Game => (GameBlock.MinWidth, GameBlock.MinHeight),
                 DockBlockKind.Transparent => (TransparentBlock.MinWidth, TransparentBlock.MinHeight),
                 DockBlockKind.Blank => (BlankBlock.MinWidth, BlankBlock.MinHeight),
+                DockBlockKind.Properties => (PropertiesBlock.MinWidth, PropertiesBlock.MinHeight),
                 DockBlockKind.ColorScheme => (ColorSchemeBlock.MinWidth, ColorSchemeBlock.MinHeight),
                 DockBlockKind.Controls => (ControlsBlock.MinWidth, ControlsBlock.MinHeight),
                 DockBlockKind.Notes => (NotesBlock.MinWidth, NotesBlock.MinHeight),
@@ -2056,6 +2126,18 @@ namespace op.io
                     {
                         foreach (TabHitRegion tab in layout.Tabs)
                         {
+                            if (tab.UngroupBounds != Rectangle.Empty &&
+                                tab.UngroupBounds.Contains(_mousePosition) &&
+                                _blocks.TryGetValue(tab.BlockId, out DockBlock tabBlock) &&
+                                TryUngroupTab(group, tabBlock))
+                            {
+                                ClearPressedTabState();
+                                return true;
+                            }
+                        }
+
+                        foreach (TabHitRegion tab in layout.Tabs)
+                        {
                             if (tab.LockBounds != Rectangle.Empty &&
                                 tab.LockBounds.Contains(_mousePosition) &&
                                 _blocks.TryGetValue(tab.BlockId, out DockBlock tabBlock))
@@ -2197,6 +2279,109 @@ namespace op.io
             Rectangle startBounds = GetDragOriginBounds(group, block);
             _draggingStartBounds = startBounds;
             _dragOffset = new Point(_mousePosition.X - startBounds.X, _mousePosition.Y - startBounds.Y);
+            return true;
+        }
+
+        private static bool TryUngroupTab(PanelGroup sourceGroup, DockBlock block)
+        {
+            if (!DockingModeEnabled || sourceGroup == null || block == null || sourceGroup.Blocks.Count <= 1)
+            {
+                return false;
+            }
+
+            BlockNode sourceNode = GetPanelNode(sourceGroup);
+            if (sourceNode == null)
+            {
+                return false;
+            }
+
+            if (_rootNode == null || !LayoutContainsNode(_rootNode, sourceNode))
+            {
+                EnsureBlockAttachedToLayout(block);
+                if (_rootNode == null || !LayoutContainsNode(_rootNode, sourceNode))
+                {
+                    return false;
+                }
+            }
+
+            Rectangle bounds = sourceNode.Block?.Bounds ?? _layoutBounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                bounds = _layoutBounds;
+            }
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                bounds = new Rectangle(0, 0, UIStyle.MinBlockSize, UIStyle.MinBlockSize);
+            }
+
+            DockSplitOrientation orientation = bounds.Height > bounds.Width
+                ? DockSplitOrientation.Vertical
+                : DockSplitOrientation.Horizontal;
+
+            bool hadFocus = BlockHasFocus(block.Id);
+
+            if (!sourceGroup.RemoveBlock(block.Id, out _))
+            {
+                return false;
+            }
+
+            _blockToPanel.Remove(block.Id);
+            _blockNodes.Remove(block.Id);
+
+            DockBlock newSourceActive = sourceGroup.ActiveBlock ?? sourceGroup.Blocks.FirstOrDefault();
+            if (newSourceActive != null)
+            {
+                SetPanelActiveBlock(sourceGroup, newSourceActive);
+                MapBlockToPanel(newSourceActive, sourceGroup);
+            }
+
+            string newPanelId = GetUniquePanelId(block.Id);
+            PanelGroup newGroup = new(newPanelId, block);
+            block.IsVisible = true;
+            _panelGroups[newPanelId] = newGroup;
+            _blockToPanel[block.Id] = newPanelId;
+
+            BlockNode newPanelNode = new(block);
+            _blockNodes[block.Id] = newPanelNode;
+            _panelNodes[newPanelId] = newPanelNode;
+            if (!_orderedPanelIds.Contains(newPanelId, StringComparer.OrdinalIgnoreCase))
+            {
+                _orderedPanelIds.Add(newPanelId);
+            }
+
+            RememberLastNonDockingActive(newGroup, block);
+
+            SplitNode split = new(orientation)
+            {
+                SplitRatio = 0.5f
+            };
+
+            if (orientation == DockSplitOrientation.Vertical)
+            {
+                int halfWidth = Math.Max(0, bounds.Width / 2);
+                split.PreferredFirstSpan = halfWidth;
+                split.PreferredSecondSpan = Math.Max(0, bounds.Width - halfWidth);
+            }
+            else
+            {
+                int halfHeight = Math.Max(0, bounds.Height / 2);
+                split.PreferredFirstSpan = halfHeight;
+                split.PreferredSecondSpan = Math.Max(0, bounds.Height - halfHeight);
+            }
+
+            split.First = sourceNode;
+            split.Second = newPanelNode;
+
+            _rootNode = ReplaceNode(_rootNode, sourceNode, split) ?? split;
+
+            if (hadFocus)
+            {
+                SetFocusedBlock(block);
+            }
+
+            MarkLayoutDirty();
+            RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
             return true;
         }
 
@@ -3880,6 +4065,22 @@ namespace op.io
             DrawCenteredGlyph(spriteBatch, glyphFont, glyph, bounds, glyphColor, -1f);
         }
 
+        private static void DrawUngroupButton(SpriteBatch spriteBatch, Rectangle bounds, bool hovered)
+        {
+            Color background = hovered ? ColorPalette.ButtonPrimaryHover : ColorPalette.ButtonPrimary;
+            Color border = hovered ? UIStyle.AccentColor : UIStyle.BlockBorder;
+            DrawRect(spriteBatch, bounds, background);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable)
+            {
+                return;
+            }
+
+            DrawCenteredGlyph(spriteBatch, glyphFont, "U", bounds, UIStyle.TextColor, -1f);
+        }
+
         private static void DrawPanelLockToggleButton(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered)
         {
             Color accent = ColorPalette.Warning;
@@ -3991,6 +4192,7 @@ namespace op.io
                 bool isActive = string.Equals(group.ActiveBlockId, tab.BlockId, StringComparison.OrdinalIgnoreCase);
                 bool isHovered = tab.Bounds.Contains(_mousePosition);
                 bool closeHovered = tab.CloseBounds.Contains(_mousePosition);
+                bool ungroupHovered = !panelLocked && tab.UngroupBounds.Contains(_mousePosition);
                 bool lockHovered = !panelLocked && tab.LockBounds.Contains(_mousePosition);
                 bool tabLocked = IsBlockLocked(tabBlock);
 
@@ -4035,13 +4237,23 @@ namespace op.io
                 {
                     float textStart = tab.Bounds.X + TabHorizontalPadding;
                     float availableWidth = tab.Bounds.Width - (TabHorizontalPadding * 2);
+                    int iconStart = int.MaxValue;
+                    if (tab.UngroupBounds != Rectangle.Empty)
+                    {
+                        iconStart = Math.Min(iconStart, tab.UngroupBounds.X);
+                    }
                     if (tab.LockBounds != Rectangle.Empty)
                     {
-                        availableWidth = Math.Max(0f, tab.LockBounds.X - TabClosePadding - textStart);
+                        iconStart = Math.Min(iconStart, tab.LockBounds.X);
                     }
-                    else if (tab.CloseBounds != Rectangle.Empty)
+                    if (tab.CloseBounds != Rectangle.Empty)
                     {
-                        availableWidth = Math.Max(0f, tab.CloseBounds.X - TabClosePadding - textStart);
+                        iconStart = Math.Min(iconStart, tab.CloseBounds.X);
+                    }
+
+                    if (iconStart != int.MaxValue)
+                    {
+                        availableWidth = Math.Max(0f, iconStart - TabClosePadding - textStart);
                     }
                     string label = FitTabLabel(tabFont, tabBlock.Title, availableWidth);
                     if (!string.IsNullOrEmpty(label))
@@ -4049,6 +4261,11 @@ namespace op.io
                         Vector2 textSize = tabFont.MeasureString(label);
                         Vector2 textPosition = new(textStart, tab.Bounds.Y + (tab.Bounds.Height - textSize.Y) / 2f);
                         tabFont.DrawString(spriteBatch, label, textPosition, textColor);
+                    }
+
+                    if (tab.UngroupBounds != Rectangle.Empty)
+                    {
+                        DrawUngroupButton(spriteBatch, tab.UngroupBounds, ungroupHovered);
                     }
 
                     if (tab.LockBounds != Rectangle.Empty)
@@ -4179,6 +4396,9 @@ namespace op.io
                 case DockBlockKind.Blank:
                     BlankBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.Properties:
+                    PropertiesBlock.Draw(spriteBatch, contentBounds);
+                    break;
                 case DockBlockKind.ColorScheme:
                     ColorSchemeBlock.Draw(spriteBatch, contentBounds);
                     break;
@@ -4224,6 +4444,9 @@ namespace op.io
                 Rectangle contentBounds = GetPanelContentBounds(block, dragBarHeight);
                 switch (block.Kind)
                 {
+                    case DockBlockKind.Properties:
+                        PropertiesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
                     case DockBlockKind.Notes:
                         NotesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
@@ -4530,9 +4753,162 @@ namespace op.io
             if (_blocks.TryGetValue(entry.IdPrefix, out DockBlock block))
             {
                 block.IsVisible = entry.IsVisible;
+                if (entry.IsVisible)
+                {
+                    EnsureBlockAttachedToLayout(block);
+                }
             }
 
             MarkLayoutDirty();
+        }
+
+        private static void EnsureBlockAttachedToLayout(DockBlock block)
+        {
+            if (block == null)
+            {
+                return;
+            }
+
+            PanelGroup group = GetPanelGroupForBlock(block);
+            if (group == null)
+            {
+                return;
+            }
+
+            if (!string.Equals(group.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                SetPanelActiveBlock(group, block);
+            }
+
+            BlockNode panelNode = GetPanelNode(group);
+            if (panelNode == null || LayoutContainsNode(_rootNode, panelNode))
+            {
+                return;
+            }
+
+            AttachPanelToLayout(panelNode);
+        }
+
+        private static void EnsureVisibleBlocksAttachedToLayout()
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block != null && block.IsVisible)
+                {
+                    EnsureBlockAttachedToLayout(block);
+                }
+            }
+        }
+
+        private static void AttachPanelToLayout(BlockNode panelNode)
+        {
+            if (panelNode == null)
+            {
+                return;
+            }
+
+            if (_rootNode == null)
+            {
+                _rootNode = panelNode;
+                MarkLayoutDirty();
+                return;
+            }
+
+            BlockNode reference = FindFirstVisibleBlockNode(_rootNode) ?? FindFirstBlockNode(_rootNode);
+            if (reference == null || ReferenceEquals(reference, panelNode))
+            {
+                _rootNode = panelNode;
+                MarkLayoutDirty();
+                return;
+            }
+
+            _rootNode = DockLayout.InsertRelative(_rootNode, panelNode, reference, DockEdge.Right);
+            MarkLayoutDirty();
+        }
+
+        private static bool LayoutContainsNode(DockNode root, DockNode target)
+        {
+            if (root == null || target == null)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(root, target))
+            {
+                return true;
+            }
+
+            if (root is SplitNode split)
+            {
+                return LayoutContainsNode(split.First, target) || LayoutContainsNode(split.Second, target);
+            }
+
+            return false;
+        }
+
+        private static DockNode ReplaceNode(DockNode root, BlockNode target, DockNode replacement)
+        {
+            if (root == null || target == null)
+            {
+                return root;
+            }
+
+            if (ReferenceEquals(root, target))
+            {
+                return replacement;
+            }
+
+            if (root is SplitNode split)
+            {
+                split.First = ReplaceNode(split.First, target, replacement);
+                split.Second = ReplaceNode(split.Second, target, replacement);
+            }
+
+            return root;
+        }
+
+        private static BlockNode FindFirstVisibleBlockNode(DockNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (node is BlockNode blockNode)
+            {
+                DockBlock block = blockNode.Block;
+                if (block != null && block.IsVisible)
+                {
+                    return blockNode;
+                }
+            }
+
+            if (node is SplitNode split)
+            {
+                return FindFirstVisibleBlockNode(split.First) ?? FindFirstVisibleBlockNode(split.Second);
+            }
+
+            return null;
+        }
+
+        private static BlockNode FindFirstBlockNode(DockNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (node is BlockNode blockNode)
+            {
+                return blockNode;
+            }
+
+            if (node is SplitNode split)
+            {
+                return FindFirstBlockNode(split.First) ?? FindFirstBlockNode(split.Second);
+            }
+
+            return null;
         }
 
         private static void AdjustNumericEntry(BlockMenuEntry entry, int newValue)
@@ -4904,6 +5280,8 @@ namespace op.io
                 _layoutDirty = true;
             }
 
+            EnsureVisibleBlocksAttachedToLayout();
+
             if (!_layoutDirty)
             {
                 if (!DockingModeEnabled)
@@ -4961,6 +5339,16 @@ namespace op.io
             HashSet<string> visibleInLayout = new(StringComparer.OrdinalIgnoreCase);
             CollectVisibleBlocks(_rootNode, visibleInLayout);
 
+            string visibilityMismatch = ValidateRenderedBlocksAgainstHiddenState(visibleInLayout);
+            if (string.IsNullOrEmpty(visibilityMismatch))
+            {
+                ClearLayoutIssue("visibility-mismatch");
+            }
+            else
+            {
+                LogLayoutIssue("visibility-mismatch", visibilityMismatch);
+            }
+
             if (anyVisibleBlocks && visibleInLayout.Count == 0)
             {
                 LogLayoutIssue("layout-empty", $"[DockLayout] Layout arrange produced zero visible nodes. Root={DescribeNode(_rootNode)} LayoutBounds={_layoutBounds}");
@@ -5006,6 +5394,78 @@ namespace op.io
                     ClearLayoutIssue(zeroKey);
                 }
             }
+        }
+
+        private static string ValidateRenderedBlocksAgainstHiddenState(ISet<string> visibleInLayout)
+        {
+            if (_orderedBlocks.Count == 0)
+            {
+                return null;
+            }
+
+            HashSet<string> layoutVisibleIds = visibleInLayout != null
+                ? new HashSet<string>(visibleInLayout, StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> intendedVisibleIds = new(_orderedBlocks.Where(block => block != null && block.IsVisible).Select(block => block.Id), StringComparer.OrdinalIgnoreCase);
+
+            List<string> missingFromLayout = intendedVisibleIds.Where(id => !layoutVisibleIds.Contains(id)).ToList();
+            List<string> unexpectedlyVisible = layoutVisibleIds.Where(id => !intendedVisibleIds.Contains(id)).ToList();
+            List<string> hiddenWithBounds = _orderedBlocks
+                .Where(block => block != null && !block.IsVisible && block.Bounds != Rectangle.Empty)
+                .Select(block => $"{block.Id} bounds={block.Bounds}")
+                .ToList();
+
+            bool mismatch = layoutVisibleIds.Count != intendedVisibleIds.Count ||
+                missingFromLayout.Count > 0 ||
+                unexpectedlyVisible.Count > 0;
+
+            if (!mismatch)
+            {
+                return null;
+            }
+
+            List<string> debugLines = new()
+            {
+                $"[DockLayout] Visibility summary: renderedInLayout={layoutVisibleIds.Count}, blocksMarkedVisible={intendedVisibleIds.Count}"
+            };
+
+            if (missingFromLayout.Count > 0)
+            {
+                debugLines.Add($"Marked visible but missing from layout: {string.Join(", ", missingFromLayout)}");
+            }
+
+            if (unexpectedlyVisible.Count > 0)
+            {
+                debugLines.Add($"Rendered in layout despite hidden flag: {string.Join(", ", unexpectedlyVisible)}");
+            }
+
+            if (hiddenWithBounds.Count > 0)
+            {
+                debugLines.Add($"Hidden blocks still have bounds assigned: {string.Join("; ", hiddenWithBounds)}");
+            }
+
+            debugLines.Add("Block visibility breakdown:");
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null)
+                {
+                    continue;
+                }
+
+                bool layoutVisible = layoutVisibleIds.Contains(block.Id);
+                bool nodeInLayout = _blockNodes.TryGetValue(block.Id, out BlockNode node) && LayoutContainsNode(_rootNode, node);
+                string panelId = _blockToPanel.TryGetValue(block.Id, out string mappedPanel) ? mappedPanel : "unmapped";
+                string bounds = block.Bounds == Rectangle.Empty ? "empty" : block.Bounds.ToString();
+
+                debugLines.Add($" - {block.Id} ({block.Kind}): isVisible={block.IsVisible}, layoutVisible={layoutVisible}, nodeInLayout={nodeInLayout}, panel={panelId}, bounds={bounds}");
+            }
+
+            foreach (string line in debugLines)
+            {
+                DebugLogger.PrintDebug(line);
+            }
+
+            return $"[DockLayout] Rendered block set does not match block hidden flags (renderedInLayout={layoutVisibleIds.Count}, markedVisible={intendedVisibleIds.Count}).";
         }
 
         private static void CollectVisibleBlocks(DockNode node, HashSet<string> visibleIds)
@@ -5629,16 +6089,18 @@ namespace op.io
 
         private readonly struct TabHitRegion
         {
-            public TabHitRegion(string blockId, Rectangle bounds, Rectangle lockBounds, Rectangle closeBounds)
+            public TabHitRegion(string blockId, Rectangle bounds, Rectangle ungroupBounds, Rectangle lockBounds, Rectangle closeBounds)
             {
                 BlockId = blockId;
                 Bounds = bounds;
+                UngroupBounds = ungroupBounds;
                 LockBounds = lockBounds;
                 CloseBounds = closeBounds;
             }
 
             public string BlockId { get; }
             public Rectangle Bounds { get; }
+            public Rectangle UngroupBounds { get; }
             public Rectangle LockBounds { get; }
             public Rectangle CloseBounds { get; }
         }

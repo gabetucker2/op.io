@@ -886,6 +886,12 @@ namespace op.io
 
         private static bool ShouldSuppressNonMetaControls()
         {
+            if (InspectModeState.IsNonMetaSuppressed)
+            {
+                GameTracker.FreezeGameInputs = true;
+                return true;
+            }
+
             if (BlockManager.IsInputBlocked())
             {
                 GameTracker.FreezeGameInputs = true;
