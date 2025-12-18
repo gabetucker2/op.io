@@ -4,7 +4,7 @@ This document captures everything Codex must follow when writing or editing code
 
 ## Tech stack & build expectations
 - **Runtime**: .NET 8.0 (`net8.0-windows`) WinExe that boots MonoGame DesktopGL (see `op.io.csproj`). Windows-only features such as `AllocConsole`, `SDL_GetWindowPosition`, and `System.Windows.Forms.Cursor` are relied upon.
-- **Libraries**: MonoGame (`Microsoft.Xna.Framework.*`, `MonoGame.Framework.DesktopGL`), `System.Data.SQLite` + `Microsoft.Data.Sqlite`, `Newtonsoft.Json`, `ppy.SDL2-CS`, `System.Drawing.Common`.
+- **Libraries**: MonoGame (`Microsoft.Xna.Framework.*`, `MonoGame.Framework.DesktopGL`), `System.Data.SQLite` + `Microsoft.Data.Sqlite`, `System.Text.Json`, `ppy.SDL2-CS`, `System.Drawing.Common`.
 - **Content pipeline**: `Content/Content.mgcb` is copied to the output; shapes are generated procedurally (no sprite assets yet).
 - **Database**: SQLite file stored under `Data/op.io.db`. `Scripts/Database/DatabaseInitializer.cs` can recreate it from the SQL scripts when needed.
 - **Run command**: `dotnet run` from the repo root (also listed in `README.md`). All data files in `Data/` are copied on build.
@@ -116,6 +116,16 @@ When writing queries:
 ### Window, UI, and screen helpers
 - `BlockManager.ApplyWindowMode(Core game)` adjusts `Graphics.IsFullScreen`, `Window.IsBorderless`, and buffer sizes according to `WindowMode` (bordered, borderless windowed/fullscreen, or legacy fullscreen). It also logs the outcome. `ScreenManager` currently mirrors the same logic.
 - Docking-mode toggles are controlled via switches stored in `ControlStateManager` and surfaced through `BlockManager.DockingModeEnabled`.
+
+### UI terminology
+- **Resize edges**: edges between panels used to resize them.
+- **Panels**: rectangular spaces occupied by groups, with a drag bar at the top and the group's active block beneath it.
+- **Drag bars**: bars you click and drag; they include the close (X) button and a lock button that locks the panel, which disables drag-bar interaction and thus group bars and tabs.
+- **Group bars**: spaces in a panel's drag bar containing 1-N tabs you can interact with.
+- **Tabs**: interactable fields inside a group bar that open their block when clicked, can be dragged to other group bars, can be closed, and have a lock icon that locks their block.
+- **Groups**: sets of blocks contained within a panel; when there is only one block it is a group of 1.
+- **Blocks**: perform a specific function.
+- **Feedback bar**: text in a block that confirms button presses and other functionality so you know your clicks are working.
 
 ### Debugging infrastructure
 - `DebugLogger` is the only logging surface. It provides level-specific helpers (`Print`, `PrintSystem`, `PrintTemporary`, `PrintError`, `PrintWarning`, `PrintDatabase`, `PrintDebug`, `PrintUI`, `PrintGO`, `PrintPlayer`, `PrintPhysics`). Each call ultimately runs through `Log(...)`, which:

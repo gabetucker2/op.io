@@ -11,6 +11,7 @@ namespace op.io
         ColorScheme,
         Controls,
         Notes,
+        DockingSetups,
         Backend,
         Specs
     }
@@ -38,10 +39,29 @@ namespace op.io
             return new Rectangle(Bounds.X, Bounds.Y, Bounds.Width, Math.Max(0, Math.Min(dragBarHeight, Bounds.Height)));
         }
 
-        public Rectangle GetContentBounds(int dragBarHeight, int padding)
+        public Rectangle GetGroupBarBounds(int dragBarHeight, int groupBarHeight)
         {
-            int contentY = Bounds.Y + dragBarHeight + padding;
-            int contentHeight = Bounds.Height - dragBarHeight - (padding * 2);
+            if (Bounds.Width <= 0 || Bounds.Height <= 0 || dragBarHeight <= 0 || groupBarHeight <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int headerHeight = Math.Min(dragBarHeight, Bounds.Height);
+            int height = Math.Max(0, Math.Min(groupBarHeight, headerHeight));
+            if (height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int y = Bounds.Y + Math.Max(0, (headerHeight - height) / 2);
+            return new Rectangle(Bounds.X, y, Bounds.Width, height);
+        }
+
+        public Rectangle GetContentBounds(int dragBarHeight, int padding, int groupBarHeight = 0)
+        {
+            int headerHeight = Math.Max(dragBarHeight, groupBarHeight);
+            int contentY = Bounds.Y + headerHeight + padding;
+            int contentHeight = Bounds.Height - headerHeight - (padding * 2);
             if (contentHeight < 0)
             {
                 contentHeight = 0;

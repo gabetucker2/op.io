@@ -34,7 +34,7 @@ namespace op.io
             Block = block;
         }
 
-        public DockBlock Block { get; }
+        public DockBlock Block { get; private set; }
         public override bool HasVisibleContent => Block != null && Block.IsVisible;
 
         public override int GetMinWidth()
@@ -64,6 +64,11 @@ namespace op.io
             {
                 Block.Bounds = bounds;
             }
+        }
+
+        public void SetBlock(DockBlock block)
+        {
+            Block = block;
         }
     }
 

@@ -10,19 +10,21 @@ namespace op.io
     {
         public static bool IsLoggingInternally { get; set; }
 
+        public readonly record struct QueuedLogEntry(string Message, ConsoleColor Color, int SuppressionBehavior, bool WasPersistedToFile);
+
         // This list holds all queued logs until the console is initialized
-        private static readonly List<Tuple<string, ConsoleColor, int>> queuedLogs = new();
+        private static readonly List<QueuedLogEntry> queuedLogs = new();
         // Holds the full session log so it can be replayed when the console is reopened
         private static readonly List<Tuple<string, ConsoleColor>> sessionLogs = new();
 
-        public static void QueueLog(string formattedMessage, ConsoleColor color, int suppressionBehavior)
+        public static void QueueLog(string formattedMessage, ConsoleColor color, int suppressionBehavior, bool wasPersistedToFile = false)
         {
-            queuedLogs.Add(Tuple.Create(formattedMessage, color, suppressionBehavior));
+            queuedLogs.Add(new QueuedLogEntry(formattedMessage, color, suppressionBehavior, wasPersistedToFile));
         }
 
-        public static List<Tuple<string, ConsoleColor, int>> FlushQueuedLogs() // Clears queuedLogs and returns its contents
+        public static List<QueuedLogEntry> FlushQueuedLogs() // Clears queuedLogs and returns its contents
         {
-            var logsCopy = new List<Tuple<string, ConsoleColor, int>>(queuedLogs);
+            var logsCopy = new List<QueuedLogEntry>(queuedLogs);
             queuedLogs.Clear();
             return logsCopy;
         }
@@ -99,9 +101,12 @@ namespace op.io
                 ? $"{formattedMessage} | {sourceMessage}"
                 : $"{formattedMessage}";
 
-            if (!ConsoleManager.ConsoleInitialized)
+            bool consoleInitialized = ConsoleManager.ConsoleInitialized;
+
+            if (!consoleInitialized)
             {
-                QueueLog(completeMessage, color, suppressionBehavior);
+                LogFileHandler.AppendLog(completeMessage);
+                QueueLog(completeMessage, color, suppressionBehavior, wasPersistedToFile: true);
                 IsLoggingInternally = false;
                 return;
             }
@@ -110,17 +115,17 @@ namespace op.io
             IsLoggingInternally = false;
         }
 
-        public static void PrintToConsole(string formattedMessage, ConsoleColor color, int suppressionBehavior)
+        public static void PrintToConsole(string formattedMessage, ConsoleColor color, int suppressionBehavior, bool writeToFile = true)
         {
             switch (suppressionBehavior)
             {
                 case 0:
-                    WriteConsoleAndFile(formattedMessage, color);
+                    WriteConsoleAndFile(formattedMessage, color, appendNewLine: true, writeToFile: writeToFile);
                     break;
 
                 case 1:
-                    WriteConsoleAndFile($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {DebugModeHandler.MAXMSGREPEATS} MAX REPEATS] ", ConsoleColor.Magenta, appendNewLine: false);
-                    WriteConsoleAndFile(formattedMessage, color);
+                    WriteConsoleAndFile($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {DebugModeHandler.MAXMSGREPEATS} MAX REPEATS] ", ConsoleColor.Magenta, appendNewLine: false, writeToFile: writeToFile);
+                    WriteConsoleAndFile(formattedMessage, color, appendNewLine: true, writeToFile: writeToFile);
                     break;
 
                 case 2:
@@ -133,7 +138,7 @@ namespace op.io
             }
         }
 
-        private static void WriteConsoleAndFile(string message, ConsoleColor color, bool appendNewLine = true)
+        private static void WriteConsoleAndFile(string message, ConsoleColor color, bool appendNewLine = true, bool writeToFile = true)
         {
             AppendToSessionLog(message, color);
 
@@ -148,7 +153,10 @@ namespace op.io
             }
             Console.ResetColor();
 
-            LogFileHandler.AppendLog(message, appendNewLine);
+            if (writeToFile)
+            {
+                LogFileHandler.AppendLog(message, appendNewLine);
+            }
         }
 
         private static void WriteConsoleOnly(string message, ConsoleColor color)

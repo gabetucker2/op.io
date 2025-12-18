@@ -47,7 +47,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int SchemePromptWidth = 360;
         private const int SchemePromptHeight = 180;
         private const int SchemePromptPadding = 16;
-        private const double StatusDurationSeconds = 4.0;
+        private const double FeedbackDurationSeconds = 4.0;
         private const string LastSchemeRowKey = "__LastScheme";
 
         private static readonly BlockScrollPanel _scrollPanel = new();
@@ -71,12 +71,13 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _saveIcon;
         private static Texture2D _newIcon;
         private static Texture2D _deleteIcon;
+        private static Texture2D _lockedIcon;
         private static string _selectedSchemeName = ColorScheme.DefaultSchemeName;
         private static bool _schemeListDirty = true;
         private static SchemePromptState _schemePrompt;
-        private static Rectangle _statusBounds;
-        private static double _statusSecondsRemaining;
-        private static string _statusMessage;
+        private static Rectangle _feedbackBarBounds;
+        private static double _feedbackSecondsRemaining;
+        private static string _feedbackMessage;
         private static bool _schemeSelectionInitialized;
         private static readonly KeyRepeatTracker HexInputRepeater = new();
         private static readonly KeyRepeatTracker SchemePromptRepeater = new();
@@ -89,7 +90,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             double elapsedSeconds = Math.Max(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d, 0d);
-            UpdateStatusTimer(gameTime);
+            UpdateFeedbackTimer(gameTime);
             ColorScheme.Initialize();
             EnsureSelectedSchemeInitialized();
             EnsureSchemeOptions();
@@ -259,7 +260,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             DrawSchemeToolbar(spriteBatch, blockLocked);
-            DrawStatusBar(spriteBatch, labelFont);
+            DrawFeedbackBar(spriteBatch, labelFont);
 
             if (_rows.Count == 0)
             {
@@ -302,22 +303,22 @@ namespace op.io.UI.BlockScripts.Blocks
             _schemeDropdown.DrawOptionsOverlay(spriteBatch);
         }
 
-        private static void DrawStatusBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
+        private static void DrawFeedbackBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
-            if (!TryGetStatusLabel(out string message, out Color color))
+            if (!TryGetFeedbackLabel(out string message, out Color color))
             {
                 return;
             }
 
-            BlockStatusBarRenderer.Draw(spriteBatch, _statusBounds, font, message, color);
+            BlockFeedbackBarRenderer.Draw(spriteBatch, _feedbackBarBounds, font, message, color);
         }
 
-        private static bool TryGetStatusLabel(out string message, out Color color)
+        private static bool TryGetFeedbackLabel(out string message, out Color color)
         {
-            bool hasStatus = _statusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(_statusMessage);
-            if (hasStatus)
+            bool hasFeedback = _feedbackSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(_feedbackMessage);
+            if (hasFeedback)
             {
-                message = _statusMessage;
+                message = _feedbackMessage;
                 color = UIStyle.TextColor;
                 return true;
             }
@@ -395,7 +396,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void UpdateLayout(Rectangle contentBounds)
         {
             _schemeToolbarBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, SchemeToolbarHeight);
-            _statusBounds = BlockStatusBarRenderer.CalculateBounds(contentBounds, _schemeToolbarBounds);
+            _feedbackBarBounds = BlockFeedbackBarRenderer.CalculateBounds(contentBounds, _schemeToolbarBounds);
 
             int buttonY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - SchemeButtonHeight) / 2;
             int x = _schemeToolbarBounds.Right - SchemeButtonWidth;
@@ -416,26 +417,26 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static Rectangle GetListContentBounds(Rectangle contentBounds)
         {
-            int statusHeight = _statusBounds.Height;
-            int listY = contentBounds.Y + SchemeToolbarHeight + statusHeight;
-            int listHeight = Math.Max(0, contentBounds.Height - SchemeToolbarHeight - statusHeight);
+            int feedbackBarHeight = _feedbackBarBounds.Height;
+            int listY = contentBounds.Y + SchemeToolbarHeight + feedbackBarHeight;
+            int listHeight = Math.Max(0, contentBounds.Height - SchemeToolbarHeight - feedbackBarHeight);
             return new Rectangle(contentBounds.X, listY, contentBounds.Width, listHeight);
         }
 
-        private static void UpdateStatusTimer(GameTime gameTime)
+        private static void UpdateFeedbackTimer(GameTime gameTime)
         {
-            if (gameTime == null || _statusSecondsRemaining <= 0f)
+            if (gameTime == null || _feedbackSecondsRemaining <= 0f)
             {
                 return;
             }
 
-            _statusSecondsRemaining = Math.Max(0f, _statusSecondsRemaining - gameTime.ElapsedGameTime.TotalSeconds);
+            _feedbackSecondsRemaining = Math.Max(0f, _feedbackSecondsRemaining - gameTime.ElapsedGameTime.TotalSeconds);
         }
 
-        private static void SetStatusMessage(string message)
+        private static void SetFeedbackMessage(string message)
         {
-            _statusMessage = message;
-            _statusSecondsRemaining = StatusDurationSeconds;
+            _feedbackMessage = message;
+            _feedbackSecondsRemaining = FeedbackDurationSeconds;
         }
 
         private static void EnsureSelectedSchemeInitialized()
@@ -503,7 +504,7 @@ namespace op.io.UI.BlockScripts.Blocks
             string target = string.IsNullOrWhiteSpace(_selectedSchemeName) ? ColorScheme.ActiveSchemeName : _selectedSchemeName;
             if (string.IsNullOrWhiteSpace(target))
             {
-                SetStatusMessage("Enter a scheme name before saving.");
+                SetFeedbackMessage("Enter a scheme name before saving.");
                 return false;
             }
 
@@ -512,11 +513,11 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 _selectedSchemeName = ColorScheme.ActiveSchemeName;
                 PersistSelectedSchemeName(_selectedSchemeName);
-                SetStatusMessage($"Saved '{_selectedSchemeName}'.");
+                SetFeedbackMessage($"Saved '{_selectedSchemeName}'.");
                 return true;
             }
 
-            SetStatusMessage("Failed to save scheme.");
+            SetFeedbackMessage("Failed to save scheme.");
             return false;
         }
 
@@ -525,7 +526,7 @@ namespace op.io.UI.BlockScripts.Blocks
             string target = string.IsNullOrWhiteSpace(_selectedSchemeName) ? ColorScheme.ActiveSchemeName : _selectedSchemeName;
             if (string.IsNullOrWhiteSpace(target))
             {
-                SetStatusMessage("No scheme selected.");
+                SetFeedbackMessage("No scheme selected.");
                 return false;
             }
 
@@ -534,11 +535,11 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 _selectedSchemeName = ColorScheme.ActiveSchemeName;
                 PersistSelectedSchemeName(_selectedSchemeName);
-                SetStatusMessage($"Loaded '{_selectedSchemeName}'.");
+                SetFeedbackMessage($"Loaded '{_selectedSchemeName}'.");
                 return true;
             }
 
-            SetStatusMessage("Failed to load scheme.");
+            SetFeedbackMessage("Failed to load scheme.");
             return false;
         }
 
@@ -547,14 +548,14 @@ namespace op.io.UI.BlockScripts.Blocks
             string target = string.IsNullOrWhiteSpace(_selectedSchemeName) ? ColorScheme.ActiveSchemeName : _selectedSchemeName;
             if (string.IsNullOrWhiteSpace(target))
             {
-                SetStatusMessage("No scheme selected.");
+                SetFeedbackMessage("No scheme selected.");
                 return false;
             }
 
             bool deleted = ColorScheme.DeleteScheme(target);
             if (!deleted)
             {
-                SetStatusMessage("Unable to delete scheme.");
+                SetFeedbackMessage("Unable to delete scheme.");
                 return false;
             }
 
@@ -574,7 +575,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
 
-            SetStatusMessage($"Deleted '{target}'.");
+            SetFeedbackMessage($"Deleted '{target}'.");
             return true;
         }
 
@@ -800,6 +801,13 @@ namespace op.io.UI.BlockScripts.Blocks
 
             FillRect(spriteBatch, bounds, ColorPalette.LockLockedFill);
             DrawRectOutline(spriteBatch, bounds, UIStyle.BlockBorder, 1);
+
+            _lockedIcon = EnsureIcon(_lockedIcon, "Icon_Locked.png");
+            if (_lockedIcon != null && !_lockedIcon.IsDisposed)
+            {
+                DrawCenteredIcon(spriteBatch, bounds, _lockedIcon, Color.White);
+                return;
+            }
 
             UIStyle.UIFont techFont = UIStyle.FontTech;
             if (techFont.IsAvailable)
@@ -1487,7 +1495,7 @@ namespace op.io.UI.BlockScripts.Blocks
             string name = _schemePrompt.Buffer?.Trim();
             if (string.IsNullOrWhiteSpace(name))
             {
-                SetStatusMessage("Enter a name for the scheme.");
+                SetFeedbackMessage("Enter a name for the scheme.");
                 return;
             }
 
@@ -1496,11 +1504,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 _selectedSchemeName = ColorScheme.ActiveSchemeName;
                 _schemeListDirty = true;
                 PersistSelectedSchemeName(_selectedSchemeName);
-                SetStatusMessage($"Saved '{_selectedSchemeName}'.");
+                SetFeedbackMessage($"Saved '{_selectedSchemeName}'.");
             }
             else
             {
-                SetStatusMessage("Failed to save scheme.");
+                SetFeedbackMessage("Failed to save scheme.");
             }
 
             CloseSchemePrompt();
@@ -1681,6 +1689,33 @@ namespace op.io.UI.BlockScripts.Blocks
             spriteBatch.Draw(_pixel, bottom, color);
             spriteBatch.Draw(_pixel, left, color);
             spriteBatch.Draw(_pixel, right, color);
+        }
+
+        private static void DrawCenteredIcon(SpriteBatch spriteBatch, Rectangle bounds, Texture2D icon, Color color)
+        {
+            if (spriteBatch == null || icon == null || icon.IsDisposed || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            int padding = Math.Max(2, Math.Min(bounds.Width, bounds.Height) / 6);
+            int availableWidth = Math.Max(0, bounds.Width - (padding * 2));
+            int availableHeight = Math.Max(0, bounds.Height - (padding * 2));
+            if (availableWidth <= 0 || availableHeight <= 0 || icon.Width <= 0 || icon.Height <= 0)
+            {
+                return;
+            }
+
+            float scale = Math.Min(availableWidth / (float)icon.Width, availableHeight / (float)icon.Height);
+            scale = Math.Min(scale, 2f);
+            if (scale <= 0f)
+            {
+                return;
+            }
+
+            Vector2 size = new(icon.Width * scale, icon.Height * scale);
+            Vector2 position = new(bounds.X + (bounds.Width - size.X) / 2f, bounds.Y + (bounds.Height - size.Y) / 2f);
+            spriteBatch.Draw(icon, position, null, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
         private static void PersistRowOrder()

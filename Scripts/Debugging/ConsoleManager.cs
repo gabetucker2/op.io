@@ -170,11 +170,12 @@ namespace op.io
 
             foreach (var log in logs)
             {
-                string logMessage = $"[DEFERRED OUTPUT] {log.Item1}";           // Formatted message string
-                ConsoleColor color = log.Item2;                                 // Console color for the message
-                int suppressionBehavior = log.Item3;                            // Suppression behavior for the message
+                string logMessage = $"[DEFERRED OUTPUT] {log.Message}";         // Formatted message string
+                ConsoleColor color = log.Color;                                 // Console color for the message
+                int suppressionBehavior = log.SuppressionBehavior;              // Suppression behavior for the message
+                bool writeToFile = !log.WasPersistedToFile;
 
-                DebugLogger.PrintToConsole(logMessage, color, suppressionBehavior);
+                DebugLogger.PrintToConsole(logMessage, color, suppressionBehavior, writeToFile);
             }
         }
 

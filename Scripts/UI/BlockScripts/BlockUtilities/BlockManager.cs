@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -17,20 +19,45 @@ namespace op.io
         private const string ColorSchemeBlockKey = "colors";
         private const string ControlsBlockKey = "controls";
         private const string NotesBlockKey = "notes";
+        private const string DockingSetupsBlockKey = "dockingsetups";
         private const string BackendBlockKey = "backend";
         private const string SpecsBlockKey = "specs";
         private const string BlockMenuControlKey = "BlockMenu";
+        private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
         private const int WindowEdgeSnapDistance = 30;
+        private const int GroupBarHeight = 26;
+        private const int TabMinWidth = 72;
+        private const int TabHorizontalPadding = 12;
+        private const int TabSpacing = 4;
+        private const int TabVerticalPadding = 3;
+        private const int TabCloseSize = 12;
+        private const int TabLockSize = 18;
+        private const int TabClosePadding = 8;
+        private const int GroupBarDragGap = 24;
+        private const int TabDragStartThreshold = 6;
+        private const string LockedIconFile = "Icon_Locked.png";
+        private const string UnlockedIconFile = "Icon_Unlocked.png";
+
+        private static readonly Color GroupBarBackground = new(28, 28, 30);
+        private static readonly Color TabInactiveBackground = new(40, 40, 42);
+        private static readonly Color TabHoverBackground = new(50, 50, 54);
+        private static readonly Color TabActiveBackground = new(60, 60, 64);
+        private static readonly Color TabCloseHoverTint = new Color(255, 255, 255, 22);
 
         private static bool _dockingModeEnabled = true;
         private static bool _blockDefinitionsReady;
         private static bool _renderingDockedFrame;
         private const int CornerSnapDistance = 16;
+        private static DockingSetupDefinition _pendingDockingSetup;
         private static readonly Dictionary<string, DockBlock> _blocks = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, BlockNode> _blockNodes = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, PanelGroup> _panelGroups = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, BlockNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, string> _blockToPanel = new(StringComparer.OrdinalIgnoreCase);
         private static readonly List<DockBlock> _orderedBlocks = [];
+        private static readonly List<string> _orderedPanelIds = new();
         private static readonly Dictionary<string, bool> _blockLockStates = new(StringComparer.OrdinalIgnoreCase);
         private static DockNode _rootNode;
         private static Rectangle _cachedViewportBounds;
@@ -41,9 +68,12 @@ namespace op.io
         private static bool _viewportPushed;
         private static RenderTarget2D _worldRenderTarget;
         private static Texture2D _pixelTexture;
+        private static Texture2D _lockedIcon;
+        private static Texture2D _unlockedIcon;
         private static MouseState _previousMouseState;
         private static Point _mousePosition;
         private static DockBlock _draggingBlock;
+        private static PanelGroup _draggingPanel;
         private static Rectangle _draggingStartBounds;
         private static Point _dragOffset;
         private static DockDropPreview? _dropPreview;
@@ -76,10 +106,22 @@ namespace op.io
         private static BlockMenuEntry _activeNumericEntry;
         private static readonly KeyRepeatTracker OverlayInputRepeater = new();
         private static Dictionary<string, Rectangle> _resizeStartBlockBounds;
+        private static readonly Dictionary<string, PanelGroupBarLayout> _groupBarLayoutCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> _loggedLayoutIssues = new(StringComparer.OrdinalIgnoreCase);
+        private static string _pressedTabBlockId;
+        private static string _pressedTabPanelId;
+        private static Point _tabPressPosition;
+        private static bool _draggingFromTab;
+        private static readonly JsonSerializerOptions DockingSerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
         public static bool IsBlockLocked(DockBlockKind blockKind)
         {
-            DockBlock block = _orderedBlocks.FirstOrDefault(p => p.Kind == blockKind);
+            DockBlock block = _orderedBlocks.FirstOrDefault(p => p.Kind == blockKind && p.IsVisible) ??
+                _orderedBlocks.FirstOrDefault(p => p.Kind == blockKind);
             return IsBlockLocked(block);
         }
 
@@ -137,10 +179,6 @@ namespace op.io
             _mousePosition = mouseState.Position;
             bool dockingEnabled = DockingModeEnabled;
             bool rebindOverlayOpen = ControlsBlock.IsRebindOverlayOpen();
-            if (!dockingEnabled)
-            {
-                ClearDockingInteractions();
-            }
 
             bool blockMenuState = rebindOverlayOpen ? false : GetBlockMenuState();
             if (blockMenuState != _blockMenuSwitchState)
@@ -158,6 +196,7 @@ namespace op.io
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
             bool allowReorder = dockingEnabled;
+            RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
 
             if (rebindOverlayOpen)
             {
@@ -169,27 +208,32 @@ namespace op.io
                 UpdateOverlayInteractions(leftClickStarted);
                 ClearDockingInteractions();
             }
-            else if (dockingEnabled)
+            else
             {
-                // Evaluate corners first so clicks on intersections start a dual-axis drag instead of being swallowed by a single edge.
-                bool resizingBlocks = allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                    UpdateResizeEdgeState(leftClickStarted, leftClickHeld, leftClickReleased));
-                if (!resizingBlocks)
+                bool tabInteracted = UpdateTabInteractions(leftClickStarted, leftClickHeld, leftClickReleased, allowReorder);
+                if (dockingEnabled)
                 {
-                    UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
+                    // Evaluate corners first so clicks on intersections start a dual-axis drag instead of being swallowed by a single edge.
+                    bool resizingBlocks = !tabInteracted && allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
+                        UpdateResizeEdgeState(leftClickStarted, leftClickHeld, leftClickReleased));
+                    if (!resizingBlocks && !tabInteracted)
+                    {
+                        UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
+                    }
+                    else
+                    {
+                        _draggingBlock = null;
+                        _dropPreview = null;
+                    }
                 }
                 else
                 {
-                    _draggingBlock = null;
-                    _dropPreview = null;
+                    ClearDockingDragState();
                 }
-            }
-            else
-            {
-                ClearDockingInteractions();
             }
 
             UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState, keyboardState, _previousKeyboardState);
+            ApplyPendingDockingSetup();
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
         }
@@ -279,11 +323,35 @@ namespace op.io
                 return;
             }
 
+            DockingSetupDefinition setup = LoadDockingSetupFromDatabase();
+            if (setup != null && ApplyDockingSetupDefinition(setup))
+            {
+                return;
+            }
+
+            ResetBlockState();
+            CreateBlocksFromMenuEntries();
+            GroupDefaultPanels();
+            _rootNode = BuildDefaultLayout();
+
+            _blockDefinitionsReady = true;
+            MarkLayoutDirty();
+        }
+
+        private static void ResetBlockState()
+        {
             _blocks.Clear();
             _blockNodes.Clear();
+            _panelGroups.Clear();
+            _panelNodes.Clear();
+            _blockToPanel.Clear();
             _orderedBlocks.Clear();
+            _orderedPanelIds.Clear();
             ClearDockingInteractions();
+        }
 
+        private static void CreateBlocksFromMenuEntries()
+        {
             foreach (BlockMenuEntry entry in _blockMenuEntries)
             {
                 if (entry.ControlMode == BlockMenuControlMode.Toggle)
@@ -308,11 +376,586 @@ namespace op.io
                     }
                 }
             }
+        }
 
-            _rootNode = BuildDefaultLayout();
+        internal static string CaptureDockingSetup()
+        {
+            DockingSetupDefinition setup = BuildDockingSetupDefinition();
+            return SerializeDockingSetup(setup);
+        }
+
+        internal static bool TryApplyDockingSetup(string payload)
+        {
+            DockingSetupDefinition setup = DeserializeDockingSetup(payload);
+            if (setup == null)
+            {
+                return false;
+            }
+
+            ApplyDockingSetupDefinition(setup);
+            return true;
+        }
+
+        internal static bool QueueDockingSetupApply(string payload)
+        {
+            DockingSetupDefinition setup = DeserializeDockingSetup(payload);
+            if (setup == null)
+            {
+                return false;
+            }
+
+            _pendingDockingSetup = setup;
+            return true;
+        }
+
+        private static void ApplyPendingDockingSetup()
+        {
+            if (_pendingDockingSetup == null)
+            {
+                return;
+            }
+
+            DockingSetupDefinition setup = _pendingDockingSetup;
+            _pendingDockingSetup = null;
+            ApplyDockingSetupDefinition(setup);
+        }
+
+        private static DockingSetupDefinition BuildDockingSetupDefinition()
+        {
+            EnsureBlockMenuEntries();
+            DockingSetupDefinition setup = new();
+
+            foreach (BlockMenuEntry entry in _blockMenuEntries)
+            {
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                DockingSetupMenuEntry menuEntry = new()
+                {
+                    Kind = entry.Kind.ToString(),
+                    Mode = entry.ControlMode.ToString(),
+                    Count = entry.ControlMode == BlockMenuControlMode.Count ? entry.Count : 0,
+                    Visible = entry.ControlMode == BlockMenuControlMode.Toggle && entry.IsVisible
+                };
+
+                setup.Menu.Add(menuEntry);
+            }
+
+            foreach (string panelId in _orderedPanelIds)
+            {
+                if (!_panelGroups.TryGetValue(panelId, out PanelGroup group) || group == null)
+                {
+                    continue;
+                }
+
+                if (group.Blocks == null || group.Blocks.Count == 0)
+                {
+                    continue;
+                }
+
+                string activeId = string.IsNullOrWhiteSpace(group.ActiveBlockId)
+                    ? group.ActiveBlock?.Id
+                    : group.ActiveBlockId;
+
+                DockingSetupPanelGroup panelGroup = new()
+                {
+                    Id = group.PanelId,
+                    Active = activeId
+                };
+
+                foreach (DockBlock block in group.Blocks)
+                {
+                    if (block == null || string.IsNullOrWhiteSpace(block.Id))
+                    {
+                        continue;
+                    }
+
+                    panelGroup.Blocks.Add(block.Id);
+                }
+
+                if (panelGroup.Blocks.Count == 0)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(panelGroup.Active))
+                {
+                    panelGroup.Active = panelGroup.Blocks[0];
+                }
+
+                setup.Panels.Add(panelGroup);
+            }
+
+            setup.Layout = BuildLayoutDefinition(_rootNode);
+            return setup;
+        }
+
+        private static DockingSetupLayoutNode BuildLayoutDefinition(DockNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (node is BlockNode blockNode)
+            {
+                string panelId = null;
+                if (blockNode.Block != null && _blockToPanel.TryGetValue(blockNode.Block.Id, out string mappedId))
+                {
+                    panelId = mappedId;
+                }
+                else
+                {
+                    panelId = blockNode.Block?.Id;
+                }
+
+                if (string.IsNullOrWhiteSpace(panelId))
+                {
+                    return null;
+                }
+
+                return new DockingSetupLayoutNode
+                {
+                    Type = "Panel",
+                    PanelId = panelId
+                };
+            }
+
+            if (node is SplitNode split)
+            {
+                DockingSetupLayoutNode first = BuildLayoutDefinition(split.First);
+                DockingSetupLayoutNode second = BuildLayoutDefinition(split.Second);
+                if (first == null)
+                {
+                    return second;
+                }
+
+                if (second == null)
+                {
+                    return first;
+                }
+
+                float ratio = MathHelper.Clamp(split.SplitRatio, 0.001f, 0.999f);
+
+                return new DockingSetupLayoutNode
+                {
+                    Type = "Split",
+                    Orientation = split.Orientation.ToString(),
+                    Ratio = ratio,
+                    First = first,
+                    Second = second
+                };
+            }
+
+            return null;
+        }
+
+        private static bool ApplyDockingSetupDefinition(DockingSetupDefinition setup)
+        {
+            if (setup == null)
+            {
+                return false;
+            }
+
+            EnsureBlockMenuEntries();
+            ResetBlockState();
+            ApplyDockingSetupMenuState(setup.Menu);
+            CreateBlocksFromMenuEntries();
+            ApplyDockingSetupPanelGroups(setup.Panels);
+
+            HashSet<string> visiblePanels = new(StringComparer.OrdinalIgnoreCase);
+            _rootNode = BuildLayoutFromDefinition(setup.Layout, visiblePanels);
+            if (_rootNode == null)
+            {
+                DebugLogger.PrintError("[DockLayout] Failed to build layout from saved definition; rebuilding from available panels.");
+                _rootNode = BuildLayoutFromPanels(visiblePanels);
+            }
+
+            HidePanelsNotInLayout(visiblePanels);
+            ApplyToggleVisibilityOverrides();
+            PruneInactiveBlockNodes();
 
             _blockDefinitionsReady = true;
             MarkLayoutDirty();
+            return true;
+        }
+
+        private static void ApplyDockingSetupMenuState(IEnumerable<DockingSetupMenuEntry> menuEntries)
+        {
+            if (menuEntries == null)
+            {
+                return;
+            }
+
+            foreach (DockingSetupMenuEntry stored in menuEntries)
+            {
+                if (stored == null || string.IsNullOrWhiteSpace(stored.Kind))
+                {
+                    continue;
+                }
+
+                if (!Enum.TryParse(stored.Kind, true, out DockBlockKind kind))
+                {
+                    continue;
+                }
+
+                BlockMenuEntry entry = _blockMenuEntries.FirstOrDefault(e => e.Kind == kind);
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                if (entry.ControlMode == BlockMenuControlMode.Count)
+                {
+                    entry.Count = ClampCount(entry, stored.Count);
+                    entry.InputBuffer = entry.Count.ToString();
+                }
+                else
+                {
+                    entry.IsVisible = stored.Visible;
+                }
+            }
+        }
+
+        private static void ApplyDockingSetupPanelGroups(IEnumerable<DockingSetupPanelGroup> groups)
+        {
+            if (groups == null)
+            {
+                return;
+            }
+
+            foreach (DockingSetupPanelGroup group in groups)
+            {
+                if (group == null)
+                {
+                    continue;
+                }
+
+                string activeId = !string.IsNullOrWhiteSpace(group.Active) ? group.Active : group.Id;
+                if (string.IsNullOrWhiteSpace(activeId))
+                {
+                    continue;
+                }
+
+                if (!_blocks.TryGetValue(activeId, out DockBlock activeBlock))
+                {
+                    continue;
+                }
+
+                PanelGroup targetGroup = GetPanelGroupForBlock(activeBlock);
+                if (targetGroup == null)
+                {
+                    continue;
+                }
+
+                List<string> orderedBlocks = group.Blocks?
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToList() ?? new List<string>();
+
+                if (!orderedBlocks.Any(id => string.Equals(id, activeId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    orderedBlocks.Insert(0, activeId);
+                }
+
+                for (int i = 0; i < orderedBlocks.Count; i++)
+                {
+                    string blockId = orderedBlocks[i];
+                    if (!_blocks.TryGetValue(blockId, out DockBlock block) || block == null)
+                    {
+                        continue;
+                    }
+
+                    PanelGroup sourceGroup = GetPanelGroupForBlock(block);
+                    if (sourceGroup != null && !ReferenceEquals(sourceGroup, targetGroup))
+                    {
+                        sourceGroup.RemoveBlock(block.Id, out _);
+                        _blockToPanel.Remove(block.Id);
+
+                        if (sourceGroup.Blocks.Count == 0)
+                        {
+                            RemovePanelGroup(sourceGroup);
+                        }
+                        else if (string.Equals(sourceGroup.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
+                        {
+                            DockBlock next = sourceGroup.ActiveBlock ?? sourceGroup.Blocks.FirstOrDefault();
+                            if (next != null)
+                            {
+                                SetPanelActiveBlock(sourceGroup, next);
+                                MapBlockToPanel(next, sourceGroup);
+                            }
+                        }
+                    }
+                    else if (ReferenceEquals(sourceGroup, targetGroup))
+                    {
+                        targetGroup.RemoveBlock(block.Id, out _);
+                        _blockToPanel.Remove(block.Id);
+                    }
+
+                    targetGroup.AddBlock(block, makeActive: false, insertIndex: i);
+                    MapBlockToPanel(block, targetGroup);
+
+                    if (!string.Equals(block.Id, activeId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        block.IsVisible = false;
+                        _blockNodes.Remove(block.Id);
+                    }
+                }
+
+                if (_blocks.TryGetValue(activeId, out DockBlock active))
+                {
+                    SetPanelActiveBlock(targetGroup, active);
+                    MapBlockToPanel(active, targetGroup);
+                }
+            }
+        }
+
+        private static DockNode BuildLayoutFromDefinition(DockingSetupLayoutNode node, HashSet<string> visiblePanels)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (string.Equals(node.Type, "Panel", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(node.PanelId))
+                {
+                    DebugLogger.PrintError("[DockLayout] Encountered panel node with no id in layout definition.");
+                    return null;
+                }
+
+                DockNode panelNode = GetPanelNodeById(node.PanelId);
+                if (panelNode == null)
+                {
+                    DebugLogger.PrintError($"[DockLayout] Panel '{node.PanelId}' from layout definition could not be resolved. Falling back to rebuild.");
+                    return null;
+                }
+
+                visiblePanels?.Add(node.PanelId);
+                return panelNode;
+            }
+
+            if (string.Equals(node.Type, "Split", StringComparison.OrdinalIgnoreCase))
+            {
+                DockNode first = BuildLayoutFromDefinition(node.First, visiblePanels);
+                DockNode second = BuildLayoutFromDefinition(node.Second, visiblePanels);
+                if (first == null)
+                {
+                    return second;
+                }
+
+                if (second == null)
+                {
+                    return first;
+                }
+
+                DockSplitOrientation orientation = DockSplitOrientation.Vertical;
+                if (!string.IsNullOrWhiteSpace(node.Orientation) &&
+                    Enum.TryParse(node.Orientation, true, out DockSplitOrientation parsed))
+                {
+                    orientation = parsed;
+                }
+
+                float ratio = MathHelper.Clamp(node.Ratio <= 0f ? 0.5f : node.Ratio, 0.001f, 0.999f);
+
+                return new SplitNode(orientation)
+                {
+                    SplitRatio = ratio,
+                    First = first,
+                    Second = second
+                };
+            }
+
+            DebugLogger.PrintError($"[DockLayout] Unrecognized layout node type '{node.Type ?? "<null>"}'.");
+            return null;
+        }
+
+        private static DockNode BuildLayoutFromPanels(HashSet<string> visiblePanels)
+        {
+            List<BlockNode> nodes = new();
+            foreach (string panelId in _orderedPanelIds)
+            {
+                DockNode node = GetPanelNodeById(panelId);
+                if (node is BlockNode blockNode)
+                {
+                    nodes.Add(blockNode);
+                    visiblePanels?.Add(panelId);
+                }
+            }
+
+            return BuildStack(nodes, DockSplitOrientation.Horizontal);
+        }
+
+        private static DockNode GetPanelNodeById(string panelId)
+        {
+            if (string.IsNullOrWhiteSpace(panelId))
+            {
+                return null;
+            }
+
+            if (_panelGroups.TryGetValue(panelId, out PanelGroup group))
+            {
+                return GetPanelNode(group);
+            }
+
+            if (_blocks.TryGetValue(panelId, out DockBlock block))
+            {
+                PanelGroup fallbackGroup = GetPanelGroupForBlock(block);
+                return GetPanelNode(fallbackGroup);
+            }
+
+            return null;
+        }
+
+        private static void HidePanelsNotInLayout(HashSet<string> visiblePanels)
+        {
+            if (visiblePanels == null)
+            {
+                return;
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null)
+                {
+                    continue;
+                }
+
+                if (!_blockToPanel.TryGetValue(block.Id, out string panelId) || string.IsNullOrWhiteSpace(panelId))
+                {
+                    continue;
+                }
+
+                if (!visiblePanels.Contains(panelId))
+                {
+                    block.IsVisible = false;
+                }
+            }
+        }
+
+        private static void ApplyToggleVisibilityOverrides()
+        {
+            foreach (BlockMenuEntry entry in _blockMenuEntries)
+            {
+                if (entry == null || entry.ControlMode != BlockMenuControlMode.Toggle || entry.IsVisible)
+                {
+                    continue;
+                }
+
+                if (_blocks.TryGetValue(entry.IdPrefix, out DockBlock block) && block != null)
+                {
+                    block.IsVisible = false;
+                }
+            }
+        }
+
+        private static void PruneInactiveBlockNodes()
+        {
+            if (_blockNodes.Count == 0)
+            {
+                return;
+            }
+
+            List<string> removeIds = new();
+            foreach (string blockId in _blockNodes.Keys)
+            {
+                if (string.IsNullOrWhiteSpace(blockId))
+                {
+                    continue;
+                }
+
+                if (!_blocks.TryGetValue(blockId, out DockBlock block))
+                {
+                    removeIds.Add(blockId);
+                    continue;
+                }
+
+                PanelGroup group = GetPanelGroupForBlock(block);
+                if (group == null || !string.Equals(group.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    removeIds.Add(blockId);
+                }
+            }
+
+            foreach (string id in removeIds)
+            {
+                _blockNodes.Remove(id);
+            }
+        }
+
+        private static DockingSetupDefinition LoadDockingSetupFromDatabase()
+        {
+            Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.DockingSetups);
+            if (data == null || data.Count == 0)
+            {
+                return null;
+            }
+
+            string activeName = null;
+            if (data.TryGetValue(DockingSetupActiveRowKey, out string storedName))
+            {
+                activeName = storedName?.Trim();
+            }
+
+            string payload = null;
+            if (!string.IsNullOrWhiteSpace(activeName) && data.TryGetValue(activeName, out string storedPayload))
+            {
+                payload = storedPayload;
+            }
+            else
+            {
+                foreach (KeyValuePair<string, string> pair in data)
+                {
+                    if (string.IsNullOrWhiteSpace(pair.Key) || pair.Key.StartsWith("__", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    activeName = pair.Key;
+                    payload = pair.Value;
+                    break;
+                }
+            }
+
+            return DeserializeDockingSetup(payload);
+        }
+
+        private static DockingSetupDefinition DeserializeDockingSetup(string payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<DockingSetupDefinition>(payload, DockingSerializerOptions);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning($"Failed to parse docking setup: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static string SerializeDockingSetup(DockingSetupDefinition setup)
+        {
+            if (setup == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Serialize(setup, DockingSerializerOptions);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning($"Failed to serialize docking setup: {ex.Message}");
+                return null;
+            }
         }
 
         private static void EnsureBlockMenuEntries()
@@ -328,6 +971,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlsBlockKey, ControlsBlock.BlockTitle, DockBlockKind.Controls, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(DockingSetupsBlockKey, DockingSetupsBlock.BlockTitle, DockBlockKind.DockingSetups, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(SpecsBlockKey, SpecsBlock.BlockTitle, DockBlockKind.Specs, BlockMenuControlMode.Toggle, initialVisible: true));
         }
@@ -365,6 +1009,80 @@ namespace op.io
             }
 
             return $"{entry.Label} {index + 1}";
+        }
+
+        private static void GroupDefaultPanels()
+        {
+            PanelGroup colorGroup = null;
+            if (_blocks.TryGetValue(ColorSchemeBlockKey, out DockBlock colorBlock))
+            {
+                colorGroup = GetPanelGroupForBlock(colorBlock);
+            }
+
+            if (colorGroup != null)
+            {
+                MergeBlockIntoGroup(colorGroup, NotesBlockKey);
+                MergeBlockIntoGroup(colorGroup, DockingSetupsBlockKey);
+            }
+
+            MergeBackendAndSpecs();
+        }
+
+        private static void MergeBlockIntoGroup(PanelGroup targetGroup, string blockId)
+        {
+            if (targetGroup == null || string.IsNullOrWhiteSpace(blockId))
+            {
+                return;
+            }
+
+            if (!_blocks.TryGetValue(blockId, out DockBlock block))
+            {
+                return;
+            }
+
+            PanelGroup sourceGroup = GetPanelGroupForBlock(block);
+            if (sourceGroup == null || ReferenceEquals(sourceGroup, targetGroup))
+            {
+                return;
+            }
+
+            sourceGroup.RemoveBlock(block.Id, out _);
+            if (sourceGroup.Blocks.Count == 0)
+            {
+                RemovePanelGroup(sourceGroup);
+            }
+            else
+            {
+                DockBlock next = sourceGroup.ActiveBlock ?? sourceGroup.Blocks.FirstOrDefault();
+                if (next != null)
+                {
+                    SetPanelActiveBlock(sourceGroup, next);
+                    MapBlockToPanel(next, sourceGroup);
+                }
+            }
+
+            targetGroup.AddBlock(block, makeActive: false);
+            MapBlockToPanel(block, targetGroup);
+            block.IsVisible = false;
+            _blockNodes.Remove(block.Id);
+        }
+
+        private static void MergeBackendAndSpecs()
+        {
+            if (!_blocks.TryGetValue(BackendBlockKey, out DockBlock backendBlock) ||
+                !_blocks.TryGetValue(SpecsBlockKey, out DockBlock specsBlock))
+            {
+                return;
+            }
+
+            PanelGroup backendGroup = GetPanelGroupForBlock(backendBlock);
+            PanelGroup specsGroup = GetPanelGroupForBlock(specsBlock);
+            if (backendGroup == null || specsGroup == null || ReferenceEquals(backendGroup, specsGroup))
+            {
+                return;
+            }
+
+            MergeBlockIntoGroup(backendGroup, specsBlock.Id);
         }
 
         private static DockNode BuildDefaultLayout()
@@ -466,6 +1184,407 @@ namespace op.io
             return nodes;
         }
 
+        private static PanelGroup GetPanelGroupForBlock(DockBlock block)
+        {
+            if (block == null)
+            {
+                return null;
+            }
+
+            if (_blockToPanel.TryGetValue(block.Id, out string panelId) &&
+                _panelGroups.TryGetValue(panelId, out PanelGroup group))
+            {
+                return group;
+            }
+
+            foreach (PanelGroup existing in _panelGroups.Values)
+            {
+                if (existing.Contains(block.Id))
+                {
+                    _blockToPanel[block.Id] = existing.PanelId;
+                    return existing;
+                }
+            }
+
+            // Lazily recreate a panel container so hidden blocks can be restored.
+            string newPanelId = block.Id;
+            PanelGroup fallback = new(newPanelId, block);
+            _panelGroups[newPanelId] = fallback;
+            _blockToPanel[block.Id] = newPanelId;
+
+            if (!_panelNodes.TryGetValue(newPanelId, out BlockNode node))
+            {
+                if (!_blockNodes.TryGetValue(block.Id, out node))
+                {
+                    node = new BlockNode(block);
+                    _blockNodes[block.Id] = node;
+                }
+
+                _panelNodes[newPanelId] = node;
+            }
+
+            if (!_orderedPanelIds.Contains(newPanelId, StringComparer.OrdinalIgnoreCase))
+            {
+                _orderedPanelIds.Add(newPanelId);
+            }
+
+            return fallback;
+        }
+
+        private static BlockNode GetPanelNode(PanelGroup group)
+        {
+            if (group == null)
+            {
+                return null;
+            }
+
+            if (_panelNodes.TryGetValue(group.PanelId, out BlockNode node))
+            {
+                return node;
+            }
+
+            DockBlock active = group.ActiveBlock;
+            if (active != null && _blockNodes.TryGetValue(active.Id, out node))
+            {
+                _panelNodes[group.PanelId] = node;
+                return node;
+            }
+
+            return null;
+        }
+
+        private static bool SetPanelActiveBlock(PanelGroup group, DockBlock newActiveBlock)
+        {
+            if (group == null || newActiveBlock == null)
+            {
+                return false;
+            }
+
+            BlockNode node = GetPanelNode(group);
+            if (node == null)
+            {
+                return false;
+            }
+
+            DockBlock previous = group.ActiveBlock;
+            if (previous != null)
+            {
+                _blockNodes.Remove(previous.Id);
+                previous.IsVisible = false;
+            }
+
+            group.SetActiveBlock(newActiveBlock.Id);
+            newActiveBlock.IsVisible = true;
+            node.SetBlock(newActiveBlock);
+            _blockNodes[newActiveBlock.Id] = node;
+            return true;
+        }
+
+        private static void MapBlockToPanel(DockBlock block, PanelGroup group)
+        {
+            if (block == null || group == null)
+            {
+                return;
+            }
+
+            _blockToPanel[block.Id] = group.PanelId;
+        }
+
+        private static int GetGroupBarHeight(PanelGroup group)
+        {
+            if (group == null)
+            {
+                return 0;
+            }
+
+            if (DockingModeEnabled)
+            {
+                return Math.Min(GroupBarHeight, UIStyle.DragBarHeight);
+            }
+
+            return GroupBarHeight;
+        }
+
+        private static Rectangle GetGroupBarBounds(DockBlock block, PanelGroup group, int dragBarHeight)
+        {
+            if (block == null || group == null)
+            {
+                return Rectangle.Empty;
+            }
+
+            int groupBarHeight = GetGroupBarHeight(group);
+            if (groupBarHeight <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int headerHeight = Math.Max(dragBarHeight, groupBarHeight);
+            Rectangle headerRect = new(block.Bounds.X, block.Bounds.Y, block.Bounds.Width, Math.Min(headerHeight, block.Bounds.Height));
+            if (headerRect.Width <= 0 || headerRect.Height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int buttonStart = headerRect.Right - DragBarButtonPadding;
+            if (dragBarHeight > 0)
+            {
+                GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds);
+                if (closeBounds != Rectangle.Empty)
+                {
+                    buttonStart = Math.Min(buttonStart, closeBounds.X);
+                }
+
+                if (panelLockBounds != Rectangle.Empty)
+                {
+                    buttonStart = Math.Min(buttonStart, panelLockBounds.X);
+                }
+            }
+
+            int width = Math.Max(0, Math.Min(headerRect.Width, buttonStart - DragBarButtonSpacing - GroupBarDragGap - headerRect.X));
+            int height = Math.Max(0, Math.Min(groupBarHeight, headerRect.Height));
+            if (width <= 0 || height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int y = headerRect.Y + Math.Max(0, (headerRect.Height - height) / 2);
+            return new Rectangle(headerRect.X, y, width, height);
+        }
+
+        private static Rectangle GetDragBarGrabBounds(DockBlock block, PanelGroup group, int dragBarHeight)
+        {
+            if (block == null || dragBarHeight <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            Rectangle dragBar = block.GetDragBarBounds(dragBarHeight);
+            if (dragBar.Width <= 0 || dragBar.Height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds);
+            int buttonStart = dragBar.Right - DragBarButtonPadding;
+            if (closeBounds != Rectangle.Empty)
+            {
+                buttonStart = Math.Min(buttonStart, closeBounds.X);
+            }
+
+            if (panelLockBounds != Rectangle.Empty)
+            {
+                buttonStart = Math.Min(buttonStart, panelLockBounds.X);
+            }
+
+            Rectangle groupBar = GetGroupBarBounds(block, group, dragBarHeight);
+            bool includeTabs = group != null && IsPanelLocked(group);
+            int left = includeTabs || groupBar == Rectangle.Empty ? dragBar.X + DragBarButtonPadding : groupBar.Right;
+            int right = buttonStart - DragBarButtonSpacing;
+            int width = Math.Max(0, right - left);
+            if (width <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            return new Rectangle(left, dragBar.Y, width, dragBar.Height);
+        }
+
+        private static Rectangle GetPanelContentBounds(DockBlock block, int dragBarHeight)
+        {
+            PanelGroup group = GetPanelGroupForBlock(block);
+            int groupBarHeight = GetGroupBarHeight(group);
+            return block.GetContentBounds(dragBarHeight, UIStyle.BlockPadding, groupBarHeight);
+        }
+
+        private static void ActivatePanelTab(PanelGroup group, string blockId)
+        {
+            if (group == null || string.IsNullOrWhiteSpace(blockId))
+            {
+                return;
+            }
+
+            DockBlock target = group.Blocks.FirstOrDefault(b => string.Equals(b.Id, blockId, StringComparison.OrdinalIgnoreCase));
+            if (target == null || string.Equals(group.ActiveBlockId, blockId, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            DockBlock previous = group.ActiveBlock;
+            bool hadFocus = previous != null && BlockHasFocus(previous.Id);
+
+            if (previous != null)
+            {
+                previous.IsVisible = false;
+            }
+
+            if (SetPanelActiveBlock(group, target))
+            {
+                MapBlockToPanel(target, group);
+                if (hadFocus)
+                {
+                    SetFocusedBlock(target);
+                }
+
+                MarkLayoutDirty();
+            }
+        }
+
+        private static void RemovePanelGroup(PanelGroup group)
+        {
+            if (group == null)
+            {
+                return;
+            }
+
+            foreach (DockBlock block in group.Blocks.ToList())
+            {
+                _blockToPanel.Remove(block.Id);
+                _blockNodes.Remove(block.Id);
+            }
+
+            if (_panelNodes.TryGetValue(group.PanelId, out BlockNode node))
+            {
+                _rootNode = DockLayout.Detach(_rootNode, node);
+                _panelNodes.Remove(group.PanelId);
+            }
+
+            _panelGroups.Remove(group.PanelId);
+            _orderedPanelIds.Remove(group.PanelId);
+        }
+
+        private static void RebuildGroupBarLayoutCache(int dragBarHeight)
+        {
+            _groupBarLayoutCache.Clear();
+            foreach (PanelGroup group in _panelGroups.Values)
+            {
+                DockBlock active = group?.ActiveBlock;
+                if (active == null || !active.IsVisible)
+                {
+                    continue;
+                }
+
+                PanelGroupBarLayout layout = BuildGroupBarLayout(active, group, dragBarHeight);
+                if (layout != null)
+                {
+                    _groupBarLayoutCache[group.PanelId] = layout;
+                }
+            }
+        }
+
+        private static PanelGroupBarLayout BuildGroupBarLayout(DockBlock block, PanelGroup group, int dragBarHeight)
+        {
+            if (block == null || group == null)
+            {
+                return null;
+            }
+
+            Rectangle groupBarBounds = GetGroupBarBounds(block, group, dragBarHeight);
+            PanelGroupBarLayout layout = new(group.PanelId, groupBarBounds);
+            if (groupBarBounds == Rectangle.Empty || group.Blocks.Count == 0)
+            {
+                return layout;
+            }
+
+            UIStyle.UIFont tabFont = UIStyle.FontTech;
+            bool panelLocked = IsPanelLocked(group);
+            bool showLockButtons = DockingModeEnabled && !panelLocked;
+            bool showCloseButtons = DockingModeEnabled && !panelLocked;
+            int availableWidth = Math.Max(0, groupBarBounds.Width - (TabSpacing * Math.Max(0, group.Blocks.Count - 1)) - (TabHorizontalPadding * 2));
+            int x = groupBarBounds.X + TabHorizontalPadding;
+            int height = Math.Max(0, groupBarBounds.Height - (TabVerticalPadding * 2));
+            int count = Math.Max(1, group.Blocks.Count);
+            int fallbackWidth = Math.Max(TabMinWidth, availableWidth / count);
+
+            foreach (DockBlock tabBlock in group.Blocks)
+            {
+                int measuredText = tabFont.IsAvailable ? (int)Math.Ceiling(tabFont.MeasureString(tabBlock.Title).X) : 0;
+                int minButtonWidth = TabHorizontalPadding * 2;
+                if (showCloseButtons)
+                {
+                    minButtonWidth += TabCloseSize + TabClosePadding;
+                }
+                if (showLockButtons)
+                {
+                    minButtonWidth += TabLockSize + TabClosePadding;
+                }
+
+                int measured = measuredText + minButtonWidth;
+                int targetWidth = Math.Max(minButtonWidth, Math.Max(fallbackWidth, Math.Min(measured, Math.Max(TabMinWidth, availableWidth))));
+
+                targetWidth = Math.Min(targetWidth, Math.Max(0, groupBarBounds.Right - x));
+                if (targetWidth <= 0)
+                {
+                    break;
+                }
+
+                Rectangle tabBounds = new(x, groupBarBounds.Y + TabVerticalPadding, targetWidth, Math.Max(0, height));
+                Rectangle closeBounds = showCloseButtons ? GetTabCloseBounds(tabBounds) : Rectangle.Empty;
+                Rectangle lockBounds = showLockButtons ? GetTabLockBounds(tabBounds, closeBounds) : Rectangle.Empty;
+                layout.Tabs.Add(new TabHitRegion(tabBlock.Id, tabBounds, lockBounds, closeBounds));
+                x += targetWidth + TabSpacing;
+                if (x >= groupBarBounds.Right)
+                {
+                    break;
+                }
+            }
+
+            layout.Tabs.Sort((a, b) => a.Bounds.X.CompareTo(b.Bounds.X));
+            return layout;
+        }
+
+        private static Rectangle GetTabCloseBounds(Rectangle tabBounds)
+        {
+            if (tabBounds.Width <= 0 || tabBounds.Height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int closeSize = Math.Min(TabCloseSize, Math.Max(8, tabBounds.Height - (TabVerticalPadding * 2)));
+            int closeX = Math.Max(tabBounds.X + TabHorizontalPadding, tabBounds.Right - TabHorizontalPadding - closeSize);
+            int closeY = tabBounds.Y + (tabBounds.Height - closeSize) / 2;
+            return new Rectangle(closeX, closeY, closeSize, closeSize);
+        }
+
+        private static Rectangle GetTabLockBounds(Rectangle tabBounds, Rectangle closeBounds)
+        {
+            if (tabBounds.Width <= 0 || tabBounds.Height <= 0 || closeBounds == Rectangle.Empty)
+            {
+                return Rectangle.Empty;
+            }
+
+            int lockSize = Math.Min(TabLockSize, Math.Max(8, tabBounds.Height));
+            int lockX = closeBounds.X - TabClosePadding - lockSize;
+            int minX = tabBounds.X + TabHorizontalPadding;
+            if (lockX < minX)
+            {
+                return Rectangle.Empty;
+            }
+
+            int lockY = tabBounds.Y + (tabBounds.Height - lockSize) / 2;
+            return new Rectangle(lockX, lockY, lockSize, lockSize);
+        }
+
+        private static PanelGroupBarLayout GetGroupBarLayoutForGroup(PanelGroup group, DockBlock block, int dragBarHeight)
+        {
+            if (group == null || block == null)
+            {
+                return null;
+            }
+
+            if (_groupBarLayoutCache.TryGetValue(group.PanelId, out PanelGroupBarLayout cached))
+            {
+                return cached;
+            }
+
+            PanelGroupBarLayout layout = BuildGroupBarLayout(block, group, dragBarHeight);
+            if (layout != null)
+            {
+                _groupBarLayoutCache[group.PanelId] = layout;
+            }
+
+            return layout;
+        }
+
         private static DockBlock CreateBlock(string id, string title, DockBlockKind kind)
         {
             DockBlock block = new(id, title, kind);
@@ -474,7 +1593,12 @@ namespace op.io
             block.MinHeight = Math.Max(0, minHeight);
             _blocks[id] = block;
             _orderedBlocks.Add(block);
-            _blockNodes[id] = new BlockNode(block);
+            BlockNode node = new(block);
+            _blockNodes[id] = node;
+            _panelGroups[id] = new PanelGroup(id, block);
+            _panelNodes[id] = node;
+            _blockToPanel[id] = id;
+            _orderedPanelIds.Add(id);
             EnsureBlockLockState(block);
             return block;
         }
@@ -490,6 +1614,7 @@ namespace op.io
                 DockBlockKind.ColorScheme => (ColorSchemeBlock.MinWidth, ColorSchemeBlock.MinHeight),
                 DockBlockKind.Controls => (ControlsBlock.MinWidth, ControlsBlock.MinHeight),
                 DockBlockKind.Notes => (NotesBlock.MinWidth, NotesBlock.MinHeight),
+                DockBlockKind.DockingSetups => (DockingSetupsBlock.MinWidth, DockingSetupsBlock.MinHeight),
                 DockBlockKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
                 DockBlockKind.Specs => (SpecsBlock.MinWidth, SpecsBlock.MinHeight),
                 _ => (defaultMin, defaultMin)
@@ -498,7 +1623,8 @@ namespace op.io
             // Keep at least the drag bar height so we can detect when a drag bar is being pushed;
             // overflow gets propagated to neighboring resize edges instead of hard-clamping.
             int clampedWidth = Math.Max(width, UIStyle.MinBlockSize);
-            int clampedHeight = Math.Max(height, UIStyle.DragBarHeight);
+            int headerHeight = Math.Max(UIStyle.DragBarHeight, GroupBarHeight);
+            int clampedHeight = Math.Max(height, headerHeight);
             return (clampedWidth, clampedHeight);
         }
 
@@ -514,6 +1640,8 @@ namespace op.io
                 _pixelTexture = new Texture2D(graphicsDevice, 1, 1);
                 _pixelTexture.SetData(new[] { Color.White });
             }
+
+            EnsureLockIcons();
 
             bool gameBlockVisible = TryGetGameBlock(out DockBlock gameBlock) && gameBlock.IsVisible;
             int desiredWidth = Math.Max(1, _gameContentBounds.Width);
@@ -650,6 +1778,220 @@ namespace op.io
             return false;
         }
 
+        private static bool UpdateTabInteractions(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased, bool allowReorder)
+        {
+            if (!leftClickStarted && !leftClickReleased && string.IsNullOrWhiteSpace(_pressedTabBlockId))
+            {
+                return false;
+            }
+
+            bool allowLockToggle = DockingModeEnabled;
+            foreach (PanelGroupBarLayout layout in _groupBarLayoutCache.Values)
+            {
+                if (layout == null || layout.Tabs.Count == 0)
+                {
+                    continue;
+                }
+
+                if (!_panelGroups.TryGetValue(layout.PanelId, out PanelGroup group))
+                {
+                    continue;
+                }
+
+                DockBlock active = group.ActiveBlock;
+                if (active == null || !active.IsVisible || GetGroupBarHeight(group) <= 0)
+                {
+                    continue;
+                }
+
+                bool inTabRegion = layout.GroupBarBounds != Rectangle.Empty && layout.GroupBarBounds.Contains(_mousePosition);
+                if (!inTabRegion)
+                {
+                    foreach (TabHitRegion tab in layout.Tabs)
+                    {
+                        if (tab.Bounds.Contains(_mousePosition))
+                        {
+                            inTabRegion = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!inTabRegion)
+                {
+                    continue;
+                }
+
+                bool panelLocked = DockingModeEnabled && IsPanelLocked(group);
+
+                if (leftClickStarted)
+                {
+                    if (!panelLocked && allowLockToggle)
+                    {
+                        foreach (TabHitRegion tab in layout.Tabs)
+                        {
+                            if (tab.LockBounds != Rectangle.Empty &&
+                                tab.LockBounds.Contains(_mousePosition) &&
+                                _blocks.TryGetValue(tab.BlockId, out DockBlock tabBlock))
+                            {
+                                ToggleBlockLock(tabBlock);
+                                ClearPressedTabState();
+                                return true;
+                            }
+                        }
+                    }
+
+                    if (!panelLocked)
+                    {
+                        foreach (TabHitRegion tab in layout.Tabs)
+                        {
+                            if (tab.CloseBounds != Rectangle.Empty && tab.CloseBounds.Contains(_mousePosition) && _blocks.TryGetValue(tab.BlockId, out DockBlock tabBlock))
+                            {
+                                if (BlockHasFocus(tabBlock.Id))
+                                {
+                                    ClearBlockFocus();
+                                }
+
+                                HandleBlockClose(tabBlock);
+                                ClearPressedTabState();
+                                return true;
+                            }
+                        }
+                    }
+
+                    string targetTab = null;
+                    foreach (TabHitRegion tab in layout.Tabs)
+                    {
+                        if (tab.Bounds.Contains(_mousePosition))
+                        {
+                            targetTab = tab.BlockId;
+                            break;
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(targetTab))
+                    {
+                        _pressedTabBlockId = targetTab;
+                        _pressedTabPanelId = layout.PanelId;
+                        _tabPressPosition = _mousePosition;
+                        return true;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_pressedTabBlockId))
+            {
+                bool panelLocked = false;
+                PanelGroup pressedGroup = null;
+                if (_panelGroups.TryGetValue(_pressedTabPanelId, out PanelGroup resolvedGroup))
+                {
+                    pressedGroup = resolvedGroup;
+                    panelLocked = DockingModeEnabled && IsPanelLocked(resolvedGroup);
+                }
+
+                if (!panelLocked && leftClickHeld && !leftClickReleased && allowReorder)
+                {
+                    int deltaX = Math.Abs(_mousePosition.X - _tabPressPosition.X);
+                    int deltaY = Math.Abs(_mousePosition.Y - _tabPressPosition.Y);
+                    if (deltaX >= TabDragStartThreshold || deltaY >= TabDragStartThreshold)
+                    {
+                        if (TryBeginTabDrag(_pressedTabPanelId, _pressedTabBlockId))
+                        {
+                            ClearPressedTabState();
+                            return false;
+                        }
+
+                        ClearPressedTabState();
+                        return true;
+                    }
+                }
+
+                if (leftClickReleased)
+                {
+                    bool releasedOnPressedTab = false;
+                    if (_groupBarLayoutCache.TryGetValue(_pressedTabPanelId, out PanelGroupBarLayout releaseLayout))
+                    {
+                        foreach (TabHitRegion tab in releaseLayout.Tabs)
+                        {
+                            if (string.Equals(tab.BlockId, _pressedTabBlockId, StringComparison.OrdinalIgnoreCase) &&
+                                tab.Bounds.Contains(_mousePosition))
+                            {
+                                releasedOnPressedTab = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (releasedOnPressedTab && pressedGroup != null)
+                    {
+                        ActivatePanelTab(pressedGroup, _pressedTabBlockId);
+                    }
+
+                    ClearPressedTabState();
+                    return true;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void ClearPressedTabState()
+        {
+            _pressedTabBlockId = null;
+            _pressedTabPanelId = null;
+            _tabPressPosition = Point.Zero;
+        }
+
+        private static bool TryBeginTabDrag(string panelId, string blockId)
+        {
+            if (string.IsNullOrWhiteSpace(panelId) || string.IsNullOrWhiteSpace(blockId))
+            {
+                return false;
+            }
+
+            if (!_panelGroups.TryGetValue(panelId, out PanelGroup group) || !_blocks.TryGetValue(blockId, out DockBlock block))
+            {
+                return false;
+            }
+
+            _draggingBlock = block;
+            _draggingPanel = group;
+            _draggingFromTab = true;
+            SetFocusedBlock(block);
+
+            BlockNode panelNode = GetPanelNode(group);
+            if (!_blockNodes.TryGetValue(block.Id, out BlockNode movingNode) || ReferenceEquals(movingNode, panelNode))
+            {
+                movingNode = new BlockNode(block);
+                _blockNodes[block.Id] = movingNode;
+            }
+
+            Rectangle startBounds = GetDragOriginBounds(group, block);
+            _draggingStartBounds = startBounds;
+            _dragOffset = new Point(_mousePosition.X - startBounds.X, _mousePosition.Y - startBounds.Y);
+            return true;
+        }
+
+        private static Rectangle GetDragOriginBounds(PanelGroup group, DockBlock block)
+        {
+            if (block != null && block.Bounds.Width > 0 && block.Bounds.Height > 0)
+            {
+                return block.Bounds;
+            }
+
+            DockBlock active = group?.ActiveBlock;
+            if (active != null && active.Bounds.Width > 0 && active.Bounds.Height > 0)
+            {
+                return active.Bounds;
+            }
+
+            int width = Math.Max(block?.MinWidth ?? UIStyle.MinBlockSize, UIStyle.MinBlockSize);
+            int height = Math.Max(block?.MinHeight ?? UIStyle.MinBlockSize, UIStyle.MinBlockSize);
+            return new Rectangle(_mousePosition.X - (width / 2), _mousePosition.Y - (height / 2), width, height);
+        }
+
         private static void UpdateDragState(bool leftClickStarted, bool leftClickReleased, bool allowReorder)
         {
             _hoveredDragBarId = null;
@@ -657,11 +1999,12 @@ namespace op.io
             if (!AnyBlockVisible())
             {
                 _draggingBlock = null;
+                _draggingPanel = null;
                 _dropPreview = null;
                 return;
             }
 
-            if (leftClickStarted && TryToggleBlockLock(_mousePosition))
+            if (leftClickStarted && TryTogglePanelLock(_mousePosition))
             {
                 return;
             }
@@ -681,13 +2024,15 @@ namespace op.io
                 }
             }
 
-            DockBlock dragBarHover = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true);
+            DockBlock dragBarHover = _draggingFromTab
+                ? null
+                : HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
             _hoveredDragBarId = dragBarHover?.Id;
 
             DockBlock dragBarHit = null;
             if (leftClickStarted)
             {
-                dragBarHit = HitTestDragBarBlock(_mousePosition);
+                dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
                 if (dragBarHit != null)
                 {
                     SetFocusedBlock(dragBarHit);
@@ -703,10 +2048,13 @@ namespace op.io
 
             if (_draggingBlock == null && leftClickStarted)
             {
-                DockBlock block = dragBarHit ?? HitTestDragBarBlock(_mousePosition);
+                DockBlock block = dragBarHit ?? HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
                 if (block != null)
                 {
+                    _draggingFromTab = false;
+                    ClearPressedTabState();
                     _draggingBlock = block;
+                    _draggingPanel = GetPanelGroupForBlock(block);
                     _draggingStartBounds = block.Bounds;
                     _dragOffset = new Point(_mousePosition.X - block.Bounds.X, _mousePosition.Y - block.Bounds.Y);
                 }
@@ -723,20 +2071,23 @@ namespace op.io
                     }
 
                     _draggingBlock = null;
+                    _draggingPanel = null;
+                    _draggingFromTab = false;
                     _dropPreview = null;
                 }
             }
         }
 
-        private static bool TryToggleBlockLock(Point position)
+        private static bool TryTogglePanelLock(Point position)
         {
-            DockBlock lockHit = HitTestLockButton(position);
+            DockBlock lockHit = HitTestPanelLockButton(position);
             if (lockHit == null)
             {
                 return false;
             }
 
-            ToggleBlockLock(lockHit);
+            PanelGroup group = GetPanelGroupForBlock(lockHit);
+            TogglePanelLock(group);
             ClearDockingInteractions();
             return true;
         }
@@ -748,6 +2099,36 @@ namespace op.io
                 return;
             }
 
+            PanelGroup group = GetPanelGroupForBlock(block);
+            bool hadFocus = BlockHasFocus(block.Id);
+
+            if (group != null && group.Blocks.Count > 1)
+            {
+                if (TryDecrementCountedBlock(block))
+                {
+                    return;
+                }
+
+                group.RemoveBlock(block.Id, out _);
+                _blockToPanel.Remove(block.Id);
+                block.IsVisible = false;
+
+                DockBlock next = group.ActiveBlock ?? group.Blocks.FirstOrDefault();
+                if (next != null)
+                {
+                    SetPanelActiveBlock(group, next);
+                    MapBlockToPanel(next, group);
+                    if (hadFocus)
+                    {
+                        SetFocusedBlock(next);
+                    }
+                }
+
+                RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
+                MarkLayoutDirty();
+                return;
+            }
+
             block.IsVisible = false;
 
             if (TryDecrementCountedBlock(block))
@@ -756,6 +2137,7 @@ namespace op.io
             }
 
             MarkLayoutDirty();
+            RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
         }
 
         private static bool TryDecrementCountedBlock(DockBlock block)
@@ -782,10 +2164,36 @@ namespace op.io
                 return;
             }
 
+            PanelGroup group = GetPanelGroupForBlock(block);
+            bool panelRemoved = false;
+            if (group != null)
+            {
+                group.RemoveBlock(block.Id, out _);
+                _blockToPanel.Remove(block.Id);
+
+                if (group.Blocks.Count == 0)
+                {
+                    RemovePanelGroup(group);
+                    panelRemoved = true;
+                }
+                else if (string.Equals(group.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    DockBlock next = group.ActiveBlock ?? group.Blocks.FirstOrDefault();
+                    if (next != null)
+                    {
+                        SetPanelActiveBlock(group, next);
+                    }
+                }
+            }
+
+            bool detachNode = group == null;
             if (_blockNodes.TryGetValue(block.Id, out BlockNode node))
             {
-                _rootNode = DockLayout.Detach(_rootNode, node);
                 _blockNodes.Remove(block.Id);
+                if (detachNode && !panelRemoved)
+                {
+                    _rootNode = DockLayout.Detach(_rootNode, node);
+                }
             }
 
             _blocks.Remove(block.Id);
@@ -800,6 +2208,21 @@ namespace op.io
 
         private static bool IsBlockLocked(DockBlock block)
         {
+            if (block == null)
+            {
+                return false;
+            }
+
+            if (!IsLockToggleAvailable(block))
+            {
+                return false;
+            }
+
+            return IsBlockLockEnabled(block);
+        }
+
+        private static bool IsBlockLockEnabled(DockBlock block)
+        {
             if (block == null || !IsLockToggleAvailable(block))
             {
                 return false;
@@ -811,6 +2234,22 @@ namespace op.io
             return locked;
         }
 
+        private static bool IsPanelLocked(PanelGroup group)
+        {
+            return group != null && group.IsLocked;
+        }
+
+        private static bool IsPanelLocked(DockBlock block)
+        {
+            if (block == null)
+            {
+                return false;
+            }
+
+            PanelGroup group = GetPanelGroupForBlock(block);
+            return IsPanelLocked(group);
+        }
+
         private static void ToggleBlockLock(DockBlock block)
         {
             if (block == null)
@@ -818,9 +2257,28 @@ namespace op.io
                 return;
             }
 
-            bool nextState = !IsBlockLocked(block);
-            _blockLockStates[block.Id] = nextState;
-            BlockDataStore.SetBlockLock(block.Kind, nextState);
+            SetBlockLock(block, !IsBlockLockEnabled(block));
+        }
+
+        private static void SetBlockLock(DockBlock block, bool isLocked)
+        {
+            if (block == null || !IsLockToggleAvailable(block))
+            {
+                return;
+            }
+
+            _blockLockStates[block.Id] = isLocked;
+            BlockDataStore.SetBlockLock(block.Kind, isLocked);
+        }
+
+        private static void TogglePanelLock(PanelGroup group)
+        {
+            if (group == null)
+            {
+                return;
+            }
+
+            group.IsLocked = !group.IsLocked;
         }
 
         private static void EnsureBlockLockState(DockBlock block)
@@ -834,7 +2292,7 @@ namespace op.io
             _blockLockStates[block.Id] = storedLock;
         }
 
-        private static DockBlock HitTestDragBarBlock(Point position, bool excludeDragBarButtons = false)
+        private static DockBlock HitTestDragBarBlock(Point position, bool excludeDragBarButtons = false, bool requireGrabRegion = false)
         {
             int dragBarHeight = GetActiveDragBarHeight();
             if (dragBarHeight <= 0)
@@ -858,6 +2316,16 @@ namespace op.io
                 if (excludeDragBarButtons && IsPointOnDragBarButton(block, dragBarHeight, position))
                 {
                     continue;
+                }
+
+                if (requireGrabRegion)
+                {
+                    PanelGroup group = GetPanelGroupForBlock(block);
+                    Rectangle grabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
+                    if (grabBounds == Rectangle.Empty || !grabBounds.Contains(position))
+                    {
+                        continue;
+                    }
                 }
 
                 return block;
@@ -891,7 +2359,7 @@ namespace op.io
             return null;
         }
 
-        private static DockBlock HitTestLockButton(Point position)
+        private static DockBlock HitTestPanelLockButton(Point position)
         {
             int dragBarHeight = GetActiveDragBarHeight();
             if (dragBarHeight <= 0)
@@ -901,13 +2369,13 @@ namespace op.io
 
             foreach (DockBlock block in _orderedBlocks)
             {
-                if (!block.IsVisible || !IsLockToggleAvailable(block))
+                if (!block.IsVisible)
                 {
                     continue;
                 }
 
-                Rectangle lockBounds = GetLockButtonBounds(block, dragBarHeight);
-                if (lockBounds != Rectangle.Empty && lockBounds.Contains(position))
+                Rectangle panelLockBounds = GetPanelLockButtonBounds(block, dragBarHeight);
+                if (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position))
                 {
                     return block;
                 }
@@ -918,8 +2386,8 @@ namespace op.io
 
         private static bool IsPointOnDragBarButton(DockBlock block, int dragBarHeight, Point position)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds);
-            return (lockBounds != Rectangle.Empty && lockBounds.Contains(position)) ||
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds);
+            return (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position)) ||
                 (closeBounds != Rectangle.Empty && closeBounds.Contains(position));
         }
 
@@ -929,15 +2397,15 @@ namespace op.io
             return closeBounds;
         }
 
-        private static Rectangle GetLockButtonBounds(DockBlock block, int dragBarHeight)
+        private static Rectangle GetPanelLockButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle lockBounds, out _);
-            return lockBounds;
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out _);
+            return panelLockBounds;
         }
 
-        private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle lockBounds, out Rectangle closeBounds)
+        private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds)
         {
-            lockBounds = Rectangle.Empty;
+            panelLockBounds = Rectangle.Empty;
             closeBounds = Rectangle.Empty;
 
             if (block == null || dragBarHeight <= 0)
@@ -953,7 +2421,7 @@ namespace op.io
 
             closeBounds = GetCloseButtonBounds(dragBarRect);
 
-            if (!IsLockToggleAvailable(block) || closeBounds == Rectangle.Empty)
+            if (closeBounds == Rectangle.Empty)
             {
                 return;
             }
@@ -967,7 +2435,7 @@ namespace op.io
                 return;
             }
 
-            lockBounds = new Rectangle(x, y, buttonSize, buttonSize);
+            panelLockBounds = new Rectangle(x, y, buttonSize, buttonSize);
         }
 
         private static bool IsLockToggleAvailable(DockBlock block)
@@ -977,11 +2445,7 @@ namespace op.io
                 return false;
             }
 
-            return block.Kind == DockBlockKind.Controls ||
-                block.Kind == DockBlockKind.ColorScheme ||
-                block.Kind == DockBlockKind.Notes ||
-                block.Kind == DockBlockKind.Backend ||
-                block.Kind == DockBlockKind.Specs;
+            return true;
         }
 
         private static Rectangle GetCloseButtonBounds(Rectangle dragBarRect)
@@ -1085,6 +2549,11 @@ namespace op.io
 
         private static DockDropPreview? BuildDropPreview(Point position)
         {
+            if (_draggingFromTab)
+            {
+                return BuildTabDropPreview(position);
+            }
+
             DockDropPreview? preview = BuildViewportSnapPreview(position);
             if (preview.HasValue)
             {
@@ -1145,6 +2614,140 @@ namespace op.io
             }
 
             return preview;
+        }
+
+        private static DockDropPreview? BuildTabDropPreview(Point position)
+        {
+            if (_draggingBlock == null)
+            {
+                return null;
+            }
+
+            int dragBarHeight = GetActiveDragBarHeight();
+
+            foreach (PanelGroupBarLayout layout in _groupBarLayoutCache.Values)
+            {
+                if (layout == null)
+                {
+                    continue;
+                }
+
+                if (!_panelGroups.TryGetValue(layout.PanelId, out PanelGroup targetGroup))
+                {
+                    continue;
+                }
+
+                DockBlock active = targetGroup.ActiveBlock;
+                if (active == null || IsPanelLocked(targetGroup))
+                {
+                    continue;
+                }
+
+                Rectangle groupBarBounds = layout.GroupBarBounds;
+                Rectangle dragBar = dragBarHeight > 0 ? active.GetDragBarBounds(dragBarHeight) : Rectangle.Empty;
+                Rectangle hitBounds = groupBarBounds != Rectangle.Empty ? groupBarBounds : dragBar;
+                if (hitBounds == Rectangle.Empty || !hitBounds.Contains(position))
+                {
+                    continue;
+                }
+
+                PanelGroupBarLayout layoutToUse = layout;
+                if (layoutToUse.Tabs.Count == 0)
+                {
+                    PanelGroupBarLayout rebuilt = BuildGroupBarLayout(active, targetGroup, dragBarHeight);
+                    if (rebuilt != null)
+                    {
+                        layoutToUse = rebuilt;
+                        _groupBarLayoutCache[targetGroup.PanelId] = rebuilt;
+                        groupBarBounds = rebuilt.GroupBarBounds;
+                    }
+                }
+
+                int insertIndex = CalculateTabInsertIndex(layoutToUse.Tabs, position.X);
+                Rectangle highlight = GetTabInsertHighlight(layoutToUse, groupBarBounds, dragBar, insertIndex);
+
+                return new DockDropPreview
+                {
+                    TargetBlock = active,
+                    TargetPanelId = targetGroup.PanelId,
+                    HighlightBounds = highlight,
+                    TabInsertIndex = insertIndex,
+                    IsTabDrop = true
+                };
+            }
+
+            return null;
+        }
+
+        private static int CalculateTabInsertIndex(IReadOnlyList<TabHitRegion> tabs, int mouseX)
+        {
+            if (tabs == null || tabs.Count == 0)
+            {
+                return 0;
+            }
+
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                TabHitRegion tab = tabs[i];
+                if (mouseX <= tab.Bounds.Center.X)
+                {
+                    return i;
+                }
+            }
+
+            return tabs.Count;
+        }
+
+        private static Rectangle GetTabInsertHighlight(PanelGroupBarLayout layout, Rectangle groupBarBounds, Rectangle dragBarBounds, int insertIndex)
+        {
+            Rectangle barBounds = groupBarBounds;
+            if (barBounds == Rectangle.Empty && layout != null && layout.Tabs.Count > 0)
+            {
+                TabHitRegion first = layout.Tabs.First();
+                TabHitRegion last = layout.Tabs.Last();
+                barBounds = Rectangle.Union(first.Bounds, last.Bounds);
+            }
+
+            if (barBounds == Rectangle.Empty)
+            {
+                barBounds = dragBarBounds;
+            }
+
+            if (barBounds == Rectangle.Empty || layout == null || layout.Tabs.Count == 0)
+            {
+                return barBounds;
+            }
+
+            int indicatorX;
+            if (insertIndex <= 0)
+            {
+                indicatorX = layout.Tabs.First().Bounds.X - (TabSpacing / 2);
+            }
+            else if (insertIndex >= layout.Tabs.Count)
+            {
+                indicatorX = layout.Tabs.Last().Bounds.Right + (TabSpacing / 2);
+            }
+            else
+            {
+                Rectangle previous = layout.Tabs[insertIndex - 1].Bounds;
+                Rectangle next = layout.Tabs[insertIndex].Bounds;
+                indicatorX = previous.Right + ((next.X - previous.Right) / 2);
+            }
+
+            int lineWidth = Math.Max(3, UIStyle.DragOutlineThickness + 1);
+            int halfWidth = lineWidth / 2;
+            int minX = barBounds.X + halfWidth;
+            int maxX = barBounds.Right - halfWidth;
+            if (minX > maxX)
+            {
+                minX = barBounds.X;
+                maxX = barBounds.Right;
+            }
+
+            indicatorX = Math.Clamp(indicatorX, minX, maxX);
+            int height = Math.Max(0, barBounds.Height - 4);
+            int y = barBounds.Y + 2;
+            return new Rectangle(indicatorX - halfWidth, y, lineWidth, height);
         }
 
         private static CornerHandle? HitTestCornerHandle(Point position)
@@ -1640,6 +3243,52 @@ namespace op.io
             return clamped / (float)Math.Max(1, spanLength);
         }
 
+        private static void DetachDraggingTabFromGroup()
+        {
+            if (!_draggingFromTab || _draggingBlock == null)
+            {
+                return;
+            }
+
+            PanelGroup sourceGroup = _draggingPanel ?? GetPanelGroupForBlock(_draggingBlock);
+            if (sourceGroup == null)
+            {
+                _draggingFromTab = false;
+                return;
+            }
+
+            bool hadFocus = BlockHasFocus(_draggingBlock.Id);
+
+            sourceGroup.RemoveBlock(_draggingBlock.Id, out _);
+            _blockToPanel.Remove(_draggingBlock.Id);
+
+            if (sourceGroup.Blocks.Count == 0)
+            {
+                RemovePanelGroup(sourceGroup);
+            }
+            else
+            {
+                DockBlock next = sourceGroup.ActiveBlock ?? sourceGroup.Blocks.FirstOrDefault();
+                if (next != null)
+                {
+                    SetPanelActiveBlock(sourceGroup, next);
+                    MapBlockToPanel(next, sourceGroup);
+                    if (hadFocus)
+                    {
+                        SetFocusedBlock(next);
+                    }
+                }
+            }
+
+            PanelGroup newGroup = GetPanelGroupForBlock(_draggingBlock);
+            SetPanelActiveBlock(newGroup, _draggingBlock);
+            MapBlockToPanel(_draggingBlock, newGroup);
+            _draggingPanel = newGroup;
+            _draggingFromTab = false;
+            MarkLayoutDirty();
+            RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
+        }
+
         private static void ApplyDrop(DockDropPreview preview)
         {
             if (_draggingBlock == null)
@@ -1647,8 +3296,15 @@ namespace op.io
                 return;
             }
 
+            if (preview.IsTabDrop)
+            {
+                ApplyTabDrop(preview);
+                return;
+            }
+
             if (preview.IsViewportSnap)
             {
+                DetachDraggingTabFromGroup();
                 ApplyViewportSnap(preview.Edge);
                 return;
             }
@@ -1663,6 +3319,8 @@ namespace op.io
                 return;
             }
 
+            DetachDraggingTabFromGroup();
+
             if (!_blockNodes.TryGetValue(_draggingBlock.Id, out BlockNode movingNode) ||
                 !_blockNodes.TryGetValue(preview.TargetBlock.Id, out BlockNode targetNode))
             {
@@ -1673,6 +3331,76 @@ namespace op.io
             _rootNode ??= targetNode;
             _rootNode = DockLayout.InsertRelative(_rootNode, movingNode, targetNode, preview.Edge);
             MarkLayoutDirty();
+        }
+
+        private static void ApplyTabDrop(DockDropPreview preview)
+        {
+            if (_draggingBlock == null || string.IsNullOrWhiteSpace(preview.TargetPanelId))
+            {
+                return;
+            }
+
+            if (!_panelGroups.TryGetValue(preview.TargetPanelId, out PanelGroup targetGroup))
+            {
+                return;
+            }
+
+            DockBlock targetActive = targetGroup.ActiveBlock;
+            if (targetActive == null || IsPanelLocked(targetGroup))
+            {
+                return;
+            }
+
+            PanelGroup sourceGroup = _draggingPanel ?? GetPanelGroupForBlock(_draggingBlock);
+            if (sourceGroup == null)
+            {
+                return;
+            }
+
+            int insertIndex = Math.Clamp(preview.TabInsertIndex, 0, Math.Max(0, targetGroup.Blocks.Count));
+
+            if (!ReferenceEquals(sourceGroup, targetGroup))
+            {
+                sourceGroup.RemoveBlock(_draggingBlock.Id, out _);
+                if (sourceGroup.Blocks.Count > 0)
+                {
+                    DockBlock newSourceActive = sourceGroup.ActiveBlock ?? sourceGroup.Blocks.FirstOrDefault();
+                    if (newSourceActive != null)
+                    {
+                        SetPanelActiveBlock(sourceGroup, newSourceActive);
+                        MapBlockToPanel(newSourceActive, sourceGroup);
+                    }
+                }
+                targetGroup.AddBlock(_draggingBlock, makeActive: true, insertIndex: insertIndex);
+                MapBlockToPanel(_draggingBlock, targetGroup);
+            }
+            else
+            {
+                sourceGroup.RemoveBlock(_draggingBlock.Id, out _);
+                targetGroup.AddBlock(_draggingBlock, makeActive: true, insertIndex: insertIndex);
+            }
+
+            SetPanelActiveBlock(targetGroup, _draggingBlock);
+
+            if (!ReferenceEquals(sourceGroup, targetGroup))
+            {
+                if (sourceGroup.Blocks.Count == 0)
+                {
+                    RemovePanelGroup(sourceGroup);
+                }
+                else
+                {
+                    DockBlock next = sourceGroup.ActiveBlock ?? sourceGroup.Blocks.FirstOrDefault();
+                    if (next != null)
+                    {
+                        SetPanelActiveBlock(sourceGroup, next);
+                    }
+                }
+            }
+
+            _draggingFromTab = false;
+            MarkLayoutDirty();
+            RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
         }
 
         private static void ApplyViewportSnap(DockEdge edge)
@@ -1795,51 +3523,69 @@ namespace op.io
 
         private static void DrawBlockBackground(SpriteBatch spriteBatch, DockBlock block, int dragBarHeight)
         {
+            PanelGroup group = GetPanelGroupForBlock(block);
             bool isTransparentBlock = block.Kind == DockBlockKind.Transparent;
             DrawRect(spriteBatch, block.Bounds, isTransparentBlock ? Core.TransparentWindowColor : UIStyle.BlockBackground);
             DrawRectOutline(spriteBatch, block.Bounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
-            if (dragBarHeight <= 0)
+            Rectangle groupBar = GetGroupBarBounds(block, group, dragBarHeight);
+            bool showTabs = groupBar != Rectangle.Empty && (group?.Blocks.Count ?? 0) > 0;
+
+            if (dragBarHeight > 0)
+            {
+                Rectangle dragBar = block.GetDragBarBounds(dragBarHeight);
+                if (dragBar.Height > 0)
+                {
+                    DrawRect(spriteBatch, dragBar, UIStyle.DragBarBackground);
+                    bool dragBarHovered = string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal);
+                    GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockButtonBounds, out Rectangle closeButtonBounds);
+                    Rectangle dragGrabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
+
+                    if (dragBarHovered && dragGrabBounds != Rectangle.Empty)
+                    {
+                        DrawRect(spriteBatch, dragGrabBounds, UIStyle.DragBarHoverTint);
+                        DrawDragBarGrabHint(spriteBatch, dragGrabBounds);
+                    }
+
+                    if (panelLockButtonBounds != Rectangle.Empty)
+                    {
+                        bool panelLocked = IsPanelLocked(group);
+                        bool hovered = panelLockButtonBounds.Contains(_mousePosition);
+                        DrawPanelLockToggleButton(spriteBatch, panelLockButtonBounds, panelLocked, hovered);
+                    }
+
+                    if (closeButtonBounds != Rectangle.Empty)
+                    {
+                        bool hovered = closeButtonBounds.Contains(_mousePosition);
+                        DrawBlockCloseButton(spriteBatch, closeButtonBounds, hovered);
+                    }
+                }
+            }
+
+            if (showTabs)
+            {
+                PanelGroupBarLayout layout = GetGroupBarLayoutForGroup(group, block, dragBarHeight);
+                DrawGroupBar(spriteBatch, layout, group, block);
+            }
+        }
+
+        private static void DrawDragBarGrabHint(SpriteBatch spriteBatch, Rectangle bounds)
+        {
+            if (bounds.Width <= 0 || bounds.Height <= 0)
             {
                 return;
             }
 
-            Rectangle dragBar = block.GetDragBarBounds(dragBarHeight);
-            if (dragBar.Height <= 0)
-            {
-                return;
-            }
+            int lineWidth = Math.Min(12, Math.Max(2, bounds.Width - 4));
+            int lineHeight = 2;
+            int spacing = Math.Max(2, bounds.Height / 6);
+            int centerX = bounds.X + (bounds.Width / 2);
+            int startX = centerX - (lineWidth / 2);
+            int centerY = bounds.Y + (bounds.Height / 2);
 
-            DrawRect(spriteBatch, dragBar, UIStyle.DragBarBackground);
-            bool dragBarHovered = string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal);
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle lockButtonBounds, out Rectangle closeButtonBounds);
-
-            if (dragBarHovered)
-            {
-                DrawRect(spriteBatch, dragBar, UIStyle.DragBarHoverTint);
-            }
-
-            UIStyle.UIFont dragBarFont = UIStyle.FontH2;
-            if (dragBarFont.IsAvailable)
-            {
-                Vector2 textSize = dragBarFont.MeasureString(block.Title);
-                float textY = dragBar.Bottom - textSize.Y + 3f;
-                Vector2 textPosition = new Vector2(dragBar.X + 12, textY);
-                dragBarFont.DrawString(spriteBatch, block.Title, textPosition, UIStyle.TextColor);
-            }
-
-            if (lockButtonBounds != Rectangle.Empty)
-            {
-                bool blockLocked = IsBlockLocked(block);
-                bool hovered = lockButtonBounds.Contains(_mousePosition);
-                DrawLockToggleButton(spriteBatch, lockButtonBounds, blockLocked, hovered);
-            }
-
-            if (closeButtonBounds != Rectangle.Empty)
-            {
-                bool hovered = closeButtonBounds.Contains(_mousePosition);
-                DrawBlockCloseButton(spriteBatch, closeButtonBounds, hovered);
-            }
+            Color hintColor = UIStyle.AccentColor * 0.8f;
+            DrawRect(spriteBatch, new Rectangle(startX, centerY - spacing - lineHeight, lineWidth, lineHeight), hintColor);
+            DrawRect(spriteBatch, new Rectangle(startX, centerY + spacing, lineWidth, lineHeight), hintColor);
         }
 
         private static void DrawBlockCloseButton(SpriteBatch spriteBatch, Rectangle bounds, bool hovered)
@@ -1864,6 +3610,22 @@ namespace op.io
             glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
         }
 
+        private static void EnsureLockIcons()
+        {
+            _lockedIcon = EnsureIcon(_lockedIcon, LockedIconFile);
+            _unlockedIcon = EnsureIcon(_unlockedIcon, UnlockedIconFile);
+        }
+
+        private static Texture2D EnsureIcon(Texture2D icon, string fileName)
+        {
+            if (icon != null && !icon.IsDisposed)
+            {
+                return icon;
+            }
+
+            return BlockIconProvider.GetIcon(fileName);
+        }
+
         private static void DrawLockToggleButton(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered)
         {
             Color background = isLocked
@@ -1873,6 +3635,14 @@ namespace op.io
             DrawRect(spriteBatch, bounds, background);
             DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
 
+            EnsureLockIcons();
+            Texture2D icon = isLocked ? _lockedIcon : _unlockedIcon;
+            if (icon != null && !icon.IsDisposed)
+            {
+                DrawCenteredIcon(spriteBatch, icon, bounds, Color.White);
+                return;
+            }
+
             UIStyle.UIFont glyphFont = UIStyle.FontBody;
             if (!glyphFont.IsAvailable)
             {
@@ -1880,12 +3650,231 @@ namespace op.io
             }
 
             string glyph = isLocked ? "L" : "U";
-            Vector2 glyphSize = glyphFont.MeasureString(glyph);
-            Vector2 glyphPosition = new(
-                bounds.X + (bounds.Width - glyphSize.X) / 2f,
-                bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
             Color glyphColor = Color.White;
-            glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
+            DrawCenteredGlyph(spriteBatch, glyphFont, glyph, bounds, glyphColor, -1f);
+        }
+
+        private static void DrawPanelLockToggleButton(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered)
+        {
+            Color accent = ColorPalette.Warning;
+            float strength = isLocked ? 0.65f : 0.35f;
+            if (hovered)
+            {
+                strength = Math.Min(1f, strength + 0.15f);
+            }
+
+            Color background = accent * strength;
+            Color border = hovered ? accent : accent * 0.9f;
+            DrawRect(spriteBatch, bounds, background);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+
+            EnsureLockIcons();
+            Texture2D icon = isLocked ? _lockedIcon : _unlockedIcon;
+            if (icon != null && !icon.IsDisposed)
+            {
+                DrawCenteredIcon(spriteBatch, icon, bounds, Color.White);
+                return;
+            }
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable)
+            {
+                return;
+            }
+
+            string glyph = isLocked ? "L" : "U";
+            Color glyphColor = Color.White;
+            DrawCenteredGlyph(spriteBatch, glyphFont, glyph, bounds, glyphColor, -1f);
+        }
+
+        private static void DrawCenteredGlyph(SpriteBatch spriteBatch, UIStyle.UIFont font, string glyph, Rectangle bounds, Color color, float verticalOffset)
+        {
+            if (!font.IsAvailable || spriteBatch == null || string.IsNullOrEmpty(glyph) || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            Vector2 glyphSize = font.MeasureString(glyph);
+            float scale = 1f;
+            if (glyphSize.X > bounds.Width || glyphSize.Y > bounds.Height)
+            {
+                float scaleX = bounds.Width / glyphSize.X;
+                float scaleY = bounds.Height / glyphSize.Y;
+                scale = Math.Min(scaleX, scaleY);
+            }
+
+            Vector2 scaledSize = glyphSize * scale;
+            Vector2 glyphPosition = new(
+                bounds.X + (bounds.Width - scaledSize.X) / 2f,
+                bounds.Y + (bounds.Height - scaledSize.Y) / 2f + (verticalOffset * scale));
+            spriteBatch.DrawString(font.Font, glyph, glyphPosition, color, 0f, Vector2.Zero, font.Scale * scale, SpriteEffects.None, 0f);
+        }
+
+        private static void DrawCenteredIcon(SpriteBatch spriteBatch, Texture2D icon, Rectangle bounds, Color color)
+        {
+            if (spriteBatch == null || icon == null || icon.IsDisposed || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            int padding = Math.Max(2, Math.Min(bounds.Width, bounds.Height) / 6);
+            int availableWidth = Math.Max(0, bounds.Width - (padding * 2));
+            int availableHeight = Math.Max(0, bounds.Height - (padding * 2));
+            if (availableWidth <= 0 || availableHeight <= 0 || icon.Width <= 0 || icon.Height <= 0)
+            {
+                return;
+            }
+
+            float scale = Math.Min(availableWidth / (float)icon.Width, availableHeight / (float)icon.Height);
+            scale = Math.Min(scale, 2f);
+            if (scale <= 0f)
+            {
+                return;
+            }
+
+            Vector2 size = new(icon.Width * scale, icon.Height * scale);
+            Vector2 position = new(bounds.X + (bounds.Width - size.X) / 2f, bounds.Y + (bounds.Height - size.Y) / 2f);
+            spriteBatch.Draw(icon, position, null, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+        }
+
+        private static void DrawGroupBar(SpriteBatch spriteBatch, PanelGroupBarLayout layout, PanelGroup group, DockBlock activeBlock)
+        {
+            if (layout == null || group == null || activeBlock == null || layout.Tabs.Count == 0)
+            {
+                return;
+            }
+
+            Rectangle groupBarBounds = layout.GroupBarBounds;
+            if (groupBarBounds != Rectangle.Empty)
+            {
+                DrawRect(spriteBatch, groupBarBounds, GroupBarBackground);
+                DrawRectOutline(spriteBatch, groupBarBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+            }
+
+            UIStyle.UIFont tabFont = UIStyle.FontTech;
+            bool locked = IsBlockLocked(activeBlock);
+            bool panelLocked = IsPanelLocked(group);
+
+            foreach (TabHitRegion tab in layout.Tabs)
+            {
+                if (!_blocks.TryGetValue(tab.BlockId, out DockBlock tabBlock))
+                {
+                    continue;
+                }
+
+                bool isActive = string.Equals(group.ActiveBlockId, tab.BlockId, StringComparison.OrdinalIgnoreCase);
+                bool isHovered = tab.Bounds.Contains(_mousePosition);
+                bool closeHovered = tab.CloseBounds.Contains(_mousePosition);
+                bool lockHovered = !panelLocked && tab.LockBounds.Contains(_mousePosition);
+                bool tabLocked = IsBlockLocked(tabBlock);
+
+                Color background = TabInactiveBackground;
+                if (isActive)
+                {
+                    background = TabActiveBackground;
+                }
+                else if (isHovered)
+                {
+                    background = TabHoverBackground;
+                }
+
+                Color textColor = isActive ? UIStyle.TextColor : UIStyle.MutedTextColor;
+
+                if (locked)
+                {
+                    background *= 0.65f;
+                    textColor = UIStyle.MutedTextColor;
+                }
+
+                DrawRect(spriteBatch, tab.Bounds, background);
+                DrawRectOutline(spriteBatch, tab.Bounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+
+                if (isHovered && !locked)
+                {
+                    int hintWidth = Math.Max(0, tab.Bounds.Width - 12);
+                    if (hintWidth > 0)
+                    {
+                        Rectangle dragHint = new(tab.Bounds.X + 6, tab.Bounds.Y + 2, hintWidth, 2);
+                        DrawRect(spriteBatch, dragHint, UIStyle.AccentColor * 0.85f);
+                    }
+                }
+
+                if (isActive)
+                {
+                    Rectangle underline = new(tab.Bounds.X, tab.Bounds.Bottom - 2, tab.Bounds.Width, 2);
+                    DrawRect(spriteBatch, underline, UIStyle.AccentColor);
+                }
+
+                if (tabFont.IsAvailable)
+                {
+                    float textStart = tab.Bounds.X + TabHorizontalPadding;
+                    float availableWidth = tab.Bounds.Width - (TabHorizontalPadding * 2);
+                    if (tab.LockBounds != Rectangle.Empty)
+                    {
+                        availableWidth = Math.Max(0f, tab.LockBounds.X - TabClosePadding - textStart);
+                    }
+                    else if (tab.CloseBounds != Rectangle.Empty)
+                    {
+                        availableWidth = Math.Max(0f, tab.CloseBounds.X - TabClosePadding - textStart);
+                    }
+                    string label = FitTabLabel(tabFont, tabBlock.Title, availableWidth);
+                    if (!string.IsNullOrEmpty(label))
+                    {
+                        Vector2 textSize = tabFont.MeasureString(label);
+                        Vector2 textPosition = new(textStart, tab.Bounds.Y + (tab.Bounds.Height - textSize.Y) / 2f);
+                        tabFont.DrawString(spriteBatch, label, textPosition, textColor);
+                    }
+
+                    if (tab.LockBounds != Rectangle.Empty)
+                    {
+                        DrawLockToggleButton(spriteBatch, tab.LockBounds, tabLocked, lockHovered);
+                    }
+
+                    if (tab.CloseBounds != Rectangle.Empty)
+                    {
+                        if (closeHovered)
+                        {
+                            DrawRect(spriteBatch, tab.CloseBounds, TabCloseHoverTint);
+                        }
+
+                        string closeGlyph = "x";
+                        Vector2 closeSize = tabFont.MeasureString(closeGlyph);
+                        Vector2 closePosition = new(
+                            tab.CloseBounds.X + (tab.CloseBounds.Width - closeSize.X) / 2f,
+                            tab.CloseBounds.Y + (tab.CloseBounds.Height - closeSize.Y) / 2f);
+                        Color closeColor = locked ? UIStyle.MutedTextColor : (closeHovered ? UIStyle.TextColor : UIStyle.MutedTextColor);
+                        tabFont.DrawString(spriteBatch, closeGlyph, closePosition, closeColor);
+                    }
+                }
+            }
+        }
+
+        private static string FitTabLabel(UIStyle.UIFont font, string text, float maxWidth)
+        {
+            if (!font.IsAvailable || string.IsNullOrWhiteSpace(text) || maxWidth <= 0f)
+            {
+                return string.Empty;
+            }
+
+            if (font.MeasureString(text).X <= maxWidth)
+            {
+                return text;
+            }
+
+            const string ellipsis = "...";
+            float ellipsisWidth = font.MeasureString(ellipsis).X;
+            if (ellipsisWidth > maxWidth)
+            {
+                return string.Empty;
+            }
+
+            string trimmed = text;
+            while (trimmed.Length > 0 && font.MeasureString(trimmed).X + ellipsisWidth > maxWidth)
+            {
+                trimmed = trimmed[..^1];
+            }
+
+            return string.Concat(trimmed, ellipsis);
         }
 
         private static Rectangle CenterRectangle(Rectangle reference, Point center)
@@ -1951,7 +3940,7 @@ namespace op.io
 
         private static void DrawBlockContent(SpriteBatch spriteBatch, DockBlock block, int dragBarHeight)
         {
-            Rectangle contentBounds = block.GetContentBounds(dragBarHeight, UIStyle.BlockPadding);
+            Rectangle contentBounds = GetPanelContentBounds(block, dragBarHeight);
 
             switch (block.Kind)
             {
@@ -1972,6 +3961,9 @@ namespace op.io
                     break;
                 case DockBlockKind.Notes:
                     NotesBlock.Draw(spriteBatch, contentBounds);
+                    break;
+                case DockBlockKind.DockingSetups:
+                    DockingSetupsBlock.Draw(spriteBatch, contentBounds);
                     break;
                 case DockBlockKind.Backend:
                     BackendBlock.Draw(spriteBatch, contentBounds);
@@ -2003,7 +3995,7 @@ namespace op.io
                     continue;
                 }
 
-                Rectangle contentBounds = block.GetContentBounds(dragBarHeight, UIStyle.BlockPadding);
+                Rectangle contentBounds = GetPanelContentBounds(block, dragBarHeight);
                 switch (block.Kind)
                 {
                     case DockBlockKind.Notes:
@@ -2020,6 +4012,9 @@ namespace op.io
                         break;
                     case DockBlockKind.Specs:
                         SpecsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
+                    case DockBlockKind.DockingSetups:
+                        DockingSetupsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
                 }
             }
@@ -2102,7 +4097,15 @@ namespace op.io
 
         private static void ClearDockingInteractions()
         {
+            ClearDockingDragState();
+            ClearPressedTabState();
+        }
+
+        private static void ClearDockingDragState()
+        {
             _draggingBlock = null;
+            _draggingPanel = null;
+            _draggingFromTab = false;
             _dropPreview = null;
             _hoveredDragBarId = null;
             _hoveredResizeEdge = null;
@@ -2687,6 +4690,7 @@ namespace op.io
 
             _layoutBounds = GetLayoutBounds(viewport);
             _rootNode?.Arrange(_layoutBounds);
+            LogLayoutIntegrityIssues();
 
             if (DockingModeEnabled)
             {
@@ -2701,10 +4705,148 @@ namespace op.io
             int dragBarHeight = GetActiveDragBarHeight();
             if (TryGetGameBlock(out DockBlock gameBlock) && gameBlock.IsVisible)
             {
-                _gameContentBounds = gameBlock.GetContentBounds(dragBarHeight, UIStyle.BlockPadding);
+                PanelGroup gamePanel = GetPanelGroupForBlock(gameBlock);
+                int groupBarHeight = GetGroupBarHeight(gamePanel);
+                _gameContentBounds = gameBlock.GetContentBounds(dragBarHeight, UIStyle.BlockPadding, groupBarHeight);
             }
 
             _layoutDirty = false;
+        }
+
+        private static void LogLayoutIntegrityIssues()
+        {
+            bool anyVisibleBlocks = AnyBlockVisible();
+            if (_rootNode == null)
+            {
+                if (anyVisibleBlocks)
+                {
+                    LogLayoutIssue("root-missing", $"[DockLayout] Layout root missing while {CountVisibleBlocks()} block(s) are marked visible. LayoutBounds={_layoutBounds}");
+                }
+                else
+                {
+                    ClearLayoutIssue("root-missing");
+                }
+
+                return;
+            }
+
+            ClearLayoutIssue("root-missing");
+
+            HashSet<string> visibleInLayout = new(StringComparer.OrdinalIgnoreCase);
+            CollectVisibleBlocks(_rootNode, visibleInLayout);
+
+            if (anyVisibleBlocks && visibleInLayout.Count == 0)
+            {
+                LogLayoutIssue("layout-empty", $"[DockLayout] Layout arrange produced zero visible nodes. Root={DescribeNode(_rootNode)} LayoutBounds={_layoutBounds}");
+            }
+            else
+            {
+                ClearLayoutIssue("layout-empty");
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null)
+                {
+                    continue;
+                }
+
+                string missingKey = $"missing:{block.Id}";
+                string zeroKey = $"zero:{block.Id}";
+
+                if (!block.IsVisible)
+                {
+                    ClearLayoutIssue(missingKey);
+                    ClearLayoutIssue(zeroKey);
+                    continue;
+                }
+
+                bool inLayout = visibleInLayout.Contains(block.Id);
+                if (!inLayout)
+                {
+                    LogLayoutIssue(missingKey, $"[DockLayout] Visible block '{block.Id}' is not attached to the layout tree. Panel={DescribePanelForBlock(block)} Bounds={block.Bounds} LayoutBounds={_layoutBounds}");
+                    ClearLayoutIssue(zeroKey);
+                    continue;
+                }
+
+                ClearLayoutIssue(missingKey);
+
+                if (block.Bounds.Width <= 0 || block.Bounds.Height <= 0)
+                {
+                    LogLayoutIssue(zeroKey, $"[DockLayout] Visible block '{block.Id}' arranged with zero-area bounds {block.Bounds}. Panel={DescribePanelForBlock(block)} LayoutBounds={_layoutBounds}");
+                }
+                else
+                {
+                    ClearLayoutIssue(zeroKey);
+                }
+            }
+        }
+
+        private static void CollectVisibleBlocks(DockNode node, HashSet<string> visibleIds)
+        {
+            if (node == null || visibleIds == null)
+            {
+                return;
+            }
+
+            if (node is BlockNode blockNode)
+            {
+                DockBlock block = blockNode.Block;
+                if (block != null && block.IsVisible)
+                {
+                    visibleIds.Add(block.Id);
+                }
+
+                return;
+            }
+
+            if (node is SplitNode split)
+            {
+                CollectVisibleBlocks(split.First, visibleIds);
+                CollectVisibleBlocks(split.Second, visibleIds);
+            }
+        }
+
+        private static void LogLayoutIssue(string key, string message)
+        {
+            if (_loggedLayoutIssues.Add(key))
+            {
+                DebugLogger.PrintError(message);
+            }
+        }
+
+        private static void ClearLayoutIssue(string key)
+        {
+            _loggedLayoutIssues.Remove(key);
+        }
+
+        private static int CountVisibleBlocks()
+        {
+            int count = 0;
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block != null && block.IsVisible)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static string DescribePanelForBlock(DockBlock block)
+        {
+            if (block == null)
+            {
+                return "null";
+            }
+
+            if (_blockToPanel.TryGetValue(block.Id, out string panelId) && !string.IsNullOrWhiteSpace(panelId))
+            {
+                return panelId;
+            }
+
+            return "unmapped";
         }
 
         private static void MarkLayoutDirty()
@@ -3159,7 +5301,8 @@ namespace op.io
 
         private static bool TryGetBlockByKind(DockBlockKind kind, out DockBlock block)
         {
-            block = _orderedBlocks.FirstOrDefault(p => p.Kind == kind);
+            block = _orderedBlocks.FirstOrDefault(p => p.Kind == kind && p.IsVisible) ??
+                _orderedBlocks.FirstOrDefault(p => p.Kind == kind);
             return block != null;
         }
 
@@ -3242,6 +5385,36 @@ namespace op.io
             spriteBatch.Draw(_pixelTexture, bottom, color);
             spriteBatch.Draw(_pixelTexture, left, color);
             spriteBatch.Draw(_pixelTexture, right, color);
+        }
+
+        private sealed class PanelGroupBarLayout
+        {
+            public PanelGroupBarLayout(string panelId, Rectangle groupBarBounds)
+            {
+                PanelId = panelId;
+                GroupBarBounds = groupBarBounds;
+                Tabs = new List<TabHitRegion>();
+            }
+
+            public string PanelId { get; }
+            public Rectangle GroupBarBounds { get; }
+            public List<TabHitRegion> Tabs { get; }
+        }
+
+        private readonly struct TabHitRegion
+        {
+            public TabHitRegion(string blockId, Rectangle bounds, Rectangle lockBounds, Rectangle closeBounds)
+            {
+                BlockId = blockId;
+                Bounds = bounds;
+                LockBounds = lockBounds;
+                CloseBounds = closeBounds;
+            }
+
+            public string BlockId { get; }
+            public Rectangle Bounds { get; }
+            public Rectangle LockBounds { get; }
+            public Rectangle CloseBounds { get; }
         }
 
         private enum BlockMenuControlMode
@@ -3331,6 +5504,9 @@ namespace op.io
             public DockEdge Edge;
             public Rectangle HighlightBounds;
             public bool IsViewportSnap;
+            public bool IsTabDrop;
+            public int TabInsertIndex;
+            public string TargetPanelId;
         }
 
         private readonly struct CornerSnapResult

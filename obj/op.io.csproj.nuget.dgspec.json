@@ -63,10 +63,6 @@
               "target": "Package",
               "version": "[3.8.2.1105, )"
             },
-            "Newtonsoft.Json": {
-              "target": "Package",
-              "version": "[13.0.3, )"
-            },
             "System.Data.SQLite": {
               "target": "Package",
               "version": "[1.0.119, )"

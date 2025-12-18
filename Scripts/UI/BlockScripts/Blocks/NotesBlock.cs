@@ -49,7 +49,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int OverlayHeaderHeight = 28;
         private const int OverlayRowHeight = 28;
         private const double CursorBlinkInterval = 0.5;
-        private const double StatusDurationSeconds = 4.0;
+        private const double FeedbackDurationSeconds = 4.0;
         private const int SavePromptWidth = 360;
         private const int SavePromptHeight = 170;
         private const int SavePromptPadding = 16;
@@ -81,7 +81,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly KeyRepeatTracker SavePromptRepeater = new();
 
         private static Rectangle CommandBarBounds;
-        private static Rectangle StatusBounds;
+        private static Rectangle FeedbackBarBounds;
         private static Rectangle TextViewportBounds;
         private static Rectangle OverlayBounds;
         private static Rectangle NoteDropdownBounds;
@@ -104,8 +104,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private static double CursorBlinkTimer;
         private static bool CursorBlinkVisible = true;
 
-        private static double StatusSecondsRemaining;
-        private static string StatusMessage;
+        private static double FeedbackSecondsRemaining;
+        private static string FeedbackMessage;
 
         private static KeyboardState PreviousKeyboardState;
         private static MouseState LastMouseState;
@@ -157,7 +157,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 TextInputRepeater.Reset();
                 UpdateSavePrompt(mouseState, previousMouseState, keyboardState, PreviousKeyboardState, elapsedSeconds);
-                UpdateStatusTimer(gameTime);
+                UpdateFeedbackTimer(gameTime);
                 PreviousKeyboardState = keyboardState;
                 return;
             }
@@ -223,7 +223,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             UpdateCursorBlink(gameTime, editingEnabled);
-            UpdateStatusTimer(gameTime);
+            UpdateFeedbackTimer(gameTime);
 
             PreviousKeyboardState = keyboardState;
         }
@@ -239,6 +239,7 @@ namespace op.io.UI.BlockScripts.Blocks
             UIStyle.UIFont labelFont = UIStyle.FontTech;
             UIStyle.UIFont bodyFont = UIStyle.FontBody;
             UIStyle.UIFont placeholderFont = UIStyle.FontH1;
+            UIStyle.UIFont feedbackFont = UIStyle.FontBody;
 
             if (!labelFont.IsAvailable || !bodyFont.IsAvailable || !headerFont.IsAvailable || !placeholderFont.IsAvailable)
             {
@@ -258,7 +259,7 @@ namespace op.io.UI.BlockScripts.Blocks
             UpdateLayout(contentBounds);
 
             DrawCommandBar(spriteBatch, labelFont, blockLocked);
-            DrawStatusBar(spriteBatch, labelFont);
+            DrawFeedbackBar(spriteBatch, feedbackFont);
 
             if (!blockLocked && ActiveOverlay != OverlayMode.None)
             {
@@ -323,7 +324,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void UpdateLayout(Rectangle contentBounds)
         {
             CommandBarBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, CommandBarHeight);
-            StatusBounds = BlockStatusBarRenderer.CalculateBounds(contentBounds, CommandBarBounds);
+            FeedbackBarBounds = BlockFeedbackBarRenderer.CalculateBounds(contentBounds, CommandBarBounds);
 
             int totalButtonsWidth = CommandOrder.Length * ButtonWidth + Math.Max(0, (CommandOrder.Length - 1) * ButtonSpacing);
             int dropdownHeight = ButtonHeight;
@@ -347,18 +348,18 @@ namespace op.io.UI.BlockScripts.Blocks
 
             OverlayBounds = Rectangle.Empty;
             int overlaySpace = 0;
-            int afterStatusY = (StatusBounds == Rectangle.Empty ? CommandBarBounds.Bottom : StatusBounds.Bottom) + ContentSpacing;
-            int availableHeight = Math.Max(0, contentBounds.Height - (afterStatusY - contentBounds.Y));
+            int afterFeedbackBarY = (FeedbackBarBounds == Rectangle.Empty ? CommandBarBounds.Bottom : FeedbackBarBounds.Bottom) + ContentSpacing;
+            int availableHeight = Math.Max(0, contentBounds.Height - (afterFeedbackBarY - contentBounds.Y));
             if (ActiveOverlay != OverlayMode.None && availableHeight > 0)
             {
                 int overlayHeight = Math.Min(220, availableHeight);
                 overlayHeight = Math.Max(Math.Min(overlayHeight, availableHeight), Math.Min(availableHeight, 140));
                 overlayHeight = Math.Max(0, overlayHeight);
-                OverlayBounds = new Rectangle(contentBounds.X, afterStatusY, contentBounds.Width, overlayHeight);
+                OverlayBounds = new Rectangle(contentBounds.X, afterFeedbackBarY, contentBounds.Width, overlayHeight);
                 overlaySpace = overlayHeight + ContentSpacing;
             }
 
-            int textY = afterStatusY + overlaySpace;
+            int textY = afterFeedbackBarY + overlaySpace;
             int textHeight = Math.Max(0, contentBounds.Bottom - textY);
             TextViewportBounds = new Rectangle(contentBounds.X, textY, contentBounds.Width, textHeight);
         }
@@ -415,16 +416,16 @@ namespace op.io.UI.BlockScripts.Blocks
             switch (command)
             {
                 case NotesCommand.Save:
-                    SetStatusMessage("Create or open a note before saving.");
+                    SetFeedbackMessage("Create or open a note before saving.");
                     break;
                 case NotesCommand.Close:
-                    SetStatusMessage("No active note to close.");
+                    SetFeedbackMessage("No active note to close.");
                     break;
                 case NotesCommand.Delete:
-                    SetStatusMessage("No saved notes to delete.");
+                    SetFeedbackMessage("No saved notes to delete.");
                     break;
                 case NotesCommand.Rename:
-                    SetStatusMessage("Open a note before renaming.");
+                    SetFeedbackMessage("Open a note before renaming.");
                     break;
             }
         }
@@ -840,20 +841,20 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void UpdateStatusTimer(GameTime gameTime)
+        private static void UpdateFeedbackTimer(GameTime gameTime)
         {
-            if (StatusSecondsRemaining <= 0f)
+            if (FeedbackSecondsRemaining <= 0f)
             {
                 return;
             }
 
-            StatusSecondsRemaining = Math.Max(0f, StatusSecondsRemaining - gameTime.ElapsedGameTime.TotalSeconds);
+            FeedbackSecondsRemaining = Math.Max(0f, FeedbackSecondsRemaining - gameTime.ElapsedGameTime.TotalSeconds);
         }
 
-        private static void SetStatusMessage(string message)
+        private static void SetFeedbackMessage(string message)
         {
-            StatusMessage = message;
-            StatusSecondsRemaining = StatusDurationSeconds;
+            FeedbackMessage = message;
+            FeedbackSecondsRemaining = FeedbackDurationSeconds;
         }
 
         private static bool HasActiveNote => !string.IsNullOrWhiteSpace(ActiveNoteName) && !string.IsNullOrWhiteSpace(ActiveNotePath);
@@ -883,7 +884,7 @@ namespace op.io.UI.BlockScripts.Blocks
             IsDirty = false;
             ActiveOverlay = OverlayMode.None;
             VerticalAnchor = -1;
-            SetStatusMessage($"Ready to edit '{fileName}'.");
+            SetFeedbackMessage($"Ready to edit '{fileName}'.");
         }
 
         private static void ClearActiveNoteState()
@@ -903,14 +904,14 @@ namespace op.io.UI.BlockScripts.Blocks
             CloseSavePrompt();
             if (!HasActiveNote)
             {
-                SetStatusMessage("No active note to close.");
+                SetFeedbackMessage("No active note to close.");
                 return;
             }
 
             bool hadChanges = IsDirty;
             ClearActiveNoteState();
             ActiveOverlay = OverlayMode.None;
-            SetStatusMessage(hadChanges ? "Closed note without saving." : "Closed note.");
+            SetFeedbackMessage(hadChanges ? "Closed note without saving." : "Closed note.");
         }
 
         private static string GenerateDefaultNoteName()
@@ -930,7 +931,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (!HasActiveNote)
             {
-                SetStatusMessage("Create or open a note before saving.");
+                SetFeedbackMessage("Create or open a note before saving.");
                 return;
             }
 
@@ -952,7 +953,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (!HasActiveNote)
             {
-                SetStatusMessage("Open a note before renaming.");
+                SetFeedbackMessage("Open a note before renaming.");
                 return;
             }
 
@@ -963,7 +964,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (string.IsNullOrWhiteSpace(noteName) || string.IsNullOrWhiteSpace(targetPath))
             {
-                SetStatusMessage("Enter a name for the note.");
+                SetFeedbackMessage("Enter a name for the note.");
                 return;
             }
 
@@ -979,12 +980,12 @@ namespace op.io.UI.BlockScripts.Blocks
                 IsDirty = false;
                 NoteListDirty = true;
                 PersistLastOpenedNote(ActiveNoteName);
-                SetStatusMessage($"Saved '{noteName}'.");
+                SetFeedbackMessage($"Saved '{noteName}'.");
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to save note '{targetPath}': {ex.Message}");
-                SetStatusMessage("Failed to save note.");
+                SetFeedbackMessage("Failed to save note.");
             }
         }
 
@@ -1091,7 +1092,7 @@ namespace op.io.UI.BlockScripts.Blocks
             string sanitized = SanitizeNoteName(SavePrompt.Buffer);
             if (string.IsNullOrWhiteSpace(sanitized))
             {
-                SetStatusMessage("Enter a name for the note.");
+                SetFeedbackMessage("Enter a name for the note.");
                 return;
             }
 
@@ -1112,7 +1113,7 @@ namespace op.io.UI.BlockScripts.Blocks
             bool switchingTarget = !string.Equals(targetPath, ActiveNotePath, StringComparison.OrdinalIgnoreCase);
             if (switchingTarget && targetExists)
             {
-                SetStatusMessage("A note with that name already exists.");
+                SetFeedbackMessage("A note with that name already exists.");
                 return;
             }
 
@@ -1126,14 +1127,14 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (!HasActiveNote)
             {
-                SetStatusMessage("Open a note before renaming.");
+                SetFeedbackMessage("Open a note before renaming.");
                 return;
             }
 
             bool pathUnchanged = string.Equals(targetPath, ActiveNotePath, StringComparison.OrdinalIgnoreCase);
             if (!pathUnchanged && File.Exists(targetPath))
             {
-                SetStatusMessage("A note with that name already exists.");
+                SetFeedbackMessage("A note with that name already exists.");
                 return;
             }
 
@@ -1154,15 +1155,15 @@ namespace op.io.UI.BlockScripts.Blocks
                 NoteListDirty = true;
                 PersistLastOpenedNote(ActiveNoteName);
 
-                string status = pathUnchanged
+                string feedbackMessage = pathUnchanged
                     ? "Name unchanged."
                     : $"Renamed '{previousName}' to '{noteName}'.";
-                SetStatusMessage(status);
+                SetFeedbackMessage(feedbackMessage);
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to rename note '{previousPath}' to '{targetPath}': {ex.Message}");
-                SetStatusMessage("Failed to rename note.");
+                SetFeedbackMessage("Failed to rename note.");
             }
         }
 
@@ -1289,13 +1290,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 PersistLastOpenedNote(entry.DisplayName);
                 if (announce)
                 {
-                    SetStatusMessage($"Opened '{entry.DisplayName}'.");
+                    SetFeedbackMessage($"Opened '{entry.DisplayName}'.");
                 }
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to open note '{entry.FullPath}': {ex.Message}");
-                SetStatusMessage("Failed to open note.");
+                SetFeedbackMessage("Failed to open note.");
             }
         }
 
@@ -1317,20 +1318,20 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 NoteListDirty = true;
                 ActiveOverlay = OverlayMode.None;
-                string status = $"Deleted '{entry.DisplayName}'.";
+                string feedbackMessage = $"Deleted '{entry.DisplayName}'.";
                 if (!HasActiveNote)
                 {
-                    TryOpenNextAvailableNote(nextNotePath, status);
+                    TryOpenNextAvailableNote(nextNotePath, feedbackMessage);
                 }
                 else
                 {
-                    SetStatusMessage(status);
+                    SetFeedbackMessage(feedbackMessage);
                 }
             }
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to delete note '{entry.FullPath}': {ex.Message}");
-                SetStatusMessage("Failed to delete note.");
+                SetFeedbackMessage("Failed to delete note.");
             }
         }
 
@@ -1358,15 +1359,15 @@ namespace op.io.UI.BlockScripts.Blocks
             return NoteFiles[0].FullPath;
         }
 
-        private static void TryOpenNextAvailableNote(string preferredPath, string prefixStatus)
+        private static void TryOpenNextAvailableNote(string preferredPath, string prefixFeedback)
         {
             EnsureNoteList();
             if (NoteFiles.Count == 0)
             {
                 ClearLastNotePreference();
-                if (!string.IsNullOrWhiteSpace(prefixStatus))
+                if (!string.IsNullOrWhiteSpace(prefixFeedback))
                 {
-                    SetStatusMessage(prefixStatus);
+                    SetFeedbackMessage(prefixFeedback);
                 }
 
                 return;
@@ -1379,13 +1380,13 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             LoadNote(next, announce: false);
-            if (!string.IsNullOrWhiteSpace(prefixStatus))
+            if (!string.IsNullOrWhiteSpace(prefixFeedback))
             {
-                SetStatusMessage($"{prefixStatus} Opened '{next.DisplayName}'.");
+                SetFeedbackMessage($"{prefixFeedback} Opened '{next.DisplayName}'.");
             }
             else
             {
-                SetStatusMessage($"Opened '{next.DisplayName}'.");
+                SetFeedbackMessage($"Opened '{next.DisplayName}'.");
             }
         }
 
@@ -1657,22 +1658,22 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawStatusBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
+        private static void DrawFeedbackBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
-            if (!TryGetStatusLabel(out string message, out Color color))
+            if (!TryGetFeedbackLabel(out string message, out Color color))
             {
                 return;
             }
 
-            BlockStatusBarRenderer.Draw(spriteBatch, StatusBounds, font, message, color);
+            BlockFeedbackBarRenderer.Draw(spriteBatch, FeedbackBarBounds, font, message, color);
         }
 
-        private static bool TryGetStatusLabel(out string message, out Color color)
+        private static bool TryGetFeedbackLabel(out string message, out Color color)
         {
-            bool hasStatus = StatusSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(StatusMessage);
-            if (hasStatus)
+            bool hasFeedback = FeedbackSecondsRemaining > 0f && !string.IsNullOrWhiteSpace(FeedbackMessage);
+            if (hasFeedback)
             {
-                message = StatusMessage;
+                message = FeedbackMessage;
                 color = UIStyle.TextColor;
                 return true;
             }
