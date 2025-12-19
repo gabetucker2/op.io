@@ -959,13 +959,14 @@ namespace op.io.UI.BlockScripts.Blocks
             return true;
         }
 
-        public static bool TryApplyNextSetup() => TryApplyAdjacentSetup(1);
+        public static bool TryApplyNextSetup(bool allowWhileLocked = false) => TryApplyAdjacentSetup(1, allowWhileLocked);
 
-        public static bool TryApplyPreviousSetup() => TryApplyAdjacentSetup(-1);
+        public static bool TryApplyPreviousSetup(bool allowWhileLocked = false) => TryApplyAdjacentSetup(-1, allowWhileLocked);
 
-        private static bool TryApplyAdjacentSetup(int direction)
+        private static bool TryApplyAdjacentSetup(int direction, bool allowWhileLocked)
         {
-            if (BlockManager.IsBlockLocked(DockBlockKind.DockingSetups))
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.DockingSetups);
+            if (blockLocked && !allowWhileLocked)
             {
                 SetFeedbackMessage("Docking setups locked.");
                 return false;

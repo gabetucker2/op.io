@@ -40,7 +40,9 @@ namespace op.io
             ["Control"] = new[] { Keys.LeftControl, Keys.RightControl },
             ["Ctrl"] = new[] { Keys.LeftControl, Keys.RightControl },
             ["Shift"] = new[] { Keys.LeftShift, Keys.RightShift },
-            ["Alt"] = new[] { Keys.LeftAlt, Keys.RightAlt }
+            ["Alt"] = new[] { Keys.LeftAlt, Keys.RightAlt },
+            ["["] = new[] { Keys.OemOpenBrackets },
+            ["]"] = new[] { Keys.OemCloseBrackets }
         };
 
         private static readonly Dictionary<string, float> _lastMouseSwitchTime = new();
@@ -574,7 +576,7 @@ namespace op.io
                 return true;
             }
 
-            if (Enum.TryParse(primaryToken, true, out Keys parsedKey))
+            if (TryParseTokenToKey(primaryToken, out Keys parsedKey))
             {
                 _keySwitchStates[parsedKey] = state;
                 return true;
@@ -755,7 +757,7 @@ namespace op.io
                 _mouseSwitchStates[primaryToken] = state;
                 updated = true;
             }
-            else if (Enum.TryParse(primaryToken, true, out Keys parsedKey))
+            else if (TryParseTokenToKey(primaryToken, out Keys parsedKey))
             {
                 _keySwitchStates[parsedKey] = state;
                 if (!_lastKeySwitchTime.ContainsKey(parsedKey))
@@ -1051,6 +1053,24 @@ namespace op.io
                     yield return key;
                 }
             }
+        }
+
+        private static bool TryParseTokenToKey(string token, out Keys parsedKey)
+        {
+            parsedKey = Keys.None;
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
+
+            if (_tokenKeyAliases.TryGetValue(token, out Keys[] aliasKeys) && aliasKeys is { Length: > 0 })
+            {
+                parsedKey = aliasKeys[0];
+                return true;
+            }
+
+            return Enum.TryParse(token, true, out parsedKey);
         }
 
         private static IEnumerable<Keys> ParseTokenToKeys(string token)

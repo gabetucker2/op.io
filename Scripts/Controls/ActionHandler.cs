@@ -46,11 +46,11 @@ namespace op.io
 
             if (InputManager.IsInputActive(ControlKeyMigrations.PreviousConfigurationKey))
             {
-                DockingSetupsBlock.TryApplyPreviousSetup();
+                DockingSetupsBlock.TryApplyPreviousSetup(allowWhileLocked: true);
             }
             else if (InputManager.IsInputActive(ControlKeyMigrations.NextConfigurationKey))
             {
-                DockingSetupsBlock.TryApplyNextSetup();
+                DockingSetupsBlock.TryApplyNextSetup(allowWhileLocked: true);
             }
         }
 

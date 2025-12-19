@@ -30,6 +30,16 @@ namespace op.io
             ["Control"] = new[] { Keys.LeftControl, Keys.RightControl },
             ["Alt"] = new[] { Keys.LeftAlt, Keys.RightAlt }
         };
+        private static readonly Dictionary<string, Keys[]> _symbolAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["["] = new[] { Keys.OemOpenBrackets },
+            ["]"] = new[] { Keys.OemCloseBrackets }
+        };
+        private static readonly Dictionary<Keys, string> _symbolKeyLabels = new()
+        {
+            { Keys.OemOpenBrackets, "[" },
+            { Keys.OemCloseBrackets, "]" }
+        };
 
         private static bool IsSwitchType(InputType inputType) =>
             inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
@@ -609,6 +619,10 @@ namespace op.io
                     case Keys.RightAlt:
                         return "Alt";
                     default:
+                        if (_symbolKeyLabels.TryGetValue(key, out string symbolLabel))
+                        {
+                            return symbolLabel;
+                        }
                         string label = NormalizeLabel(key.ToString());
                         if (!string.IsNullOrWhiteSpace(label))
                         {
@@ -688,6 +702,12 @@ namespace op.io
             if (_modifierAliases.TryGetValue(token, out Keys[] aliasKeys))
             {
                 bindingToken = InputBindingToken.CreateKeyboard(aliasKeys, NormalizeLabel(token));
+                return true;
+            }
+
+            if (_symbolAliases.TryGetValue(token, out Keys[] symbolKeys))
+            {
+                bindingToken = InputBindingToken.CreateKeyboard(symbolKeys, NormalizeLabel(token));
                 return true;
             }
 
