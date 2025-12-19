@@ -21,6 +21,8 @@ INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('DebugMode', 
 INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('AllowGameInputFreeze', 14);
 INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('TransparentTabBlocking', 15);
 INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('HoldInputs', 16);
+INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('UsePreviousConfiguration', 17);
+INSERT OR REPLACE INTO BlockControls (RowKey, RenderOrder) VALUES ('UseNextConfiguration', 18);
 
 -----------------------------------------------------------------------
 -- Backend block
@@ -213,8 +215,8 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('__ActiveSet
 INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '{
   "version": 3,
   "menu": [
-    { "kind": "Blank", "mode": "Count", "count": 1, "visible": true },
-    { "kind": "Transparent", "mode": "Count", "count": 1, "visible": true },
+    { "kind": "Blank", "mode": "Count", "count": 0, "visible": false },
+    { "kind": "Transparent", "mode": "Count", "count": 0, "visible": false },
     { "kind": "Game", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Properties", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "ColorScheme", "mode": "Toggle", "count": 0, "visible": true },

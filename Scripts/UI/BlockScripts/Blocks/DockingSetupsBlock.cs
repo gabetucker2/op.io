@@ -958,6 +958,45 @@ namespace op.io.UI.BlockScripts.Blocks
             SetFeedbackMessage($"Loaded '{SelectedSetupName}'.");
             return true;
         }
+
+        public static bool TryApplyNextSetup() => TryApplyAdjacentSetup(1);
+
+        public static bool TryApplyPreviousSetup() => TryApplyAdjacentSetup(-1);
+
+        private static bool TryApplyAdjacentSetup(int direction)
+        {
+            if (BlockManager.IsBlockLocked(DockBlockKind.DockingSetups))
+            {
+                SetFeedbackMessage("Docking setups locked.");
+                return false;
+            }
+
+            EnsureSetupList();
+            EnsureSelectionInitialized();
+
+            if (SetupEntries.Count == 0)
+            {
+                SetFeedbackMessage("No saved setups.");
+                return false;
+            }
+
+            int currentIndex = SetupEntries.FindIndex(entry => string.Equals(entry.Name, SelectedSetupName, StringComparison.OrdinalIgnoreCase));
+            if (currentIndex < 0)
+            {
+                currentIndex = 0;
+                SelectedSetupName = SetupEntries[currentIndex].Name;
+            }
+
+            int targetIndex = (currentIndex + direction) % SetupEntries.Count;
+            if (targetIndex < 0)
+            {
+                targetIndex += SetupEntries.Count;
+            }
+
+            string targetName = SetupEntries[targetIndex].Name;
+            return SelectSetup(targetName, applyLayout: true);
+        }
+
         private static void EnsureSetupList()
         {
             if (!SetupListDirty)

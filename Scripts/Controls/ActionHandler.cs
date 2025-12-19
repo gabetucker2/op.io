@@ -43,6 +43,15 @@ namespace op.io
             {
                 DebugLogger.PrintUI("ReturnCursorToPlayer input not active.");
             }
+
+            if (InputManager.IsInputActive(ControlKeyMigrations.PreviousConfigurationKey))
+            {
+                DockingSetupsBlock.TryApplyPreviousSetup();
+            }
+            else if (InputManager.IsInputActive(ControlKeyMigrations.NextConfigurationKey))
+            {
+                DockingSetupsBlock.TryApplyNextSetup();
+            }
         }
 
         public static void Move(GameObject gameObject, Vector2 direction, float speed)

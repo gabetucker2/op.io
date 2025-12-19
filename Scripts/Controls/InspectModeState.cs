@@ -1,4 +1,6 @@
 using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace op.io
 {
@@ -9,28 +11,78 @@ namespace op.io
         private static InspectableObjectInfo _hovered;
         private static InspectableObjectInfo _locked;
         private static bool _inspectModeEnabled;
+        private static bool _suppressHoverUntilPointerMoves;
+        private static Point _lastCursorPosition;
 
         public static bool InspectModeEnabled => _inspectModeEnabled;
         public static bool IsNonMetaSuppressed => _inspectModeEnabled;
+        public static bool HasLockedTarget => _locked != null;
 
         public static void ApplyInspectModeState(bool enabled)
         {
+            if (_inspectModeEnabled == enabled)
+            {
+                return;
+            }
+
             _inspectModeEnabled = enabled;
+
+            if (!_inspectModeEnabled)
+            {
+                _hovered = null;
+                _suppressHoverUntilPointerMoves = true;
+                _lastCursorPosition = Mouse.GetState().Position;
+            }
+            else
+            {
+                _suppressHoverUntilPointerMoves = false;
+            }
         }
 
-        public static void UpdateHovered(InspectableObjectInfo hovered)
+        public static void UpdateHovered(InspectableObjectInfo hovered, Point cursorPosition, bool allowNullOverride = true)
         {
+            if (_suppressHoverUntilPointerMoves)
+            {
+                if (cursorPosition == _lastCursorPosition)
+                {
+                    if (allowNullOverride)
+                    {
+                        _hovered = null;
+                    }
+                    return;
+                }
+
+                _suppressHoverUntilPointerMoves = false;
+            }
+
+            _lastCursorPosition = cursorPosition;
+
+            if (!allowNullOverride && hovered == null && _hovered != null)
+            {
+                return;
+            }
+
             _hovered = hovered;
         }
 
         public static void LockHovered()
         {
-            if (!_inspectModeEnabled || _hovered == null)
+            if (!_inspectModeEnabled || _hovered == null || !_hovered.IsValid)
             {
                 return;
             }
 
-            _locked = _hovered.Clone();
+            LockTarget(_hovered);
+        }
+
+        public static void LockTarget(InspectableObjectInfo target)
+        {
+            if (target == null || !target.IsValid)
+            {
+                return;
+            }
+
+            _locked = target.Clone();
         }
 
         public static void ClearLock()
@@ -59,10 +111,21 @@ namespace op.io
             }
 
             _locked.Refresh();
-            if (!_locked.IsValid)
+        }
+
+        public static bool IsTargetLocked(InspectableObjectInfo target)
+        {
+            if (target == null || _locked == null)
             {
-                _locked = null;
+                return false;
             }
+
+            if (_locked.Source != null && target.Source != null)
+            {
+                return ReferenceEquals(_locked.Source, target.Source);
+            }
+
+            return _locked.Id == target.Id && target.Id != 0;
         }
     }
 }

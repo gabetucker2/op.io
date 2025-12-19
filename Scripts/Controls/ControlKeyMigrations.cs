@@ -9,9 +9,11 @@ namespace op.io
         internal const string BlockMenuKey = "BlockMenu";
         internal const string LegacyPanelMenuKey = "PanelMenu";
         internal const string HoldInputsKey = "HoldInputs";
+        internal const string NextConfigurationKey = "UseNextConfiguration";
+        internal const string PreviousConfigurationKey = "UsePreviousConfiguration";
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
         private static bool _applied;
-        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey];
+        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey, NextConfigurationKey, PreviousConfigurationKey];
 
         public static void EnsureApplied()
         {
@@ -33,6 +35,7 @@ namespace op.io
                 EnsureTransparentTabBlockingControl();
                 EnsureHoldInputsControl();
                 EnsureInspectModeControl();
+                EnsureConfigurationCycleControls();
                 EnsureLockModeColumn();
                 MigrateLegacySwitchType();
                 EnsureMetaControlColumn();
@@ -163,6 +166,30 @@ WHERE SettingKey = @legacyKey;";
             ControlKeyData.SetInputType(InspectModeState.InspectModeKey, "NoSaveSwitch");
             ControlKeyData.EnsureSwitchStartState(InspectModeState.InspectModeKey, 0);
             ControlKeyData.EnsureInputKey(InspectModeState.InspectModeKey, "Shift + I");
+        }
+
+        private static void EnsureConfigurationCycleControls()
+        {
+            EnsureConfigurationControl(PreviousConfigurationKey, "[", 17);
+            EnsureConfigurationControl(NextConfigurationKey, "]", 18);
+        }
+
+        private static void EnsureConfigurationControl(string settingKey, string defaultInput, int renderOrder)
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = settingKey,
+                InputKey = defaultInput,
+                InputType = "Trigger",
+                SwitchStartState = 0,
+                MetaControl = true,
+                RenderOrder = renderOrder,
+                LockMode = false
+            });
+
+            ControlKeyData.SetInputType(settingKey, "Trigger");
+            ControlKeyData.ClearSwitchStartState(settingKey);
+            ControlKeyData.EnsureInputKey(settingKey, defaultInput);
         }
 
         private static void EnsureCrouchUsesNoSaveSwitch()

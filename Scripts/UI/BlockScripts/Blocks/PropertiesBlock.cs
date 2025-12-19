@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io.UI.BlockScripts.Blocks
 {
@@ -17,25 +18,31 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ButtonHeight = 32;
         private const int HeaderSpacing = 6;
         private const int RowSpacing = 4;
+        private const int LockButtonSize = 44;
+        private const int LockButtonPadding = 8;
 
         private static Texture2D _pixel;
+        private static Texture2D _lockedIcon;
+        private static Texture2D _unlockedIcon;
         private static MouseState _lastMouseState;
         private static readonly Dictionary<Shape, Texture2D> PreviewCache = new();
 
         private readonly struct PropertiesLayout
         {
-            public PropertiesLayout(Rectangle inspectButton, Rectangle modeLabel, Rectangle previewBounds, Rectangle detailsBounds)
+            public PropertiesLayout(Rectangle inspectButton, Rectangle modeLabel, Rectangle previewBounds, Rectangle detailsBounds, Rectangle lockButtonBounds)
             {
                 InspectButton = inspectButton;
                 ModeLabel = modeLabel;
                 PreviewBounds = previewBounds;
                 DetailsBounds = detailsBounds;
+                LockButtonBounds = lockButtonBounds;
             }
 
             public Rectangle InspectButton { get; }
             public Rectangle ModeLabel { get; }
             public Rectangle PreviewBounds { get; }
             public Rectangle DetailsBounds { get; }
+            public Rectangle LockButtonBounds { get; }
         }
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
@@ -46,23 +53,54 @@ namespace op.io.UI.BlockScripts.Blocks
                 previousMouseState.LeftButton == ButtonState.Pressed;
 
             InspectableObjectInfo hovered = null;
-            if (BlockManager.IsCursorWithinGameBlock())
+            bool cursorInGameBlock = BlockManager.IsCursorWithinGameBlock();
+            if (cursorInGameBlock)
             {
                 Vector2 gameCursor = MouseFunctions.GetMousePosition();
                 hovered = GameObjectInspector.FindHoveredObject(gameCursor);
             }
 
-            InspectModeState.UpdateHovered(hovered);
+            InspectModeState.UpdateHovered(hovered, mouseState.Position, allowNullOverride: cursorInGameBlock);
             InspectModeState.ValidateLockStillValid();
 
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Properties);
-            if (!blockLocked && leftClickReleased && layout.InspectButton.Contains(mouseState.Position))
+            InspectableObjectInfo activeTarget = InspectModeState.GetActiveTarget();
+            bool hasActiveTarget = activeTarget != null;
+            bool lockButtonHovered = hasActiveTarget && layout.LockButtonBounds.Contains(mouseState.Position);
+            bool lockButtonClicked = !blockLocked && lockButtonHovered && leftClickReleased;
+
+            if (lockButtonClicked)
             {
-                InspectModeState.ClearLock();
+                if (InspectModeState.IsTargetLocked(activeTarget))
+                {
+                    InspectModeState.ClearLock();
+                }
+                else if (activeTarget != null && activeTarget.IsValid)
+                {
+                    InspectModeState.LockTarget(activeTarget);
+                }
             }
-            else if (!blockLocked && leftClickReleased && InspectModeState.InspectModeEnabled && hovered != null)
+            else if (!blockLocked && leftClickReleased)
             {
-                InspectModeState.LockHovered();
+                bool clickedInspectButton = layout.InspectButton.Contains(mouseState.Position);
+                if (clickedInspectButton)
+                {
+                    if (!InspectModeState.HasLockedTarget)
+                    {
+                        InspectModeState.ClearLock();
+                    }
+                }
+                else if (InspectModeState.InspectModeEnabled && !InspectModeState.HasLockedTarget)
+                {
+                    if (hovered != null)
+                    {
+                        InspectModeState.LockHovered();
+                    }
+                    else
+                    {
+                        InspectModeState.ClearLock();
+                    }
+                }
             }
         }
 
@@ -89,13 +127,21 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawModeBadge(spriteBatch, layout.ModeLabel);
 
             InspectableObjectInfo target = InspectModeState.GetActiveTarget();
+            bool lockHovered = layout.LockButtonBounds.Contains(_lastMouseState.Position);
+            bool targetLocked = InspectModeState.IsTargetLocked(target);
+
             if (target == null || !target.IsValid)
             {
                 DrawEmptyState(spriteBatch, layout);
+                if (InspectModeState.HasLockedTarget)
+                {
+                    DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
+                }
                 return;
             }
 
             DrawPreview(spriteBatch, layout.PreviewBounds, target);
+            DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
             DrawDetails(spriteBatch, layout.DetailsBounds, target);
         }
 
@@ -122,7 +168,22 @@ namespace op.io.UI.BlockScripts.Blocks
                 : Math.Max(0, infoArea.Width - previewBounds.Width - Padding);
             Rectangle detailsBounds = new(detailsX, infoArea.Y, detailsWidth, infoArea.Height);
 
-            return new PropertiesLayout(inspectButton, modeLabel, previewBounds, detailsBounds);
+            Rectangle lockButtonBounds = Rectangle.Empty;
+            if (previewBounds != Rectangle.Empty)
+            {
+                int maxSize = Math.Min(LockButtonSize, Math.Min(previewBounds.Width, previewBounds.Height));
+                int availableHeight = Math.Max(0, previewBounds.Height - (LockButtonPadding * 2));
+                maxSize = Math.Min(maxSize, availableHeight);
+
+                if (maxSize > 0)
+                {
+                    int x = Math.Max(previewBounds.Right - maxSize - LockButtonPadding, previewBounds.X);
+                    int y = previewBounds.Y + LockButtonPadding;
+                    lockButtonBounds = new Rectangle(x, y, maxSize, maxSize);
+                }
+            }
+
+            return new PropertiesLayout(inspectButton, modeLabel, previewBounds, detailsBounds, lockButtonBounds);
         }
 
         private static void EnsureResources(GraphicsDevice graphicsDevice)
@@ -186,7 +247,7 @@ namespace op.io.UI.BlockScripts.Blocks
             tech.DrawString(spriteBatch, hoverText, new Vector2(details.X, y), UIStyle.MutedTextColor);
             y += tech.LineHeight + RowSpacing;
 
-            string lockText = "Enable inspect mode to click-lock a target.";
+            string lockText = "Click the lock on the preview to pin the target.";
             tech.DrawString(spriteBatch, lockText, new Vector2(details.X, y), UIStyle.MutedTextColor);
 
             if (layout.PreviewBounds != Rectangle.Empty)
@@ -218,6 +279,76 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             DrawRectOutline(spriteBatch, previewBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+        }
+
+        private static void DrawLockToggle(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered, bool disabled)
+        {
+            if (bounds == Rectangle.Empty || _pixel == null)
+            {
+                return;
+            }
+
+            bool activeHover = hovered && !disabled;
+            Color fill = isLocked
+                ? (activeHover ? ColorPalette.LockLockedHoverFill : ColorPalette.LockLockedFill)
+                : (activeHover ? ColorPalette.LockUnlockedHoverFill : ColorPalette.LockUnlockedFill);
+            Color border = isLocked
+                ? (activeHover ? UIStyle.AccentColor : UIStyle.BlockBorder)
+                : UIStyle.AccentColor;
+
+            if (disabled)
+            {
+                fill *= 0.55f;
+                border *= 0.55f;
+            }
+
+            DrawRect(spriteBatch, bounds, fill);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+
+            Texture2D icon = GetLockIcon(isLocked);
+            if (icon != null && !icon.IsDisposed)
+            {
+                Vector2 center = new(bounds.Center.X, bounds.Center.Y);
+                Vector2 origin = new(icon.Width / 2f, icon.Height / 2f);
+                float scale = Math.Min((bounds.Width - 8f) / (float)icon.Width, (bounds.Height - 8f) / (float)icon.Height);
+                scale = Math.Max(0.1f, scale);
+                Color tint = disabled ? Color.White * 0.65f : Color.White;
+                spriteBatch.Draw(icon, center, null, tint, 0f, origin, scale, SpriteEffects.None, 0f);
+                return;
+            }
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable)
+            {
+                return;
+            }
+
+            string glyph = isLocked ? "L" : "U";
+            Color glyphColor = disabled ? UIStyle.MutedTextColor : Color.White;
+            Vector2 glyphSize = glyphFont.MeasureString(glyph);
+            Vector2 glyphPosition = new(
+                bounds.X + (bounds.Width - glyphSize.X) / 2f,
+                bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
+            glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
+        }
+
+        private static Texture2D GetLockIcon(bool isLocked)
+        {
+            EnsureLockIcons();
+            return isLocked ? _lockedIcon : _unlockedIcon;
+        }
+
+        private static void EnsureLockIcons()
+        {
+            if (_lockedIcon == null || _lockedIcon.IsDisposed)
+            {
+                _lockedIcon = BlockIconProvider.GetIcon("Icon_Locked.png");
+            }
+
+            if (_unlockedIcon == null || _unlockedIcon.IsDisposed)
+            {
+                _unlockedIcon = BlockIconProvider.GetIcon("Icon_Unlocked.png");
+            }
         }
 
         private static void DrawDetails(SpriteBatch spriteBatch, Rectangle bounds, InspectableObjectInfo target)
