@@ -62,8 +62,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const float SavePromptFallbackHelperHeight = 20f;
         private const string LastNoteRowKey = "__LastNote";
 
-        private static readonly string ProjectRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
-        private static readonly string NotesDirectory = Path.Combine(ProjectRoot, "UserNotes");
+        private static readonly string NotesDirectory = NotesFileSystem.NotesDirectoryPath;
         private static readonly NotesCommand[] CommandOrder = new[]
         {
             NotesCommand.Save,

@@ -1,2 +1,1 @@
-﻿* First do the thing.
-* Then do the other thing
+﻿Write here

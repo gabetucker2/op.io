@@ -1916,37 +1916,160 @@ namespace op.io
                 return layout;
             }
 
+            static int CalculateIconMinWidth(bool showCloseButtons, bool showLockButtons, bool showUngroupButtons)
+            {
+                int width = TabHorizontalPadding * 2;
+                bool hasIcon = false;
+
+                if (showCloseButtons)
+                {
+                    width += TabCloseSize;
+                    hasIcon = true;
+                }
+
+                if (showLockButtons)
+                {
+                    if (hasIcon)
+                    {
+                        width += TabClosePadding;
+                    }
+
+                    width += TabLockSize;
+                    hasIcon = true;
+                }
+
+                if (showUngroupButtons)
+                {
+                    if (hasIcon)
+                    {
+                        width += TabClosePadding;
+                    }
+
+                    width += TabUngroupSize;
+                }
+
+                return width;
+            }
+
+            static void TopUpWidths(IList<int> widths, int targetWidth, ref int remainingWidth)
+            {
+                if (widths == null || widths.Count == 0 || targetWidth <= 0 || remainingWidth <= 0)
+                {
+                    return;
+                }
+
+                bool progressed = true;
+                while (remainingWidth > 0 && progressed)
+                {
+                    progressed = false;
+                    for (int i = 0; i < widths.Count && remainingWidth > 0; i++)
+                    {
+                        if (widths[i] >= targetWidth)
+                        {
+                            continue;
+                        }
+
+                        int needed = targetWidth - widths[i];
+                        int share = Math.Max(1, remainingWidth / Math.Max(1, widths.Count - i));
+                        int grant = Math.Min(needed, Math.Min(share, remainingWidth));
+                        if (grant <= 0)
+                        {
+                            continue;
+                        }
+
+                        widths[i] += grant;
+                        remainingWidth -= grant;
+                        progressed = true;
+                    }
+                }
+            }
+
+            static void TopUpWidthsToTargets(IList<int> widths, IReadOnlyList<int> targets, ref int remainingWidth)
+            {
+                if (widths == null || targets == null || widths.Count == 0 || targets.Count == 0 || remainingWidth <= 0)
+                {
+                    return;
+                }
+
+                int count = Math.Min(widths.Count, targets.Count);
+                bool progressed = true;
+                while (remainingWidth > 0 && progressed)
+                {
+                    progressed = false;
+                    for (int i = 0; i < count && remainingWidth > 0; i++)
+                    {
+                        int target = targets[i];
+                        if (widths[i] >= target)
+                        {
+                            continue;
+                        }
+
+                        int needed = target - widths[i];
+                        int share = Math.Max(1, remainingWidth / Math.Max(1, count - i));
+                        int grant = Math.Min(needed, Math.Min(share, remainingWidth));
+                        if (grant <= 0)
+                        {
+                            continue;
+                        }
+
+                        widths[i] += grant;
+                        remainingWidth -= grant;
+                        progressed = true;
+                    }
+                }
+            }
+
             UIStyle.UIFont tabFont = UIStyle.FontTech;
             bool panelLocked = IsPanelLocked(group);
             bool showLockButtons = DockingModeEnabled && !panelLocked;
             bool showCloseButtons = DockingModeEnabled && !panelLocked;
             bool showUngroupButtons = showLockButtons && group.Blocks.Count > 1;
-            int availableWidth = Math.Max(0, groupBarBounds.Width - (TabSpacing * Math.Max(0, group.Blocks.Count - 1)) - (TabHorizontalPadding * 2));
-            int x = groupBarBounds.X + TabHorizontalPadding;
-            int height = Math.Max(0, groupBarBounds.Height - (TabVerticalPadding * 2));
-            int count = Math.Max(1, group.Blocks.Count);
-            int fallbackWidth = Math.Max(TabMinWidth, availableWidth / count);
+            int tabCount = group.Blocks.Count;
+            int availableWidth = Math.Max(0, groupBarBounds.Width - (TabSpacing * Math.Max(0, tabCount - 1)) - (TabHorizontalPadding * 2));
+            int iconMinWidth = CalculateIconMinWidth(showCloseButtons, showLockButtons, showUngroupButtons);
+            int comfortableMinWidth = Math.Max(iconMinWidth, TabMinWidth);
+            int baseWidth = tabCount > 0 ? (int)Math.Floor(Math.Min(iconMinWidth, availableWidth / (double)tabCount)) : 0;
+            baseWidth = Math.Max(0, baseWidth);
+            int remainingWidth = Math.Max(0, availableWidth - (baseWidth * tabCount));
 
+            List<int> tabWidths = new(tabCount);
+            List<int> textWidths = new(tabCount);
             foreach (DockBlock tabBlock in group.Blocks)
             {
+                tabWidths.Add(baseWidth);
                 int measuredText = tabFont.IsAvailable ? (int)Math.Ceiling(tabFont.MeasureString(tabBlock.Title).X) : 0;
-                int minButtonWidth = TabHorizontalPadding * 2;
-                if (showCloseButtons)
-                {
-                    minButtonWidth += TabCloseSize + TabClosePadding;
-                }
-                if (showLockButtons)
-                {
-                    minButtonWidth += TabLockSize + TabClosePadding;
-                }
-                if (showUngroupButtons)
-                {
-                    minButtonWidth += TabUngroupSize + TabClosePadding;
-                }
+                textWidths.Add(Math.Max(0, measuredText));
+            }
 
-                int measured = measuredText + minButtonWidth;
-                int targetWidth = Math.Max(minButtonWidth, Math.Max(fallbackWidth, Math.Min(measured, Math.Max(TabMinWidth, availableWidth))));
+            TopUpWidths(tabWidths, iconMinWidth, ref remainingWidth);
+            if (comfortableMinWidth > iconMinWidth)
+            {
+                TopUpWidths(tabWidths, comfortableMinWidth, ref remainingWidth);
+            }
 
+            List<int> textTargets = new(tabCount);
+            for (int i = 0; i < tabCount; i++)
+            {
+                int target = comfortableMinWidth + textWidths[i];
+                target = Math.Min(target, availableWidth);
+                target = Math.Max(tabWidths[i], target);
+                textTargets.Add(target);
+            }
+
+            TopUpWidthsToTargets(tabWidths, textTargets, ref remainingWidth);
+
+            if (remainingWidth > 0 && tabWidths.Count > 0)
+            {
+                tabWidths[^1] += remainingWidth;
+                remainingWidth = 0;
+            }
+
+            int x = groupBarBounds.X + TabHorizontalPadding;
+            int height = Math.Max(0, groupBarBounds.Height - (TabVerticalPadding * 2));
+            for (int i = 0; i < group.Blocks.Count && i < tabWidths.Count; i++)
+            {
+                DockBlock tabBlock = group.Blocks[i];
+                int targetWidth = tabWidths[i];
                 targetWidth = Math.Min(targetWidth, Math.Max(0, groupBarBounds.Right - x));
                 if (targetWidth <= 0)
                 {

@@ -22,4 +22,5 @@ git reset --hard HEAD
 git clean -fd
 
 # Other
-To unbind a key, make sure it's saved as an empty string.
+* To unbind a key, make sure it's saved as an empty string.
+* To find system-level errors and logs, do Win+R -> eventvwr.msc -> Windows Logs -> System -> Click `Error` level message

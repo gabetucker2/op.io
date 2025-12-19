@@ -27,6 +27,7 @@ namespace op.io
             if (shouldReset)
             {
                 BlockDataStore.ResetCache();
+                NotesFileSystem.ResetToDefaultNote();
             }
 
             if (!shouldReset && databaseExists)
