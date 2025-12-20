@@ -14,7 +14,8 @@ namespace op.io
         Notes,
         DockingSetups,
         Backend,
-        Specs
+        Specs,
+        DebugLogs
     }
 
     public sealed class DockBlock

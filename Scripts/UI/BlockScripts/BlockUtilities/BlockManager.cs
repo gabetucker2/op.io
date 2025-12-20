@@ -23,6 +23,7 @@ namespace op.io
         private const string DockingSetupsBlockKey = "dockingsetups";
         private const string BackendBlockKey = "backend";
         private const string SpecsBlockKey = "specs";
+        private const string DebugLogsBlockKey = "debuglogs";
         private const string BlockMenuControlKey = "BlockMenu";
         private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
         private const string DockingSetupActiveRowKey = "__ActiveSetup";
@@ -862,6 +863,7 @@ namespace op.io
             GroupCountedBlocks(definedBlocks);
             ApplyDockingSetupPanelGroups(GetPanelGroupsFromDefinition(setup));
             ApplyDockingSetupLocks(setup);
+            MergeBackendAndSpecs();
 
             HashSet<string> visiblePanels = new(StringComparer.OrdinalIgnoreCase);
             _rootNode = BuildLayoutFromDefinition(setup.Layout, visiblePanels);
@@ -1388,6 +1390,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(DockingSetupsBlockKey, DockingSetupsBlock.BlockTitle, DockBlockKind.DockingSetups, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(DebugLogsBlockKey, DebugLogsBlock.BlockTitle, DockBlockKind.DebugLogs, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(SpecsBlockKey, SpecsBlock.BlockTitle, DockBlockKind.Specs, BlockMenuControlMode.Toggle, initialVisible: true));
         }
 
@@ -1557,19 +1560,41 @@ namespace op.io
         private static void MergeBackendAndSpecs()
         {
             if (!_blocks.TryGetValue(BackendBlockKey, out DockBlock backendBlock) ||
-                !_blocks.TryGetValue(SpecsBlockKey, out DockBlock specsBlock))
+                backendBlock == null)
             {
                 return;
             }
 
             PanelGroup backendGroup = GetPanelGroupForBlock(backendBlock);
-            PanelGroup specsGroup = GetPanelGroupForBlock(specsBlock);
-            if (backendGroup == null || specsGroup == null || ReferenceEquals(backendGroup, specsGroup))
+            if (backendGroup == null)
             {
                 return;
             }
 
-            MergeBlockIntoGroup(backendGroup, specsBlock.Id);
+            bool backendLocked = backendGroup.IsLocked;
+
+            if (_blocks.TryGetValue(SpecsBlockKey, out DockBlock specsBlock) && specsBlock != null)
+            {
+                PanelGroup specsGroup = GetPanelGroupForBlock(specsBlock);
+                if (specsGroup != null && !ReferenceEquals(backendGroup, specsGroup))
+                {
+                    backendLocked |= specsGroup.IsLocked;
+                    MergeBlockIntoGroup(backendGroup, specsBlock.Id);
+                }
+            }
+
+            if (_blocks.TryGetValue(DebugLogsBlockKey, out DockBlock debugLogsBlock) && debugLogsBlock != null)
+            {
+                PanelGroup debugLogsGroup = GetPanelGroupForBlock(debugLogsBlock);
+                if (debugLogsGroup != null && !ReferenceEquals(backendGroup, debugLogsGroup))
+                {
+                    backendLocked |= debugLogsGroup.IsLocked;
+                }
+
+                MergeBlockIntoGroup(backendGroup, debugLogsBlock.Id);
+            }
+
+            backendGroup.IsLocked = backendLocked;
         }
 
         private static DockNode BuildDefaultLayout()
@@ -2279,6 +2304,7 @@ namespace op.io
                 DockBlockKind.DockingSetups => (DockingSetupsBlock.MinWidth, DockingSetupsBlock.MinHeight),
                 DockBlockKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
                 DockBlockKind.Specs => (SpecsBlock.MinWidth, SpecsBlock.MinHeight),
+                DockBlockKind.DebugLogs => (DebugLogsBlock.MinWidth, DebugLogsBlock.MinHeight),
                 _ => (defaultMin, defaultMin)
             };
 
@@ -4791,6 +4817,9 @@ namespace op.io
                 case DockBlockKind.Backend:
                     BackendBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.DebugLogs:
+                    DebugLogsBlock.Draw(spriteBatch, contentBounds);
+                    break;
                 case DockBlockKind.Specs:
                     SpecsBlock.Draw(spriteBatch, contentBounds);
                     break;
@@ -4918,6 +4947,9 @@ namespace op.io
                         break;
                     case DockBlockKind.Backend:
                         BackendBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        break;
+                    case DockBlockKind.DebugLogs:
+                        DebugLogsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
                     case DockBlockKind.Specs:
                         SpecsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);

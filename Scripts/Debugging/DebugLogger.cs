@@ -10,12 +10,17 @@ namespace op.io
     {
         public static bool IsLoggingInternally { get; set; }
 
+        public readonly record struct DebugLogEntry(string Message, ConsoleColor Color);
         public readonly record struct QueuedLogEntry(string Message, ConsoleColor Color, int SuppressionBehavior, bool WasPersistedToFile);
 
         // This list holds all queued logs until the console is initialized
         private static readonly List<QueuedLogEntry> queuedLogs = new();
         // Holds the full session log so it can be replayed when the console is reopened
         private static readonly List<Tuple<string, ConsoleColor>> sessionLogs = new();
+        // Maintains a bounded history for the in-game log viewer.
+        private const int MaxUiLogEntries = 2000;
+        private static readonly object UiLogSync = new();
+        private static readonly List<DebugLogEntry> uiLogHistory = new();
 
         public static void QueueLog(string formattedMessage, ConsoleColor color, int suppressionBehavior, bool wasPersistedToFile = false)
         {
@@ -27,6 +32,14 @@ namespace op.io
             var logsCopy = new List<QueuedLogEntry>(queuedLogs);
             queuedLogs.Clear();
             return logsCopy;
+        }
+
+        public static DebugLogEntry[] GetLogHistorySnapshot()
+        {
+            lock (UiLogSync)
+            {
+                return uiLogHistory.ToArray();
+            }
         }
 
         public static void ReplaySessionLogToConsole()
@@ -103,6 +116,8 @@ namespace op.io
 
             bool consoleInitialized = ConsoleManager.ConsoleInitialized;
 
+            AppendUiLogEntries(completeMessage, color, suppressionBehavior, wasDeferred: !consoleInitialized);
+
             if (!consoleInitialized)
             {
                 LogFileHandler.AppendLog(completeMessage);
@@ -169,6 +184,44 @@ namespace op.io
         private static void AppendToSessionLog(string message, ConsoleColor color)
         {
             sessionLogs.Add(Tuple.Create(message, color));
+        }
+
+        private static void AppendUiLogEntries(string message, ConsoleColor color, int suppressionBehavior, bool wasDeferred)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            string decorated = wasDeferred ? $"[DEFERRED OUTPUT] {message}" : message;
+            List<DebugLogEntry> pending = new();
+
+            switch (suppressionBehavior)
+            {
+                case 0:
+                    pending.Add(new DebugLogEntry(decorated, color));
+                    break;
+                case 1:
+                    pending.Add(new DebugLogEntry($"[SUBSEQUENT MESSAGES SUPPRESSED DUE TO {DebugModeHandler.MAXMSGREPEATS} MAX REPEATS] ", ConsoleColor.Magenta));
+                    pending.Add(new DebugLogEntry(decorated, color));
+                    break;
+                case 2:
+                    return;
+                default:
+                    pending.Add(new DebugLogEntry(decorated, color));
+                    break;
+            }
+
+            lock (UiLogSync)
+            {
+                uiLogHistory.AddRange(pending);
+                int excess = uiLogHistory.Count - MaxUiLogEntries;
+                if (excess > 0)
+                {
+                    int trimCount = Math.Min(excess + 50, uiLogHistory.Count);
+                    uiLogHistory.RemoveRange(0, trimCount);
+                }
+            }
         }
 
         // Public-facing logging methods for different log levels

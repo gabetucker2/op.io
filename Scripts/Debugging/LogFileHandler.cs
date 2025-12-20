@@ -14,6 +14,20 @@ namespace op.io
         private static bool _initialized;
         private static int _maxLogFiles = DefaultMaxLogFiles;
 
+        public static string GetLogsDirectory()
+        {
+            try
+            {
+                Directory.CreateDirectory(LogsRoot);
+            }
+            catch
+            {
+                // If the directory cannot be created we still return the intended path.
+            }
+
+            return LogsRoot;
+        }
+
         public static void AppendLog(string message, bool appendNewLine = true)
         {
             try

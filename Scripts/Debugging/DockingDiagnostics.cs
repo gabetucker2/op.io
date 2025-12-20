@@ -10,14 +10,12 @@ namespace op.io
 {
     /// <summary>
     /// Centralized diagnostics for tracking why DockingMode ends up enabled by default.
-    /// Writes both to the normal debug logger and to a dedicated log file under Logs/DockingDebug.log.
+    /// Writes to the normal debug logger (no dedicated dock debug file anymore).
     /// </summary>
     internal static class DockingDiagnostics
     {
         private const string DockingSettingKey = "DockingMode";
         private static readonly object Sync = new();
-        private static readonly string LogsRoot = Path.Combine(ResolveProjectRoot(), "Logs");
-        private static readonly string LogPath = Path.Combine(LogsRoot, "DockingDebug.log");
         private static bool _initialized;
 
         private static void EnsureInitialized()
@@ -34,55 +32,14 @@ namespace op.io
                     return;
                 }
 
-                Directory.CreateDirectory(LogsRoot);
-                try
-                {
-                    string header = $"=== Docking diagnostics session started at {DateTime.Now:O} ==={Environment.NewLine}";
-                    File.AppendAllText(LogPath, header, Encoding.UTF8);
-                }
-                catch
-                {
-                    // Never throw from diagnostics logging.
-                }
-
                 _initialized = true;
             }
         }
 
-        private static string ResolveProjectRoot()
-        {
-            string baseDirectory = AppContext.BaseDirectory;
-            DirectoryInfo directory = new(baseDirectory);
-
-            // Walk up to the project root (bin/Debug/net8.0-windows -> project folder)
-            for (int i = 0; i < 3; i++)
-            {
-                if (directory.Parent == null)
-                {
-                    break;
-                }
-
-                directory = directory.Parent;
-            }
-
-            return directory.FullName;
-        }
-
         private static void AppendRaw(string message)
         {
-            try
-            {
-                EnsureInitialized();
-                string payload = $"{message}{Environment.NewLine}";
-                lock (Sync)
-                {
-                    File.AppendAllText(LogPath, payload, Encoding.UTF8);
-                }
-            }
-            catch
-            {
-                // Never throw from diagnostics logging.
-            }
+            EnsureInitialized();
+            DebugLogger.PrintDebug(message);
         }
 
         private static void Append(string category, string message, string source, string context, string stackTrace)
@@ -90,7 +47,6 @@ namespace op.io
             string prefix = $"{DateTime.Now:O} [{category}]";
             string composed = $"{prefix} {message} | source={source}{(string.IsNullOrWhiteSpace(context) ? string.Empty : $" | context={context}")}{(string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : $" | stack={stackTrace}")}";
             AppendRaw(composed);
-            DebugLogger.PrintDebug(composed);
         }
 
         private static string DescribeCaller(string callerFilePath, string callerMember, int callerLine)
