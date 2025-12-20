@@ -24,6 +24,7 @@ namespace op.io
         private const string BackendBlockKey = "backend";
         private const string SpecsBlockKey = "specs";
         private const string BlockMenuControlKey = "BlockMenu";
+        private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
         private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
@@ -88,6 +89,7 @@ namespace op.io
         private static bool _overlayMenuVisible;
         private static bool _blockMenuSwitchState;
         private static bool _allowTransparentBlockClickThrough;
+        private static bool _panelInteractionLockActive;
         private static bool _isWindowClickThroughActive;
         private static Rectangle _overlayBounds;
         private static Rectangle _overlayDismissBounds;
@@ -202,13 +204,22 @@ namespace op.io
             _mousePosition = mouseState.Position;
             bool dockingEnabled = DockingModeEnabled;
             bool rebindOverlayOpen = ControlsBlock.IsRebindOverlayOpen();
+            bool panelInteractionsLocked = ShouldLockPanelInteractions();
+            bool lockStateChanged = panelInteractionsLocked != _panelInteractionLockActive;
+            _panelInteractionLockActive = panelInteractionsLocked;
+            if (_panelInteractionLockActive)
+            {
+                if (lockStateChanged)
+                {
+                    ClearDockingInteractions();
+                }
+
+                _overlayMenuVisible = false;
+            }
 
             bool blockMenuState = rebindOverlayOpen ? false : GetBlockMenuState();
-            if (blockMenuState != _blockMenuSwitchState)
-            {
-                _blockMenuSwitchState = blockMenuState;
-                _overlayMenuVisible = blockMenuState;
-            }
+            _blockMenuSwitchState = blockMenuState;
+            _overlayMenuVisible = !_panelInteractionLockActive && blockMenuState;
 
             if (!_overlayMenuVisible && !rebindOverlayOpen)
             {
@@ -221,7 +232,7 @@ namespace op.io
             bool allowReorder = dockingEnabled;
             RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
 
-            if (rebindOverlayOpen)
+            if (rebindOverlayOpen && !_panelInteractionLockActive)
             {
                 ClearDockingInteractions();
             }
@@ -231,7 +242,7 @@ namespace op.io
                 UpdateOverlayInteractions(leftClickStarted);
                 ClearDockingInteractions();
             }
-            else
+            else if (!_panelInteractionLockActive)
             {
                 bool tabInteracted = UpdateTabInteractions(leftClickStarted, leftClickHeld, leftClickReleased, allowReorder);
                 if (dockingEnabled)
@@ -253,6 +264,10 @@ namespace op.io
                 {
                     ClearDockingDragState();
                 }
+            }
+            else
+            {
+                ClearDockingDragState();
             }
 
             UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState, keyboardState, _previousKeyboardState);
@@ -2976,6 +2991,11 @@ namespace op.io
                 return false;
             }
 
+            if (_panelInteractionLockActive)
+            {
+                return true;
+            }
+
             if (!IsLockToggleAvailable(block))
             {
                 return false;
@@ -2999,6 +3019,11 @@ namespace op.io
 
         private static bool IsPanelLocked(PanelGroup group)
         {
+            if (_panelInteractionLockActive)
+            {
+                return true;
+            }
+
             return group != null && group.IsLocked;
         }
 
@@ -5628,6 +5653,16 @@ namespace op.io
         public static bool IsBlockMenuOpen() => _overlayMenuVisible;
 
         public static bool IsInputBlocked() => _overlayMenuVisible || ControlsBlock.IsRebindOverlayOpen() || ColorSchemeBlock.IsEditorOpen;
+
+        private static bool ShouldLockPanelInteractions()
+        {
+            if (!ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
+            {
+                return false;
+            }
+
+            return !ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
+        }
 
         public static bool IsCursorWithinGameBlock()
         {

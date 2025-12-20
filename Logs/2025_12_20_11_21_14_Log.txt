@@ -1,4 +1,4 @@
-Log created at 2025-12-20T10:38:29.0851325-05:00
+Log created at 2025-12-20T11:21:14.0610149-05:00
 [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
 [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
 [DATABASE] Reset notes directory to default at 'C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\UserNotes\note.txt'. | NotesFileSystem.cs::ResetToDefaultNote @ Line 35
@@ -114,8 +114,8 @@ Log created at 2025-12-20T10:38:29.0851325-05:00
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
 [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DEBUG] 2025-12-20T10:38:29.3430452-05:00 [MIGRATION] stage=pre-normalize rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=EnsureDockingModeDefaultOff start | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:38:29.3441972-05:00 [MIGRATION] stage=skip-reset rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=Markers indicate OFF already applied | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.3580266-05:00 [MIGRATION] stage=pre-normalize rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=EnsureDockingModeDefaultOff start | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.3595612-05:00 [MIGRATION] stage=skip-reset rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=Markers indicate OFF already applied | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
 [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
@@ -247,12 +247,12 @@ Log created at 2025-12-20T10:38:29.0851325-05:00
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [GENERAL] Initializing BlockMenu switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
 [DATABASE] Loaded switch state: BlockMenu = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
-[DEBUG] 2025-12-20T10:38:29.4324964-05:00 [LOAD] source=ControlStateManager.LoadControlSwitchStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Bulk load | source=ControlStateManager.cs::LoadControlSwitchStates@214 | stack=ControlStateManager.cs::LoadControlSwitchStates@214 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.4555658-05:00 [LOAD] source=ControlStateManager.LoadControlSwitchStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Bulk load | source=ControlStateManager.cs::LoadControlSwitchStates@214 | stack=ControlStateManager.cs::LoadControlSwitchStates@214 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
 [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DEBUG] 2025-12-20T10:38:29.4344933-05:00 [INIT] source=ControlStateManager.SetSwitchState dbRaw=0 dbBool=OFF requested=OFF hasPersistenceFlag=True | source=ControlStateManager.cs::SetSwitchState@73 | context=ControlStateManager.LoadControlSwitchStates | stack=ControlStateManager.cs::SetSwitchState@73 <= ControlStateManager.cs::LoadControlSwitchStates@227 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.4579940-05:00 [INIT] source=ControlStateManager.SetSwitchState dbRaw=0 dbBool=OFF requested=OFF hasPersistenceFlag=True | source=ControlStateManager.cs::SetSwitchState@73 | context=ControlStateManager.LoadControlSwitchStates | stack=ControlStateManager.cs::SetSwitchState@73 <= ControlStateManager.cs::LoadControlSwitchStates@227 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
 [GENERAL] Initializing DockingMode switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
 [DATABASE] Loaded switch state: DockingMode = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
@@ -294,7 +294,7 @@ Log created at 2025-12-20T10:38:29.0851325-05:00
 [DATABASE] Setting starting debug mode to switch value: 1 | DebugModeHandler.cs::get_DEBUGENABLED @ Line 23
 [DEBUG] Initialized switch state for 'Crouch' (LeftControl) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 124
 [DEBUG] Switch 'BlockMenu' could not map input key 'Shift + X' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 128
-[DEBUG] 2025-12-20T10:38:29.4535786-05:00 [LOAD] source=InputTypeManager.InitializeControlStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Initial switch cache hydrate | source=InputTypeManager.cs::InitializeControlStates@103 | stack=InputTypeManager.cs::InitializeControlStates@103 <= GameInitializer.cs::Initialize@49 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.4810114-05:00 [LOAD] source=InputTypeManager.InitializeControlStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Initial switch cache hydrate | source=InputTypeManager.cs::InitializeControlStates@103 | stack=InputTypeManager.cs::InitializeControlStates@103 <= GameInitializer.cs::Initialize@49 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
 [DEBUG] Initialized switch state for 'DockingMode' (V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 124
 [DEBUG] Switch 'DebugMode' could not map input key 'Shift + B' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 128
 [DEBUG] Switch 'AllowGameInputFreeze' could not map input key 'Shift + C' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 128
@@ -370,10 +370,10 @@ Log created at 2025-12-20T10:38:29.0851325-05:00
 [GAMEOBJECT] Core player set: ID=1, Pos={X:100 Y:100}, Shape=Circle | GameObjectInitializer.cs::InitializeAgents @ Line 181
 [GAMEOBJECT] Agents loaded: 1 total | GameObjectInitializer.cs::InitializeAgents @ Line 183
 [GAMEOBJECT] Initialization complete. Total GameObjects: 35, StaticObjects: 3 | GameObjectInitializer.cs::Initialize @ Line 21
-[DEBUG] 2025-12-20T10:38:29.6557626-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.ApplyInitialStates docking=OFF note=Hydrated from cached switch state snapshot | source=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 | stack=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 <= GameInitializer.cs::Initialize@112 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.7677903-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.ApplyInitialStates docking=OFF note=Hydrated from cached switch state snapshot | source=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 | stack=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 <= GameInitializer.cs::Initialize@112 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 59
-[DEBUG] 2025-12-20T10:38:29.6850700-05:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=OFF note=changed=False | source=BlockManager.cs::DockingModeEnabled@145 | stack=BlockManager.cs::set_DockingModeEnabled@145 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:38:29.6858077-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=OFF note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.8594729-05:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=OFF note=changed=False | source=BlockManager.cs::DockingModeEnabled@149 | stack=BlockManager.cs::set_DockingModeEnabled@149 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T11:21:14.8603303-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=OFF note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 | DockingDiagnostics.cs::Append @ Line 93
 [DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 44
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, MetaControl, LockMode FROM ControlKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
@@ -477,6 +477,8 @@ Log created at 2025-12-20T10:38:29.0851325-05:00
 [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [PLAYER] SwitchCooldown loaded: 0.1 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
@@ -557,6 +559,28 @@ Log created at 2025-12-20T10:38:29.0851325-05:00
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @whereValue LIMIT 1; with whereValue: CursorFollowDeadzonePixels | DatabaseFetch.cs::GetSetting @ Line 40
+[DATABASE] Successfully retrieved setting 'CursorFollowDeadzonePixels' from 'ControlSettings'. | DatabaseFetch.cs::GetSetting @ Line 49
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: SprintSpeedMultiplier | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Updated and saved AllowGameInputFreeze to False from True | ControlStateManager.cs::SetSwitchState @ Line 106
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[DATABASE] Updated and saved AllowGameInputFreeze to True from False | ControlStateManager.cs::SetSwitchState @ Line 106
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[PHYSICS] Destroying GameObject ID=19 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=19 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [UI] Exit hotkey triggered. Closing game. | ActionHandler.cs::Tickwise_CheckActions @ Line 23
 [DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
