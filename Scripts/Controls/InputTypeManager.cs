@@ -34,6 +34,7 @@ namespace op.io
         // Minimal combo suppression state
         private static readonly HashSet<Keys> _comboActiveKeys = new();
         private static readonly HashSet<Keys> _comboBreakGuard = new();
+        internal static bool HasStableSnapshot => _frameCounter > 0;
 
         private static readonly Dictionary<string, Keys[]> _tokenKeyAliases = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -99,6 +100,15 @@ namespace op.io
                         }
                         bool isOn = TypeConversionFunctions.IntToBool(switchState);
 
+                        DockingDiagnostics.RecordRawControlState(
+                            "InputTypeManager.InitializeControlStates",
+                            settingKey,
+                            inputKey,
+                            inputTypeLabel,
+                            switchState,
+                            isOn,
+                            saveToBackend,
+                            note: "Initial switch cache hydrate");
                         _switchStateCache[settingKey] = isOn;
                         _settingKeyToInputKey[settingKey] = inputKey;
                         RegisterInputKeyForSetting(settingKey, inputKey);
@@ -435,6 +445,16 @@ namespace op.io
             {
                 _keySwitchStates[key] = !_keySwitchStates[key];
                 _lastKeySwitchTime[key] = Core.GAMETIME;
+                if (_inputKeyToSettingKeys.TryGetValue(key.ToString(), out var linkedSettings) &&
+                    linkedSettings.Any(sk => string.Equals(sk, "DockingMode", StringComparison.OrdinalIgnoreCase)))
+                {
+                    DockingDiagnostics.RecordInputEdge(
+                        "InputTypeManager.IsKeySwitch",
+                        key.ToString(),
+                        _keySwitchStates[key],
+                        context: $"withinStartup={withinStartup};comboGuard={_comboActiveKeys.Contains(key)};breakGuard={_comboBreakGuard.Contains(key)}",
+                        note: "Primary token toggle (release edge)");
+                }
                 NotifySwitchStateFromInput(key.ToString(), _keySwitchStates[key]);
             }
 
@@ -480,7 +500,16 @@ namespace op.io
 
             foreach (string settingKey in settingKeys)
             {
-                ControlStateManager.SetSwitchState(settingKey, state);
+                ControlStateManager.SetSwitchState(settingKey, state, $"InputTypeManager.NotifySwitchStateFromInput:{inputKey}");
+                if (string.Equals(settingKey, "DockingMode", StringComparison.OrdinalIgnoreCase))
+                {
+                    DockingDiagnostics.RecordInputEdge(
+                        "InputTypeManager.NotifySwitchStateFromInput",
+                        inputKey,
+                        state,
+                        context: $"HasStableSnapshot={HasStableSnapshot}",
+                        note: "Switch state updated from live input edge");
+                }
                 _bindingSwitchStates[settingKey] = state;
             }
         }
@@ -547,18 +576,29 @@ namespace op.io
                 return false;
             }
 
-            bool saveToBackend = !IsNoSaveSwitch(row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty);
+            string inputTypeLabel = row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty;
+            bool saveToBackend = !IsNoSaveSwitch(inputTypeLabel);
             ControlStateManager.RegisterSwitchPersistence(settingKey, saveToBackend);
 
             object switchStateObj = row.TryGetValue("SwitchStartState", out object rawState) ? rawState : null;
             int switchState = switchStateObj == null || switchStateObj == DBNull.Value ? 0 : Convert.ToInt32(switchStateObj);
             bool state = TypeConversionFunctions.IntToBool(switchState);
+
+            DockingDiagnostics.RecordRawControlState(
+                "InputTypeManager.LoadSwitchStateForSetting",
+                settingKey,
+                inputKey,
+                inputTypeLabel,
+                switchState,
+                state,
+                saveToBackend,
+                note: "Fallback loader");
             _switchStateCache[settingKey] = state;
             _settingKeyToInputKey[settingKey] = inputKey;
             RegisterInputKeyForSetting(settingKey, inputKey);
             SeedBindingState(settingKey, state);
             TrySeedSwitchState(inputKey, state);
-            ControlStateManager.SetSwitchState(settingKey, state);
+            ControlStateManager.SetSwitchState(settingKey, state, "InputTypeManager.LoadSwitchStateForSetting");
             return true;
         }
 
@@ -774,7 +814,15 @@ namespace op.io
             }
 
             _switchStateCache[settingKey] = state;
-            ControlStateManager.SetSwitchState(settingKey, state);
+            if (string.Equals(settingKey, "DockingMode", StringComparison.OrdinalIgnoreCase))
+            {
+                DockingDiagnostics.RecordInputEdge(
+                    "InputTypeManager.OverrideSwitchState",
+                    inputKey,
+                    state,
+                    note: "Override invoked");
+            }
+            ControlStateManager.SetSwitchState(settingKey, state, "InputTypeManager.OverrideSwitchState");
             SeedBindingState(settingKey, state);
             return true;
         }

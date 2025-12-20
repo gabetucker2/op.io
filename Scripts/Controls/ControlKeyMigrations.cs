@@ -36,6 +36,7 @@ namespace op.io
                 EnsureHoldInputsControl();
                 EnsureInspectModeControl();
                 EnsureConfigurationCycleControls();
+                EnsureDockingModeDefaultOff();
                 EnsureLockModeColumn();
                 MigrateLegacySwitchType();
                 EnsureMetaControlColumn();
@@ -124,14 +125,32 @@ WHERE SettingKey = @legacyKey;";
                 SettingKey = TransparentTabBlockingKey,
                 InputKey = "Shift + V",
                 InputType = "SaveSwitch",
-                SwitchStartState = 0,
+                SwitchStartState = 1,
                 MetaControl = false,
                 RenderOrder = 15
             });
 
             ControlKeyData.SetInputType(TransparentTabBlockingKey, "SaveSwitch");
-            ControlKeyData.EnsureSwitchStartState(TransparentTabBlockingKey, 0);
+            ForceTransparentTabBlockingDefaultOn();
             ControlKeyData.EnsureInputKey(TransparentTabBlockingKey, "Shift + V");
+        }
+
+        private static void ForceTransparentTabBlockingDefaultOn()
+        {
+            try
+            {
+                const string sql = @"
+UPDATE ControlKey
+SET SwitchStartState = 1
+WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR SwitchStartState = 0);";
+                DatabaseQuery.ExecuteNonQuery(sql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to normalize TransparentTabBlocking default: {ex.Message}");
+            }
+
+            ControlKeyData.EnsureSwitchStartState(TransparentTabBlockingKey, 1);
         }
 
         private static void EnsureHoldInputsControl()
@@ -166,6 +185,75 @@ WHERE SettingKey = @legacyKey;";
             ControlKeyData.SetInputType(InspectModeState.InspectModeKey, "NoSaveSwitch");
             ControlKeyData.EnsureSwitchStartState(InspectModeState.InspectModeKey, 0);
             ControlKeyData.EnsureInputKey(InspectModeState.InspectModeKey, "Shift + I");
+        }
+
+        private static void EnsureDockingModeDefaultOff()
+        {
+            const string key = "DockingMode";
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = key,
+                InputKey = "V",
+                InputType = "SaveSwitch",
+                SwitchStartState = 0,
+                MetaControl = true,
+                RenderOrder = 12
+            });
+
+            ControlKeyData.SetInputType(key, "SaveSwitch");
+            ControlKeyData.EnsureInputKey(key, "V");
+            ControlKeyData.EnsureSwitchStartState(key, 0);
+
+            try
+            {
+                string markerOff = Path.Combine(DatabaseConfig.DatabaseDirectory, ".docking_default_off_applied");
+                string markerOn = Path.Combine(DatabaseConfig.DatabaseDirectory, ".docking_default_on_applied");
+
+                int currentRawState = DatabaseConfig.GetSetting("ControlKey", "SwitchStartState", key, -1);
+                bool currentBoolState = TypeConversionFunctions.IntToBool(currentRawState <= -1 ? 0 : currentRawState);
+                DockingDiagnostics.RecordMigration(
+                    "pre-normalize",
+                    currentRawState,
+                    currentBoolState,
+                    File.Exists(markerOff),
+                    File.Exists(markerOn),
+                    note: "EnsureDockingModeDefaultOff start");
+
+                bool shouldReset = !File.Exists(markerOff) || File.Exists(markerOn);
+                if (shouldReset)
+                {
+                    const string sql = "UPDATE ControlKey SET SwitchStartState = 0 WHERE SettingKey = @key;";
+                    DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = key });
+                    File.WriteAllText(markerOff, DateTime.UtcNow.ToString("O"));
+                    if (File.Exists(markerOn))
+                    {
+                        File.Delete(markerOn);
+                    }
+
+                    int resetRawState = DatabaseConfig.GetSetting("ControlKey", "SwitchStartState", key, -1);
+                    DockingDiagnostics.RecordMigration(
+                        "post-reset",
+                        resetRawState,
+                        TypeConversionFunctions.IntToBool(resetRawState <= -1 ? 0 : resetRawState),
+                        File.Exists(markerOff),
+                        File.Exists(markerOn),
+                        note: "Reset DockingMode default to OFF");
+                }
+                else
+                {
+                    DockingDiagnostics.RecordMigration(
+                        "skip-reset",
+                        currentRawState,
+                        currentBoolState,
+                        File.Exists(markerOff),
+                        File.Exists(markerOn),
+                        note: "Markers indicate OFF already applied");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to normalize DockingMode default: {ex.Message}");
+            }
         }
 
         private static void EnsureConfigurationCycleControls()
@@ -254,6 +342,12 @@ WHERE SettingKey = @legacyKey;";
 
         public static bool ShouldScannerTrackSwitch(string settingKey)
         {
+            if (string.Equals(settingKey, "DockingMode", StringComparison.OrdinalIgnoreCase))
+            {
+                // Avoid scanner-driven toggles for DockingMode; rely on direct input edges only.
+                return false;
+            }
+
             return !RequiresSwitchSemantics(settingKey);
         }
     }

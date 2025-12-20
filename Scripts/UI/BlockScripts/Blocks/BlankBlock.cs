@@ -9,9 +9,15 @@ namespace op.io.UI.BlockScripts.Blocks
         public const int MinWidth = 30;
         public const int MinHeight = 0;
 
-        public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
+        public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds, float labelOpacity)
         {
             if (spriteBatch == null || contentBounds.Width <= 0 || contentBounds.Height <= 0)
+            {
+                return;
+            }
+
+            labelOpacity = MathHelper.Clamp(labelOpacity, 0f, 1f);
+            if (labelOpacity <= 0f)
             {
                 return;
             }
@@ -28,7 +34,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 contentBounds.X + (contentBounds.Width - size.X) / 2f,
                 contentBounds.Y + (contentBounds.Height - size.Y) / 2f);
 
-            font.DrawString(spriteBatch, label, position, UIStyle.MutedTextColor);
+            Color color = UIStyle.MutedTextColor * labelOpacity;
+            font.DrawString(spriteBatch, label, position, color);
         }
     }
 }

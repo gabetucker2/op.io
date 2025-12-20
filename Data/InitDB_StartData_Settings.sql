@@ -36,10 +36,10 @@ INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrde
 
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('Exit', 'Escape', 'Trigger', 1, 10, 0, 1);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('BlockMenu', 'Shift + X', 'SaveSwitch', 1, 11, 0, 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('DockingMode', 'V', 'SaveSwitch', 1, 12, 1, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('DockingMode', 'V', 'SaveSwitch', 1, 12, 0, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('DebugMode', 'Shift + B', 'SaveSwitch', 1, 13, 1, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('AllowGameInputFreeze', 'Shift + C', 'SaveSwitch', 1, 14, 1, 0);
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('TransparentTabBlocking', 'Shift + V', 'SaveSwitch', 1, 15, 0, 0);
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('TransparentTabBlocking', 'Shift + V', 'SaveSwitch', 1, 15, 1, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('HoldInputs', 'M', 'NoSaveSwitch', 1, 16, 0, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('UsePreviousConfiguration', '[', 'Trigger', 1, 17, 0, 0);
 INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode) VALUES ('UseNextConfiguration', ']', 'Trigger', 1, 18, 0, 0);

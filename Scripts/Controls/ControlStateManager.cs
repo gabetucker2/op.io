@@ -55,14 +55,28 @@ namespace op.io
         /// <summary>
         /// Sets the state of a switch (used by GameInitializer when loading settings).
         /// </summary>
-        public static void SetSwitchState(string settingKey, bool state)
+        public static void SetSwitchState(string settingKey, bool state, string source = null)
         {
+            bool isDockingSwitch = string.Equals(settingKey, "DockingMode", StringComparison.OrdinalIgnoreCase);
+            bool hasPersistenceFlag = _switchPersistence.ContainsKey(settingKey);
+
             if (!ContainsSwitchState(settingKey))
             {
                 int newState = DatabaseConfig.GetSetting("ControlKey", "SwitchStartState", settingKey, -1);
                 if (newState < 0)
                 {
                     newState = TypeConversionFunctions.BoolToInt(state);
+                }
+
+                if (isDockingSwitch)
+                {
+                    DockingDiagnostics.RecordSwitchInitialization(
+                        "ControlStateManager.SetSwitchState",
+                        TypeConversionFunctions.IntToBool(newState),
+                        newState,
+                        state,
+                        hasPersistenceFlag,
+                        source);
                 }
 
                 DebugLogger.Print($"Initializing {settingKey} switch with default state from database: {newState}");
@@ -72,13 +86,35 @@ namespace op.io
             {
                 if (_switchStates[settingKey] != state)
                 {
+                    bool previousState = _switchStates[settingKey];
                     _switchStates[settingKey] = state;
-                    if (ShouldPersist(settingKey))
+                    bool shouldPersist = ShouldPersist(settingKey);
+
+                    if (isDockingSwitch)
+                    {
+                        DockingDiagnostics.RecordSwitchChange(
+                            "ControlStateManager.SetSwitchState",
+                            previousState,
+                            state,
+                            shouldPersist,
+                            source,
+                            reason: "state-change");
+                    }
+
+                    if (shouldPersist)
                     {
                         DebugLogger.PrintDatabase($"Updated and saved {settingKey} to {state} from {!state}");  //  NEVER CALLS
                         SaveSwitchState(settingKey, _switchStates[settingKey]);
                     }
                     DispatchSwitchChange(settingKey, state);
+                }
+                else if (isDockingSwitch && !string.Equals(source, "SwitchStateScanner.Tick", StringComparison.OrdinalIgnoreCase))
+                {
+                    DockingDiagnostics.RecordNoOpSet(
+                        "ControlStateManager.SetSwitchState",
+                        state,
+                        source,
+                        reason: "state-unchanged");
                 }
             }
             TriggerManager.PrimeTriggerIfTrue(settingKey, state);
@@ -89,7 +125,7 @@ namespace op.io
         /// </summary>
         public static void ToggleSwitchState(string settingKey)
         {
-            SetSwitchState(settingKey, !_switchStates[settingKey]);
+            SetSwitchState(settingKey, !_switchStates[settingKey], "ControlStateManager.ToggleSwitchState");
         }
 
         /// <summary>
@@ -155,7 +191,7 @@ namespace op.io
             try
             {
                 // Fetch all control keys with SwitchStartState from the database
-                const string sql = "SELECT SettingKey, SwitchStartState, InputType FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch');";
+                const string sql = "SELECT SettingKey, SwitchStartState, InputType, InputKey FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch');";
                 var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
@@ -173,11 +209,22 @@ namespace op.io
                         int switchState = switchStateObj == null || switchStateObj == DBNull.Value ? 0 : Convert.ToInt32(switchStateObj);
                         bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
                         bool saveToBackend = !string.Equals(row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase);
+                        string inputKey = row.TryGetValue("InputKey", out object inputObj) ? inputObj?.ToString() : string.Empty;
+
+                        DockingDiagnostics.RecordRawControlState(
+                            "ControlStateManager.LoadControlSwitchStates",
+                            settingKey,
+                            inputKey,
+                            row.TryGetValue("InputType", out object typeLabelObj) ? typeLabelObj?.ToString() : string.Empty,
+                            switchState,
+                            switchStateBool,
+                            saveToBackend,
+                            note: "Bulk load");
 
                         RegisterSwitchPersistence(settingKey, saveToBackend);
 
                         // Store this information in ControlStateManager
-                        SetSwitchState(settingKey, switchStateBool);
+                        SetSwitchState(settingKey, switchStateBool, "ControlStateManager.LoadControlSwitchStates");
                         DebugLogger.PrintDatabase($"Loaded switch state: {settingKey} = {(switchStateBool ? "ON" : "OFF")}");
                     }
                     else

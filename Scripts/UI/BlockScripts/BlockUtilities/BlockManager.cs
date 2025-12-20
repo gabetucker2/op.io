@@ -41,6 +41,10 @@ namespace op.io
         private const int TabDragStartThreshold = 6;
         private const string LockedIconFile = "Icon_Locked.png";
         private const string UnlockedIconFile = "Icon_Unlocked.png";
+        private const double BlankBlockFadeInDurationSeconds = 0.35d;
+        private const double BlankBlockFadeOutDurationSeconds = 0.22d;
+        private const double BlankBlockInterruptedFadeOutScale = 0.6d;
+        private const double BlankBlockMinimumFadeDurationSeconds = 0.015d;
 
         private static readonly Color GroupBarBackground = new(28, 28, 30);
         private static readonly Color TabInactiveBackground = new(40, 40, 42);
@@ -48,7 +52,7 @@ namespace op.io
         private static readonly Color TabActiveBackground = new(60, 60, 64);
         private static readonly Color TabCloseHoverTint = new Color(255, 255, 255, 22);
 
-        private static bool _dockingModeEnabled = true;
+        private static bool _dockingModeEnabled = false;
         private static bool _blockDefinitionsReady;
         private static bool _renderingDockedFrame;
         private const int CornerSnapDistance = 16;
@@ -58,6 +62,7 @@ namespace op.io
         private static readonly Dictionary<string, PanelGroup> _panelGroups = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, BlockNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, string> _blockToPanel = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, BlankBlockHoverState> _blankBlockHoverStates = new(StringComparer.OrdinalIgnoreCase);
         private static readonly List<DockBlock> _orderedBlocks = [];
         private static readonly List<string> _orderedPanelIds = new();
         private static readonly Dictionary<string, bool> _blockLockStates = new(StringComparer.OrdinalIgnoreCase);
@@ -137,6 +142,10 @@ namespace op.io
                 bool dockingChanged = _dockingModeEnabled != value;
                 _dockingModeEnabled = value;
                 ScreenManager.ApplyDockingWindowChrome(Core.Instance, _dockingModeEnabled);
+                DockingDiagnostics.RecordBlockToggle(
+                    "BlockManager.DockingModeEnabled",
+                    _dockingModeEnabled,
+                    note: $"changed={dockingChanged}");
 
                 if (!dockingChanged)
                 {
@@ -360,6 +369,7 @@ namespace op.io
             _panelGroups.Clear();
             _panelNodes.Clear();
             _blockToPanel.Clear();
+            _blankBlockHoverStates.Clear();
             _orderedBlocks.Clear();
             _orderedPanelIds.Clear();
             _blockLockStates.Clear();
@@ -2901,6 +2911,7 @@ namespace op.io
             _blocks.Remove(block.Id);
             _orderedBlocks.Remove(block);
             _blockLockStates.Remove(block.Id);
+            _blankBlockHoverStates.Remove(block.Id);
             if (string.Equals(_hoveredDragBarId, block.Id, StringComparison.OrdinalIgnoreCase))
             {
                 _hoveredDragBarId = null;
@@ -4685,7 +4696,7 @@ namespace op.io
                     TransparentBlock.Draw(spriteBatch, contentBounds);
                     break;
                 case DockBlockKind.Blank:
-                    BlankBlock.Draw(spriteBatch, contentBounds);
+                    BlankBlock.Draw(spriteBatch, contentBounds, GetBlankBlockLabelOpacity(block));
                     break;
                 case DockBlockKind.Properties:
                     PropertiesBlock.Draw(spriteBatch, contentBounds);
@@ -4711,12 +4722,92 @@ namespace op.io
             }
         }
 
+        private static void UpdateBlankBlockHoverState(DockBlock block, double elapsedSeconds)
+        {
+            BlankBlockHoverState state = EnsureBlankBlockHoverState(block);
+            if (state == null)
+            {
+                return;
+            }
+
+            bool hovering = block.Bounds.Contains(_mousePosition);
+            bool shouldFadeOut = !hovering && (state.IsHovering || state.Animation.TargetOpacity > 0f);
+
+            if (hovering && !state.IsHovering)
+            {
+                state.IsHovering = true;
+                state.Animation.Begin(state.Animation.CurrentOpacity, 1f, BlankBlockFadeInDurationSeconds, true);
+            }
+            else if (shouldFadeOut)
+            {
+                state.IsHovering = false;
+                double fadeOutDuration = GetBlankBlockFadeOutDuration(state);
+                state.Animation.Begin(state.Animation.CurrentOpacity, 0f, fadeOutDuration, false);
+            }
+
+            state.Animation.Update(elapsedSeconds);
+        }
+
+        private static double GetBlankBlockFadeOutDuration(BlankBlockHoverState state)
+        {
+            if (state == null)
+            {
+                return BlankBlockFadeOutDurationSeconds;
+            }
+
+            bool interruptedFadeIn = state.Animation.IsFadeIn &&
+                state.Animation.DurationSeconds > 0d &&
+                state.Animation.ElapsedSeconds < state.Animation.DurationSeconds;
+
+            if (interruptedFadeIn)
+            {
+                double interruptedDuration = state.Animation.ElapsedSeconds * BlankBlockInterruptedFadeOutScale;
+                return Math.Max(BlankBlockMinimumFadeDurationSeconds, interruptedDuration);
+            }
+
+            return BlankBlockFadeOutDurationSeconds;
+        }
+
+        private static BlankBlockHoverState EnsureBlankBlockHoverState(DockBlock block)
+        {
+            if (block == null || string.IsNullOrWhiteSpace(block.Id))
+            {
+                return null;
+            }
+
+            if (!_blankBlockHoverStates.TryGetValue(block.Id, out BlankBlockHoverState state))
+            {
+                state = new BlankBlockHoverState();
+                state.Animation.Begin(0f, 0f, 0d, false);
+                _blankBlockHoverStates[block.Id] = state;
+            }
+
+            return state;
+        }
+
+        private static float GetBlankBlockLabelOpacity(DockBlock block)
+        {
+            if (block == null)
+            {
+                return 0f;
+            }
+
+            if (_blankBlockHoverStates.TryGetValue(block.Id, out BlankBlockHoverState state))
+            {
+                return MathHelper.Clamp(state.Animation.CurrentOpacity, 0f, 1f);
+            }
+
+            return 0f;
+        }
+
         private static void UpdateInteractiveBlocks(GameTime gameTime, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             if (gameTime == null || _orderedBlocks.Count == 0)
             {
                 return;
             }
+
+            double elapsedSeconds = Math.Max(gameTime.ElapsedGameTime.TotalSeconds, 0d);
 
             if (ControlsBlock.IsRebindOverlayOpen())
             {
@@ -4735,6 +4826,9 @@ namespace op.io
                 Rectangle contentBounds = GetPanelContentBounds(block, dragBarHeight);
                 switch (block.Kind)
                 {
+                    case DockBlockKind.Blank:
+                        UpdateBlankBlockHoverState(block, elapsedSeconds);
+                        break;
                     case DockBlockKind.Properties:
                         PropertiesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;
@@ -6397,6 +6491,12 @@ namespace op.io
             public Rectangle UngroupBounds { get; }
             public Rectangle LockBounds { get; }
             public Rectangle CloseBounds { get; }
+        }
+
+        private sealed class BlankBlockHoverState
+        {
+            public bool IsHovering;
+            public OpacityAnimation Animation;
         }
 
         private enum BlockMenuControlMode

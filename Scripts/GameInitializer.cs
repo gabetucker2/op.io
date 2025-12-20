@@ -233,6 +233,7 @@ namespace op.io
             else
             {
                 _clickThroughEnabled = enable;
+                ApplyTopmostForClickThrough(enable);
             }
         }
 
@@ -291,16 +292,48 @@ namespace op.io
             }
 
             SetWindowLongPtr(_transparentWindowHandle, GWL_EXSTYLE, styles);
+            ApplyTopmostForClickThrough(enable, force: true);
+        }
+
+        private static void ApplyTopmostForClickThrough(bool clickThroughEnabled, bool force = false)
+        {
+            if (_transparentWindowHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            if (!force && _isTopmost == clickThroughEnabled)
+            {
+                return;
+            }
+
+            IntPtr target = clickThroughEnabled ? HWND_TOPMOST : HWND_NOTOPMOST;
+            const uint flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+            bool success = SetWindowPos(_transparentWindowHandle, target, 0, 0, 0, 0, flags);
+            if (!success)
+            {
+                DebugLogger.PrintWarning("Failed to adjust window z-order for click-through toggle.");
+                return;
+            }
+
+            _isTopmost = clickThroughEnabled;
         }
 
         private static IntPtr _transparentWindowHandle;
         private static bool _clickThroughEnabled;
+        private static bool _isTopmost;
 
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x00080000;
         private const int WS_EX_TRANSPARENT = 0x00000020;
         private const int LWA_COLORKEY = 0x00000001;
         private const int DWMWA_CAPTION_COLOR = 35;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_NOOWNERZORDER = 0x0200;
+        private static readonly IntPtr HWND_TOPMOST = new(-1);
+        private static readonly IntPtr HWND_NOTOPMOST = new(-2);
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
@@ -319,6 +352,9 @@ namespace op.io
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint pvAttribute, uint cbAttribute);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         private static long GetWindowLongPtr(IntPtr hWnd, int nIndex)
         {

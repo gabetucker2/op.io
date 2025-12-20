@@ -30,6 +30,12 @@ namespace op.io
 
         public static void Tick()
         {
+            // Avoid polling switches until a prior input snapshot exists to prevent first-frame edge noise.
+            if (!InputTypeManager.HasStableSnapshot)
+            {
+                return;
+            }
+
             if (!_initialized)
             {
                 Initialize();
@@ -43,7 +49,7 @@ namespace op.io
             foreach (string key in _switchKeys.OrderByDescending(k => InputManager.GetBindingTokenCount(k)))
             {
                 bool liveState = InputManager.IsInputActive(key);
-                ControlStateManager.SetSwitchState(key, liveState);
+                ControlStateManager.SetSwitchState(key, liveState, "SwitchStateScanner.Tick");
             }
         }
     }

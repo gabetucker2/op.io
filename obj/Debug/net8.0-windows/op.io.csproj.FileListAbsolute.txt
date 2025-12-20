@@ -170,3 +170,4 @@ C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows
 C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Images\Icons\Icon_Save.png
 C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Images\Icons\Icon_Locked.png
 C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Images\Icons\Icon_Unlocked.png
+C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Data\.docking_default_off_applied

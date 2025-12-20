@@ -1,0 +1,115 @@
+Log created at 2025-12-20T09:20:43.4474120-05:00
+[GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
+[DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
+[DATABASE] Reset notes directory to default at 'C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\UserNotes\note.txt'. | NotesFileSystem.cs::ResetToDefaultNote @ Line 35
+[DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 147
+[DATABASE] Created new database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::CreateDatabaseIfNotExists @ Line 170
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: InitializeDatabase, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Executed successfully: InitDB_Structure_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_Structure_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Database structure scripts loaded successfully. | DatabaseInitializer.cs::LoadStructureScripts @ Line 86
+[DATABASE] Ensured block tables for lock/order persistence. | DatabaseInitializer.cs::EnsureBlockTables @ Line 94
+[DATABASE] Verified table exists: GameObjects | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Verified table exists: Agents | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Verified table exists: FarmData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Verified table exists: MapData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Executed successfully: InitDB_StartData_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_StartData_Blocks.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_StartData_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Database initialization complete. | DatabaseInitializer.cs::InitializeDatabase @ Line 73
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT SettingKey FROM ControlKey ORDER BY RenderOrder, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 18 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: TransparentTabBlocking | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: HoldInputs | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: InspectMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: UsePreviousConfiguration | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: UseNextConfiguration | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: DockingMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125

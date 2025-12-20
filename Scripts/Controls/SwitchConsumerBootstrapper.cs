@@ -2,13 +2,23 @@ namespace op.io
 {
     public static class SwitchConsumerBootstrapper
     {
+        private static bool _dockingModeState;
+        private static bool _transparentTabBlockingState;
+
         public static void RegisterDefaultConsumers()
         {
             SwitchRegistry.ClearConsumers();
 
             SwitchRegistry.RegisterConsumer("DockingMode", value =>
             {
+                bool previous = _dockingModeState;
+                _dockingModeState = value;
                 BlockManager.DockingModeEnabled = value;
+                DockingDiagnostics.RecordConsumerUpdate(
+                    "SwitchConsumerBootstrapper.RegisterDefaultConsumers",
+                    value,
+                    note: $"previous={previous}");
+                ApplyWindowClickThrough();
             });
 
             SwitchRegistry.RegisterConsumer("AllowGameInputFreeze", value =>
@@ -26,7 +36,8 @@ namespace op.io
 
             SwitchRegistry.RegisterConsumer("TransparentTabBlocking", value =>
             {
-                GameInitializer.SetWindowClickThrough(value);
+                _transparentTabBlockingState = value;
+                ApplyWindowClickThrough();
             });
 
             SwitchRegistry.RegisterConsumer(InspectModeState.InspectModeKey, value =>
@@ -49,9 +60,38 @@ namespace op.io
             ApplyInitialStates();
         }
 
+        private static void ApplyWindowClickThrough()
+        {
+            // Keep the window interactive while docking mode is on; honor the transparent blocking switch otherwise.
+            bool enableClickThrough = !_dockingModeState && !_transparentTabBlockingState;
+            GameInitializer.SetWindowClickThrough(enableClickThrough);
+        }
+
         private static void ApplyInitialStates()
         {
             var snapshot = ControlStateManager.GetCachedSwitchStatesSnapshot();
+
+            if (snapshot.TryGetValue("DockingMode", out bool docking))
+            {
+                _dockingModeState = docking;
+                DockingDiagnostics.RecordConsumerUpdate(
+                    "SwitchConsumerBootstrapper.ApplyInitialStates",
+                    docking,
+                    note: "Hydrated from cached switch state snapshot");
+            }
+            else
+            {
+                DockingDiagnostics.RecordConsumerUpdate(
+                    "SwitchConsumerBootstrapper.ApplyInitialStates",
+                    state: false,
+                    note: "DockingMode missing from cached switch state snapshot; defaulting false");
+            }
+
+            if (snapshot.TryGetValue("TransparentTabBlocking", out bool transparentBlock))
+            {
+                _transparentTabBlockingState = transparentBlock;
+            }
+
             foreach (var kvp in snapshot)
             {
                 SwitchRegistry.NotifyConsumers(kvp.Key, kvp.Value);
