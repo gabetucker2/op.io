@@ -103,6 +103,7 @@ namespace op.io
                     _transparentWindowHandle = hwnd;
                     ApplyTransparencyKey(hwnd, Core.TransparentWindowColor);
                     SetWindowClickThrough(false);
+                    GameInitializer.ApplyWindowCaptionColor(UIStyle.DragBarBackground);
                 }
             }
 

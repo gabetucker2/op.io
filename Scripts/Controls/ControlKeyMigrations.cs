@@ -342,12 +342,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
 
         public static bool ShouldScannerTrackSwitch(string settingKey)
         {
-            if (string.Equals(settingKey, "DockingMode", StringComparison.OrdinalIgnoreCase))
-            {
-                // Avoid scanner-driven toggles for DockingMode; rely on direct input edges only.
-                return false;
-            }
-
+            // Keep scanner coverage for switches (including DockingMode) so key-edge toggles are detected each frame.
             return !RequiresSwitchSemantics(settingKey);
         }
     }

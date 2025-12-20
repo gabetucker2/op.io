@@ -604,6 +604,18 @@ namespace op.io
 
         private static bool TrySeedSwitchState(string inputKey, bool state)
         {
+            if (string.IsNullOrWhiteSpace(inputKey))
+            {
+                return false;
+            }
+
+            bool isCombo = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+            if (isCombo)
+            {
+                // Combo bindings track their own switch state; avoid seeding shared key caches that could bleed across settings.
+                return false;
+            }
+
             string primaryToken = GetPrimaryToken(inputKey);
             if (string.IsNullOrWhiteSpace(primaryToken))
             {
@@ -785,6 +797,8 @@ namespace op.io
                 return false;
             }
 
+            bool isCombo = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+
             string primaryToken = GetPrimaryToken(inputKey);
             if (string.IsNullOrWhiteSpace(primaryToken))
             {
@@ -792,12 +806,12 @@ namespace op.io
             }
 
             bool updated = false;
-            if (IsMouseInput(primaryToken))
+            if (!isCombo && IsMouseInput(primaryToken))
             {
                 _mouseSwitchStates[primaryToken] = state;
                 updated = true;
             }
-            else if (TryParseTokenToKey(primaryToken, out Keys parsedKey))
+            else if (!isCombo && TryParseTokenToKey(primaryToken, out Keys parsedKey))
             {
                 _keySwitchStates[parsedKey] = state;
                 if (!_lastKeySwitchTime.ContainsKey(parsedKey))
@@ -805,6 +819,11 @@ namespace op.io
                     _lastKeySwitchTime[parsedKey] = 0;
                 }
                 _lastKeySwitchTime[parsedKey] = Core.GAMETIME;
+                updated = true;
+            }
+            else if (isCombo)
+            {
+                // Combo bindings track their own state via _bindingSwitchStates; avoid sharing key-level switch flags.
                 updated = true;
             }
 

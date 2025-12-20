@@ -77,6 +77,11 @@ namespace op.io
             WindowMode targetMode = dockingEnabled ? _dockingEnabledWindowMode : _dockingDisabledWindowMode;
             if (game.WindowMode == targetMode)
             {
+                if (dockingEnabled)
+                {
+                    GameInitializer.ApplyWindowCaptionColor(UIStyle.DragBarBackground);
+                }
+
                 return;
             }
 
