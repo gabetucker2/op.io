@@ -49,6 +49,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int SchemePromptPadding = 16;
         private const double FeedbackDurationSeconds = 4.0;
         private const string LastSchemeRowKey = "__LastScheme";
+        private const string HexFocusOwner = "ColorSchemeBlock.HexInput";
+        private const string SchemePromptFocusOwner = "ColorSchemeBlock.SchemePrompt";
 
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly List<ColorRow> _rows = new();
@@ -123,9 +125,15 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_schemePrompt.IsOpen)
             {
                 UpdateSchemePrompt(mouseState, previousMouseState, keyboardState, previousKeyboardState, elapsedSeconds);
+                FocusModeManager.SetFocusActive(SchemePromptFocusOwner, _schemePrompt.IsOpen);
+                FocusModeManager.SetFocusActive(HexFocusOwner, false);
                 _lastMousePosition = mouseState.Position;
                 _previousKeyboardState = keyboardState;
                 return;
+            }
+            else
+            {
+                FocusModeManager.SetFocusActive(SchemePromptFocusOwner, false);
             }
 
             if (blockLocked && _dragState.IsDragging)
@@ -179,9 +187,14 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_editor.IsActive)
             {
                 UpdateEditor(contentBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState, elapsedSeconds);
+                FocusModeManager.SetFocusActive(HexFocusOwner, _editor.HexFocused);
                 _lastMousePosition = mouseState.Position;
                 _previousKeyboardState = keyboardState;
                 return;
+            }
+            else
+            {
+                FocusModeManager.SetFocusActive(HexFocusOwner, false);
             }
 
             _hoveredRowKey = !blockLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
@@ -857,6 +870,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _editor = default;
             HexInputRepeater.Reset();
+            FocusModeManager.SetFocusActive(HexFocusOwner, false);
         }
 
         private static void UpdateEditor(Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
@@ -1355,12 +1369,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 Buffer = string.Empty
             };
             BuildSchemePromptLayout(_lastContentBounds);
+            FocusModeManager.SetFocusActive(SchemePromptFocusOwner, true);
         }
 
         private static void CloseSchemePrompt()
         {
             _schemePrompt = default;
             SchemePromptRepeater.Reset();
+            FocusModeManager.SetFocusActive(SchemePromptFocusOwner, false);
         }
 
         private static void BuildSchemePromptLayout(Rectangle overlaySpace)

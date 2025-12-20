@@ -52,6 +52,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int PromptButtonSpacing = 10;
         private const float PromptTitleSpacing = 6f;
         private const string ActiveSetupRowKey = "__ActiveSetup";
+        private const string PromptFocusOwner = "DockingSetupsBlock.Prompt";
 
         private static readonly DockingCommand[] CommandOrder = new[]
         {
@@ -130,9 +131,14 @@ namespace op.io.UI.BlockScripts.Blocks
             if (NamePrompt.IsOpen)
             {
                 UpdatePrompt(mouseState, previousMouseState, keyboardState, PreviousKeyboardState, elapsedSeconds);
+                FocusModeManager.SetFocusActive(PromptFocusOwner, NamePrompt.IsOpen);
                 UpdateFeedbackTimer(gameTime);
                 PreviousKeyboardState = keyboardState;
                 return;
+            }
+            else
+            {
+                FocusModeManager.SetFocusActive(PromptFocusOwner, false);
             }
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
@@ -785,12 +791,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 Mode = mode
             };
             BuildPromptLayout(LastContentBounds);
+            FocusModeManager.SetFocusActive(PromptFocusOwner, true);
         }
 
         private static void ClosePrompt()
         {
             NamePrompt = default;
             PromptRepeater.Reset();
+            FocusModeManager.SetFocusActive(PromptFocusOwner, false);
         }
 
         private static void SaveSelectedSetup()

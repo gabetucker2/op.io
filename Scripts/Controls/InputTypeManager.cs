@@ -55,6 +55,7 @@ namespace op.io
         private static float? _cachedTriggerCooldown = null;
         private static float? _cachedSwitchCooldown = null;
         private static bool _hasPreviousState;
+        private static bool IsFocusBlocked() => FocusModeManager.IsFocusModeActive;
 
         public static void InitializeControlStates()
         {
@@ -146,11 +147,21 @@ namespace op.io
 
         public static bool IsKeyHeld(Keys key)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             return Keyboard.GetState().IsKeyDown(key);
         }
 
         public static bool IsMouseButtonHeld(string mouseKey)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             MouseState currentMouseState = Mouse.GetState();
 
             if (string.IsNullOrWhiteSpace(mouseKey))
@@ -188,6 +199,11 @@ namespace op.io
 
         public static bool IsKeyTriggered(Keys key)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             EnsurePreviousState();
 
             if (Core.Instance.Player == null)
@@ -254,6 +270,11 @@ namespace op.io
 
         public static bool IsMouseButtonTriggered(string mouseKey)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             EnsurePreviousState();
 
             MouseState currentMouseState = Mouse.GetState();
@@ -320,6 +341,11 @@ namespace op.io
 
         public static bool IsMouseButtonSwitch(string mouseKey)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             EnsurePreviousState();
 
             MouseState currentMouseState = Mouse.GetState();
@@ -371,11 +397,21 @@ namespace op.io
 
         public static bool PeekMouseSwitchState(string mouseKey)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             return _mouseSwitchStates.TryGetValue(mouseKey, out bool state) && state;
         }
 
         public static bool IsKeySwitch(Keys key)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             EnsurePreviousState();
 
             KeyboardState current = Keyboard.GetState();
@@ -463,6 +499,11 @@ namespace op.io
 
         public static bool PeekKeySwitchState(Keys key)
         {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
             return _keySwitchStates.TryGetValue(key, out bool state) && state;
         }
 
@@ -968,6 +1009,10 @@ namespace op.io
             }
 
             EnsureBindingTracking(settingKey);
+            if (IsFocusBlocked())
+            {
+                return _bindingSwitchStates[settingKey];
+            }
 
             // Track whether the full chord was held in the last tick to trigger on chord break.
             bool wasFullyHeld = _bindingChordHeld.TryGetValue(settingKey, out bool held) && held;

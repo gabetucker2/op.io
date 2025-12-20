@@ -27,6 +27,7 @@ namespace op.io
         private const string BlockMenuControlKey = "BlockMenu";
         private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
         private const string DockingSetupActiveRowKey = "__ActiveSetup";
+        private const string OverlayInputFocusOwner = "BlockManager.OverlayNumeric";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
         private const int WindowEdgeSnapDistance = 30;
@@ -5439,6 +5440,7 @@ namespace op.io
             entry.IsEditing = true;
             entry.InputBuffer = string.IsNullOrWhiteSpace(entry.InputBuffer) ? entry.Count.ToString() : entry.InputBuffer;
             OverlayInputRepeater.Reset();
+            FocusModeManager.SetFocusActive(OverlayInputFocusOwner, true);
         }
 
         private static void ClearActiveNumericEntry()
@@ -5451,6 +5453,7 @@ namespace op.io
 
             _activeNumericEntry = null;
             OverlayInputRepeater.Reset();
+            FocusModeManager.SetFocusActive(OverlayInputFocusOwner, false);
         }
 
         private static void ClearOverlayEditingState()
@@ -5466,16 +5469,19 @@ namespace op.io
 
             _activeNumericEntry = null;
             OverlayInputRepeater.Reset();
+            FocusModeManager.SetFocusActive(OverlayInputFocusOwner, false);
         }
 
         private static void UpdateOverlayKeyboardInput(KeyboardState keyboardState, double elapsedSeconds)
         {
             if (!_overlayMenuVisible || _activeNumericEntry == null)
             {
+                FocusModeManager.SetFocusActive(OverlayInputFocusOwner, false);
                 OverlayInputRepeater.Reset();
                 return;
             }
 
+            FocusModeManager.SetFocusActive(OverlayInputFocusOwner, true);
             BlockMenuEntry entry = _activeNumericEntry;
             bool changed = false;
 

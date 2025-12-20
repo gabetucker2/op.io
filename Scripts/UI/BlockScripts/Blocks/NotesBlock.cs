@@ -61,6 +61,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const float SavePromptFallbackTitleHeight = 26f;
         private const float SavePromptFallbackHelperHeight = 20f;
         private const string LastNoteRowKey = "__LastNote";
+        private const string TextFocusOwner = "NotesBlock.TextArea";
+        private const string SavePromptFocusOwner = "NotesBlock.SavePrompt";
 
         private static readonly string NotesDirectory = NotesFileSystem.NotesDirectoryPath;
         private static readonly NotesCommand[] CommandOrder = new[]
@@ -156,9 +158,15 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 TextInputRepeater.Reset();
                 UpdateSavePrompt(mouseState, previousMouseState, keyboardState, PreviousKeyboardState, elapsedSeconds);
+                FocusModeManager.SetFocusActive(SavePromptFocusOwner, SavePrompt.IsOpen);
+                FocusModeManager.SetFocusActive(TextFocusOwner, false);
                 UpdateFeedbackTimer(gameTime);
                 PreviousKeyboardState = keyboardState;
                 return;
+            }
+            else
+            {
+                FocusModeManager.SetFocusActive(SavePromptFocusOwner, false);
             }
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
@@ -209,6 +217,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             bool editingEnabled = !blockLocked && BlockManager.BlockHasFocus(DockBlockKind.Notes) && HasActiveNote;
+            FocusModeManager.SetFocusActive(TextFocusOwner, editingEnabled);
 
             if (editingEnabled)
             {
@@ -1001,12 +1010,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 Mode = mode
             };
             BuildSavePromptLayout(LastContentBounds);
+            FocusModeManager.SetFocusActive(SavePromptFocusOwner, true);
         }
 
         private static void CloseSavePrompt()
         {
             SavePrompt = default;
             SavePromptRepeater.Reset();
+            FocusModeManager.SetFocusActive(SavePromptFocusOwner, false);
         }
 
         private static void UpdateSavePrompt(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState, double elapsedSeconds)
