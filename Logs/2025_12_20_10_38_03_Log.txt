@@ -1,14 +1,28 @@
-Log created at 2025-12-20T10:17:27.9683775-05:00
+Log created at 2025-12-20T10:38:03.2707574-05:00
 [GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
 [DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
-[DATABASE] RestartDB disabled and database already exists. Skipping database reset. | DatabaseInitializer.cs::InitializeDatabase @ Line 35
+[DATABASE] Reset notes directory to default at 'C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\UserNotes\note.txt'. | NotesFileSystem.cs::ResetToDefaultNote @ Line 35
+[DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 147
+[DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\bin\Debug\net8.0-windows\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 147
+[DATABASE] Created new database file at: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseInitializer.cs::CreateDatabaseIfNotExists @ Line 170
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
 [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
 [DATABASE] ConfigureDatabase called by: InitializeDatabase, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Executed successfully: InitDB_Structure_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_Structure_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Database structure scripts loaded successfully. | DatabaseInitializer.cs::LoadStructureScripts @ Line 86
 [DATABASE] Ensured block tables for lock/order persistence. | DatabaseInitializer.cs::EnsureBlockTables @ Line 94
+[DATABASE] Verified table exists: GameObjects | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Verified table exists: Agents | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Verified table exists: FarmData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Verified table exists: MapData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 129
+[DATABASE] Executed successfully: InitDB_StartData_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_StartData_Blocks.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_StartData_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Database initialization complete. | DatabaseInitializer.cs::InitializeDatabase @ Line 73
 [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
 [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
@@ -27,7 +41,7 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
 [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
 [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
-[DATABASE] Query executed successfully. Retrieved 19 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Query executed successfully. Retrieved 18 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
 [DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
@@ -62,7 +76,19 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
 [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
 [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
-[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
 [DATABASE]   @settingKey: UsePreviousConfiguration | DatabaseQuery.cs::ExecuteQuery @ Line 22
@@ -88,8 +114,8 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
 [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DEBUG] 2025-12-20T10:17:28.0851378-05:00 [MIGRATION] stage=pre-normalize rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=EnsureDockingModeDefaultOff start | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:17:28.0866783-05:00 [MIGRATION] stage=skip-reset rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=Markers indicate OFF already applied | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.5292771-05:00 [MIGRATION] stage=pre-normalize rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=EnsureDockingModeDefaultOff start | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.5307415-05:00 [MIGRATION] stage=skip-reset rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=Markers indicate OFF already applied | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
 [DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
@@ -151,7 +177,7 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
-[DATABASE] Loading general settings... | GameInitializer.cs::LoadGeneralSettings @ Line 143
+[DATABASE] Loading general settings... | GameInitializer.cs::LoadGeneralSettings @ Line 144
 [DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
 [DATABASE]   @value: WindowMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
@@ -201,7 +227,7 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
 [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
 [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
-[DATABASE] Loaded general settings: BackgroundColor={R:20 G:20 B:25 A:255}, Viewport=1400x1400, Mode=BorderedWindowed, VSync=False, FixedTimeStep=False, FPS=240 | GameInitializer.cs::LoadGeneralSettings @ Line 175
+[DATABASE] Loaded general settings: BackgroundColor={R:20 G:20 B:25 A:255}, Viewport=1400x1400, Mode=BorderedWindowed, VSync=False, FixedTimeStep=False, FPS=240 | GameInitializer.cs::LoadGeneralSettings @ Line 176
 [DATABASE] Loading control switch states... | ControlStateManager.cs::LoadControlSwitchStates @ Line 189
 [DATABASE] Executing query: SELECT SettingKey, SwitchStartState, InputType, InputKey FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch'); | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
@@ -221,12 +247,12 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
 [GENERAL] Initializing BlockMenu switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
 [DATABASE] Loaded switch state: BlockMenu = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
-[DEBUG] 2025-12-20T10:17:28.1999384-05:00 [LOAD] source=ControlStateManager.LoadControlSwitchStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Bulk load | source=ControlStateManager.cs::LoadControlSwitchStates@214 | stack=ControlStateManager.cs::LoadControlSwitchStates@214 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.6167776-05:00 [LOAD] source=ControlStateManager.LoadControlSwitchStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Bulk load | source=ControlStateManager.cs::LoadControlSwitchStates@214 | stack=ControlStateManager.cs::LoadControlSwitchStates@214 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
 [DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
-[DEBUG] 2025-12-20T10:17:28.2031477-05:00 [INIT] source=ControlStateManager.SetSwitchState dbRaw=0 dbBool=OFF requested=OFF hasPersistenceFlag=True | source=ControlStateManager.cs::SetSwitchState@73 | context=ControlStateManager.LoadControlSwitchStates | stack=ControlStateManager.cs::SetSwitchState@73 <= ControlStateManager.cs::LoadControlSwitchStates@227 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.6187164-05:00 [INIT] source=ControlStateManager.SetSwitchState dbRaw=0 dbBool=OFF requested=OFF hasPersistenceFlag=True | source=ControlStateManager.cs::SetSwitchState@73 | context=ControlStateManager.LoadControlSwitchStates | stack=ControlStateManager.cs::SetSwitchState@73 <= ControlStateManager.cs::LoadControlSwitchStates@227 <= GameInitializer.cs::Initialize@46 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
 [GENERAL] Initializing DockingMode switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
 [DATABASE] Loaded switch state: DockingMode = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
@@ -268,7 +294,7 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Setting starting debug mode to switch value: 1 | DebugModeHandler.cs::get_DEBUGENABLED @ Line 23
 [DEBUG] Initialized switch state for 'Crouch' (LeftControl) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 124
 [DEBUG] Switch 'BlockMenu' could not map input key 'Shift + X' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 128
-[DEBUG] 2025-12-20T10:17:28.2323679-05:00 [LOAD] source=InputTypeManager.InitializeControlStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Initial switch cache hydrate | source=InputTypeManager.cs::InitializeControlStates@103 | stack=InputTypeManager.cs::InitializeControlStates@103 <= GameInitializer.cs::Initialize@49 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.6362797-05:00 [LOAD] source=InputTypeManager.InitializeControlStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Initial switch cache hydrate | source=InputTypeManager.cs::InitializeControlStates@103 | stack=InputTypeManager.cs::InitializeControlStates@103 <= GameInitializer.cs::Initialize@49 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::Append @ Line 93
 [DEBUG] Initialized switch state for 'DockingMode' (V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 124
 [DEBUG] Switch 'DebugMode' could not map input key 'Shift + B' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 128
 [DEBUG] Switch 'AllowGameInputFreeze' could not map input key 'Shift + C' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 128
@@ -285,9 +311,9 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [GAMEOBJECT] Loading map objects from database... | MapObjectLoader.cs::LoadMapObjects @ Line 13
 [DATABASE] Executing query: SELECT g.ID, g.Name, g.Type, g.PositionX, g.PositionY, g.Rotation, g.Width, g.Height, g.Sides, g.FillR, g.FillG, g.FillB, g.FillA, g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth, g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics, g.Shape FROM MapData s INNER JOIN GameObjects g ON s.ID = g.ID | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
-[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
-[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
 [DATABASE] Query executed successfully. Retrieved 3 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [GAMEOBJECT] Loaded 3 map objects. | MapObjectLoader.cs::LoadMapObjects @ Line 23
 [DEBUG] Loaded map object ID=2. | MapObjectLoader.cs::LoadMapObjects @ Line 34
@@ -298,9 +324,6 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [GAMEOBJECT] Loading farm prototypes from database... | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 16
 [DATABASE] Executing query:  |                     SELECT |                         g.ID, |                         g.Name, |                         g.Type, |                         g.PositionX, |                         g.PositionY, |                         g.Rotation, |                         g.Width, |                         g.Height, |                         g.Sides, |                         g.FillR, g.FillG, g.FillB, g.FillA, |                         g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |                         g.OutlineWidth, |                         g.IsCollidable, |                         g.IsDestructible, |                         g.Mass, |                         g.StaticPhysics, |                         g.Shape, |                         f.Count |                     FROM GameObjects g |                     INNER JOIN FarmData f ON g.ID = f.ID |                     WHERE g.Type = 'Prototype'; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
-[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
-[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
 [DATABASE] Query executed successfully. Retrieved 4 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [GAMEOBJECT] Loaded 4 farm prototypes. | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 51
 [GAMEOBJECT] Farm Prototype: ID=5, Name=Triangle, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
@@ -311,9 +334,6 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Loading farm data from database... | FarmDataLoader.cs::LoadFarmData @ Line 31
 [DATABASE] Executing query: SELECT ID, Count FROM FarmData | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
-[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
 [DATABASE] Query executed successfully. Retrieved 4 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [DATABASE] Loaded 4 farm data entries. | FarmDataLoader.cs::LoadFarmData @ Line 43
 [GAMEOBJECT] Farm Prototypes loaded: 4 | GameObjectInitializer.cs::InitializeFarms @ Line 60
@@ -350,17 +370,17 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [GAMEOBJECT] Core player set: ID=1, Pos={X:100 Y:100}, Shape=Circle | GameObjectInitializer.cs::InitializeAgents @ Line 181
 [GAMEOBJECT] Agents loaded: 1 total | GameObjectInitializer.cs::InitializeAgents @ Line 183
 [GAMEOBJECT] Initialization complete. Total GameObjects: 35, StaticObjects: 3 | GameObjectInitializer.cs::Initialize @ Line 21
-[DEBUG] 2025-12-20T10:17:28.4419176-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.ApplyInitialStates docking=OFF note=Hydrated from cached switch state snapshot | source=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 | stack=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 <= GameInitializer.cs::Initialize@111 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.8497803-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.ApplyInitialStates docking=OFF note=Hydrated from cached switch state snapshot | source=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 | stack=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 <= GameInitializer.cs::Initialize@112 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::Append @ Line 93
 [UI] Applied WindowMode: BorderlessWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 59
-[DEBUG] 2025-12-20T10:17:28.5115519-05:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=OFF note=changed=False | source=BlockManager.cs::DockingModeEnabled@145 | stack=BlockManager.cs::set_DockingModeEnabled@145 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:17:28.5128187-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=OFF note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.8800834-05:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=OFF note=changed=False | source=BlockManager.cs::DockingModeEnabled@145 | stack=BlockManager.cs::set_DockingModeEnabled@145 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 | DockingDiagnostics.cs::Append @ Line 93
+[DEBUG] 2025-12-20T10:38:03.8812856-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=OFF note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 | DockingDiagnostics.cs::Append @ Line 93
 [DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 44
 [DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, MetaControl, LockMode FROM ControlKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
 [DATABASE] Query executed successfully. Retrieved 19 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [PHYSICS] Initializing PhysicsManager... | PhysicsManager.cs::Initialize @ Line 24
 [PHYSICS] PhysicsManager initialization complete. | PhysicsManager.cs::Initialize @ Line 26
-[GENERAL] Game initialization complete. | GameInitializer.cs::Initialize @ Line 121
+[GENERAL] Game initialization complete. | GameInitializer.cs::Initialize @ Line 122
 [GENERAL] SpriteBatch initialized successfully. | GameRenderer.cs::LoadGraphics @ Line 26
 [DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
 [DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
@@ -457,8 +477,8 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
 [PLAYER] SwitchCooldown loaded: 0.1 | Agent.cs::LoadSwitchCooldown @ Line 146
 [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
-[PHYSICS] Destroying GameObject ID=25 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
-[GAMEOBJECT] Unregistered GameObject ID=25 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
 [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
 [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
 [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
@@ -541,48 +561,8 @@ Log created at 2025-12-20T10:17:27.9683775-05:00
 [SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
 [DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @whereValue LIMIT 1; with whereValue: CursorFollowDeadzonePixels | DatabaseFetch.cs::GetSetting @ Line 40
 [DATABASE] Successfully retrieved setting 'CursorFollowDeadzonePixels' from 'ControlSettings'. | DatabaseFetch.cs::GetSetting @ Line 49
-[DEBUG] 2025-12-20T10:17:31.1947382-05:00 [INPUT] source=InputTypeManager.IsKeySwitch inputKey='V' newState=ON note=Primary token toggle (release edge) | source=InputTypeManager.cs::IsKeySwitch@451 | context=withinStartup=False;comboGuard=False;breakGuard=False | stack=InputTypeManager.cs::IsKeySwitch@451 <= InputManager.cs::IsSwitch@1039 <= InputManager.cs::EvaluateSwitchState@858 <= InputManager.cs::IsActive@823 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:17:31.1968165-05:00 [SET] source=ControlStateManager.SetSwitchState prev=OFF next=ON persisted=True reason=state-change | source=ControlStateManager.cs::SetSwitchState@95 | context=InputTypeManager.NotifySwitchStateFromInput:V | stack=ControlStateManager.cs::SetSwitchState@95 <= InputTypeManager.cs::NotifySwitchStateFromInput@503 <= InputTypeManager.cs::IsKeySwitch@458 <= InputManager.cs::IsSwitch@1039 | DockingDiagnostics.cs::Append @ Line 93
-[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 106
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[UI] Applied WindowMode: BorderedWindowed, Resolution: 1400x1400 | ScreenManager.cs::ApplyWindowMode @ Line 59
-[DEBUG] 2025-12-20T10:17:31.2653682-05:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=ON note=changed=True | source=BlockManager.cs::DockingModeEnabled@145 | stack=BlockManager.cs::set_DockingModeEnabled@145 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= ControlStateManager.cs::DispatchSwitchChange@184 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:17:31.2661778-05:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=ON note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= ControlStateManager.cs::DispatchSwitchChange@184 <= ControlStateManager.cs::SetSwitchState@109 | DockingDiagnostics.cs::Append @ Line 93
-[DEBUG] 2025-12-20T10:17:31.2672946-05:00 [INPUT] source=InputTypeManager.NotifySwitchStateFromInput inputKey='V' newState=ON note=Switch state updated from live input edge | source=InputTypeManager.cs::NotifySwitchStateFromInput@506 | context=HasStableSnapshot=True | stack=InputTypeManager.cs::NotifySwitchStateFromInput@506 <= InputTypeManager.cs::IsKeySwitch@458 <= InputManager.cs::IsSwitch@1039 <= InputManager.cs::EvaluateSwitchState@858 | DockingDiagnostics.cs::Append @ Line 93
-[UI] Exit hotkey triggered. Closing game. | ActionHandler.cs::Tickwise_CheckActions @ Line 23
-[DATABASE] Persisting cached switch states before closing the game. | GameCloser.cs::PersistCachedSwitchStates @ Line 21
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'Crouch' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'BlockMenu' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'DebugMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'AllowGameInputFreeze' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[DATABASE] Updated and saved TransparentTabBlocking to False from True | ControlStateManager.cs::SetSwitchState @ Line 106
 [DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
 [DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
 [DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
 [DATABASE] Successfully updated 'TransparentTabBlocking' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'HoldInputs' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
-[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
-[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\StandaloneScripts\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
-[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
-[DATABASE] Successfully updated 'InspectMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103

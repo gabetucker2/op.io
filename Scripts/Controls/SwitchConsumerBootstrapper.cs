@@ -62,9 +62,9 @@ namespace op.io
 
         private static void ApplyWindowClickThrough()
         {
-            // Keep the window interactive while docking mode is on; honor the transparent blocking switch otherwise.
-            bool enableClickThrough = !_dockingModeState && !_transparentTabBlockingState;
-            GameInitializer.SetWindowClickThrough(enableClickThrough);
+            // Allow click-through when docking is off and transparent tab blocking is disabled; BlockManager scopes it to transparent blocks.
+            bool allowTransparentBlockClickThrough = !_dockingModeState && !_transparentTabBlockingState;
+            BlockManager.SetTransparentBlockClickThroughAllowed(allowTransparentBlockClickThrough);
         }
 
         private static void ApplyInitialStates()

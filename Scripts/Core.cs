@@ -10,7 +10,7 @@ namespace op.io
 
         // do not use `ForceDebugMode` unless `DebugMode` in `InitDB_StartData_Settlings.sql` isn't working.
         // this will wipe all locally saved data, use with caution
-        public static bool RestartDB { get; set; } = false;
+        public static bool RestartDB { get; set; } = true;
         public static bool ForceDebugMode { get; set; } = false;
 
         public static Color TransparentWindowColor { get; set; }

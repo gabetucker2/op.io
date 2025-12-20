@@ -87,6 +87,8 @@ namespace op.io
         private static DockDropPreview? _dropPreview;
         private static bool _overlayMenuVisible;
         private static bool _blockMenuSwitchState;
+        private static bool _allowTransparentBlockClickThrough;
+        private static bool _isWindowClickThroughActive;
         private static Rectangle _overlayBounds;
         private static Rectangle _overlayDismissBounds;
         private static Rectangle _overlayOpenAllBounds;
@@ -163,6 +165,8 @@ namespace op.io
                     EnsureBlocks();
                     MarkLayoutDirty();
                 }
+
+                UpdateTransparentBlockClickThrough();
             }
         }
 
@@ -171,6 +175,12 @@ namespace op.io
             EnsureBlocks();
             MarkLayoutDirty();
             EnsureSurfaceResources(Core.Instance?.GraphicsDevice);
+        }
+
+        public static void SetTransparentBlockClickThroughAllowed(bool allowClickThrough)
+        {
+            _allowTransparentBlockClickThrough = allowClickThrough;
+            UpdateTransparentBlockClickThrough();
         }
 
         public static void Update(GameTime gameTime)
@@ -247,6 +257,7 @@ namespace op.io
 
             UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState, keyboardState, _previousKeyboardState);
             ApplyPendingDockingSetup();
+            UpdateTransparentBlockClickThrough();
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
         }
@@ -285,6 +296,45 @@ namespace op.io
             }
 
             return true;
+        }
+
+        private static void UpdateTransparentBlockClickThrough()
+        {
+            bool shouldAllowClickThrough =
+                _allowTransparentBlockClickThrough &&
+                !_dockingModeEnabled &&
+                IsPointerOverTransparentBlock();
+
+            if (shouldAllowClickThrough == _isWindowClickThroughActive)
+            {
+                return;
+            }
+
+            _isWindowClickThroughActive = shouldAllowClickThrough;
+            GameInitializer.SetWindowClickThrough(shouldAllowClickThrough);
+        }
+
+        private static bool IsPointerOverTransparentBlock()
+        {
+            if (_orderedBlocks.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !block.IsVisible || block.Kind != DockBlockKind.Transparent)
+                {
+                    continue;
+                }
+
+                if (block.Bounds.Contains(_mousePosition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static void CompleteDockedFrame(SpriteBatch spriteBatch)
