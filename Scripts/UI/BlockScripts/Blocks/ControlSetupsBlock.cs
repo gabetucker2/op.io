@@ -342,7 +342,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     SetFeedbackMessage("Select a setup to rename.");
                     break;
                 case ControlSetupCommand.Delete:
-                    SetFeedbackMessage("No saved setups to delete.");
+                    SetFeedbackMessage("Keep at least one setup.");
                     break;
             }
         }
@@ -888,6 +888,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            if (SetupEntries.Count <= 1)
+            {
+                SetFeedbackMessage("Keep at least one setup.");
+                ActiveOverlay = OverlayMode.None;
+                return;
+            }
+
             if (!ControlConfigurationManager.TryDelete(name, out string error))
             {
                 if (!string.IsNullOrWhiteSpace(error))
@@ -1048,7 +1055,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 ControlSetupCommand.Save => SetupEntries.Count == 0 && string.IsNullOrWhiteSpace(SelectedSetupName),
                 ControlSetupCommand.Rename => string.IsNullOrWhiteSpace(SelectedSetupName),
-                ControlSetupCommand.Delete => SetupEntries.Count == 0,
+                ControlSetupCommand.Delete => SetupEntries.Count <= 1,
                 _ => false
             };
         }

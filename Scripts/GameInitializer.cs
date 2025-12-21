@@ -26,6 +26,8 @@ namespace op.io
             DatabaseInitializer.InitializeDatabase();
             SafeLog("GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied");
             ControlKeyMigrations.EnsureApplied();
+            SafeLog("GameInitializer.Initialize: ControlConfigurationManager.ApplyStartupConfiguration");
+            ControlConfigurationManager.ApplyStartupConfiguration();
             try
             {
                 SafeLog("GameInitializer.Initialize: ColorScheme.Initialize");

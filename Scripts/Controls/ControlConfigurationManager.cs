@@ -10,6 +10,7 @@ namespace op.io
     internal static class ControlConfigurationManager
     {
         private const string ActiveSetupRowKey = "__ActiveControlSetup";
+        private const string DefaultConfigurationName = "Default";
 
         private static readonly JsonSerializerOptions SerializerOptions = new()
         {
@@ -37,6 +38,11 @@ namespace op.io
         public static IReadOnlyList<string> ListConfigurations()
         {
             EnsureTables();
+            if (!EnsureDefaultConfiguration(out string seedError) && !string.IsNullOrWhiteSpace(seedError))
+            {
+                DebugLogger.PrintError($"Failed to ensure default control configuration: {seedError}");
+            }
+
             Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.ControlSetups);
             return data.Keys
                 .Where(name => !string.Equals(name, ActiveSetupRowKey, StringComparison.OrdinalIgnoreCase))
@@ -160,6 +166,20 @@ namespace op.io
             }
 
             EnsureTables();
+            IReadOnlyList<string> existing = ListConfigurations();
+            if (existing.Count <= 1)
+            {
+                error = "At least one control setup is required.";
+                return false;
+            }
+
+            Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.ControlSetups);
+            if (!data.ContainsKey(name))
+            {
+                error = "Unable to find that configuration.";
+                return false;
+            }
+
             BlockDataStore.DeleteRows(DockBlockKind.ControlSetups, new[] { name });
 
             string active = GetActiveConfigurationName();
@@ -229,6 +249,48 @@ namespace op.io
 
             string target = names[targetIndex];
             return TryApply(target, out error);
+        }
+
+        public static void ApplyStartupConfiguration()
+        {
+            EnsureTables();
+
+            if (!EnsureDefaultConfiguration(out string seedError) && !string.IsNullOrWhiteSpace(seedError))
+            {
+                DebugLogger.PrintError($"Failed to seed default control configuration: {seedError}");
+            }
+
+            IReadOnlyList<string> names = ListConfigurations();
+            if (names.Count == 0)
+            {
+                DebugLogger.PrintError("No control configurations available to load.");
+                return;
+            }
+
+            string active = GetActiveConfigurationName();
+            string target = names.FirstOrDefault(name => string.Equals(name, active, StringComparison.OrdinalIgnoreCase)) ?? names.First();
+
+            if (TryApply(target, out string applyError))
+            {
+                return;
+            }
+
+            DebugLogger.PrintError($"Failed to apply control configuration '{target}' on startup: {applyError}");
+
+            string fallback = names.First();
+            if (!string.Equals(fallback, target, StringComparison.OrdinalIgnoreCase) &&
+                TryApply(fallback, out string fallbackError))
+            {
+                DebugLogger.PrintWarning($"Applied fallback control configuration '{fallback}' after startup failure.");
+                return;
+            }
+            else if (!string.Equals(fallback, target, StringComparison.OrdinalIgnoreCase))
+            {
+                DebugLogger.PrintError($"Fallback control configuration '{fallback}' also failed to load.");
+                return;
+            }
+
+            DebugLogger.PrintError("Unable to apply any control configuration on startup.");
         }
 
         private static void EnsureTables()
@@ -455,6 +517,193 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     ControlStateManager.RegisterSwitchPersistence(binding.SettingKey, persist);
                     ControlStateManager.SetSwitchState(binding.SettingKey, switchOn, "ControlConfigurationManager.ApplyRuntimeBindings");
                 }
+            }
+        }
+
+        private static bool EnsureDefaultConfiguration(out string error)
+        {
+            error = null;
+            try
+            {
+                EnsureTables();
+
+                Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.ControlSetups);
+                bool hasDefault = data.TryGetValue(DefaultConfigurationName, out string defaultPayload);
+                ControlConfiguration defaultConfigFromStore = hasDefault ? Deserialize(defaultPayload, out error) : null;
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    DebugLogger.PrintError($"Stored default control configuration is invalid: {error}");
+                    error = null;
+                    defaultConfigFromStore = null;
+                }
+
+                if (defaultConfigFromStore != null && defaultConfigFromStore.Bindings != null && defaultConfigFromStore.Bindings.Count > 0)
+                {
+                    return true;
+                }
+
+                ControlConfiguration config = BuildDefaultConfiguration();
+                return SaveConfiguration(DefaultConfigurationName, config, out error);
+            }
+            catch (Exception ex)
+            {
+                error = $"Failed to ensure default configuration: {ex.Message}";
+                return false;
+            }
+        }
+
+        private static bool SaveConfiguration(string name, ControlConfiguration config, out string error)
+        {
+            error = null;
+            string payload = Serialize(config, out error);
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                return false;
+            }
+
+            BlockDataStore.SetRowData(DockBlockKind.ControlSetups, name, payload);
+            return true;
+        }
+
+        private static ControlConfiguration BuildDefaultConfiguration()
+        {
+            ControlConfiguration snapshot = CaptureSnapshot();
+            Dictionary<string, ControlBindingSnapshot> bindings = BuildDefaultBindingMap();
+
+            if (snapshot?.Bindings != null)
+            {
+                foreach (ControlBindingSnapshot binding in snapshot.Bindings)
+                {
+                    if (binding == null || string.IsNullOrWhiteSpace(binding.SettingKey))
+                    {
+                        continue;
+                    }
+
+                    bindings[binding.SettingKey] = binding;
+                }
+            }
+
+            Dictionary<string, string> rowData = snapshot?.RowData ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> rowOrders = snapshot?.RowOrders ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (rowOrders.Count == 0)
+            {
+                rowOrders = BuildRowOrdersFromBindings(bindings.Values);
+            }
+            else
+            {
+                EnsureRowOrdersContainBindings(rowOrders, bindings.Values);
+            }
+
+            List<ControlBindingSnapshot> orderedBindings = bindings.Values
+                .OrderBy(b => b.RenderOrder > 0 ? b.RenderOrder : int.MaxValue)
+                .ThenBy(b => b.SettingKey, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new ControlConfiguration
+            {
+                Bindings = orderedBindings,
+                RowData = rowData,
+                RowOrders = rowOrders
+            };
+        }
+
+        private static Dictionary<string, ControlBindingSnapshot> BuildDefaultBindingMap()
+        {
+            var defaults = new[]
+            {
+                new ControlBindingSnapshot { SettingKey = "MoveUp", InputKey = "W", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 1, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "MoveDown", InputKey = "S", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 2, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "MoveLeft", InputKey = "A", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 3, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "MoveRight", InputKey = "D", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 4, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "MoveTowardsCursor", InputKey = "LeftClick", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 5, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "MoveAwayFromCursor", InputKey = "RightClick", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 6, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "Sprint", InputKey = "LeftShift", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 7, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "Crouch", InputKey = "LeftControl", InputType = "NoSaveSwitch", SwitchStartState = 0, MetaControl = false, RenderOrder = 8, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "ReturnCursorToPlayer", InputKey = "Space", InputType = "Trigger", SwitchStartState = 0, MetaControl = false, RenderOrder = 9, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "Exit", InputKey = "Escape", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 10, LockMode = true },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.BlockMenuKey, InputKey = "Shift + X", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 11, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "DockingMode", InputKey = "V", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 12, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "DebugMode", InputKey = "Shift + B", InputType = "SaveSwitch", SwitchStartState = 1, MetaControl = true, RenderOrder = 13, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "AllowGameInputFreeze", InputKey = "Shift + C", InputType = "SaveSwitch", SwitchStartState = 1, MetaControl = true, RenderOrder = 14, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "TransparentTabBlocking", InputKey = "Shift + V", InputType = "SaveSwitch", SwitchStartState = 1, MetaControl = false, RenderOrder = 15, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.HoldInputsKey, InputKey = "M", InputType = "NoSaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 16, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.PreviousConfigurationKey, InputKey = "Shift + [", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 17, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.NextConfigurationKey, InputKey = "Shift + ]", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 18, LockMode = false }
+            };
+
+            var map = new Dictionary<string, ControlBindingSnapshot>(StringComparer.OrdinalIgnoreCase);
+            foreach (ControlBindingSnapshot binding in defaults)
+            {
+                if (string.IsNullOrWhiteSpace(binding.SettingKey))
+                {
+                    continue;
+                }
+
+                map[binding.SettingKey] = binding;
+            }
+
+            return map;
+        }
+
+        private static Dictionary<string, int> BuildRowOrdersFromBindings(IEnumerable<ControlBindingSnapshot> bindings)
+        {
+            var orders = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (bindings == null)
+            {
+                return orders;
+            }
+
+            int fallbackOrder = 0;
+            foreach (ControlBindingSnapshot binding in bindings.OrderBy(b => b.RenderOrder > 0 ? b.RenderOrder : int.MaxValue).ThenBy(b => b.SettingKey, StringComparer.OrdinalIgnoreCase))
+            {
+                if (binding == null || string.IsNullOrWhiteSpace(binding.SettingKey))
+                {
+                    continue;
+                }
+
+                string key = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Controls, binding.SettingKey);
+                if (string.IsNullOrWhiteSpace(key) || orders.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                int order = binding.RenderOrder > 0 ? binding.RenderOrder : ++fallbackOrder;
+                orders[key] = order;
+                fallbackOrder = Math.Max(fallbackOrder, order);
+            }
+
+            return orders;
+        }
+
+        private static void EnsureRowOrdersContainBindings(Dictionary<string, int> rowOrders, IEnumerable<ControlBindingSnapshot> bindings)
+        {
+            if (rowOrders == null || bindings == null)
+            {
+                return;
+            }
+
+            int maxOrder = rowOrders.Count == 0 ? 0 : rowOrders.Values.Max();
+            foreach (ControlBindingSnapshot binding in bindings)
+            {
+                if (binding == null || string.IsNullOrWhiteSpace(binding.SettingKey))
+                {
+                    continue;
+                }
+
+                string key = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Controls, binding.SettingKey);
+                if (string.IsNullOrWhiteSpace(key) || rowOrders.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                int order = binding.RenderOrder > 0 ? binding.RenderOrder : maxOrder + 1;
+                if (order <= maxOrder)
+                {
+                    order = maxOrder + 1;
+                }
+
+                rowOrders[key] = order;
+                maxOrder = Math.Max(maxOrder, order);
             }
         }
 
