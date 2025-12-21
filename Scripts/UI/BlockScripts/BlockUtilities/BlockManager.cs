@@ -20,6 +20,7 @@ namespace op.io
         private const string ColorSchemeBlockKey = "colors";
         private const string ControlsBlockKey = "controls";
         private const string NotesBlockKey = "notes";
+        private const string ControlSetupsBlockKey = "controlsetups";
         private const string DockingSetupsBlockKey = "dockingsetups";
         private const string BackendBlockKey = "backend";
         private const string SpecsBlockKey = "specs";
@@ -864,6 +865,7 @@ namespace op.io
             GroupCountedBlocks(definedBlocks);
             ApplyDockingSetupPanelGroups(GetPanelGroupsFromDefinition(setup));
             ApplyDockingSetupLocks(setup);
+            MergeControlSetupsIntoControlsGroup();
             MergeBackendAndSpecs();
 
             HashSet<string> visiblePanels = new(StringComparer.OrdinalIgnoreCase);
@@ -1389,6 +1391,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlsBlockKey, ControlsBlock.BlockTitle, DockBlockKind.Controls, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(ControlSetupsBlockKey, ControlSetupsBlock.BlockTitle, DockBlockKind.ControlSetups, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(DockingSetupsBlockKey, DockingSetupsBlock.BlockTitle, DockBlockKind.DockingSetups, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(DebugLogsBlockKey, DebugLogsBlock.BlockTitle, DockBlockKind.DebugLogs, BlockMenuControlMode.Toggle, initialVisible: true));
@@ -1504,6 +1507,8 @@ namespace op.io
 
         private static void GroupDefaultPanels()
         {
+            MergeControlSetupsIntoControlsGroup();
+
             PanelGroup colorGroup = null;
             if (_blocks.TryGetValue(ColorSchemeBlockKey, out DockBlock colorBlock))
             {
@@ -1517,6 +1522,36 @@ namespace op.io
             }
 
             MergeBackendAndSpecs();
+        }
+
+        private static void MergeControlSetupsIntoControlsGroup()
+        {
+            if (!_blocks.TryGetValue(ControlsBlockKey, out DockBlock controlsBlock) ||
+                controlsBlock == null)
+            {
+                return;
+            }
+
+            PanelGroup controlsGroup = GetPanelGroupForBlock(controlsBlock);
+            if (controlsGroup == null)
+            {
+                return;
+            }
+
+            bool mergedGroupLocked = controlsGroup.IsLocked;
+
+            if (_blocks.TryGetValue(ControlSetupsBlockKey, out DockBlock controlSetupsBlock) &&
+                controlSetupsBlock != null)
+            {
+                PanelGroup controlSetupsGroup = GetPanelGroupForBlock(controlSetupsBlock);
+                if (controlSetupsGroup != null && !ReferenceEquals(controlsGroup, controlSetupsGroup))
+                {
+                    mergedGroupLocked |= controlSetupsGroup.IsLocked;
+                }
+            }
+
+            MergeBlockIntoGroup(controlsGroup, ControlSetupsBlockKey);
+            controlsGroup.IsLocked = mergedGroupLocked;
         }
 
         private static void MergeBlockIntoGroup(PanelGroup targetGroup, string blockId)
@@ -1606,6 +1641,7 @@ namespace op.io
             BlockNode propertiesNode = GetBlockNodesByKind(DockBlockKind.Properties).FirstOrDefault();
             BlockNode colorNode = GetBlockNodesByKind(DockBlockKind.ColorScheme).FirstOrDefault();
             BlockNode controlsNode = GetBlockNodesByKind(DockBlockKind.Controls).FirstOrDefault();
+            BlockNode controlSetupsNode = GetBlockNodesByKind(DockBlockKind.ControlSetups).FirstOrDefault();
             BlockNode notesNode = GetBlockNodesByKind(DockBlockKind.Notes).FirstOrDefault();
             BlockNode backendNode = GetBlockNodesByKind(DockBlockKind.Backend).FirstOrDefault();
             BlockNode specsNode = GetBlockNodesByKind(DockBlockKind.Specs).FirstOrDefault();
@@ -1617,7 +1653,8 @@ namespace op.io
             DockNode blankAndTransparent = CombineNodes(transparentStack, blankStack, DockSplitOrientation.Vertical, sideRatio);
 
             DockNode leftColumn = CombineNodes(blankAndTransparent, gameNode, DockSplitOrientation.Horizontal, 0.36f);
-            DockNode controlsAndNotes = CombineNodes(controlsNode, notesNode, DockSplitOrientation.Horizontal, 0.5f);
+            DockNode controlsAndConfigs = CombineNodes(controlsNode, controlSetupsNode, DockSplitOrientation.Horizontal, 0.52f);
+            DockNode controlsAndNotes = CombineNodes(controlsAndConfigs, notesNode, DockSplitOrientation.Horizontal, 0.64f);
             DockNode backendAndSpecs = CombineNodes(backendNode, specsNode, DockSplitOrientation.Horizontal, 0.58f);
             DockNode paletteBackend = CombineNodes(colorNode, backendAndSpecs, DockSplitOrientation.Horizontal, 0.42f);
             DockNode propertiesAndControls = CombineNodes(propertiesNode, controlsAndNotes, DockSplitOrientation.Horizontal, 0.26f);
@@ -2302,6 +2339,7 @@ namespace op.io
                 DockBlockKind.ColorScheme => (ColorSchemeBlock.MinWidth, ColorSchemeBlock.MinHeight),
                 DockBlockKind.Controls => (ControlsBlock.MinWidth, ControlsBlock.MinHeight),
                 DockBlockKind.Notes => (NotesBlock.MinWidth, NotesBlock.MinHeight),
+                DockBlockKind.ControlSetups => (ControlSetupsBlock.MinWidth, ControlSetupsBlock.MinHeight),
                 DockBlockKind.DockingSetups => (DockingSetupsBlock.MinWidth, DockingSetupsBlock.MinHeight),
                 DockBlockKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
                 DockBlockKind.Specs => (SpecsBlock.MinWidth, SpecsBlock.MinHeight),
@@ -4812,6 +4850,9 @@ namespace op.io
                 case DockBlockKind.Notes:
                     NotesBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.ControlSetups:
+                    ControlSetupsBlock.Draw(spriteBatch, contentBounds);
+                    break;
                 case DockBlockKind.DockingSetups:
                     DockingSetupsBlock.Draw(spriteBatch, contentBounds);
                     break;
@@ -4943,12 +4984,15 @@ namespace op.io
                     case DockBlockKind.ColorScheme:
                         ColorSchemeBlock.Update(gameTime, contentBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState);
                         break;
-                    case DockBlockKind.Controls:
-                        ControlsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
-                        break;
-                    case DockBlockKind.Backend:
-                        BackendBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
-                        break;
+                case DockBlockKind.Controls:
+                    ControlsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                    break;
+                case DockBlockKind.ControlSetups:
+                    ControlSetupsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                    break;
+                case DockBlockKind.Backend:
+                    BackendBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                    break;
                     case DockBlockKind.DebugLogs:
                         DebugLogsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
                         break;

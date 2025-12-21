@@ -258,8 +258,8 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
 
         private static void EnsureConfigurationCycleControls()
         {
-            EnsureConfigurationControl(PreviousConfigurationKey, "[", 17);
-            EnsureConfigurationControl(NextConfigurationKey, "]", 18);
+            EnsureConfigurationControl(PreviousConfigurationKey, "Shift + [", 17);
+            EnsureConfigurationControl(NextConfigurationKey, "Shift + ]", 18);
         }
 
         private static void EnsureConfigurationControl(string settingKey, string defaultInput, int renderOrder)

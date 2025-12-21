@@ -53,6 +53,12 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ValueHighlightPadding = 2;
         private const int DragStartThreshold = 6;
 
+        internal static void InvalidateCache()
+        {
+            _keybindCacheLoaded = false;
+            _keybindCache.Clear();
+        }
+
         private static bool IsSwitchType(InputType inputType) =>
             inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
 

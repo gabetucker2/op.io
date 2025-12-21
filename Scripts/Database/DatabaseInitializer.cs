@@ -93,6 +93,7 @@ namespace op.io
                 BlockDataStore.EnsureTables(
                     connection,
                     DockBlockKind.Controls,
+                    DockBlockKind.ControlSetups,
                     DockBlockKind.Backend,
                     DockBlockKind.Specs,
                     DockBlockKind.ColorScheme,

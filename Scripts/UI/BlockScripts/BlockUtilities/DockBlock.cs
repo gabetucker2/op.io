@@ -12,6 +12,7 @@ namespace op.io
         ColorScheme,
         Controls,
         Notes,
+        ControlSetups,
         DockingSetups,
         Backend,
         Specs,
