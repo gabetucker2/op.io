@@ -243,15 +243,25 @@ namespace op.io
         public static IReadOnlyList<string> GetAvailableSchemeNames()
         {
             EnsureInitialized();
-            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            HashSet<string> names = GetSchemeNamesFromRowData(storedData);
+
             if (!string.IsNullOrWhiteSpace(_activeSchemeName))
             {
                 names.Add(_activeSchemeName);
             }
 
-            names.Add(DefaultSchemeName);
+            return names.OrderBy(n => n).ToList();
+        }
 
-            Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+        private static HashSet<string> GetSchemeNamesFromRowData(Dictionary<string, string> storedData)
+        {
+            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+            if (storedData == null)
+            {
+                return names;
+            }
+
             foreach (string rowKey in storedData.Keys)
             {
                 if (TryParseSchemeRowKey(rowKey, out string schemeName, out _))
@@ -260,7 +270,7 @@ namespace op.io
                 }
             }
 
-            return names.OrderBy(n => n).ToList();
+            return names;
         }
 
         public static bool SaveCurrentScheme(string schemeName, bool makeActive = true)
@@ -286,6 +296,11 @@ namespace op.io
 
         public static bool DeleteScheme(string schemeName)
         {
+            return TryDeleteScheme(schemeName, out _);
+        }
+
+        public static bool CanDeleteScheme(string schemeName)
+        {
             EnsureInitialized();
             string normalized = NormalizeSchemeName(schemeName);
             if (string.IsNullOrWhiteSpace(normalized))
@@ -293,19 +308,43 @@ namespace op.io
                 return false;
             }
 
-            if (string.Equals(normalized, DefaultSchemeName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(normalized, LightSchemeName, StringComparison.OrdinalIgnoreCase))
+            Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            HashSet<string> schemeNames = GetSchemeNamesFromRowData(storedData);
+            return schemeNames.Contains(normalized) && schemeNames.Count > 1;
+        }
+
+        public static bool TryDeleteScheme(string schemeName, out string error)
+        {
+            error = null;
+            EnsureInitialized();
+            string normalized = NormalizeSchemeName(schemeName);
+            if (string.IsNullOrWhiteSpace(normalized))
             {
+                error = "No scheme selected.";
                 return false;
             }
 
             Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            HashSet<string> schemeNames = GetSchemeNamesFromRowData(storedData);
+            if (!schemeNames.Contains(normalized))
+            {
+                error = "Unable to find that scheme.";
+                return false;
+            }
+
+            if (schemeNames.Count <= 1)
+            {
+                error = "At least one scheme must remain.";
+                return false;
+            }
+
             List<string> rowsToDelete = storedData.Keys
                 .Where(k => TryParseSchemeRowKey(k, out string scheme, out _) && scheme.Equals(normalized, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (rowsToDelete.Count == 0)
             {
+                error = "Unable to find that scheme.";
                 return false;
             }
 
@@ -314,10 +353,79 @@ namespace op.io
             bool wasActive = string.Equals(_activeSchemeName, normalized, StringComparison.OrdinalIgnoreCase);
             if (wasActive)
             {
-                string fallback = ResolveFallbackScheme(normalized);
+                schemeNames.Remove(normalized);
+                string fallback = ResolveFallbackScheme(normalized, schemeNames);
                 _activeSchemeName = fallback;
                 PersistActiveSchemeName(_activeSchemeName);
                 TryLoadScheme(_activeSchemeName, persistActive: false, applySideEffects: true);
+            }
+
+            return true;
+        }
+
+        public static bool TryRenameScheme(string oldName, string newName, out string error)
+        {
+            error = null;
+            EnsureInitialized();
+
+            string source = NormalizeSchemeName(oldName);
+            string target = NormalizeSchemeName(newName);
+
+            if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target))
+            {
+                error = "Enter a scheme name.";
+                return false;
+            }
+
+            if (string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
+            {
+                error = "Choose a different name.";
+                return false;
+            }
+
+            Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            bool targetExists = data.Keys.Any(key => TryParseSchemeRowKey(key, out string scheme, out _) && scheme.Equals(target, StringComparison.OrdinalIgnoreCase));
+            if (targetExists)
+            {
+                error = "That name already exists.";
+                return false;
+            }
+
+            List<(ColorRole Role, string Value)> sourceRows = new();
+            foreach (var pair in data)
+            {
+                if (TryParseSchemeRowKey(pair.Key, out string scheme, out ColorRole role) &&
+                    scheme.Equals(source, StringComparison.OrdinalIgnoreCase))
+                {
+                    sourceRows.Add((role, pair.Value));
+                }
+            }
+
+            if (sourceRows.Count == 0)
+            {
+                error = "Unable to find that scheme.";
+                return false;
+            }
+
+            foreach ((ColorRole Role, string Value) row in sourceRows)
+            {
+                string destinationKey = EncodeSchemeRowKey(target, row.Role);
+                BlockDataStore.SetRowData(DockBlockKind.ColorScheme, destinationKey, row.Value);
+            }
+
+            List<string> rowsToDelete = data.Keys
+                .Where(key => TryParseSchemeRowKey(key, out string scheme, out _) && scheme.Equals(source, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (rowsToDelete.Count > 0)
+            {
+                BlockDataStore.DeleteRows(DockBlockKind.ColorScheme, rowsToDelete);
+            }
+
+            if (string.Equals(_activeSchemeName, source, StringComparison.OrdinalIgnoreCase))
+            {
+                _activeSchemeName = target;
+                PersistActiveSchemeName(target);
+                TryLoadScheme(target, persistActive: true, applySideEffects: true);
             }
 
             return true;
@@ -510,6 +618,7 @@ namespace op.io
             SafeLog("ColorScheme.LoadFromStore: EnsureTables done");
 
             Dictionary<string, string> storedData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
+            HashSet<string> storedSchemes = GetSchemeNamesFromRowData(storedData);
             string storedActiveScheme = ResolveActiveSchemeName(storedData);
             Dictionary<string, bool> storedLocks = BlockDataStore.LoadRowLocks(DockBlockKind.ColorScheme);
             if (storedData.Count > 0)
@@ -576,10 +685,12 @@ namespace op.io
 
             if (!TryLoadScheme(_activeSchemeName, persistActive: false, applySideEffects: false))
             {
-                _activeSchemeName = DefaultSchemeName;
+                string fallback = ResolveFallbackScheme(_activeSchemeName, storedSchemes);
+                _activeSchemeName = fallback;
+                TryLoadScheme(_activeSchemeName, persistActive: false, applySideEffects: false);
             }
 
-            EnsureDefaultSchemesSeeded();
+            EnsureDefaultSchemesSeeded(storedData);
         }
 
         private static string ResolveActiveSchemeName(Dictionary<string, string> storedData)
@@ -597,15 +708,24 @@ namespace op.io
             return null;
         }
 
-        private static void EnsureDefaultSchemesSeeded()
+        private static void EnsureDefaultSchemesSeeded(Dictionary<string, string> storedData)
         {
             try
             {
-                EnsureNamedSchemeExists(DefaultSchemeName, CaptureCurrentPalette());
-                EnsureNamedSchemeExists(LightSchemeName, GetLightModeDefaults());
-                if (string.IsNullOrWhiteSpace(_activeSchemeName))
+                HashSet<string> schemeNames = GetSchemeNamesFromRowData(storedData);
+                if (schemeNames.Count == 0)
                 {
-                    _activeSchemeName = DefaultSchemeName;
+                    EnsureNamedSchemeExists(DefaultSchemeName, CaptureCurrentPalette());
+                    schemeNames.Add(DefaultSchemeName);
+                    EnsureNamedSchemeExists(LightSchemeName, GetLightModeDefaults());
+                    schemeNames.Add(LightSchemeName);
+                }
+
+                if (string.IsNullOrWhiteSpace(_activeSchemeName) || !schemeNames.Contains(_activeSchemeName))
+                {
+                    _activeSchemeName = schemeNames
+                        .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                        .FirstOrDefault() ?? DefaultSchemeName;
                 }
 
                 PersistActiveSchemeName(_activeSchemeName);
@@ -851,27 +971,15 @@ namespace op.io
             BlockDataStore.SetRowData(DockBlockKind.ColorScheme, ActiveSchemeRowKey, normalized);
         }
 
-        private static string ResolveFallbackScheme(string deletedName)
+        private static string ResolveFallbackScheme(string deletedName, IEnumerable<string> candidateNames = null)
         {
-            Dictionary<string, string> remainingData = BlockDataStore.LoadRowData(DockBlockKind.ColorScheme);
-            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase)
-            {
-                DefaultSchemeName,
-                LightSchemeName
-            };
-
-            foreach (string key in remainingData.Keys)
-            {
-                if (TryParseSchemeRowKey(key, out string scheme, out _))
-                {
-                    names.Add(scheme);
-                }
-            }
-
-            return names
+            IEnumerable<string> names = candidateNames ?? GetSchemeNamesFromRowData(BlockDataStore.LoadRowData(DockBlockKind.ColorScheme));
+            string fallback = names?
                 .Where(name => !string.Equals(name, deletedName, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault() ?? DefaultSchemeName;
+                .FirstOrDefault();
+
+            return string.IsNullOrWhiteSpace(fallback) ? DefaultSchemeName : fallback;
         }
 
         private static void ApplySideEffects()

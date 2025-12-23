@@ -17,8 +17,8 @@ namespace op.io.UI.BlockScripts.Blocks
         public const int MinHeight = 160;
 
         private const int ToolbarHeight = 38;
-        private const int ButtonHeight = 30;
-        private const int ButtonSpacing = 8;
+        private const int ButtonHeight = BlockButtonRowLayout.DefaultButtonHeight;
+        private const int ButtonSpacing = BlockButtonRowLayout.DefaultButtonSpacing;
         private const int Padding = 12;
         private const int TextPadding = 8;
         private const int OpenFolderButtonWidth = 130;
@@ -373,13 +373,15 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             Rectangle toolbar = new(contentBounds.X, contentBounds.Y, contentBounds.Width, Math.Min(ToolbarHeight, contentBounds.Height));
 
-            int buttonY = toolbar.Y + Math.Max(0, (toolbar.Height - ButtonHeight) / 2);
-            int x = toolbar.X;
+            Rectangle buttonRow = new(toolbar.X, toolbar.Y, toolbar.Width, toolbar.Height);
+            IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildRow(
+                buttonRow,
+                new[] { OpenFolderButtonWidth, CopyButtonWidth },
+                ButtonHeight,
+                ButtonSpacing);
 
-            Rectangle openFolderBounds = new(x, buttonY, Math.Min(OpenFolderButtonWidth, Math.Max(0, contentBounds.Width - x + contentBounds.X)), ButtonHeight);
-            x = openFolderBounds.Right + ButtonSpacing;
-
-            Rectangle copyBounds = new(x, buttonY, Math.Min(CopyButtonWidth, Math.Max(0, contentBounds.Width - x + contentBounds.X)), ButtonHeight);
+            Rectangle openFolderBounds = buttons.Count > 0 ? buttons[0] : Rectangle.Empty;
+            Rectangle copyBounds = buttons.Count > 1 ? buttons[1] : Rectangle.Empty;
 
             int viewportY = toolbar.Bottom + Padding;
             int viewportHeight = Math.Max(0, contentBounds.Bottom - viewportY);

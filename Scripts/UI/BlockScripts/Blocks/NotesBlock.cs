@@ -40,9 +40,9 @@ namespace op.io.UI.BlockScripts.Blocks
         }
 
         private const int CommandBarHeight = 36;
-        private const int ButtonHeight = 26;
-        private const int ButtonWidth = ButtonHeight;
-        private const int ButtonSpacing = 8;
+        private const int ButtonHeight = BlockButtonRowLayout.DefaultButtonHeight;
+        private const int ButtonWidth = BlockButtonRowLayout.DefaultButtonWidth;
+        private const int ButtonSpacing = BlockButtonRowLayout.DefaultButtonSpacing;
         private const int ContentSpacing = 12;
         private const int TextPadding = 6;
         private const int OverlayPadding = 10;
@@ -346,12 +346,20 @@ namespace op.io.UI.BlockScripts.Blocks
                 ? new Rectangle(dropdownX, dropdownY, dropdownWidth, dropdownHeight)
                 : Rectangle.Empty;
 
+            Array.Fill(CommandBounds, Rectangle.Empty);
             int buttonX = dropdownX + (dropdownWidth > 0 ? dropdownWidth + ButtonSpacing : 0);
-            int buttonY = CommandBarBounds.Y + (CommandBarHeight - ButtonHeight) / 2;
-            for (int i = 0; i < CommandOrder.Length; i++)
+            Rectangle buttonRow = new(buttonX, CommandBarBounds.Y, Math.Max(0, CommandBarBounds.Right - buttonX), CommandBarHeight);
+            IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildUniformRow(
+                buttonRow,
+                CommandOrder.Length,
+                ButtonWidth,
+                ButtonHeight,
+                ButtonSpacing);
+
+            int applyCount = Math.Min(CommandBounds.Length, buttons.Count);
+            for (int i = 0; i < applyCount; i++)
             {
-                CommandBounds[i] = new Rectangle(buttonX, buttonY, ButtonWidth, ButtonHeight);
-                buttonX += ButtonWidth + ButtonSpacing;
+                CommandBounds[i] = buttons[i];
             }
 
             OverlayBounds = Rectangle.Empty;
@@ -1597,8 +1605,7 @@ namespace op.io.UI.BlockScripts.Blocks
         }
         private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font, bool blockLocked)
         {
-            FillRect(spriteBatch, CommandBarBounds, UIStyle.DragBarBackground);
-            DrawRect(spriteBatch, CommandBarBounds, UIStyle.BlockBorder);
+            BlockToolbarRenderer.Draw(spriteBatch, PixelTexture, CommandBarBounds);
 
             DrawNoteDropdown(spriteBatch, font, blockLocked);
             for (int i = 0; i < CommandOrder.Length; i++)
@@ -1648,24 +1655,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (NoteDropdown.HasOptions)
-            {
-                NoteDropdown.Draw(spriteBatch, drawOptions: false);
-            }
-            else
-            {
-                FillRect(spriteBatch, NoteDropdownBounds, UIStyle.BlockBackground);
-                DrawRect(spriteBatch, NoteDropdownBounds, UIStyle.BlockBorder);
-                string placeholder = "No saved notes";
-                Vector2 size = font.MeasureString(placeholder);
-                Vector2 pos = new(NoteDropdownBounds.X + 8, NoteDropdownBounds.Y + (NoteDropdownBounds.Height - size.Y) / 2f);
-                font.DrawString(spriteBatch, placeholder, pos, UIStyle.MutedTextColor);
-            }
-
-            if (blockLocked)
-            {
-                FillRect(spriteBatch, NoteDropdownBounds, UIStyle.BlockBackground * 0.45f);
-            }
+            BlockToolbarRenderer.DrawDropdown(
+                spriteBatch,
+                PixelTexture,
+                NoteDropdown,
+                NoteDropdownBounds,
+                font,
+                blockLocked,
+                "No saved notes");
         }
 
         private static void DrawFeedbackBar(SpriteBatch spriteBatch, UIStyle.UIFont font)

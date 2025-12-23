@@ -39,18 +39,28 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int EditorMaxWidth = 560;
         private const int EditorMinHeight = 360;
         private const int EditorMaxHeight = 620;
-        private const int SchemeToolbarHeight = 44;
-        private const int SchemeButtonHeight = 28;
-        private const int SchemeButtonWidth = SchemeButtonHeight;
-        private const int SchemeDropdownHeight = 30;
-        private const int SchemeControlSpacing = 10;
+        private const int SchemeToolbarHeight = 36;
+        private const int SchemeButtonHeight = BlockButtonRowLayout.DefaultButtonHeight;
+        private const int SchemeButtonWidth = BlockButtonRowLayout.DefaultButtonWidth;
+        private const int SchemeDropdownHeight = SchemeButtonHeight;
+        private const int SchemeControlSpacing = BlockButtonRowLayout.DefaultButtonSpacing;
         private const int SchemePromptWidth = 360;
         private const int SchemePromptHeight = 180;
         private const int SchemePromptPadding = 16;
+        private const float SchemePromptTitleSpacing = 6f;
+        private const float SchemePromptHelperSpacing = 10f;
+        private const float SchemePromptFallbackTitleHeight = 26f;
+        private const float SchemePromptFallbackHelperHeight = 20f;
         private const double FeedbackDurationSeconds = 4.0;
         private const string LastSchemeRowKey = "__LastScheme";
         private const string HexFocusOwner = "ColorSchemeBlock.HexInput";
         private const string SchemePromptFocusOwner = "ColorSchemeBlock.SchemePrompt";
+
+        private enum SchemePromptMode
+        {
+            New,
+            Rename
+        }
 
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static readonly List<ColorRow> _rows = new();
@@ -69,9 +79,11 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Rectangle _schemeToolbarBounds;
         private static Rectangle _saveSchemeBounds;
         private static Rectangle _newSchemeBounds;
+        private static Rectangle _renameSchemeBounds;
         private static Rectangle _deleteSchemeBounds;
         private static Texture2D _saveIcon;
         private static Texture2D _newIcon;
+        private static Texture2D _renameIcon;
         private static Texture2D _deleteIcon;
         private static Texture2D _lockedIcon;
         private static string _selectedSchemeName = ColorScheme.DefaultSchemeName;
@@ -169,14 +181,36 @@ namespace op.io.UI.BlockScripts.Blocks
                 else if (_newSchemeBounds.Contains(mouseState.Position))
                 {
                     CloseEditor(applyChanges: false);
-                    OpenSchemePrompt();
+                    OpenSchemePrompt(SchemePromptMode.New);
+                    _lastMousePosition = mouseState.Position;
+                    _previousKeyboardState = keyboardState;
+                    return;
+                }
+                else if (_renameSchemeBounds.Contains(mouseState.Position))
+                {
+                    if (string.IsNullOrWhiteSpace(_selectedSchemeName))
+                    {
+                        SetFeedbackMessage("Select a scheme to rename.");
+                    }
+                    else
+                    {
+                        CloseEditor(applyChanges: false);
+                        OpenSchemePrompt(SchemePromptMode.Rename, _selectedSchemeName);
+                        _lastMousePosition = mouseState.Position;
+                        _previousKeyboardState = keyboardState;
+                        return;
+                    }
                     _lastMousePosition = mouseState.Position;
                     _previousKeyboardState = keyboardState;
                     return;
                 }
                 else if (_deleteSchemeBounds.Contains(mouseState.Position))
                 {
-                    if (TryDeleteSelectedScheme())
+                    if (string.IsNullOrWhiteSpace(_selectedSchemeName))
+                    {
+                        SetFeedbackMessage("No scheme selected.");
+                    }
+                    else if (TryDeleteSelectedScheme())
                     {
                         EnsureRows();
                         _schemeListDirty = true;
@@ -411,20 +445,38 @@ namespace op.io.UI.BlockScripts.Blocks
             _schemeToolbarBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, SchemeToolbarHeight);
             _feedbackBarBounds = BlockFeedbackBarRenderer.CalculateBounds(contentBounds, _schemeToolbarBounds);
 
-            int buttonY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - SchemeButtonHeight) / 2;
-            int x = _schemeToolbarBounds.Right - SchemeButtonWidth;
-            _deleteSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
-            x -= SchemeControlSpacing + SchemeButtonWidth;
-            _newSchemeBounds = new Rectangle(x, buttonY, SchemeButtonWidth, SchemeButtonHeight);
-            x -= SchemeControlSpacing + SchemeButtonWidth;
-            _saveSchemeBounds = new Rectangle(Math.Max(_schemeToolbarBounds.X, x), buttonY, SchemeButtonWidth, SchemeButtonHeight);
+            int toolbarPadding = SchemeControlSpacing;
+            Rectangle toolbarRow = new(
+                _schemeToolbarBounds.X + toolbarPadding,
+                _schemeToolbarBounds.Y,
+                Math.Max(0, _schemeToolbarBounds.Width - (toolbarPadding * 2)),
+                _schemeToolbarBounds.Height);
+            IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildUniformRow(
+                toolbarRow,
+                4,
+                SchemeButtonWidth,
+                SchemeButtonHeight,
+                SchemeControlSpacing,
+                BlockButtonRowLayout.Alignment.Right);
 
-            int availableDropdown = _saveSchemeBounds.X - SchemeControlSpacing - _schemeToolbarBounds.X;
-            int dropdownWidth = Math.Max(0, availableDropdown);
+            _saveSchemeBounds = _newSchemeBounds = _renameSchemeBounds = _deleteSchemeBounds = Rectangle.Empty;
+            if (buttons.Count >= 4)
+            {
+                _saveSchemeBounds = buttons[0];
+                _newSchemeBounds = buttons[1];
+                _renameSchemeBounds = buttons[2];
+                _deleteSchemeBounds = buttons[3];
+            }
+
+            int dropdownRight = _saveSchemeBounds != Rectangle.Empty
+                ? _saveSchemeBounds.X - SchemeControlSpacing
+                : _schemeToolbarBounds.Right - toolbarPadding;
+            int dropdownX = _schemeToolbarBounds.X + toolbarPadding;
+            int dropdownWidth = Math.Max(0, dropdownRight - dropdownX);
             int dropdownHeight = SchemeDropdownHeight;
             int dropdownY = _schemeToolbarBounds.Y + (_schemeToolbarBounds.Height - dropdownHeight) / 2;
             _schemeDropdown.Bounds = dropdownWidth > 0
-                ? new Rectangle(_schemeToolbarBounds.X, dropdownY, dropdownWidth, dropdownHeight)
+                ? new Rectangle(dropdownX, dropdownY, dropdownWidth, dropdownHeight)
                 : Rectangle.Empty;
         }
 
@@ -565,10 +617,10 @@ namespace op.io.UI.BlockScripts.Blocks
                 return false;
             }
 
-            bool deleted = ColorScheme.DeleteScheme(target);
+            bool deleted = ColorScheme.TryDeleteScheme(target, out string error);
             if (!deleted)
             {
-                SetFeedbackMessage("Unable to delete scheme.");
+                SetFeedbackMessage(string.IsNullOrWhiteSpace(error) ? "Unable to delete scheme." : error);
                 return false;
             }
 
@@ -611,6 +663,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             _saveIcon = EnsureIcon(_saveIcon, "Icon_Save.png");
             _newIcon = EnsureIcon(_newIcon, "Icon_New.png");
+            _renameIcon = EnsureIcon(_renameIcon, "Icon_Rename.png");
             _deleteIcon = EnsureIcon(_deleteIcon, "Icon_Delete.png");
         }
 
@@ -653,18 +706,29 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             EnsureSchemeIcons();
-            FillRect(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBackground * 1.05f);
-            DrawRectOutline(spriteBatch, _schemeToolbarBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+            BlockToolbarRenderer.Draw(spriteBatch, _pixel, _schemeToolbarBounds);
 
-            _schemeDropdown.Draw(spriteBatch, drawOptions: false);
+            UIStyle.UIFont font = UIStyle.FontBody;
+            BlockToolbarRenderer.DrawDropdown(
+                spriteBatch,
+                _pixel,
+                _schemeDropdown,
+                _schemeDropdown.Bounds,
+                font,
+                blockLocked,
+                "No schemes");
 
             bool saveHovered = !blockLocked && UIButtonRenderer.IsHovered(_saveSchemeBounds, _lastMousePosition);
             bool newHovered = !blockLocked && UIButtonRenderer.IsHovered(_newSchemeBounds, _lastMousePosition);
-            bool deleteHovered = !blockLocked && UIButtonRenderer.IsHovered(_deleteSchemeBounds, _lastMousePosition);
+            bool renameDisabled = blockLocked || string.IsNullOrWhiteSpace(_selectedSchemeName);
+            bool deleteDisabled = blockLocked || string.IsNullOrWhiteSpace(_selectedSchemeName) || !ColorScheme.CanDeleteScheme(_selectedSchemeName);
+            bool renameHovered = !renameDisabled && UIButtonRenderer.IsHovered(_renameSchemeBounds, _lastMousePosition);
+            bool deleteHovered = !deleteDisabled && UIButtonRenderer.IsHovered(_deleteSchemeBounds, _lastMousePosition);
 
             DrawSchemeButton(spriteBatch, _saveSchemeBounds, _saveIcon, "Save", saveHovered, blockLocked);
             DrawSchemeButton(spriteBatch, _newSchemeBounds, _newIcon, "New", newHovered, blockLocked);
-            DrawSchemeButton(spriteBatch, _deleteSchemeBounds, _deleteIcon, "Delete", deleteHovered, blockLocked);
+            DrawSchemeButton(spriteBatch, _renameSchemeBounds, _renameIcon, "Rename", renameHovered, renameDisabled);
+            DrawSchemeButton(spriteBatch, _deleteSchemeBounds, _deleteIcon, "Delete", deleteHovered, deleteDisabled);
         }
 
         private static void DrawSchemeButton(SpriteBatch spriteBatch, Rectangle bounds, Texture2D icon, string fallbackLabel, bool isHovered, bool isDisabled)
@@ -1112,13 +1176,16 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            string title = "Save color scheme";
+            bool isRename = _schemePrompt.Mode == SchemePromptMode.Rename;
+            string title = isRename ? "Rename color scheme" : "Save color scheme";
             Vector2 titleSize = headerFont.MeasureString(title);
             Vector2 titlePos = new(dialog.X + (dialog.Width - titleSize.X) / 2f, dialog.Y + SchemePromptPadding);
             headerFont.DrawString(spriteBatch, title, titlePos, UIStyle.TextColor);
 
-            string helper = "Name this scheme to store current colors.";
-            Vector2 helperPos = new(dialog.X + SchemePromptPadding, titlePos.Y + titleSize.Y + 6f);
+            string helper = isRename
+                ? "Choose a new name for this scheme."
+                : "Name this scheme to store current colors.";
+            Vector2 helperPos = new(dialog.X + SchemePromptPadding, titlePos.Y + titleSize.Y + SchemePromptTitleSpacing);
             bodyFont.DrawString(spriteBatch, helper, helperPos, UIStyle.MutedTextColor);
 
             Rectangle input = _schemePrompt.InputBounds;
@@ -1133,8 +1200,10 @@ namespace op.io.UI.BlockScripts.Blocks
 
             bool saveHovered = UIButtonRenderer.IsHovered(_schemePrompt.ConfirmBounds, _lastMousePosition);
             bool cancelHovered = UIButtonRenderer.IsHovered(_schemePrompt.CancelBounds, _lastMousePosition);
-            bool disableSave = string.IsNullOrWhiteSpace(_schemePrompt.Buffer);
-            UIButtonRenderer.Draw(spriteBatch, _schemePrompt.ConfirmBounds, "Save", UIButtonRenderer.ButtonStyle.Blue, saveHovered, disableSave);
+            bool disableSave = string.IsNullOrWhiteSpace(_schemePrompt.Buffer) ||
+                (isRename && string.Equals(_schemePrompt.Buffer?.Trim(), _schemePrompt.OriginalName, StringComparison.OrdinalIgnoreCase));
+            string confirmLabel = isRename ? "Rename" : "Save";
+            UIButtonRenderer.Draw(spriteBatch, _schemePrompt.ConfirmBounds, confirmLabel, UIButtonRenderer.ButtonStyle.Blue, saveHovered, disableSave);
             UIButtonRenderer.Draw(spriteBatch, _schemePrompt.CancelBounds, "Cancel", UIButtonRenderer.ButtonStyle.Grey, cancelHovered);
         }
 
@@ -1359,14 +1428,16 @@ namespace op.io.UI.BlockScripts.Blocks
             return current.IsKeyDown(key) && !previous.IsKeyDown(key);
         }
 
-        private static void OpenSchemePrompt()
+        private static void OpenSchemePrompt(SchemePromptMode mode, string initialValue = null)
         {
             _schemeDropdown.Close();
             SchemePromptRepeater.Reset();
             _schemePrompt = new SchemePromptState
             {
                 IsOpen = true,
-                Buffer = string.Empty
+                Buffer = initialValue ?? string.Empty,
+                Mode = mode,
+                OriginalName = initialValue ?? string.Empty
             };
             BuildSchemePromptLayout(_lastContentBounds);
             FocusModeManager.SetFocusActive(SchemePromptFocusOwner, true);
@@ -1391,7 +1462,25 @@ namespace op.io.UI.BlockScripts.Blocks
 
             int inputWidth = width - (SchemePromptPadding * 2);
             int inputHeight = HexInputHeight;
-            int inputY = y + SchemePromptPadding + 44;
+            string title = _schemePrompt.Mode == SchemePromptMode.Rename ? "Rename color scheme" : "Save color scheme";
+            string helper = _schemePrompt.Mode == SchemePromptMode.Rename
+                ? "Choose a new name for this scheme."
+                : "Name this scheme to store current colors.";
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            UIStyle.UIFont bodyFont = UIStyle.FontBody;
+            float titleHeight = SchemePromptFallbackTitleHeight;
+            float helperHeight = SchemePromptFallbackHelperHeight;
+            if (headerFont.IsAvailable)
+            {
+                titleHeight = MathF.Max(headerFont.MeasureString(title).Y, SchemePromptFallbackTitleHeight);
+            }
+            if (bodyFont.IsAvailable)
+            {
+                helperHeight = MathF.Max(bodyFont.MeasureString(helper).Y, SchemePromptFallbackHelperHeight);
+            }
+
+            float introHeight = titleHeight + SchemePromptTitleSpacing + helperHeight + SchemePromptHelperSpacing;
+            int inputY = y + SchemePromptPadding + (int)MathF.Ceiling(introHeight);
             _schemePrompt.InputBounds = new Rectangle(x + SchemePromptPadding, inputY, inputWidth, inputHeight);
 
             int buttonsY = _schemePrompt.InputBounds.Bottom + SchemePromptPadding;
@@ -1515,16 +1604,36 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (ColorScheme.SaveCurrentScheme(name, makeActive: true))
+            bool isRename = _schemePrompt.Mode == SchemePromptMode.Rename;
+            if (isRename)
             {
-                _selectedSchemeName = ColorScheme.ActiveSchemeName;
-                _schemeListDirty = true;
-                PersistSelectedSchemeName(_selectedSchemeName);
-                SetFeedbackMessage($"Saved '{_selectedSchemeName}'.");
+                string sourceName = string.IsNullOrWhiteSpace(_schemePrompt.OriginalName) ? _selectedSchemeName : _schemePrompt.OriginalName;
+                sourceName = sourceName?.Trim();
+                if (ColorScheme.TryRenameScheme(sourceName, name, out string error))
+                {
+                    _selectedSchemeName = ColorScheme.ActiveSchemeName;
+                    _schemeListDirty = true;
+                    PersistSelectedSchemeName(_selectedSchemeName);
+                    SetFeedbackMessage($"Renamed to '{_selectedSchemeName}'.");
+                }
+                else
+                {
+                    SetFeedbackMessage(string.IsNullOrWhiteSpace(error) ? "Failed to rename scheme." : error);
+                }
             }
             else
             {
-                SetFeedbackMessage("Failed to save scheme.");
+                if (ColorScheme.SaveCurrentScheme(name, makeActive: true))
+                {
+                    _selectedSchemeName = ColorScheme.ActiveSchemeName;
+                    _schemeListDirty = true;
+                    PersistSelectedSchemeName(_selectedSchemeName);
+                    SetFeedbackMessage($"Saved '{_selectedSchemeName}'.");
+                }
+                else
+                {
+                    SetFeedbackMessage("Failed to save scheme.");
+                }
             }
 
             CloseSchemePrompt();
@@ -1883,6 +1992,8 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             public bool IsOpen;
             public string Buffer;
+            public SchemePromptMode Mode;
+            public string OriginalName;
             public Rectangle Bounds;
             public Rectangle InputBounds;
             public Rectangle ConfirmBounds;

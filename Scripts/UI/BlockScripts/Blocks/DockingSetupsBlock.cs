@@ -36,9 +36,9 @@ namespace op.io.UI.BlockScripts.Blocks
         }
 
         private const int CommandBarHeight = 36;
-        private const int ButtonHeight = 26;
-        private const int ButtonWidth = ButtonHeight;
-        private const int ButtonSpacing = 8;
+        private const int ButtonHeight = BlockButtonRowLayout.DefaultButtonHeight;
+        private const int ButtonWidth = BlockButtonRowLayout.DefaultButtonWidth;
+        private const int ButtonSpacing = BlockButtonRowLayout.DefaultButtonSpacing;
         private const int ContentSpacing = 12;
         private const int OverlayPadding = 10;
         private const int OverlayHeaderHeight = 28;
@@ -47,10 +47,15 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int PromptWidth = 360;
         private const int PromptHeight = 180;
         private const int PromptPadding = 16;
-        private const int PromptInputHeight = 28;
+        private const int PromptInputHeight = 34;
+        private const int PromptInputHorizontalPadding = 8;
+        private const float PromptInputTextNudge = 2f;
         private const int PromptButtonHeight = 28;
         private const int PromptButtonSpacing = 10;
         private const float PromptTitleSpacing = 6f;
+        private const float PromptHelperSpacing = 10f;
+        private const float PromptFallbackTitleHeight = 26f;
+        private const float PromptFallbackHelperHeight = 20f;
         private const string ActiveSetupRowKey = "__ActiveSetup";
         private const string PromptFocusOwner = "DockingSetupsBlock.Prompt";
 
@@ -263,12 +268,20 @@ namespace op.io.UI.BlockScripts.Blocks
                 ? new Rectangle(dropdownX, dropdownY, dropdownWidth, dropdownHeight)
                 : Rectangle.Empty;
 
+            Array.Fill(CommandBounds, Rectangle.Empty);
             int buttonX = dropdownX + (dropdownWidth > 0 ? dropdownWidth + ButtonSpacing : 0);
-            int buttonY = CommandBarBounds.Y + (CommandBarHeight - ButtonHeight) / 2;
-            for (int i = 0; i < CommandOrder.Length; i++)
+            Rectangle buttonRow = new(buttonX, CommandBarBounds.Y, Math.Max(0, CommandBarBounds.Right - buttonX), CommandBarHeight);
+            IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildUniformRow(
+                buttonRow,
+                CommandOrder.Length,
+                ButtonWidth,
+                ButtonHeight,
+                ButtonSpacing);
+
+            int applyCount = Math.Min(CommandBounds.Length, buttons.Count);
+            for (int i = 0; i < applyCount; i++)
             {
-                CommandBounds[i] = new Rectangle(buttonX, buttonY, ButtonWidth, ButtonHeight);
-                buttonX += ButtonWidth + ButtonSpacing;
+                CommandBounds[i] = buttons[i];
             }
 
             OverlayBounds = Rectangle.Empty;
@@ -398,8 +411,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void DrawCommandBar(SpriteBatch spriteBatch, UIStyle.UIFont font, bool blockLocked)
         {
-            FillRect(spriteBatch, CommandBarBounds, UIStyle.DragBarBackground);
-            DrawRect(spriteBatch, CommandBarBounds, UIStyle.BlockBorder);
+            BlockToolbarRenderer.Draw(spriteBatch, PixelTexture, CommandBarBounds);
 
             DrawSetupDropdown(spriteBatch, font, blockLocked);
             for (int i = 0; i < CommandOrder.Length; i++)
@@ -445,24 +457,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            if (SetupDropdown.HasOptions)
-            {
-                SetupDropdown.Draw(spriteBatch, drawOptions: false);
-            }
-            else
-            {
-                FillRect(spriteBatch, DropdownBounds, UIStyle.BlockBackground);
-                DrawRect(spriteBatch, DropdownBounds, UIStyle.BlockBorder);
-                string placeholder = "No saved setups";
-                Vector2 size = font.MeasureString(placeholder);
-                Vector2 pos = new(DropdownBounds.X + 8, DropdownBounds.Y + (DropdownBounds.Height - size.Y) / 2f);
-                font.DrawString(spriteBatch, placeholder, pos, UIStyle.MutedTextColor);
-            }
-
-            if (blockLocked)
-            {
-                FillRect(spriteBatch, DropdownBounds, UIStyle.BlockBackground * 0.45f);
-            }
+            BlockToolbarRenderer.DrawDropdown(
+                spriteBatch,
+                PixelTexture,
+                SetupDropdown,
+                DropdownBounds,
+                font,
+                blockLocked,
+                "No saved setups");
         }
 
         private static void DrawFeedbackBar(SpriteBatch spriteBatch, UIStyle.UIFont font)
@@ -615,7 +617,9 @@ namespace op.io.UI.BlockScripts.Blocks
             string text = string.IsNullOrWhiteSpace(NamePrompt.Buffer) ? "Setup name" : NamePrompt.Buffer;
             Color textColor = string.IsNullOrWhiteSpace(NamePrompt.Buffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
             Vector2 textSize = TextSpacingHelper.MeasureWithWideSpaces(inputFont, text);
-            Vector2 textPos = new(input.X + 8, input.Y + (input.Height - textSize.Y) / 2f);
+            float textX = input.X + PromptInputHorizontalPadding;
+            float textY = input.Y + (input.Height - textSize.Y) / 2f - PromptInputTextNudge;
+            Vector2 textPos = new(textX, textY);
             TextSpacingHelper.DrawWithWideSpaces(inputFont, spriteBatch, text, textPos, textColor);
 
             bool saveHovered = UIButtonRenderer.IsHovered(NamePrompt.ConfirmBounds, LastMouseState.Position);
@@ -637,7 +641,25 @@ namespace op.io.UI.BlockScripts.Blocks
 
             int inputWidth = width - (PromptPadding * 2);
             int inputHeight = PromptInputHeight;
-            int inputY = y + PromptPadding + 44;
+            string title = NamePrompt.Mode == NamePromptMode.Rename ? "Rename setup" : "New setup";
+            string helper = NamePrompt.Mode == NamePromptMode.Rename
+                ? "Choose a new name for this setup."
+                : "Name this setup to save it.";
+            UIStyle.UIFont headerFont = UIStyle.FontH2;
+            UIStyle.UIFont bodyFont = UIStyle.FontBody;
+            float titleHeight = PromptFallbackTitleHeight;
+            float helperHeight = PromptFallbackHelperHeight;
+            if (headerFont.IsAvailable)
+            {
+                titleHeight = MathF.Max(headerFont.MeasureString(title).Y, PromptFallbackTitleHeight);
+            }
+            if (bodyFont.IsAvailable)
+            {
+                helperHeight = MathF.Max(bodyFont.MeasureString(helper).Y, PromptFallbackHelperHeight);
+            }
+
+            float introHeight = titleHeight + PromptTitleSpacing + helperHeight + PromptHelperSpacing;
+            int inputY = y + PromptPadding + (int)MathF.Ceiling(introHeight);
             NamePrompt.InputBounds = new Rectangle(x + PromptPadding, inputY, inputWidth, inputHeight);
 
             int buttonsY = NamePrompt.InputBounds.Bottom + PromptPadding;

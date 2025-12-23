@@ -296,10 +296,30 @@ namespace op.io
                     return Vector2.Zero;
                 }
 
-                return Font.MeasureString(text) * Scale;
+                return UITextRenderer.Measure(this, text);
             }
 
             public Vector2 MeasureString(StringBuilder builder)
+            {
+                if (!IsAvailable || builder == null || builder.Length == 0)
+                {
+                    return Vector2.Zero;
+                }
+
+                return UITextRenderer.Measure(this, builder);
+            }
+
+            internal Vector2 MeasureRawString(string text)
+            {
+                if (!IsAvailable || string.IsNullOrEmpty(text))
+                {
+                    return Vector2.Zero;
+                }
+
+                return Font.MeasureString(text) * Scale;
+            }
+
+            internal Vector2 MeasureRawString(StringBuilder builder)
             {
                 if (!IsAvailable || builder == null || builder.Length == 0)
                 {
@@ -316,10 +336,30 @@ namespace op.io
                     return;
                 }
 
-                spriteBatch.DrawString(Font, text, position, color, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+                UITextRenderer.Draw(this, spriteBatch, text, position, color);
             }
 
             public void DrawString(SpriteBatch spriteBatch, StringBuilder builder, Vector2 position, Color color)
+            {
+                if (!IsAvailable || spriteBatch == null || builder == null || builder.Length == 0)
+                {
+                    return;
+                }
+
+                UITextRenderer.Draw(this, spriteBatch, builder, position, color);
+            }
+
+            internal void DrawRawString(SpriteBatch spriteBatch, string text, Vector2 position, Color color)
+            {
+                if (!IsAvailable || spriteBatch == null || string.IsNullOrEmpty(text))
+                {
+                    return;
+                }
+
+                spriteBatch.DrawString(Font, text, position, color, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+            }
+
+            internal void DrawRawString(SpriteBatch spriteBatch, StringBuilder builder, Vector2 position, Color color)
             {
                 if (!IsAvailable || spriteBatch == null || builder == null || builder.Length == 0)
                 {

@@ -114,7 +114,7 @@ namespace op.io
             return selectionChangedId != null;
         }
 
-        public void Draw(SpriteBatch spriteBatch, bool drawOptions = true)
+        public void Draw(SpriteBatch spriteBatch, bool drawOptions = true, bool isDisabled = false)
         {
             if (spriteBatch == null || Bounds == Rectangle.Empty || !HasOptions)
             {
@@ -130,7 +130,7 @@ namespace op.io
             EnsurePixel(spriteBatch.GraphicsDevice ?? Core.Instance?.GraphicsDevice);
             Color background = UIStyle.BlockBackground;
             Color border = UIStyle.BlockBorder;
-            Color textColor = UIStyle.TextColor;
+            Color textColor = isDisabled ? UIStyle.MutedTextColor : UIStyle.TextColor;
 
             FillRect(spriteBatch, Bounds, background);
             DrawRectOutline(spriteBatch, Bounds, border, UIStyle.BlockBorderThickness);
