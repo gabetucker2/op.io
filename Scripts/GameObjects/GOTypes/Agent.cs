@@ -53,6 +53,8 @@ namespace op.io
         }
 
         public bool IsPlayer { get; private set; }
+        public Attributes_Barrel BarrelAttributes { get; set; }
+        public Attributes_Body BodyAttributes { get; set; }
 
         private float _baseSpeed;
 
@@ -98,7 +100,9 @@ namespace op.io
             bool isPlayer,
             Color fillColor,
             Color outlineColor,
-            int outlineWidth
+            int outlineWidth,
+            Attributes_Barrel barrelAttributes = default,
+            Attributes_Body bodyAttributes = default
         )
             : base(id, name, type, position, rotation, mass, isDestructible, isCollidable, staticPhysics, shape, fillColor, outlineColor, outlineWidth)
         {
@@ -108,6 +112,8 @@ namespace op.io
             IsSprinting = false;
             IsPlayer = isPlayer;
             BaseSpeed = baseSpeed;
+            BarrelAttributes = barrelAttributes;
+            BodyAttributes = bodyAttributes;
 
             // Log agent creation without loading cooldowns
             DebugLogger.PrintPlayer($"Agent created with TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");

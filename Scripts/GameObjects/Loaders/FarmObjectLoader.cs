@@ -33,11 +33,19 @@ namespace op.io
                             continue;
                         }
 
+                        if (!SimpleGameObject.TryFromGameObject(prototype, out SimpleGameObject baseArchetype))
+                        {
+                            DebugLogger.PrintWarning($"Farm prototype with ID {farmData.ID} is missing shape data. Skipping.");
+                            continue;
+                        }
+
+                        FarmGameObject farmArchetype = new(baseArchetype, farmData);
+
                         // Create the farm objects based on the prototype and the count
                         for (int i = 0; i < farmData.Count; i++)
                         {
                             // Clone the prototype and set unique properties (like position)
-                            GameObject farmObject = CloneFarmPrototype(prototype, farmData);
+                            GameObject farmObject = CloneFarmPrototype(farmArchetype);
 
                             if (farmObject == null)
                             {
@@ -66,27 +74,14 @@ namespace op.io
         }
 
         // Clone the farm prototype and set specific properties for the farm object
-        private static GameObject CloneFarmPrototype(GameObject prototype, FarmData farmData)
+        private static GameObject CloneFarmPrototype(FarmGameObject archetype)
         {
             try
             {
-                // Create a new farm object from the prototype
-                GameObject farmObject = new GameObject(
-                    id: farmData.ID,  // Using the FarmData ID
-                    name: prototype.Name,
-                    type: prototype.Type,
-                    position: new Vector2(farmData.Count * 50, 100),  // Example: Position based on Count (adjust as needed)
-                    rotation: prototype.Rotation,
-                    mass: prototype.Mass,
-                    isDestructible: prototype.IsDestructible,
-                    isCollidable: prototype.IsCollidable,
-                    staticPhysics: prototype.StaticPhysics,
-                    shape: prototype.Shape,  // Clone the shape for this farm object
-                    fillColor: prototype.FillColor,
-                    outlineColor: prototype.OutlineColor,
-                    outlineWidth: prototype.OutlineWidth,
-                    isPrototype: false  // Farm objects are not prototypes
-                );
+                SimpleGameObject baseObject = archetype.BaseObject;
+                Vector2 position = new Vector2(archetype.FarmData.Count * 50, 100);
+                SimpleGameObject instance = archetype.CreateInstance(archetype.FarmData.ID, position, baseObject.Transform.Rotation);
+                GameObject farmObject = instance.ToGameObject();
 
                 // Load the shape content (e.g., texture) for this farm object
                 farmObject.LoadContent(Core.Instance.GraphicsDevice);

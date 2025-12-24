@@ -5720,3 +5720,21 @@
 2025-12-23T12:57:58.3337809-05:00 LoadGeneralSettings: start
 2025-12-23T12:57:58.3569558-05:00 LoadGeneralSettings: done
 2025-12-23T12:57:58.6634143-05:00 GameInitializer.Initialize: complete
+2025-12-24T17:17:43.9623385-05:00 GameInitializer.Initialize: start
+2025-12-24T17:17:44.0560506-05:00 GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase
+2025-12-24T17:17:44.2756850-05:00 GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied
+2025-12-24T17:17:44.4427406-05:00 GameInitializer.Initialize: ControlConfigurationManager.ApplyStartupConfiguration
+2025-12-24T17:17:44.7232886-05:00 GameInitializer.Initialize: ColorScheme.Initialize
+2025-12-24T17:17:44.7252749-05:00 ColorScheme.Initialize: start
+2025-12-24T17:17:44.7270103-05:00 ColorScheme.Initialize: after SeedDefaults
+2025-12-24T17:17:44.7279497-05:00 ColorScheme.LoadFromStore: EnsureTables start
+2025-12-24T17:17:44.7281350-05:00 ColorScheme.LoadFromStore: EnsureTables done
+2025-12-24T17:17:44.7374372-05:00 ColorScheme.LoadFromStore: locks
+2025-12-24T17:17:44.7392100-05:00 ColorScheme.LoadFromStore: orders
+2025-12-24T17:17:44.7518152-05:00 ColorScheme.Initialize: after LoadFromStore
+2025-12-24T17:17:44.7523774-05:00 ColorScheme.ApplySideEffects: done
+2025-12-24T17:17:44.7525712-05:00 ColorScheme.Initialize: complete
+2025-12-24T17:17:44.7527525-05:00 GameInitializer.Initialize: LoadGeneralSettings
+2025-12-24T17:17:44.7534216-05:00 LoadGeneralSettings: start
+2025-12-24T17:17:44.7789473-05:00 LoadGeneralSettings: done
+2025-12-24T17:17:45.1293342-05:00 GameInitializer.Initialize: complete

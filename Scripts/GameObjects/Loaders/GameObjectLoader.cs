@@ -1,6 +1,13 @@
 using System;
 using System.Collections.Generic;
+
 using Microsoft.Xna.Framework;
+
+using CollisionMode = op.io.Attributes.CollisionMode;
+using DestructionMode = op.io.Attributes.DestructionMode;
+using PhysicsAttributes = op.io.Attributes.Physics;
+using PhysicsMotion = op.io.Attributes.PhysicsMotion;
+using ShapeAttributes = op.io.Attributes.Shape;
 
 namespace op.io
 {
@@ -98,20 +105,17 @@ namespace op.io
             return gameObjects;
         }
 
-        /// <summary>
-        /// Converts a DB row to a GameObject. 
-        /// If isPrototype is true, shape is marked as prototype and not drawn.
-        /// If skipRegister is true, ShapeManager will not register this GameObject.
-        /// </summary>
-        public static GameObject DeserializeGameObject(Dictionary<string, object> row, bool isPrototype = false)
+        public static bool TryDeserializeSimpleGameObject(Dictionary<string, object> row, out SimpleGameObject archetype)
         {
+            archetype = default;
+
             try
             {
                 int id = Convert.ToInt32(row["ID"]);
                 string name = row["Name"]?.ToString() ?? "Unknown";
                 string type = row["Type"]?.ToString() ?? "Unknown";
                 Vector2 position = new(Convert.ToSingle(row["PositionX"]), Convert.ToSingle(row["PositionY"]));
-                float rotation = row.ContainsKey("Rotation") ? Convert.ToSingle(row["Rotation"]) : 0f;  // Ensure rotation is being read from the DB
+                float rotation = row.ContainsKey("Rotation") ? Convert.ToSingle(row["Rotation"]) : 0f;
                 float mass = Convert.ToSingle(row["Mass"]);
                 bool isCollidable = Convert.ToBoolean(row["IsCollidable"]);
                 bool isDestructible = Convert.ToBoolean(row["IsDestructible"]);
@@ -151,30 +155,45 @@ namespace op.io
                     };
                 }
 
-                Shape shape = new(shapeType, width, height, sides, fillColor, outlineColor, outlineWidth);
+                Attributes.Identity identity = new(id, name, type);
+                Attributes.Transform transform = new(position, rotation);
+                PhysicsAttributes physics = new(
+                    staticPhysics ? PhysicsMotion.Static : PhysicsMotion.Dynamic,
+                    isCollidable ? CollisionMode.Collidable : CollisionMode.NonCollidable,
+                    isDestructible ? DestructionMode.Destructible : DestructionMode.Indestructible,
+                    mass);
 
-                return new GameObject(
-                    id,
-                    name,
-                    type,
-                    position,
-                    rotation,  // Pass rotation to GameObject constructor
-                    mass,
-                    isDestructible,
-                    isCollidable,
-                    staticPhysics,
-                    shape,
-                    fillColor,
-                    outlineColor,
-                    outlineWidth,
-                    isPrototype // Pass isPrototype to the GameObject constructor
-                );
+                ShapeAttributes shapeAttributes = new(sides);
+                Attributes.Geometry geometry = new(shapeType, width, height, shapeAttributes);
+                Attributes.Appearance appearance = new(fillColor, outlineColor, outlineWidth);
+
+                archetype = new SimpleGameObject(
+                    identity,
+                    transform,
+                    physics,
+                    geometry,
+                    appearance);
+
+                return true;
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Error deserializing GameObject: {ex.Message}");
+                DebugLogger.PrintError($"Error deserializing GameObject archetype: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Converts a DB row to a GameObject using the SimpleGameObject archetype.
+        /// </summary>
+        public static GameObject DeserializeGameObject(Dictionary<string, object> row, bool isPrototype = false)
+        {
+            if (!TryDeserializeSimpleGameObject(row, out SimpleGameObject archetype))
+            {
                 return null;
             }
+
+            return archetype.ToGameObject(isPrototype);
         }
 
     }

@@ -16,6 +16,7 @@ namespace op.io
 
             InitializeMapObjects();
             InitializeFarms();
+            InitializeBlocks();
             InitializeAgents();
 
             DebugLogger.PrintGO($"Initialization complete. Total GameObjects: {Core.Instance.GameObjects.Count}, StaticObjects: {Core.Instance.StaticObjects.Count}");
@@ -103,6 +104,14 @@ namespace op.io
                 var matchingData = farmData.FirstOrDefault(f => f.ID == proto.ID);
                 if (matchingData == null) continue;
 
+                if (!SimpleGameObject.TryFromGameObject(proto, out SimpleGameObject baseArchetype))
+                {
+                    DebugLogger.PrintWarning($"Farm prototype ID={proto?.ID} is missing shape data. Skipping.");
+                    continue;
+                }
+
+                FarmGameObject farmArchetype = new(baseArchetype, matchingData);
+
                 // Debugging meta info before instantiating
                 DebugLogger.PrintGO($"Processing prototype: {proto.Name}, ID: {proto.ID}. Farms to instantiate: {matchingData.Count}");
 
@@ -118,7 +127,7 @@ namespace op.io
                 // Debugging each farm being instantiated
                 for (int i = 0; i < matchingData.Count; i++)
                 {
-                    var farm = CloneFarmWithRandomPosition(proto, random, viewportWidth, viewportHeight);
+                    var farm = CloneFarmWithRandomPosition(farmArchetype, random, viewportWidth, viewportHeight);
                     farms.Add(farm);
 
                     // Log every 50th farm instantiation for debugging
@@ -135,31 +144,36 @@ namespace op.io
             return farms;
         }
 
-        private static GameObject CloneFarmWithRandomPosition(GameObject proto, Random random, int viewportWidth, int viewportHeight)
+        private static GameObject CloneFarmWithRandomPosition(FarmGameObject archetype, Random random, int viewportWidth, int viewportHeight)
         {
             // Random position generation for the farm
-            int maxX = Math.Max(1, viewportWidth - proto.Shape.Width);
-            int maxY = Math.Max(1, viewportHeight - proto.Shape.Height);
+            SimpleGameObject baseObject = archetype.BaseObject;
+            int maxX = Math.Max(1, viewportWidth - baseObject.Geometry.Width);
+            int maxY = Math.Max(1, viewportHeight - baseObject.Geometry.Height);
 
             Vector2 newPosition = new Vector2(random.Next(0, maxX), random.Next(0, maxY));
             float newRotation = (float)(random.NextDouble() * MathF.Tau);
 
-            // Create farm GameObject based on prototype
-            return new GameObject(
-                GameObjectManager.GetNextID(),
-                proto.Name,
-                proto.Type,
-                newPosition,
-                newRotation,
-                proto.Mass,
-                proto.IsDestructible,
-                proto.IsCollidable,
-                proto.StaticPhysics,
-                proto.Shape,
-                proto.FillColor,
-                proto.OutlineColor,
-                proto.OutlineWidth
-            );
+            SimpleGameObject instance = archetype.CreateInstance(GameObjectManager.GetNextID(), newPosition, newRotation);
+            return instance.ToGameObject();
+        }
+
+        private static void InitializeBlocks()
+        {
+            try
+            {
+                DebugLogger.PrintGO("Initializing Block GameObjects...");
+
+                var blockArchetypes = BlockObjectLoader.LoadBlockArchetypes();
+                if (blockArchetypes.Count > 0)
+                {
+                    DebugLogger.PrintWarning("Block GameObjects are defined but instantiation is disabled.");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in InitializeBlocks: {ex.Message}");
+            }
         }
 
         private static void InitializeAgents()

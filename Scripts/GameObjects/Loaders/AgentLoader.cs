@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework;
 
 namespace op.io
 {
@@ -108,63 +107,17 @@ namespace op.io
         {
             try
             {
-                // Deserialize the basic properties from the database row
-                int id = Convert.ToInt32(row["ID"]);
-                string name = row["Name"].ToString();
-                string type = row["Type"].ToString();
-                Vector2 position = new(Convert.ToSingle(row["PositionX"]), Convert.ToSingle(row["PositionY"]));
-                float rotation = Convert.ToSingle(row["Rotation"]);
-                float mass = Convert.ToSingle(row["Mass"]);
-                bool isDestructible = Convert.ToBoolean(row["IsDestructible"]);
-                bool isCollidable = Convert.ToBoolean(row["IsCollidable"]);
-                bool staticPhysics = Convert.ToBoolean(row["StaticPhysics"]);
+                if (!GameObjectLoader.TryDeserializeSimpleGameObject(row, out SimpleGameObject baseObject))
+                {
+                    DebugLogger.PrintWarning("Skipped agent row after failing to deserialize base GameObject data.");
+                    return null;
+                }
 
-                Color fillColor = new(
-                    Convert.ToInt32(row["FillR"]),
-                    Convert.ToInt32(row["FillG"]),
-                    Convert.ToInt32(row["FillB"]),
-                    Convert.ToInt32(row["FillA"])
-                );
-
-                Color outlineColor = new(
-                    Convert.ToInt32(row["OutlineR"]),
-                    Convert.ToInt32(row["OutlineG"]),
-                    Convert.ToInt32(row["OutlineB"]),
-                    Convert.ToInt32(row["OutlineA"])
-                );
-
-                int width = Convert.ToInt32(row["Width"]);
-                int height = Convert.ToInt32(row["Height"]);
-                int sides = Convert.ToInt32(row["Sides"]);
-                int outlineWidth = Convert.ToInt32(row["OutlineWidth"]);
-
-                string shapeType = row["Shape"]?.ToString() ?? "Rectangle"; // Default to rectangle if no shape is specified
-
-                // Deserialize the shape
-                Shape shape = new(shapeType, width, height, sides, fillColor, outlineColor, outlineWidth);
-
-                // Deserialize agent-specific data
                 float baseSpeed = Convert.ToSingle(row["BaseSpeed"]);
                 bool isPlayer = Convert.ToBoolean(row["IsPlayer"]);
 
-                // Return the Agent with all necessary properties
-                return new Agent(
-                    id,
-                    name,
-                    type,
-                    position,
-                    rotation,
-                    mass,
-                    isDestructible,
-                    isCollidable,
-                    staticPhysics,
-                    shape,
-                    baseSpeed,
-                    isPlayer,
-                    fillColor,
-                    outlineColor,
-                    outlineWidth
-                );
+                PlayerGameObject archetype = new(baseObject, baseSpeed, isPlayer, default, default);
+                return archetype.ToAgent();
             }
             catch (Exception ex)
             {

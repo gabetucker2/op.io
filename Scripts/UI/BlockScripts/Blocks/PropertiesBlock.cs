@@ -362,13 +362,14 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             float y = bounds.Y;
-            Vector2 headingSize = heading.MeasureString(target.DisplayName);
-            heading.DrawString(spriteBatch, target.DisplayName, new Vector2(bounds.X, y), UIStyle.TextColor);
-
             InspectableObjectInfo locked = InspectModeState.GetLockedTarget();
-            if (locked != null && ReferenceEquals(locked.Source, target.Source))
+            Properties properties = new(target, locked);
+            Vector2 headingSize = heading.MeasureString(properties.Title);
+            heading.DrawString(spriteBatch, properties.Title, new Vector2(bounds.X, y), UIStyle.TextColor);
+
+            string lockedTag = properties.LockedTag;
+            if (!string.IsNullOrWhiteSpace(lockedTag))
             {
-                string lockedTag = "LOCKED";
                 Vector2 tagSize = tech.MeasureString(lockedTag);
                 Vector2 tagPos = new(bounds.Right - tagSize.X, y + Math.Max(0, (headingSize.Y - tagSize.Y) / 2));
                 tech.DrawString(spriteBatch, lockedTag, tagPos, UIStyle.AccentColor);
@@ -376,61 +377,17 @@ namespace op.io.UI.BlockScripts.Blocks
 
             y += headingSize.Y + HeaderSpacing;
 
-            DrawRow(spriteBatch, tech, "Type", $"{target.Type} (ID {target.Id})", bounds.X, ref y);
-
-            string flags = BuildFlags(target);
-            DrawRow(spriteBatch, tech, "Flags", flags, bounds.X, ref y);
-
-            DrawRow(spriteBatch, tech, "Position", $"{target.Position.X:0.0}, {target.Position.Y:0.0}", bounds.X, ref y);
-
-            float rotationDeg = MathHelper.ToDegrees(target.Rotation);
-            DrawRow(spriteBatch, tech, "Rotation", $"{rotationDeg:0.0} deg", bounds.X, ref y);
-
-            string sizeText = $"{target.Width} x {target.Height}";
-            if (target.Shape != null && target.Shape.ShapeType == "Polygon" && target.Sides > 0)
+            foreach (Properties.Row row in properties.Rows)
             {
-                sizeText = $"{sizeText} ({target.Sides}-sided polygon)";
+                if (row.Kind == Properties.RowKind.Color)
+                {
+                    DrawColorRow(spriteBatch, tech, bounds.X, ref y, row.Label, row.Color, row.Value);
+                }
+                else
+                {
+                    DrawRow(spriteBatch, tech, row.Label, row.Value, bounds.X, ref y);
+                }
             }
-            else if (target.Shape != null)
-            {
-                sizeText = $"{sizeText} ({target.Shape.ShapeType})";
-            }
-            DrawRow(spriteBatch, tech, "Size", sizeText, bounds.X, ref y);
-
-            DrawRow(spriteBatch, tech, "Mass", $"{target.Mass:0.##}", bounds.X, ref y);
-
-            DrawColorRow(spriteBatch, tech, bounds.X, ref y, "Fill", target.FillColor);
-            DrawColorRow(spriteBatch, tech, bounds.X, ref y, "Outline", target.OutlineColor);
-        }
-
-        private static string BuildFlags(InspectableObjectInfo target)
-        {
-            List<string> parts = new();
-            if (target.IsPlayer)
-            {
-                parts.Add("Player");
-            }
-
-            parts.Add(target.StaticPhysics ? "Static" : "Dynamic");
-            if (target.IsCollidable)
-            {
-                parts.Add("Collidable");
-            }
-            else
-            {
-                parts.Add("Non-collidable");
-            }
-
-            if (target.IsDestructible)
-            {
-                parts.Add("Destructible");
-            }
-            else
-            {
-                parts.Add("Indestructible");
-            }
-
-            return string.Join(" | ", parts);
         }
 
         private static void DrawRow(SpriteBatch spriteBatch, UIStyle.UIFont font, string label, string value, float x, ref float y)
@@ -444,7 +401,7 @@ namespace op.io.UI.BlockScripts.Blocks
             y += font.LineHeight + RowSpacing;
         }
 
-        private static void DrawColorRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, ref float y, string label, Color color)
+        private static void DrawColorRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, ref float y, string label, Color color, string hex)
         {
             Vector2 labelSize = font.MeasureString(label);
             font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
@@ -454,16 +411,10 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawRect(spriteBatch, swatch, color);
             DrawRectOutline(spriteBatch, swatch, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
-            string hex = ToHex(color);
             float textX = swatch.Right + Padding;
             font.DrawString(spriteBatch, hex, new Vector2(textX, y), UIStyle.TextColor);
 
             y += font.LineHeight + RowSpacing;
-        }
-
-        private static string ToHex(Color color)
-        {
-            return $"#{color.R:X2}{color.G:X2}{color.B:X2}{color.A:X2}";
         }
 
         private static Texture2D GetPreviewTexture(GraphicsDevice graphicsDevice, Shape shape)
