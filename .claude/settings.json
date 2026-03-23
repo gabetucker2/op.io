@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"ResizeEdge\\\\|CornerHandle\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts/UI/BlockScripts/BlockUtilities/*.cs)",
+      "Bash(dotnet build:*)"
+    ]
+  }
+}

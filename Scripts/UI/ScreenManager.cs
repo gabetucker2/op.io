@@ -112,7 +112,6 @@ namespace op.io
             }
             ForceImmediateClear(game);
             PreserveClientTopLeft(windowHandle, desiredClientTopLeft);
-            _desiredClientTopLeft = desiredClientTopLeft;
             if (snapToWorkArea)
             {
                 EnsureWindowWithinWorkArea(windowHandle, targetWorkArea);
@@ -179,12 +178,39 @@ namespace op.io
                 return;
             }
 
+            IntPtr hwnd = _resizeTarget.Window?.Handle ?? IntPtr.Zero;
+
+            // Snapshot the outer window position before ApplyChanges() so we can undo any
+            // spurious repositioning that MonoGame does internally (e.g. re-centering the
+            // window based on the new back-buffer size). GetWindowRect is used instead of
+            // ClientToScreen because ClientToScreen can return unreliable coordinates inside
+            // the live-resize modal loop. Only snapshot when no pending chrome-toggle anchor
+            // is active — that anchor takes priority via EnsurePendingClientAnchor.
+            NativeRect preRect = default;
+            bool hasPre = hwnd != IntPtr.Zero
+                && _desiredClientTopLeft == null
+                && GetWindowRect(hwnd, out preRect);
+
             _resizeTarget.ViewportWidth = newWidth;
             _resizeTarget.ViewportHeight = newHeight;
             _resizeTarget.Graphics.PreferredBackBufferWidth = newWidth;
             _resizeTarget.Graphics.PreferredBackBufferHeight = newHeight;
             _resizeTarget.Graphics.ApplyChanges();
-            EnsurePendingClientAnchor(_resizeTarget.Window?.Handle ?? IntPtr.Zero);
+
+            if (_desiredClientTopLeft != null)
+            {
+                EnsurePendingClientAnchor(hwnd);
+            }
+            else if (hasPre && GetWindowRect(hwnd, out NativeRect postRect))
+            {
+                int deltaX = preRect.Left - postRect.Left;
+                int deltaY = preRect.Top - postRect.Top;
+                if (Math.Abs(deltaX) > 1 || Math.Abs(deltaY) > 1)
+                {
+                    const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
+                    SetWindowPos(hwnd, IntPtr.Zero, postRect.Left + deltaX, postRect.Top + deltaY, 0, 0, flags);
+                }
+            }
         }
 
         private static bool IsWindowedMode(WindowMode mode)
@@ -301,22 +327,35 @@ namespace op.io
                 return;
             }
 
+            Point desired = _desiredClientTopLeft.Value;
+
+            // Always clear immediately — this is a one-shot correction for the chrome toggle.
+            // Keeping the anchor alive across multiple events causes it to fight user resizes.
+            _desiredClientTopLeft = null;
+
             Point? current = GetClientTopLeftOnScreen(hwnd);
             if (current == null)
             {
                 return;
             }
 
-            int deltaX = _desiredClientTopLeft.Value.X - current.Value.X;
-            int deltaY = _desiredClientTopLeft.Value.Y - current.Value.Y;
+            int deltaX = desired.X - current.Value.X;
+            int deltaY = desired.Y - current.Value.Y;
             if (Math.Abs(deltaX) <= 1 && Math.Abs(deltaY) <= 1)
             {
-                _desiredClientTopLeft = null;
+                return;
+            }
+
+            // Use the outer window rect as the base for SetWindowPos — passing client
+            // coordinates directly would place the window 8px off due to the invisible
+            // DWM resize border, causing delta to cycle at -8 and never converge.
+            if (!GetWindowRect(hwnd, out NativeRect windowRect))
+            {
                 return;
             }
 
             const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
-            SetWindowPos(hwnd, IntPtr.Zero, current.Value.X + deltaX, current.Value.Y + deltaY, 0, 0, flags);
+            SetWindowPos(hwnd, IntPtr.Zero, windowRect.Left + deltaX, windowRect.Top + deltaY, 0, 0, flags);
         }
 
         private static bool IsWindowMaximized(IntPtr hwnd)

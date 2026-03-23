@@ -14,8 +14,8 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '20
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_G', '20');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '25');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_A', '255');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1400');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1400');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1200');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1200');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('WindowMode', 'BorderedWindowed');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('VSync', 'false'); -- G-Sync will override this
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('FixedTimeStep', 'false');
