@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -6,6 +7,7 @@ namespace op.io
 {
     public static class GameRenderer
     {
+        public static bool IsDrawing { get; private set; }
         public static void LoadGraphics()
         {
             if (Core.Instance == null)
@@ -50,6 +52,31 @@ namespace op.io
         }
 
         public static void Draw()
+        {
+            if (IsDrawing)
+            {
+                DebugLogger.PrintUI("[GameRenderer] [Draw] Re-entrant Draw call detected and blocked.");
+                return;
+            }
+
+            IsDrawing = true;
+            try
+            {
+                DrawInternal();
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"[GameRenderer] [Draw] Exception in Draw: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                try { Core.Instance?.GraphicsDevice?.SetRenderTarget(null); } catch { }
+                try { Core.Instance?.SpriteBatch?.End(); } catch { }
+            }
+            finally
+            {
+                IsDrawing = false;
+            }
+        }
+
+        private static void DrawInternal()
         {
             bool usingDockedLayout = BlockManager.BeginDockedFrame(Core.Instance.GraphicsDevice);
 

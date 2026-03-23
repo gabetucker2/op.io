@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -64,6 +65,8 @@ namespace op.io
         private static WindowMode _dockingEnabledWindowMode = WindowMode.BorderedWindowed;
         private static WindowMode _dockingDisabledWindowMode = WindowMode.BorderlessWindowed;
         private static Point? _desiredClientTopLeft;
+        private static ResizePaintHook _resizePaintHook;
+        private static bool _inResizeDraw;
 
         public static void ApplyDockingWindowChrome(Core game, bool dockingEnabled)
         {
@@ -145,6 +148,12 @@ namespace op.io
             DetachResizeHandler();
             _resizeTarget = game;
             game.Window.ClientSizeChanged += OnClientSizeChanged;
+
+            IntPtr hwnd = game.Window?.Handle ?? IntPtr.Zero;
+            if (hwnd != IntPtr.Zero)
+            {
+                _resizePaintHook = new ResizePaintHook(hwnd);
+            }
         }
 
         private static void DetachResizeHandler()
@@ -156,6 +165,10 @@ namespace op.io
 
             _resizeTarget.Window.ClientSizeChanged -= OnClientSizeChanged;
             _resizeTarget = null;
+
+            _resizePaintHook?.Detach();
+            _resizePaintHook = null;
+            _inResizeDraw = false;
         }
 
         private static void OnClientSizeChanged(object sender, EventArgs e)
@@ -210,6 +223,47 @@ namespace op.io
                     const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
                     SetWindowPos(hwnd, IntPtr.Zero, postRect.Left + deltaX, postRect.Top + deltaY, 0, 0, flags);
                 }
+            }
+
+            // Invalidate the window so WM_PAINT fires after the swap chain is resized.
+            // The ResizePaintHook handles WM_PAINT by running a game tick, which is the
+            // context the DWM actually flushes composition from during the modal resize loop.
+            InvalidateRect(_resizeTarget.Window?.Handle ?? IntPtr.Zero, IntPtr.Zero, false);
+        }
+
+        private static void RunResizeDraw()
+        {
+            if (_inResizeDraw)
+            {
+                DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Blocked: already in resize draw.");
+                return;
+            }
+
+            if (_resizeTarget?.SpriteBatch == null)
+                return;
+
+            if (GameRenderer.IsDrawing)
+            {
+                DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Blocked: GameRenderer.Draw() is already executing (re-entrant WndProc call).");
+                return;
+            }
+
+            _inResizeDraw = true;
+            try
+            {
+                DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Starting resize draw.");
+                GameRenderer.Draw();
+                _resizeTarget.GraphicsDevice.Present();
+                DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Resize draw complete.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"[ScreenManager] [RunResizeDraw] Exception: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                try { _resizeTarget?.GraphicsDevice?.SetRenderTarget(null); } catch { }
+            }
+            finally
+            {
+                _inResizeDraw = false;
             }
         }
 
@@ -427,6 +481,73 @@ namespace op.io
             const uint flags = SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
             SetWindowPos(hwnd, IntPtr.Zero, targetX, targetY, width, height, flags);
         }
+
+        // Hooks WM_PAINT on the game window via Win32 SetWindowLongPtr subclassing.
+        // WM_PAINT is the only context where DWM actually composites frames during the
+        // modal resize loop. Drawing from WM_SIZE is intentionally skipped: Present()
+        // pumps the Win32 message queue while waiting for VBlank, which dispatches the
+        // WM_PAINT queued by OnClientSizeChanged's InvalidateRect while _inResizeDraw is
+        // still true — blocking it. ValidateRect inside that blocked WM_PAINT clears the
+        // update region, preventing any further WM_PAINT from drawing. By not calling
+        // RunResizeDraw from WM_SIZE, WM_PAINT always fires cleanly after the swap chain
+        // is resized and draws the updated layout in the correct DWM compositing context.
+        private sealed class ResizePaintHook
+        {
+            private const int WM_SIZE = 0x0005;
+            private const int WM_PAINT = 0x000F;
+            private const int GWLP_WNDPROC = -4;
+
+            private delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+            private readonly IntPtr _hwnd;
+            private readonly IntPtr _originalWndProc;
+            private readonly WndProcDelegate _wndProcDelegate; // keep alive to prevent GC
+
+            public ResizePaintHook(IntPtr hwnd)
+            {
+                _hwnd = hwnd;
+                _wndProcDelegate = WndProc;
+                IntPtr newProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate);
+                _originalWndProc = SetWindowLongPtr(hwnd, GWLP_WNDPROC, newProc);
+            }
+
+            public void Detach()
+            {
+                if (_originalWndProc != IntPtr.Zero)
+                    SetWindowLongPtr(_hwnd, GWLP_WNDPROC, _originalWndProc);
+            }
+
+            private IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+            {
+                if (msg == WM_SIZE)
+                {
+                    // Forward to the original proc so ClientSizeChanged fires and
+                    // ApplyChanges() resizes the swap chain. OnClientSizeChanged then
+                    // calls InvalidateRect to queue WM_PAINT, which handles the draw.
+                    // Do NOT call RunResizeDraw here — see class comment above.
+                    return CallWindowProc(_originalWndProc, hwnd, msg, wParam, lParam);
+                }
+                if (msg == WM_PAINT)
+                {
+                    RunResizeDraw();
+                    ValidateRect(hwnd, IntPtr.Zero);
+                    return IntPtr.Zero;
+                }
+                return CallWindowProc(_originalWndProc, hwnd, msg, wParam, lParam);
+            }
+
+            [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+            private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr newProc);
+
+            [DllImport("user32.dll")]
+            private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+        }
+
+        [DllImport("user32.dll")]
+        private static extern bool InvalidateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
+
+        [DllImport("user32.dll")]
+        private static extern bool ValidateRect(IntPtr hWnd, IntPtr lpRect);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct NativeRect

@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(grep -n \"ResizeEdge\\\\|CornerHandle\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts/UI/BlockScripts/BlockUtilities/*.cs)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -l \"ResizeEdgeDrag\" \"c:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Logs/\"*.txt)",
+      "Bash(find /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Data/Enums -name \"*.cs\" -exec wc -l {} +)",
+      "Bash(find /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts -name *Network* -o -name *Server* -o -name *Client* -o -name *Socket* -o -name *Http*)",
+      "Bash(grep -r \"using.*Http\\\\|using.*Socket\\\\|using.*Net\\\\|namespace.*Network\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts --include=*.cs)",
+      "Bash(wc -l /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts/**/*.cs)",
+      "Bash(grep -r \"namespace.*Attributes\\\\|class.*Attributes\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Data --include=*.cs)"
     ]
   }
 }

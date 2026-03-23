@@ -1065,12 +1065,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static Rectangle GetViewportBounds()
         {
-            if (Core.Instance?.GraphicsDevice == null)
-            {
-                return Rectangle.Empty;
-            }
-
-            return Core.Instance.GraphicsDevice.Viewport.Bounds;
+            return BlockManager.GetVirtualViewport();
         }
 
         private static bool TryCaptureBinding(KeyboardState keyboardState, KeyboardState previousKeyboardState, MouseState mouseState, MouseState previousMouseState, out string inputKey, out string displayLabel)

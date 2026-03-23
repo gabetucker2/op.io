@@ -83,7 +83,11 @@ namespace op.io
         private static Texture2D _lockedIcon;
         private static Texture2D _unlockedIcon;
         private static MouseState _previousMouseState;
+        private static MouseState _previousVirtualMouseState;
         private static Point _mousePosition;
+        private static float _uiScale = 1f;
+        private static Rectangle _actualGameContentBounds;
+        private const float ReferenceUIHeight = 1080f;
         private static DockBlock _draggingBlock;
         private static PanelGroup _draggingPanel;
         private static Rectangle _draggingStartBounds;
@@ -192,7 +196,9 @@ namespace op.io
         {
             if (Core.Instance?.GraphicsDevice == null)
             {
-                _previousMouseState = Mouse.GetState();
+                MouseState ms = Mouse.GetState();
+                _previousMouseState = ms;
+                _previousVirtualMouseState = ms;
                 return;
             }
 
@@ -203,8 +209,10 @@ namespace op.io
             double elapsedSeconds = Math.Max(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d, 0d);
 
             MouseState mouseState = Mouse.GetState();
+            float invScale = _uiScale > 0f ? 1f / _uiScale : 1f;
+            MouseState virtualMouseState = ScaleMouseState(mouseState, invScale);
             KeyboardState keyboardState = Keyboard.GetState();
-            _mousePosition = mouseState.Position;
+            _mousePosition = virtualMouseState.Position;
             bool dockingEnabled = DockingModeEnabled;
             bool rebindOverlayOpen = ControlsBlock.IsRebindOverlayOpen();
             bool panelInteractionsLocked = ShouldLockPanelInteractions();
@@ -273,10 +281,11 @@ namespace op.io
                 ClearDockingDragState();
             }
 
-            UpdateInteractiveBlocks(gameTime, mouseState, _previousMouseState, keyboardState, _previousKeyboardState);
+            UpdateInteractiveBlocks(gameTime, virtualMouseState, _previousVirtualMouseState, keyboardState, _previousKeyboardState);
             ApplyPendingDockingSetup();
             UpdateTransparentBlockClickThrough();
             _previousMouseState = mouseState;
+            _previousVirtualMouseState = virtualMouseState;
             _previousKeyboardState = keyboardState;
         }
 
@@ -296,8 +305,8 @@ namespace op.io
                 _worldRenderTarget != null &&
                 TryGetGameBlock(out DockBlock gameBlock) &&
                 gameBlock.IsVisible &&
-                _gameContentBounds.Width > 0 &&
-                _gameContentBounds.Height > 0;
+                _actualGameContentBounds.Width > 0 &&
+                _actualGameContentBounds.Height > 0;
 
             if (readyForRenderTarget)
             {
@@ -375,13 +384,13 @@ namespace op.io
             UpdateLayoutCache();
             EnsureSurfaceResources(Core.Instance.GraphicsDevice);
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
-            Rectangle viewport = Core.Instance.GraphicsDevice.Viewport.Bounds;
-            DrawRect(spriteBatch, viewport, Core.TransparentWindowColor);
+            Matrix uiTransform = _uiScale > 0f ? Matrix.CreateScale(_uiScale, _uiScale, 1f) : Matrix.Identity;
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, null, uiTransform);
+            DrawRect(spriteBatch, _layoutBounds, Core.TransparentWindowColor);
 
             if (!AnyBlockVisible())
             {
-                DrawEmptyState(spriteBatch, viewport);
+                DrawEmptyState(spriteBatch, _layoutBounds);
             }
             else
             {
@@ -2371,8 +2380,8 @@ namespace op.io
             EnsureLockIcons();
 
             bool gameBlockVisible = TryGetGameBlock(out DockBlock gameBlock) && gameBlock.IsVisible;
-            int desiredWidth = Math.Max(1, _gameContentBounds.Width);
-            int desiredHeight = Math.Max(1, _gameContentBounds.Height);
+            int desiredWidth = Math.Max(1, _actualGameContentBounds.Width);
+            int desiredHeight = Math.Max(1, _actualGameContentBounds.Height);
 
             if (!gameBlockVisible || desiredWidth <= 1 || desiredHeight <= 1)
             {
@@ -5699,6 +5708,25 @@ namespace op.io
             _overlayCloseAllBounds = new Rectangle(_overlayOpenAllBounds.Right + 20, _overlayBounds.Bottom - 44, buttonWidth, 32);
         }
 
+        public static Rectangle GetVirtualViewport()
+        {
+            if (_layoutBounds.Width > 0 && _layoutBounds.Height > 0) return _layoutBounds;
+            return Core.Instance?.GraphicsDevice?.Viewport.Bounds ?? Rectangle.Empty;
+        }
+
+        private static MouseState ScaleMouseState(MouseState state, float scale)
+        {
+            return new MouseState(
+                (int)MathF.Round(state.X * scale),
+                (int)MathF.Round(state.Y * scale),
+                state.ScrollWheelValue,
+                state.LeftButton,
+                state.MiddleButton,
+                state.RightButton,
+                state.XButton1,
+                state.XButton2);
+        }
+
         private static void DrawEmptyState(SpriteBatch spriteBatch, Rectangle viewport)
         {
             UIStyle.UIFont font = UIStyle.FontHBody;
@@ -5721,8 +5749,11 @@ namespace op.io
 
         private static Rectangle GetLayoutBounds(Rectangle viewport)
         {
-            // No outer padding: blocks should touch the window edges.
-            return viewport;
+            // Use a fixed reference height so panel content stays consistent regardless of window
+            // size; layout only adapts when the aspect ratio changes.
+            if (_uiScale <= 0f) return viewport;
+            int virtualWidth = (int)MathF.Round(viewport.Width / _uiScale);
+            return new Rectangle(0, 0, virtualWidth, (int)ReferenceUIHeight);
         }
 
         private static int GetActiveDragBarHeight()
@@ -5829,6 +5860,13 @@ namespace op.io
             }
 
             Rectangle viewport = graphicsDevice.Viewport.Bounds;
+            float newScale = viewport.Height > 0 ? viewport.Height / ReferenceUIHeight : 1f;
+            if (Math.Abs(_uiScale - newScale) > 0.0001f)
+            {
+                _uiScale = newScale;
+                _layoutDirty = true;
+            }
+
             if (viewport != _cachedViewportBounds)
             {
                 _cachedViewportBounds = viewport;
@@ -5861,12 +5899,20 @@ namespace op.io
             }
 
             _gameContentBounds = Rectangle.Empty;
+            _actualGameContentBounds = Rectangle.Empty;
             int dragBarHeight = GetActiveDragBarHeight();
             if (TryGetGameBlock(out DockBlock gameBlock) && gameBlock.IsVisible)
             {
                 PanelGroup gamePanel = GetPanelGroupForBlock(gameBlock);
                 int groupBarHeight = GetGroupBarHeight(gamePanel);
                 _gameContentBounds = gameBlock.GetContentBounds(dragBarHeight, UIStyle.BlockPadding, groupBarHeight);
+                _actualGameContentBounds = _uiScale > 0f
+                    ? new Rectangle(
+                        (int)(_gameContentBounds.X * _uiScale),
+                        (int)(_gameContentBounds.Y * _uiScale),
+                        (int)MathF.Ceiling(_gameContentBounds.Width * _uiScale),
+                        (int)MathF.Ceiling(_gameContentBounds.Height * _uiScale))
+                    : _gameContentBounds;
             }
 
             _layoutDirty = false;
@@ -6552,22 +6598,22 @@ namespace op.io
             float x = windowPosition.X;
             float y = windowPosition.Y;
 
-            if (_worldRenderTarget == null || _gameContentBounds.Width <= 0 || _gameContentBounds.Height <= 0)
+            if (_worldRenderTarget == null || _actualGameContentBounds.Width <= 0 || _actualGameContentBounds.Height <= 0)
             {
                 return new Vector2(x, y);
             }
 
-            float relativeX = (x - _gameContentBounds.X) / _gameContentBounds.Width;
-            float relativeY = (y - _gameContentBounds.Y) / _gameContentBounds.Height;
+            float relativeX = (x - _actualGameContentBounds.X) / _actualGameContentBounds.Width;
+            float relativeY = (y - _actualGameContentBounds.Y) / _actualGameContentBounds.Height;
 
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
         }
 
         private static Rectangle GetCurrentGameContentBounds()
         {
-            if (_gameContentBounds.Width > 0 && _gameContentBounds.Height > 0)
+            if (_actualGameContentBounds.Width > 0 && _actualGameContentBounds.Height > 0)
             {
-                return _gameContentBounds;
+                return _actualGameContentBounds;
             }
 
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
@@ -6581,8 +6627,8 @@ namespace op.io
             if (_worldRenderTarget == null ||
                 _worldRenderTarget.Width <= 0 ||
                 _worldRenderTarget.Height <= 0 ||
-                _gameContentBounds.Width <= 0 ||
-                _gameContentBounds.Height <= 0)
+                _actualGameContentBounds.Width <= 0 ||
+                _actualGameContentBounds.Height <= 0)
             {
                 return false;
             }
@@ -6593,8 +6639,8 @@ namespace op.io
             normalizedX = MathHelper.Clamp(normalizedX, 0f, 1f);
             normalizedY = MathHelper.Clamp(normalizedY, 0f, 1f);
 
-            float projectedX = _gameContentBounds.X + (normalizedX * _gameContentBounds.Width);
-            float projectedY = _gameContentBounds.Y + (normalizedY * _gameContentBounds.Height);
+            float projectedX = _actualGameContentBounds.X + (normalizedX * _actualGameContentBounds.Width);
+            float projectedY = _actualGameContentBounds.Y + (normalizedY * _actualGameContentBounds.Height);
 
             windowPosition = new Vector2(projectedX, projectedY);
             return true;

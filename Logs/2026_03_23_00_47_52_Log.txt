@@ -1,0 +1,973 @@
+Log created at 2026-03-23T00:47:52.2497343-04:00
+[GENERAL] Initializing game... | GameInitializer.cs::Initialize @ Line 13
+[DATABASE] Using database file path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseInitializer.cs::InitializeDatabase @ Line 22
+[DATABASE] Reset notes directory to default at 'C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\UserNotes\note.txt'. | NotesFileSystem.cs::ResetToDefaultNote @ Line 35
+[DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 155
+[DATABASE] Successfully deleted existing database file at: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\op.io.db | DatabaseInitializer.cs::DeleteDatabaseIfExists @ Line 155
+[DATABASE] Created new database file at: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseInitializer.cs::CreateDatabaseIfNotExists @ Line 178
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: InitializeDatabase, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Executed successfully: InitDB_Structure_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_Structure_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Database structure scripts loaded successfully. | DatabaseInitializer.cs::LoadStructureScripts @ Line 86
+[DATABASE] Ensured block tables for lock/order persistence. | DatabaseInitializer.cs::EnsureBlockTables @ Line 102
+[DATABASE] Verified table exists: GameObjects | DatabaseInitializer.cs::VerifyTablesExistence @ Line 137
+[DATABASE] Verified table exists: Agents | DatabaseInitializer.cs::VerifyTablesExistence @ Line 137
+[DATABASE] Verified table exists: FarmData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 137
+[DATABASE] Verified table exists: MapData | DatabaseInitializer.cs::VerifyTablesExistence @ Line 137
+[DATABASE] Executed successfully: InitDB_StartData_Settings.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_StartData_Blocks.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Executed successfully: InitDB_StartData_GOs.sql | SQLScriptExecutor.cs::RunSQLScript @ Line 43
+[DATABASE] Database initialization complete. | DatabaseInitializer.cs::InitializeDatabase @ Line 73
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT SettingKey FROM ControlKey ORDER BY RenderOrder, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: PanelMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: BlockMenu | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: TransparentTabBlocking | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: HoldInputs | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: InspectMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: UsePreviousConfiguration | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: UseNextConfiguration | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: DockingMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 0 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEBUG] 2026-03-23T00:47:52.4539179-04:00 [MIGRATION] stage=pre-normalize rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=EnsureDockingModeDefaultOff start | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@214 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] 2026-03-23T00:47:52.4548127-04:00 [MIGRATION] stage=skip-reset rawState=0 boolState=OFF markerOffExists=True markerOnExists=False note=Markers indicate OFF already applied | source=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 | stack=ControlKeyMigrations.cs::EnsureDockingModeDefaultOff@244 <= ControlKeyMigrations.cs::EnsureApplied@39 <= GameInitializer.cs::Initialize@28 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode | FROM ControlKey | ORDER BY ControlOrder ASC, SettingKey ASC; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, MetaControl, LockMode FROM ControlKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 19 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing Crouch switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing BlockMenu switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DEBUG] 2026-03-23T00:47:52.6619932-04:00 [INIT] source=ControlStateManager.SetSwitchState dbRaw=0 dbBool=OFF requested=OFF hasPersistenceFlag=True | source=ControlStateManager.cs::SetSwitchState@73 | context=ControlConfigurationManager.ApplyRuntimeBindings | stack=ControlStateManager.cs::SetSwitchState@73 <= ControlConfigurationManager.cs::ApplyRuntimeBindings@518 <= ControlConfigurationManager.cs::ApplyConfiguration@354 <= ControlConfigurationManager.cs::TryApply@218 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[GENERAL] Initializing DockingMode switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing DebugMode switch with default state from database: 1 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing AllowGameInputFreeze switch with default state from database: 1 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing TransparentTabBlocking switch with default state from database: 1 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing HoldInputs switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 44
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::GetSetting @ Line 49
+[DATABASE] ConfigureDatabase called by: GetSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[GENERAL] Initializing InspectMode switch with default state from database: 0 | ControlStateManager.cs::SetSwitchState @ Line 82
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Skipping redundant PRAGMA configuration (Already configured). | DatabaseConfig.cs::ConfigureDatabase @ Line 125
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Loading general settings... | GameInitializer.cs::LoadGeneralSettings @ Line 146
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: WindowMode | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: ViewportWidth | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: ViewportHeight | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: VSync | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: FixedTimeStep | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: TargetFrameRate | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM GeneralSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: NumLogFiles | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Loaded general settings: BackgroundColor={R:20 G:20 B:25 A:255}, Viewport=1200x1200, Mode=BorderedWindowed, VSync=False, FixedTimeStep=False, FPS=240 | GameInitializer.cs::LoadGeneralSettings @ Line 178
+[DATABASE] Loading control switch states... | ControlStateManager.cs::LoadControlSwitchStates @ Line 189
+[DATABASE] Executing query: SELECT SettingKey, SwitchStartState, InputType, InputKey FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch'); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 8 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Loaded switch state: BlockMenu = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Loaded switch state: TransparentTabBlocking = ON | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Loaded switch state: HoldInputs = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Loaded switch state: InspectMode = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DEBUG] 2026-03-23T00:47:52.7697730-04:00 [LOAD] source=ControlStateManager.LoadControlSwitchStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Bulk load | source=ControlStateManager.cs::LoadControlSwitchStates@214 | stack=ControlStateManager.cs::LoadControlSwitchStates@214 <= GameInitializer.cs::Initialize@48 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] 2026-03-23T00:47:52.7708037-04:00 [SET-NOOP] source=ControlStateManager.SetSwitchState state=OFF reason=state-unchanged | source=ControlStateManager.cs::SetSwitchState@113 | context=ControlStateManager.LoadControlSwitchStates | stack=ControlStateManager.cs::SetSwitchState@113 <= ControlStateManager.cs::LoadControlSwitchStates@227 <= GameInitializer.cs::Initialize@48 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DATABASE] Loaded switch state: DockingMode = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Loaded switch state: Crouch = OFF | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Loaded switch state: DebugMode = ON | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Loaded switch state: AllowGameInputFreeze = ON | ControlStateManager.cs::LoadControlSwitchStates @ Line 228
+[DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch'); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 8 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Setting starting debug mode to switch value: 1 | DebugModeHandler.cs::get_DEBUGENABLED @ Line 23
+[DEBUG] Switch 'BlockMenu' could not map input key 'Shift + X' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 129
+[DEBUG] Switch 'TransparentTabBlocking' could not map input key 'Shift + V' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 129
+[DEBUG] Initialized switch state for 'HoldInputs' (M) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 125
+[DEBUG] Switch 'InspectMode' could not map input key 'Shift + I' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 129
+[DEBUG] 2026-03-23T00:47:52.7807066-04:00 [LOAD] source=InputTypeManager.InitializeControlStates inputKey='V' inputType=SaveSwitch rawState=0 boolState=OFF saveToBackend=True note=Initial switch cache hydrate | source=InputTypeManager.cs::InitializeControlStates@104 | stack=InputTypeManager.cs::InitializeControlStates@104 <= GameInitializer.cs::Initialize@51 <= Core.cs::Initialize@92 <= ::DoInitialize@0 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] Initialized switch state for 'DockingMode' (V) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 125
+[DEBUG] Initialized switch state for 'Crouch' (LeftControl) to OFF. | InputTypeManager.cs::InitializeControlStates @ Line 125
+[DEBUG] Switch 'DebugMode' could not map input key 'Shift + B' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 129
+[DEBUG] Switch 'AllowGameInputFreeze' could not map input key 'Shift + C' into the runtime cache. | InputTypeManager.cs::InitializeControlStates @ Line 129
+[DEBUG] Critical switch 'DebugMode' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 584
+[DEBUG] Critical switch 'AllowGameInputFreeze' cached verification -> ON. | InputTypeManager.cs::EnsureCriticalSwitchStates @ Line 584
+[DEBUG] Initializing console... | ConsoleManager.cs::InitializeConsoleIfEnabled @ Line 32
+[DEBUG] Console opened due to debug mode being enabled. | ConsoleManager.cs::SetConsoleVisibility @ Line 85
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1200x1200 | ScreenManager.cs::ApplyWindowMode @ Line 60
+[GAMEOBJECT] Initializing GameObjects... | GameObjectInitializer.cs::Initialize @ Line 12
+[GAMEOBJECT] Initializing MapObjects... | GameObjectInitializer.cs::InitializeMapObjects @ Line 29
+[GAMEOBJECT] Loading map objects from database... | MapObjectLoader.cs::LoadMapObjects @ Line 13
+[DATABASE] Executing query: SELECT g.ID, g.Name, g.Type, g.PositionX, g.PositionY, g.Rotation, g.Width, g.Height, g.Sides, g.FillR, g.FillG, g.FillB, g.FillA, g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth, g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics, g.Shape FROM MapData s INNER JOIN GameObjects g ON s.ID = g.ID | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Query executed successfully. Retrieved 3 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 3 map objects. | MapObjectLoader.cs::LoadMapObjects @ Line 23
+[DEBUG] Loaded map object ID=2. | MapObjectLoader.cs::LoadMapObjects @ Line 34
+[DEBUG] Loaded map object ID=3. | MapObjectLoader.cs::LoadMapObjects @ Line 34
+[DEBUG] Loaded map object ID=4. | MapObjectLoader.cs::LoadMapObjects @ Line 34
+[GAMEOBJECT] MapObjects loaded: 3 total | GameObjectInitializer.cs::InitializeMapObjects @ Line 37
+[GAMEOBJECT] Initializing Farms... | GameObjectInitializer.cs::InitializeFarms @ Line 54
+[GAMEOBJECT] Loading farm prototypes from database... | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 16
+[DATABASE] Executing query:  |                     SELECT |                         g.ID, |                         g.Name, |                         g.Type, |                         g.PositionX, |                         g.PositionY, |                         g.Rotation, |                         g.Width, |                         g.Height, |                         g.Sides, |                         g.FillR, g.FillG, g.FillB, g.FillA, |                         g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |                         g.OutlineWidth, |                         g.IsCollidable, |                         g.IsDestructible, |                         g.Mass, |                         g.StaticPhysics, |                         g.Shape, |                         f.Count |                     FROM GameObjects g |                     INNER JOIN FarmData f ON g.ID = f.ID |                     WHERE g.Type = 'Prototype'; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] Query executed successfully. Retrieved 4 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 4 farm prototypes. | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 51
+[GAMEOBJECT] Farm Prototype: ID=5, Name=Triangle, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototype: ID=6, Name=Square, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototype: ID=7, Name=Pentagon, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototype: ID=8, Name=Octagon, Type=Prototype | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 66
+[GAMEOBJECT] Farm Prototypes loaded: 4 | FarmProtoLoader.cs::LoadFarmPrototypes @ Line 75
+[DATABASE] Loading farm data from database... | FarmDataLoader.cs::LoadFarmData @ Line 31
+[DATABASE] Executing query: SELECT ID, Count FROM FarmData | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] Query executed successfully. Retrieved 4 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Loaded 4 farm data entries. | FarmDataLoader.cs::LoadFarmData @ Line 43
+[GAMEOBJECT] Farm Prototypes loaded: 4 | GameObjectInitializer.cs::InitializeFarms @ Line 61
+[GAMEOBJECT] Farm Data loaded: 4 | GameObjectInitializer.cs::InitializeFarms @ Line 64
+[GAMEOBJECT] Farm Prototype: ID=5, Name=Triangle, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 69
+[GAMEOBJECT] Farm Prototype: ID=6, Name=Square, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 69
+[GAMEOBJECT] Farm Prototype: ID=7, Name=Pentagon, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 69
+[GAMEOBJECT] Farm Prototype: ID=8, Name=Octagon, Type=Prototype | GameObjectInitializer.cs::InitializeFarms @ Line 69
+[GAMEOBJECT] Processing prototype: Triangle, ID: 5. Farms to instantiate: 15 | GameObjectInitializer.cs::InstantiateFarms @ Line 116
+[GAMEOBJECT] Instantiating 15 farms for prototype Triangle (ID=5) | GameObjectInitializer.cs::InstantiateFarms @ Line 124
+[GAMEOBJECT] Instantiating farm #0 for prototype: Triangle, ID: 5 | GameObjectInitializer.cs::InstantiateFarms @ Line 136
+[GAMEOBJECT] Processing prototype: Square, ID: 6. Farms to instantiate: 10 | GameObjectInitializer.cs::InstantiateFarms @ Line 116
+[GAMEOBJECT] Instantiating 10 farms for prototype Square (ID=6) | GameObjectInitializer.cs::InstantiateFarms @ Line 124
+[GAMEOBJECT] Instantiating farm #0 for prototype: Square, ID: 6 | GameObjectInitializer.cs::InstantiateFarms @ Line 136
+[GAMEOBJECT] Processing prototype: Pentagon, ID: 7. Farms to instantiate: 4 | GameObjectInitializer.cs::InstantiateFarms @ Line 116
+[GAMEOBJECT] Instantiating 4 farms for prototype Pentagon (ID=7) | GameObjectInitializer.cs::InstantiateFarms @ Line 124
+[GAMEOBJECT] Instantiating farm #0 for prototype: Pentagon, ID: 7 | GameObjectInitializer.cs::InstantiateFarms @ Line 136
+[GAMEOBJECT] Processing prototype: Octagon, ID: 8. Farms to instantiate: 2 | GameObjectInitializer.cs::InstantiateFarms @ Line 116
+[GAMEOBJECT] Instantiating 2 farms for prototype Octagon (ID=8) | GameObjectInitializer.cs::InstantiateFarms @ Line 124
+[GAMEOBJECT] Instantiating farm #0 for prototype: Octagon, ID: 8 | GameObjectInitializer.cs::InstantiateFarms @ Line 136
+[GAMEOBJECT] Farm instantiation completed. Total iterations across all prototypes: 31, Total farms created: 31 | GameObjectInitializer.cs::InstantiateFarms @ Line 142
+[GAMEOBJECT] Farms instantiated: 31 | GameObjectInitializer.cs::InitializeFarms @ Line 76
+[GAMEOBJECT] Farms loaded into game: 31 total | GameObjectInitializer.cs::InitializeFarms @ Line 81
+[GAMEOBJECT] Initializing Block GameObjects... | GameObjectInitializer.cs::InitializeBlocks @ Line 165
+[GAMEOBJECT] Initializing Agents... | GameObjectInitializer.cs::InitializeAgents @ Line 183
+[GAMEOBJECT] Loading all Agents from database... | AgentLoader.cs::LoadAgents @ Line 63
+[DATABASE] Executing query:  |             SELECT  |             g.ID, |             g.Name, |             g.Type, |             g.PositionX, |             g.PositionY, |             g.Rotation,        -- Ensure this is included for rotation |             g.Width, |             g.Height, |             g.Sides, |             g.FillR, g.FillG, g.FillB, g.FillA, |             g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |             g.OutlineWidth, |             g.IsCollidable, |             g.IsDestructible, |             g.Mass, |             g.StaticPhysics, |             g.Shape, s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed |             FROM Agents s |             INNER JOIN GameObjects g ON s.ID = g.ID; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Retrieved 1 rows from Agents + GameObjects. | AgentLoader.cs::LoadAgents @ Line 78
+[DATABASE] Row keys: ID, Name, Type, PositionX, PositionY, Rotation, Width, Height, Sides, FillR, FillG, FillB, FillA, OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth, IsCollidable, IsDestructible, Mass, StaticPhysics, Shape, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed | AgentLoader.cs::LoadAgents @ Line 82
+[PLAYER] Agent created with TriggerCooldown: 0, SwitchCooldown: 0 | Agent.cs::.ctor @ Line 119
+[GAMEOBJECT] Loaded Agent ID=1, Pos={X:100 Y:100}, Shape=Circle | AgentLoader.cs::LoadAgents @ Line 88
+[GAMEOBJECT] Total agents loaded: 1 | AgentLoader.cs::LoadAgents @ Line 96
+[GAMEOBJECT] Core player set: ID=1, Pos={X:100 Y:100}, Shape=Circle | GameObjectInitializer.cs::InitializeAgents @ Line 195
+[GAMEOBJECT] Agents loaded: 1 total | GameObjectInitializer.cs::InitializeAgents @ Line 197
+[GAMEOBJECT] Initialization complete. Total GameObjects: 35, StaticObjects: 3 | GameObjectInitializer.cs::Initialize @ Line 22
+[DEBUG] 2026-03-23T00:47:53.2002628-04:00 [CONSUMER] source=SwitchConsumerBootstrapper.ApplyInitialStates docking=OFF note=Hydrated from cached switch state snapshot | source=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 | stack=SwitchConsumerBootstrapper.cs::ApplyInitialStates@77 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 <= GameInitializer.cs::Initialize@114 <= Core.cs::Initialize@92 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[UI] Applied WindowMode: BorderlessWindowed, Resolution: 1200x1200 | ScreenManager.cs::ApplyWindowMode @ Line 60
+[DEBUG] 2026-03-23T00:47:53.2254108-04:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=OFF note=changed=False | source=BlockManager.cs::DockingModeEnabled@156 | stack=BlockManager.cs::set_DockingModeEnabled@156 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] 2026-03-23T00:47:53.2260722-04:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=OFF note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= SwitchConsumerBootstrapper.cs::ApplyInitialStates@97 <= SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@60 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] Setting debug mode to: True | DebugModeHandler.cs::ApplySwitchState @ Line 44
+[PHYSICS] Initializing PhysicsManager... | PhysicsManager.cs::Initialize @ Line 24
+[PHYSICS] PhysicsManager initialization complete. | PhysicsManager.cs::Initialize @ Line 26
+[GENERAL] Game initialization complete. | GameInitializer.cs::Initialize @ Line 124
+[GENERAL] SpriteBatch initialized successfully. | GameRenderer.cs::LoadGraphics @ Line 28
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_R | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_G | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_B | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleColor_A | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM DebugVisuals WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DebugCircleRadius | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEBUG] DebugRenderer initialized with color {R:255 G:0 B:0 A:255} and radius 3 | DebugRenderer.cs::Initialize @ Line 42
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Attempting to open database connection... Using Database Path: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseManager.cs::OpenConnection @ Line 22
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Connection String being used: Data Source=C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db;Version=3; | DatabaseManager.cs::OpenConnection @ Line 34
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection opened successfully. | DatabaseManager.cs::OpenConnection @ Line 41
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection is ready for use. | DatabaseManager.cs::OpenConnection @ Line 42
+[DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] Database connection closed successfully. | DatabaseManager.cs::CloseConnection @ Line 62
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [DATABASE] ConfigureDatabase called by: OpenConnection, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[GENERAL] GameRenderer: Graphics and GameObjects loaded successfully. | GameRenderer.cs::LoadGraphics @ Line 51
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: TriggerCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PLAYER] TriggerCooldown loaded: 0.5 | Agent.cs::LoadTriggerCooldown @ Line 132
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: SwitchCooldown | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PLAYER] SwitchCooldown loaded: 0.1 | Agent.cs::LoadSwitchCooldown @ Line 152
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[PHYSICS] Destroying GameObject ID=18 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=18 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=17 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 51
+[GAMEOBJECT] Unregistered GameObject ID=17 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=16 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=16 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=23 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=23 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[PHYSICS] Destroying GameObject ID=24 (destructible). | CollisionResolver.cs::ResolveCollisions @ Line 42
+[GAMEOBJECT] Unregistered GameObject ID=24 | GameObjectRegister.cs::UnregisterGameObject @ Line 31
+[DATABASE] Executing query: SELECT SettingKey, InputKey, InputType, COALESCE(RenderOrder, 0) AS ControlOrder FROM ControlKey ORDER BY ControlOrder ASC, SettingKey; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] Query executed successfully. Retrieved 19 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] Query executed successfully. Retrieved 7 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[SYSTEM] ShapeManager initialized. | ShapeManager.cs::.ctor @ Line 15
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] ReturnCursorToPlayer input not active. | ActionHandler.cs::Tickwise_CheckActions @ Line 44
+[DATABASE] Executing query: SELECT Value FROM ControlSettings WHERE SettingKey = @whereValue LIMIT 1; with whereValue: CursorFollowDeadzonePixels | DatabaseFetch.cs::GetSetting @ Line 40
+[DATABASE] Successfully retrieved setting 'CursorFollowDeadzonePixels' from 'ControlSettings'. | DatabaseFetch.cs::GetSetting @ Line 49
+[DEBUG] 2026-03-23T00:48:06.7022359-04:00 [INPUT] source=InputTypeManager.IsKeySwitch inputKey='V' newState=ON note=Primary token toggle (release edge) | source=InputTypeManager.cs::IsKeySwitch@487 | context=withinStartup=False;comboGuard=False;breakGuard=False | stack=InputTypeManager.cs::IsKeySwitch@487 <= InputManager.cs::IsSwitch@1039 <= InputManager.cs::EvaluateSwitchState@858 <= InputManager.cs::IsActive@823 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] 2026-03-23T00:48:06.7040975-04:00 [SET] source=ControlStateManager.SetSwitchState prev=OFF next=ON persisted=True reason=state-change | source=ControlStateManager.cs::SetSwitchState@95 | context=InputTypeManager.NotifySwitchStateFromInput:V | stack=ControlStateManager.cs::SetSwitchState@95 <= InputTypeManager.cs::NotifySwitchStateFromInput@544 <= InputTypeManager.cs::IsKeySwitch@494 <= InputManager.cs::IsSwitch@1039 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DATABASE] Updated and saved DockingMode to True from False | ControlStateManager.cs::SetSwitchState @ Line 106
+[DATABASE] Attempting to open database connection to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 82
+[DATABASE] Database connection opened successfully to: C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\Data\op.io.db | DatabaseConfig.cs::UpdateSetting @ Line 87
+[DATABASE] ConfigureDatabase called by: UpdateSetting, Thread ID: 1, IsConfigured: True | DatabaseConfig.cs::ConfigureDatabase @ Line 121
+[DATABASE] Successfully updated 'DockingMode' in ControlKey. | DatabaseConfig.cs::UpdateSetting @ Line 103
+[UI] Applied WindowMode: BorderedWindowed, Resolution: 1200x1200 | ScreenManager.cs::ApplyWindowMode @ Line 60
+[DEBUG] 2026-03-23T00:48:06.7363360-04:00 [BLOCK] source=BlockManager.DockingModeEnabled dockingMode=ON note=changed=True | source=BlockManager.cs::DockingModeEnabled@156 | stack=BlockManager.cs::set_DockingModeEnabled@156 <= SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@16 <= SwitchRegistry.cs::NotifyConsumers@42 <= ControlStateManager.cs::DispatchSwitchChange@184 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] 2026-03-23T00:48:06.7371532-04:00 [CONSUMER] source=SwitchConsumerBootstrapper.RegisterDefaultConsumers docking=ON note=previous=False | source=SwitchConsumerBootstrapper.cs::RegisterDefaultConsumers@17 | stack=SwitchConsumerBootstrapper.cs::<RegisterDefaultConsumers>b__2_0@17 <= SwitchRegistry.cs::NotifyConsumers@42 <= ControlStateManager.cs::DispatchSwitchChange@184 <= ControlStateManager.cs::SetSwitchState@109 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[DEBUG] 2026-03-23T00:48:06.7376016-04:00 [INPUT] source=InputTypeManager.NotifySwitchStateFromInput inputKey='V' newState=ON note=Switch state updated from live input edge | source=InputTypeManager.cs::NotifySwitchStateFromInput@547 | context=HasStableSnapshot=True | stack=InputTypeManager.cs::NotifySwitchStateFromInput@547 <= InputTypeManager.cs::IsKeySwitch@494 <= InputManager.cs::IsSwitch@1039 <= InputManager.cs::EvaluateSwitchState@858 | DockingDiagnostics.cs::AppendRaw @ Line 42
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] [ScreenManager] [RunResizeDraw] Starting resize draw. | ScreenManager.cs::RunResizeDraw @ Line 254
+[SUBSEQUENT MESSAGES SUPPRESSED DUE TO 25 MAX REPEATS] [UI] [ScreenManager] [RunResizeDraw] Resize draw complete. | ScreenManager.cs::RunResizeDraw @ Line 257
+[UI] [ResizeEdgeStart] Edge[Vertical] Depth=0 Bounds={X:1942 Y:0 Width:8 Height:1080} Node=Split(Vertical, ratio=0.670, bounds={X:0 Y:0 Width:2903 Height:1080}) First=Block(id=game, bounds={X:0 Y:0 Width:1946 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1946 Y:0 Width:957 Height:1080}) Mouse={X:1948 Y:344} | BlockManager.cs::UpdateResizeEdgeState @ Line 2455
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.670, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.670 New=0.671 RelativePos=1948 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1948 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1946 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1946 Y:0 Width:957 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.671, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.671 New=0.671 RelativePos=1947 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1947 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1948 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1948 Y:0 Width:955 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.671, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.671 New=0.670 RelativePos=1946 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1946 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1947 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1947 Y:0 Width:956 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.670, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.670 New=0.670 RelativePos=1944 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1944 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1946 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1946 Y:0 Width:957 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.670, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.670 New=0.669 RelativePos=1942 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1942 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1944 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1944 Y:0 Width:959 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.669, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.669 New=0.668 RelativePos=1940 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1940 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1942 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1942 Y:0 Width:961 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.668, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.668 New=0.667 RelativePos=1937 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1937 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1940 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1940 Y:0 Width:963 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.667, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.667 New=0.666 RelativePos=1934 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1934 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1937 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1937 Y:0 Width:966 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.666, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.666 New=0.665 RelativePos=1930 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1930 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1934 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1934 Y:0 Width:969 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.665, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.665 New=0.663 RelativePos=1924 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1924 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1930 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1930 Y:0 Width:973 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.663, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.663 New=0.662 RelativePos=1921 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1921 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1924 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1924 Y:0 Width:979 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.662, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.662 New=0.658 RelativePos=1911 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1911 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1921 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1921 Y:0 Width:982 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.658, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.658 New=0.656 RelativePos=1905 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1905 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1911 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1911 Y:0 Width:992 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.656, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.656 New=0.651 RelativePos=1891 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1891 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1905 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1905 Y:0 Width:998 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.651, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.651 New=0.647 RelativePos=1878 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1878 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1891 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1891 Y:0 Width:1012 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.647, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.647 New=0.645 RelativePos=1871 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1871 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1878 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1878 Y:0 Width:1025 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.645, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.645 New=0.641 RelativePos=1861 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1861 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1871 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1871 Y:0 Width:1032 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.641, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.641 New=0.638 RelativePos=1853 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1853 Y:344} First=Block(id=game, bounds={X:0 Y:0 Width:1861 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1861 Y:0 Width:1042 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.638, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.638 New=0.634 RelativePos=1840 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1840 Y:345} First=Block(id=game, bounds={X:0 Y:0 Width:1853 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1853 Y:0 Width:1050 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.634, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.634 New=0.629 RelativePos=1827 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1827 Y:346} First=Block(id=game, bounds={X:0 Y:0 Width:1840 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1840 Y:0 Width:1063 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.629, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.629 New=0.625 RelativePos=1814 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1814 Y:346} First=Block(id=game, bounds={X:0 Y:0 Width:1827 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1827 Y:0 Width:1076 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.625, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.625 New=0.621 RelativePos=1804 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1804 Y:346} First=Block(id=game, bounds={X:0 Y:0 Width:1814 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1814 Y:0 Width:1089 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.621, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.621 New=0.617 RelativePos=1790 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1790 Y:346} First=Block(id=game, bounds={X:0 Y:0 Width:1804 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1804 Y:0 Width:1099 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.617, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.617 New=0.614 RelativePos=1783 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1783 Y:346} First=Block(id=game, bounds={X:0 Y:0 Width:1790 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1790 Y:0 Width:1113 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.614, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.614 New=0.609 RelativePos=1768 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1768 Y:347} First=Block(id=game, bounds={X:0 Y:0 Width:1783 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1783 Y:0 Width:1120 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.609, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.609 New=0.603 RelativePos=1751 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1751 Y:348} First=Block(id=game, bounds={X:0 Y:0 Width:1768 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1768 Y:0 Width:1135 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.603, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.603 New=0.598 RelativePos=1737 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1737 Y:348} First=Block(id=game, bounds={X:0 Y:0 Width:1751 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1751 Y:0 Width:1152 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.598, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.598 New=0.593 RelativePos=1722 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1722 Y:348} First=Block(id=game, bounds={X:0 Y:0 Width:1737 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1737 Y:0 Width:1166 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.593, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.593 New=0.590 RelativePos=1712 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1712 Y:348} First=Block(id=game, bounds={X:0 Y:0 Width:1722 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1722 Y:0 Width:1181 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.590, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.590 New=0.584 RelativePos=1695 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1695 Y:348} First=Block(id=game, bounds={X:0 Y:0 Width:1712 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1712 Y:0 Width:1191 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.584, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.584 New=0.580 RelativePos=1685 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1685 Y:348} First=Block(id=game, bounds={X:0 Y:0 Width:1695 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1695 Y:0 Width:1208 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.580, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.580 New=0.574 RelativePos=1665 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1665 Y:349} First=Block(id=game, bounds={X:0 Y:0 Width:1685 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1685 Y:0 Width:1218 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.574, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.574 New=0.568 RelativePos=1649 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1649 Y:349} First=Block(id=game, bounds={X:0 Y:0 Width:1665 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1665 Y:0 Width:1238 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.568, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.568 New=0.566 RelativePos=1643 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1643 Y:350} First=Block(id=game, bounds={X:0 Y:0 Width:1649 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1649 Y:0 Width:1254 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.566, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.566 New=0.563 RelativePos=1635 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1635 Y:350} First=Block(id=game, bounds={X:0 Y:0 Width:1643 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1643 Y:0 Width:1260 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.563, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.563 New=0.557 RelativePos=1617 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1617 Y:350} First=Block(id=game, bounds={X:0 Y:0 Width:1635 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1635 Y:0 Width:1268 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.557, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.557 New=0.553 RelativePos=1604 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1604 Y:351} First=Block(id=game, bounds={X:0 Y:0 Width:1617 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1617 Y:0 Width:1286 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.553, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.553 New=0.550 RelativePos=1597 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1597 Y:351} First=Block(id=game, bounds={X:0 Y:0 Width:1604 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1604 Y:0 Width:1299 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.550, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.550 New=0.547 RelativePos=1589 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1589 Y:351} First=Block(id=game, bounds={X:0 Y:0 Width:1597 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1597 Y:0 Width:1306 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.547, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.547 New=0.543 RelativePos=1577 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1577 Y:351} First=Block(id=game, bounds={X:0 Y:0 Width:1589 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1589 Y:0 Width:1314 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.543, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.543 New=0.542 RelativePos=1572 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1572 Y:351} First=Block(id=game, bounds={X:0 Y:0 Width:1577 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1577 Y:0 Width:1326 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.542, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.542 New=0.540 RelativePos=1568 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1568 Y:351} First=Block(id=game, bounds={X:0 Y:0 Width:1572 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1572 Y:0 Width:1331 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.540, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.540 New=0.536 RelativePos=1556 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1556 Y:352} First=Block(id=game, bounds={X:0 Y:0 Width:1568 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1568 Y:0 Width:1335 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.536, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.536 New=0.534 RelativePos=1551 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1551 Y:352} First=Block(id=game, bounds={X:0 Y:0 Width:1556 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1556 Y:0 Width:1347 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.534, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.534 New=0.529 RelativePos=1535 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1535 Y:352} First=Block(id=game, bounds={X:0 Y:0 Width:1551 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1551 Y:0 Width:1352 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.529, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.529 New=0.526 RelativePos=1528 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1528 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1535 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1535 Y:0 Width:1368 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.526, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.526 New=0.524 RelativePos=1521 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1521 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1528 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1528 Y:0 Width:1375 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.524, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.524 New=0.521 RelativePos=1512 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1512 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1521 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1521 Y:0 Width:1382 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.521, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.521 New=0.518 RelativePos=1503 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1503 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1512 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1512 Y:0 Width:1391 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.518, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.518 New=0.515 RelativePos=1496 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1496 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1503 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1503 Y:0 Width:1400 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.515, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.515 New=0.514 RelativePos=1492 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1492 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1496 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1496 Y:0 Width:1407 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.514, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.514 New=0.511 RelativePos=1482 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1482 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1492 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1492 Y:0 Width:1411 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.511, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.511 New=0.508 RelativePos=1476 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1476 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1482 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1482 Y:0 Width:1421 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.508, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.508 New=0.507 RelativePos=1472 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1472 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1476 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1476 Y:0 Width:1427 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.507, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.507 New=0.504 RelativePos=1464 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1464 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1472 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1472 Y:0 Width:1431 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.504, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.504 New=0.504 RelativePos=1462 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1462 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1464 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1464 Y:0 Width:1439 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.504, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.504 New=0.502 RelativePos=1457 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1457 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1462 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1462 Y:0 Width:1441 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.502, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.502 New=0.500 RelativePos=1451 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1451 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1457 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1457 Y:0 Width:1446 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.500, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.500 New=0.499 RelativePos=1448 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1448 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1451 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1451 Y:0 Width:1452 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.499, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.499 New=0.497 RelativePos=1444 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1444 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1448 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1448 Y:0 Width:1455 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.497, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.497 New=0.496 RelativePos=1441 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1441 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1444 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1444 Y:0 Width:1459 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.496, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.496 New=0.494 RelativePos=1434 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1434 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1441 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1441 Y:0 Width:1462 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.494, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.494 New=0.493 RelativePos=1432 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1432 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1434 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1434 Y:0 Width:1469 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.493, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.493 New=0.493 RelativePos=1430 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1430 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1432 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1432 Y:0 Width:1471 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.493, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.493 New=0.491 RelativePos=1426 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1426 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1430 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1430 Y:0 Width:1473 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.491, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.491 New=0.491 RelativePos=1424 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1424 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1426 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1426 Y:0 Width:1477 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.491, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.491 New=0.489 RelativePos=1420 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1420 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1424 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1424 Y:0 Width:1479 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.489, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.489 New=0.488 RelativePos=1418 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1418 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1420 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1420 Y:0 Width:1483 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.488, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.488 New=0.487 RelativePos=1413 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1413 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1418 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1418 Y:0 Width:1485 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.487, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.487 New=0.486 RelativePos=1412 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1412 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1413 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1413 Y:0 Width:1490 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.486, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.486 New=0.485 RelativePos=1408 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1408 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1412 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1412 Y:0 Width:1491 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.485, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.485 New=0.485 RelativePos=1407 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1407 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1408 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1408 Y:0 Width:1495 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.485, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.485 New=0.483 RelativePos=1403 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1403 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1407 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1407 Y:0 Width:1496 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.483, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.483 New=0.483 RelativePos=1401 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1401 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1403 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1403 Y:0 Width:1500 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.483, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.483 New=0.482 RelativePos=1398 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1398 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1401 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1401 Y:0 Width:1502 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.482, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.482 New=0.480 RelativePos=1394 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1394 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1398 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1398 Y:0 Width:1505 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.480, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.480 New=0.480 RelativePos=1392 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1392 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1394 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1394 Y:0 Width:1509 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.480, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.480 New=0.479 RelativePos=1390 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1390 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1392 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1392 Y:0 Width:1511 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.479, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.479 New=0.478 RelativePos=1388 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1388 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1390 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1390 Y:0 Width:1513 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.478, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.478 New=0.477 RelativePos=1386 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1386 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1388 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1388 Y:0 Width:1515 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.477, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.477 New=0.477 RelativePos=1385 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1385 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1386 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1386 Y:0 Width:1517 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.477, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.477 New=0.476 RelativePos=1382 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1382 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1385 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1385 Y:0 Width:1518 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.476, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.476 New=0.476 RelativePos=1381 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1381 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1382 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1382 Y:0 Width:1521 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.476, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.476 New=0.475 RelativePos=1378 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1378 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1381 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1381 Y:0 Width:1522 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.475, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.475 New=0.474 RelativePos=1377 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1377 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1378 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1378 Y:0 Width:1525 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.474, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.474 New=0.474 RelativePos=1375 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1375 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1377 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1377 Y:0 Width:1526 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.474, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.474 New=0.473 RelativePos=1374 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1374 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1375 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1375 Y:0 Width:1528 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.473, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.473 New=0.473 RelativePos=1372 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1372 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1374 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1374 Y:0 Width:1529 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.473, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.473 New=0.472 RelativePos=1370 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1370 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1372 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1372 Y:0 Width:1531 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.472, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.472 New=0.471 RelativePos=1368 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1368 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1370 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1370 Y:0 Width:1533 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.471, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.471 New=0.470 RelativePos=1365 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1365 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1368 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1368 Y:0 Width:1535 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.470, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.470 New=0.470 RelativePos=1363 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1363 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1365 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1365 Y:0 Width:1538 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.470, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.470 New=0.469 RelativePos=1362 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1362 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1363 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1363 Y:0 Width:1540 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.469, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.469 New=0.468 RelativePos=1360 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1360 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1362 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1362 Y:0 Width:1541 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.468, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.468 New=0.467 RelativePos=1357 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1357 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1360 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1360 Y:0 Width:1543 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.467, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.467 New=0.467 RelativePos=1356 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1356 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1357 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1357 Y:0 Width:1546 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.467, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.467 New=0.465 RelativePos=1351 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1351 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1356 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1356 Y:0 Width:1547 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.465, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.465 New=0.464 RelativePos=1348 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1348 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1351 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1351 Y:0 Width:1552 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.464, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.464 New=0.463 RelativePos=1344 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1344 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1348 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1348 Y:0 Width:1555 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.463, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.463 New=0.462 RelativePos=1341 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1341 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1344 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1344 Y:0 Width:1559 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.462, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.462 New=0.461 RelativePos=1339 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1339 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1341 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1341 Y:0 Width:1562 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.461, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.461 New=0.460 RelativePos=1336 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1336 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1339 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1339 Y:0 Width:1564 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.460, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.460 New=0.460 RelativePos=1334 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1334 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1336 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1336 Y:0 Width:1567 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.460, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.460 New=0.458 RelativePos=1331 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1331 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1334 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1334 Y:0 Width:1569 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.458, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.458 New=0.457 RelativePos=1326 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1326 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1331 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1331 Y:0 Width:1572 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.457, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.457 New=0.456 RelativePos=1323 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1323 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1326 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1326 Y:0 Width:1577 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.456, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.456 New=0.454 RelativePos=1318 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1318 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1323 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1323 Y:0 Width:1580 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.454, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.454 New=0.452 RelativePos=1313 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1313 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1318 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1318 Y:0 Width:1585 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.452, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.452 New=0.451 RelativePos=1310 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1310 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1313 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1313 Y:0 Width:1590 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.451, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.451 New=0.450 RelativePos=1307 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1307 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1310 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1310 Y:0 Width:1593 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.450, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.450 New=0.449 RelativePos=1302 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1302 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1307 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1307 Y:0 Width:1596 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.449, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.449 New=0.447 RelativePos=1299 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1299 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1302 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1302 Y:0 Width:1601 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.447, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.447 New=0.446 RelativePos=1295 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1295 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1299 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1299 Y:0 Width:1604 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.446, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.446 New=0.445 RelativePos=1291 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1291 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1295 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1295 Y:0 Width:1608 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.445, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.445 New=0.443 RelativePos=1285 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1285 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1291 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1291 Y:0 Width:1612 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.443, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.443 New=0.442 RelativePos=1282 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1282 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1285 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1285 Y:0 Width:1618 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.442, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.442 New=0.440 RelativePos=1278 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1278 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1282 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1282 Y:0 Width:1621 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.440, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.440 New=0.439 RelativePos=1275 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1275 Y:362} First=Block(id=game, bounds={X:0 Y:0 Width:1278 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1278 Y:0 Width:1625 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.439, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.439 New=0.437 RelativePos=1270 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1270 Y:362} First=Block(id=game, bounds={X:0 Y:0 Width:1275 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1275 Y:0 Width:1628 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.437, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.437 New=0.436 RelativePos=1266 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1266 Y:362} First=Block(id=game, bounds={X:0 Y:0 Width:1270 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1270 Y:0 Width:1633 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.436, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.436 New=0.435 RelativePos=1262 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1262 Y:362} First=Block(id=game, bounds={X:0 Y:0 Width:1266 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1266 Y:0 Width:1637 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.435, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.435 New=0.433 RelativePos=1256 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1256 Y:362} First=Block(id=game, bounds={X:0 Y:0 Width:1262 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1262 Y:0 Width:1641 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.433, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.433 New=0.432 RelativePos=1253 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1253 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1256 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1256 Y:0 Width:1647 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.432, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.432 New=0.429 RelativePos=1246 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1246 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1253 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1253 Y:0 Width:1650 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.429, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.429 New=0.428 RelativePos=1242 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1242 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1246 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1246 Y:0 Width:1657 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.428, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.428 New=0.427 RelativePos=1239 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1239 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1242 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1242 Y:0 Width:1661 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.427, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.427 New=0.424 RelativePos=1232 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1232 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1239 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1239 Y:0 Width:1664 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.424, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.424 New=0.424 RelativePos=1230 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1230 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1232 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1232 Y:0 Width:1671 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.424, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.424 New=0.423 RelativePos=1227 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1227 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1230 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1230 Y:0 Width:1673 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.423, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.423 New=0.421 RelativePos=1222 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1222 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1227 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1227 Y:0 Width:1676 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.421, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.421 New=0.420 RelativePos=1218 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1218 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1222 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1222 Y:0 Width:1681 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.420, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.420 New=0.419 RelativePos=1215 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1215 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1218 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1218 Y:0 Width:1685 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.419, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.419 New=0.417 RelativePos=1211 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1211 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1215 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1215 Y:0 Width:1688 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.417, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.417 New=0.416 RelativePos=1207 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1207 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1211 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1211 Y:0 Width:1692 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.416 New=0.415 RelativePos=1204 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1204 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1207 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1207 Y:0 Width:1696 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.415, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.415 New=0.414 RelativePos=1202 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1202 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1204 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1204 Y:0 Width:1699 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.414, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.414 New=0.414 RelativePos=1201 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1201 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1202 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1202 Y:0 Width:1701 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.414, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.414 New=0.413 RelativePos=1198 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1198 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1201 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1201 Y:0 Width:1702 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.413, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.413 New=0.412 RelativePos=1197 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1197 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1198 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1198 Y:0 Width:1705 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.412, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.412 New=0.411 RelativePos=1192 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1192 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1197 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1197 Y:0 Width:1706 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.411, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.411 New=0.410 RelativePos=1190 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1190 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1192 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1192 Y:0 Width:1711 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.410, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.410 New=0.409 RelativePos=1187 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1187 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1190 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1190 Y:0 Width:1713 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.409, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.409 New=0.408 RelativePos=1185 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1185 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1187 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1187 Y:0 Width:1716 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.408, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.408 New=0.408 RelativePos=1183 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1183 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1185 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1185 Y:0 Width:1718 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.408, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.408 New=0.407 RelativePos=1181 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1181 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1183 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1183 Y:0 Width:1720 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.407, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.407 New=0.406 RelativePos=1179 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1179 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1181 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1181 Y:0 Width:1722 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.406, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.406 New=0.405 RelativePos=1176 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1176 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1179 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1179 Y:0 Width:1724 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.405, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.405 New=0.405 RelativePos=1175 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1175 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1176 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1176 Y:0 Width:1727 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.405, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.405 New=0.404 RelativePos=1172 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1172 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1175 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1175 Y:0 Width:1728 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.404, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.404 New=0.403 RelativePos=1170 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1170 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1172 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1172 Y:0 Width:1731 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.403, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.403 New=0.402 RelativePos=1168 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1168 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1170 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1170 Y:0 Width:1733 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.402, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.402 New=0.402 RelativePos=1167 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1167 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1168 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1168 Y:0 Width:1735 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.402, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.402 New=0.402 RelativePos=1166 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1166 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1167 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1167 Y:0 Width:1736 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.402, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.402 New=0.402 RelativePos=1167 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1167 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1166 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1166 Y:0 Width:1737 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.402, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.402 New=0.402 RelativePos=1168 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1168 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1167 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1167 Y:0 Width:1736 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.402, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.402 New=0.403 RelativePos=1169 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1169 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1168 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1168 Y:0 Width:1735 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.403, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.403 New=0.403 RelativePos=1170 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1170 Y:365} First=Block(id=game, bounds={X:0 Y:0 Width:1169 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1169 Y:0 Width:1734 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.403, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.403 New=0.403 RelativePos=1171 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1171 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1170 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1170 Y:0 Width:1733 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.403, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.403 New=0.404 RelativePos=1172 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1172 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1171 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1171 Y:0 Width:1732 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.404, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.404 New=0.404 RelativePos=1174 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1174 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1172 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1172 Y:0 Width:1731 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.404, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.404 New=0.405 RelativePos=1175 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1175 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1174 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1174 Y:0 Width:1729 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.405, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.405 New=0.405 RelativePos=1176 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1176 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1175 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1175 Y:0 Width:1728 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.405, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.405 New=0.405 RelativePos=1177 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1177 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1176 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1176 Y:0 Width:1727 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.405, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.405 New=0.406 RelativePos=1178 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1178 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1177 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1177 Y:0 Width:1726 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.406, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.406 New=0.406 RelativePos=1179 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1179 Y:364} First=Block(id=game, bounds={X:0 Y:0 Width:1178 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1178 Y:0 Width:1725 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.406, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.406 New=0.406 RelativePos=1180 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1180 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1179 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1179 Y:0 Width:1724 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.406, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.406 New=0.407 RelativePos=1181 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1181 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1180 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1180 Y:0 Width:1723 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.407, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.407 New=0.407 RelativePos=1182 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1182 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1181 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1181 Y:0 Width:1722 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.407, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.407 New=0.408 RelativePos=1183 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1183 Y:363} First=Block(id=game, bounds={X:0 Y:0 Width:1182 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1182 Y:0 Width:1721 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.408, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.408 New=0.408 RelativePos=1184 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1184 Y:362} First=Block(id=game, bounds={X:0 Y:0 Width:1183 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1183 Y:0 Width:1720 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.408, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.408 New=0.408 RelativePos=1185 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1185 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1184 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1184 Y:0 Width:1719 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.408, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.408 New=0.409 RelativePos=1186 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1186 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1185 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1185 Y:0 Width:1718 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.409, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.409 New=0.409 RelativePos=1187 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1187 Y:361} First=Block(id=game, bounds={X:0 Y:0 Width:1186 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1186 Y:0 Width:1717 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.409, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.409 New=0.409 RelativePos=1188 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1188 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1187 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1187 Y:0 Width:1716 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.409, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.409 New=0.410 RelativePos=1189 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1189 Y:360} First=Block(id=game, bounds={X:0 Y:0 Width:1188 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1188 Y:0 Width:1715 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.410, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.410 New=0.410 RelativePos=1190 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1190 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1189 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1189 Y:0 Width:1714 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.410, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.410 New=0.410 RelativePos=1191 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1191 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1190 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1190 Y:0 Width:1713 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.410, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.410 New=0.411 RelativePos=1192 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1192 Y:359} First=Block(id=game, bounds={X:0 Y:0 Width:1191 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1191 Y:0 Width:1712 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.411, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.411 New=0.411 RelativePos=1193 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1193 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1192 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1192 Y:0 Width:1711 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.411, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.411 New=0.411 RelativePos=1194 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1194 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1193 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1193 Y:0 Width:1710 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.411, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.411 New=0.412 RelativePos=1195 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1195 Y:358} First=Block(id=game, bounds={X:0 Y:0 Width:1194 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1194 Y:0 Width:1709 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.412, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.412 New=0.412 RelativePos=1196 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1196 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1195 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1195 Y:0 Width:1708 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.412, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.412 New=0.412 RelativePos=1197 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1197 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1196 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1196 Y:0 Width:1707 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.412, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.412 New=0.413 RelativePos=1198 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1198 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1197 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1197 Y:0 Width:1706 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.413, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.413 New=0.413 RelativePos=1199 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1199 Y:357} First=Block(id=game, bounds={X:0 Y:0 Width:1198 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1198 Y:0 Width:1705 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.413, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.413 New=0.413 RelativePos=1200 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1200 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1199 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1199 Y:0 Width:1704 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.413, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.413 New=0.414 RelativePos=1201 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1201 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1200 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1200 Y:0 Width:1703 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.414, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.414 New=0.414 RelativePos=1202 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1202 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1201 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1201 Y:0 Width:1702 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.414, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.414 New=0.414 RelativePos=1203 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1203 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1202 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1202 Y:0 Width:1701 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.414, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.414 New=0.415 RelativePos=1204 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1204 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1203 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1203 Y:0 Width:1700 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.415, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.415 New=0.415 RelativePos=1205 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1205 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1204 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1204 Y:0 Width:1699 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.415, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.415 New=0.415 RelativePos=1206 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1206 Y:356} First=Block(id=game, bounds={X:0 Y:0 Width:1205 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1205 Y:0 Width:1698 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.415, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.415 New=0.416 RelativePos=1207 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1207 Y:355} First=Block(id=game, bounds={X:0 Y:0 Width:1206 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1206 Y:0 Width:1697 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.416 New=0.416 RelativePos=1208 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1208 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1207 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1207 Y:0 Width:1696 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.416 New=0.416 RelativePos=1209 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1209 Y:354} First=Block(id=game, bounds={X:0 Y:0 Width:1208 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1208 Y:0 Width:1695 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:2903 Height:1080}) Prev=0.416 New=0.417 RelativePos=1210 Bounds={X:0 Y:0 Width:2903 Height:1080} Mouse={X:1210 Y:353} First=Block(id=game, bounds={X:0 Y:0 Width:1209 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1209 Y:0 Width:1694 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeEnd] Edge[Vertical] Depth=0 Bounds={X:1206 Y:0 Width:8 Height:1080} Node=Split(Vertical, ratio=0.417, bounds={X:0 Y:0 Width:2903 Height:1080}) First=Block(id=game, bounds={X:0 Y:0 Width:1210 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:1210 Y:0 Width:1693 Height:1080}) | BlockManager.cs::UpdateResizeEdgeState @ Line 2427
+[UI] [ResizeLayoutDelta] Game: {X:0 Y:0 Width:1946 Height:1080} -> {X:0 Y:0 Width:1210 Height:1080} | Properties: {X:1946 Y:0 Width:957 Height:302} -> {X:1210 Y:0 Width:1693 Height:302} | Color Scheme: {X:1946 Y:753 Width:957 Height:147} -> {X:1210 Y:753 Width:1693 Height:147} | Controls: {X:1946 Y:302 Width:957 Height:451} -> {X:1210 Y:302 Width:1693 Height:451} | Backend: {X:1946 Y:900 Width:957 Height:180} -> {X:1210 Y:900 Width:1693 Height:180} | BlockManager.cs::LogResizeBlockDeltas @ Line 6456
+[UI] [ResizeEdgeStart] Edge[Vertical] Depth=0 Bounds={X:587 Y:0 Width:8 Height:1080} Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:1419 Height:1080}) First=Block(id=game, bounds={X:0 Y:0 Width:591 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:591 Y:0 Width:828 Height:1080}) Mouse={X:590 Y:387} | BlockManager.cs::UpdateResizeEdgeState @ Line 2455
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.416 New=0.416 RelativePos=590 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:590 Y:387} First=Block(id=game, bounds={X:0 Y:0 Width:591 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:591 Y:0 Width:828 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.416, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.416 New=0.417 RelativePos=592 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:592 Y:389} First=Block(id=game, bounds={X:0 Y:0 Width:590 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:590 Y:0 Width:829 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.417, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.417 New=0.421 RelativePos=597 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:597 Y:391} First=Block(id=game, bounds={X:0 Y:0 Width:592 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:592 Y:0 Width:827 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.421, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.421 New=0.421 RelativePos=598 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:598 Y:391} First=Block(id=game, bounds={X:0 Y:0 Width:597 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:597 Y:0 Width:822 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.421, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.421 New=0.424 RelativePos=601 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:601 Y:392} First=Block(id=game, bounds={X:0 Y:0 Width:598 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:598 Y:0 Width:821 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.424, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.424 New=0.426 RelativePos=604 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:604 Y:393} First=Block(id=game, bounds={X:0 Y:0 Width:601 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:601 Y:0 Width:818 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.426, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.426 New=0.430 RelativePos=610 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:610 Y:395} First=Block(id=game, bounds={X:0 Y:0 Width:604 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:604 Y:0 Width:815 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.430, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.430 New=0.434 RelativePos=616 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:616 Y:396} First=Block(id=game, bounds={X:0 Y:0 Width:610 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:610 Y:0 Width:809 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.434, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.434 New=0.439 RelativePos=623 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:623 Y:399} First=Block(id=game, bounds={X:0 Y:0 Width:616 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:616 Y:0 Width:803 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.439, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.439 New=0.447 RelativePos=635 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:635 Y:401} First=Block(id=game, bounds={X:0 Y:0 Width:623 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:623 Y:0 Width:796 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.447, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.447 New=0.450 RelativePos=639 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:639 Y:402} First=Block(id=game, bounds={X:0 Y:0 Width:635 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:635 Y:0 Width:784 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.450, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.450 New=0.454 RelativePos=644 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:644 Y:402} First=Block(id=game, bounds={X:0 Y:0 Width:639 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:639 Y:0 Width:780 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.454, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.454 New=0.462 RelativePos=655 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:655 Y:404} First=Block(id=game, bounds={X:0 Y:0 Width:644 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:644 Y:0 Width:775 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.462, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.462 New=0.472 RelativePos=670 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:670 Y:407} First=Block(id=game, bounds={X:0 Y:0 Width:655 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:655 Y:0 Width:764 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.472, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.472 New=0.476 RelativePos=675 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:675 Y:407} First=Block(id=game, bounds={X:0 Y:0 Width:670 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:670 Y:0 Width:749 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.476, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.476 New=0.483 RelativePos=685 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:685 Y:409} First=Block(id=game, bounds={X:0 Y:0 Width:675 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:675 Y:0 Width:744 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.483, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.483 New=0.492 RelativePos=698 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:698 Y:410} First=Block(id=game, bounds={X:0 Y:0 Width:685 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:685 Y:0 Width:734 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.492, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.492 New=0.500 RelativePos=709 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:709 Y:410} First=Block(id=game, bounds={X:0 Y:0 Width:698 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:698 Y:0 Width:721 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.500, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.500 New=0.505 RelativePos=717 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:717 Y:411} First=Block(id=game, bounds={X:0 Y:0 Width:709 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:709 Y:0 Width:710 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.505, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.505 New=0.511 RelativePos=725 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:725 Y:412} First=Block(id=game, bounds={X:0 Y:0 Width:717 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:717 Y:0 Width:702 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.511, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.511 New=0.524 RelativePos=743 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:743 Y:413} First=Block(id=game, bounds={X:0 Y:0 Width:725 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:725 Y:0 Width:694 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.524, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.524 New=0.527 RelativePos=748 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:748 Y:414} First=Block(id=game, bounds={X:0 Y:0 Width:743 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:743 Y:0 Width:676 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.527, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.527 New=0.533 RelativePos=756 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:756 Y:415} First=Block(id=game, bounds={X:0 Y:0 Width:748 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:748 Y:0 Width:671 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.533, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.533 New=0.541 RelativePos=767 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:767 Y:415} First=Block(id=game, bounds={X:0 Y:0 Width:756 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:756 Y:0 Width:663 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.541, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.541 New=0.550 RelativePos=780 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:780 Y:416} First=Block(id=game, bounds={X:0 Y:0 Width:767 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:767 Y:0 Width:652 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.550, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.550 New=0.555 RelativePos=788 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:788 Y:416} First=Block(id=game, bounds={X:0 Y:0 Width:780 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:780 Y:0 Width:639 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.555, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.555 New=0.558 RelativePos=792 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:792 Y:417} First=Block(id=game, bounds={X:0 Y:0 Width:788 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:788 Y:0 Width:631 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.558, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.558 New=0.568 RelativePos=806 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:806 Y:417} First=Block(id=game, bounds={X:0 Y:0 Width:792 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:792 Y:0 Width:627 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.568, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.568 New=0.573 RelativePos=813 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:813 Y:417} First=Block(id=game, bounds={X:0 Y:0 Width:806 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:806 Y:0 Width:613 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.573, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.573 New=0.580 RelativePos=823 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:823 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:813 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:813 Y:0 Width:606 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.580, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.580 New=0.584 RelativePos=829 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:829 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:823 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:823 Y:0 Width:596 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.584, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.584 New=0.588 RelativePos=834 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:834 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:829 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:829 Y:0 Width:590 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.588, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.588 New=0.590 RelativePos=837 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:837 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:834 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:834 Y:0 Width:585 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.590, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.590 New=0.593 RelativePos=842 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:842 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:837 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:837 Y:0 Width:582 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.593, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.593 New=0.595 RelativePos=844 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:844 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:842 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:842 Y:0 Width:577 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.595, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.595 New=0.598 RelativePos=848 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:848 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:844 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:844 Y:0 Width:575 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.598, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.598 New=0.600 RelativePos=852 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:852 Y:418} First=Block(id=game, bounds={X:0 Y:0 Width:848 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:848 Y:0 Width:571 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.600, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.600 New=0.604 RelativePos=857 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:857 Y:419} First=Block(id=game, bounds={X:0 Y:0 Width:852 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:852 Y:0 Width:567 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.604, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.604 New=0.606 RelativePos=860 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:860 Y:420} First=Block(id=game, bounds={X:0 Y:0 Width:857 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:857 Y:0 Width:562 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.606, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.606 New=0.607 RelativePos=862 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:862 Y:420} First=Block(id=game, bounds={X:0 Y:0 Width:860 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:860 Y:0 Width:559 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.607, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.607 New=0.610 RelativePos=866 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:866 Y:420} First=Block(id=game, bounds={X:0 Y:0 Width:862 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:862 Y:0 Width:557 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.610, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.610 New=0.614 RelativePos=871 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:871 Y:421} First=Block(id=game, bounds={X:0 Y:0 Width:866 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:866 Y:0 Width:553 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.614, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.614 New=0.615 RelativePos=872 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:872 Y:422} First=Block(id=game, bounds={X:0 Y:0 Width:871 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:871 Y:0 Width:548 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.615, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.615 New=0.616 RelativePos=874 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:874 Y:422} First=Block(id=game, bounds={X:0 Y:0 Width:872 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:872 Y:0 Width:547 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.616, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.616 New=0.618 RelativePos=877 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:877 Y:422} First=Block(id=game, bounds={X:0 Y:0 Width:874 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:874 Y:0 Width:545 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.618, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.618 New=0.620 RelativePos=880 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:880 Y:424} First=Block(id=game, bounds={X:0 Y:0 Width:877 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:877 Y:0 Width:542 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.620, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.620 New=0.622 RelativePos=883 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:883 Y:424} First=Block(id=game, bounds={X:0 Y:0 Width:880 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:880 Y:0 Width:539 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.622, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.622 New=0.623 RelativePos=884 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:884 Y:424} First=Block(id=game, bounds={X:0 Y:0 Width:883 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:883 Y:0 Width:536 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.623, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.623 New=0.624 RelativePos=885 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:885 Y:425} First=Block(id=game, bounds={X:0 Y:0 Width:884 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:884 Y:0 Width:535 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeDrag] Ori=Vertical Node=Split(Vertical, ratio=0.624, bounds={X:0 Y:0 Width:1419 Height:1080}) Prev=0.624 New=0.624 RelativePos=886 Bounds={X:0 Y:0 Width:1419 Height:1080} Mouse={X:886 Y:425} First=Block(id=game, bounds={X:0 Y:0 Width:885 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:885 Y:0 Width:534 Height:1080}) | BlockManager.cs::ApplyResizeEdgeDragInternal @ Line 3726
+[UI] [ResizeEdgeEnd] Edge[Vertical] Depth=0 Bounds={X:882 Y:0 Width:8 Height:1080} Node=Split(Vertical, ratio=0.624, bounds={X:0 Y:0 Width:1419 Height:1080}) First=Block(id=game, bounds={X:0 Y:0 Width:886 Height:1080}) Second=Split(Horizontal, ratio=0.280, bounds={X:886 Y:0 Width:533 Height:1080}) | BlockManager.cs::UpdateResizeEdgeState @ Line 2427
+[UI] [ResizeLayoutDelta] Game: {X:0 Y:0 Width:591 Height:1080} -> {X:0 Y:0 Width:886 Height:1080} | Properties: {X:591 Y:0 Width:828 Height:302} -> {X:886 Y:0 Width:533 Height:302} | Color Scheme: {X:591 Y:753 Width:828 Height:147} -> {X:886 Y:753 Width:533 Height:147} | Controls: {X:591 Y:302 Width:828 Height:451} -> {X:886 Y:302 Width:533 Height:451} | Backend: {X:591 Y:900 Width:828 Height:180} -> {X:886 Y:900 Width:533 Height:180} | BlockManager.cs::LogResizeBlockDeltas @ Line 6456

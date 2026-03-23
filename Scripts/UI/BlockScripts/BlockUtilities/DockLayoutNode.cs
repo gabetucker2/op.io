@@ -282,34 +282,14 @@ namespace op.io
                 return;
             }
 
-            int delta = newTotal - oldTotal;
-            bool startEdgeChanged = newStart != oldStart && newEnd == oldEnd;
-            bool endEdgeChanged = newStart == oldStart && newEnd != oldEnd;
-
-            int first = PreferredFirstSpan.Value;
-            int second = PreferredSecondSpan.Value;
-
-            if (endEdgeChanged)
-            {
-                second += delta;
-            }
-            else if (startEdgeChanged)
-            {
-                first += delta;
-            }
-            else
-            {
-                // If the node moved or both edges shifted, bias the adjustment toward
-                // the second child so unaffected siblings keep their size.
-                second += delta;
-            }
-
             int minFirst = Math.Clamp(minFirstSpan, 0, newTotal);
             int minSecond = Math.Clamp(minSecondSpan, 0, newTotal);
             int maxFirst = Math.Max(minFirst, newTotal - minSecond);
 
-            first = Math.Clamp(first, minFirst, maxFirst);
-            second = Math.Max(minSecond, newTotal - first);
+            // Maintain proportional split ratio across all resize scenarios so block
+            // layout stays at the same relative proportions when the window is resized.
+            int first = Math.Clamp((int)MathF.Round(SplitRatio * newTotal), minFirst, maxFirst);
+            int second = Math.Max(minSecond, newTotal - first);
 
             PreferredFirstSpan = first;
             PreferredSecondSpan = second;

@@ -1707,14 +1707,10 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static Rectangle GetEditorViewport(Rectangle fallbackBounds)
         {
-            GraphicsDevice device = Core.Instance?.GraphicsDevice;
-            if (device != null)
+            Rectangle virtualViewport = BlockManager.GetVirtualViewport();
+            if (virtualViewport.Width > 0 && virtualViewport.Height > 0)
             {
-                Rectangle viewport = device.Viewport.Bounds;
-                if (viewport.Width > 0 && viewport.Height > 0)
-                {
-                    return viewport;
-                }
+                return virtualViewport;
             }
 
             return fallbackBounds;
