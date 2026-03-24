@@ -55,6 +55,7 @@ namespace op.io
         public bool IsPlayer { get; private set; }
         public Attributes_Barrel BarrelAttributes { get; set; }
         public Attributes_Body BodyAttributes { get; set; }
+        public Attributes_Meta MetaAttributes { get; set; }
 
         private float _baseSpeed;
 

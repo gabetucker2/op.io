@@ -2207,7 +2207,13 @@ namespace op.io
 
             if (remainingWidth > 0 && tabWidths.Count > 0)
             {
-                tabWidths[^1] += remainingWidth;
+                int count = tabWidths.Count;
+                int share = remainingWidth / count;
+                int leftover = remainingWidth % count;
+                for (int i = 0; i < count; i++)
+                {
+                    tabWidths[i] += share + (i < leftover ? 1 : 0);
+                }
                 remainingWidth = 0;
             }
 

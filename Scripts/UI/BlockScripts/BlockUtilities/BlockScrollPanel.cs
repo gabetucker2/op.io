@@ -30,8 +30,11 @@ namespace op.io.UI.BlockScripts.BlockUtilities
         private static readonly Dictionary<int, Texture2D> _cornerTextures = new();
 
         public float ScrollOffset => _scrollOffset;
+        public float MaxOffset => _maxOffset;
         public bool IsScrollbarVisible => _scrollbarVisible;
         public Rectangle ContentViewportBounds => _contentViewportBounds == Rectangle.Empty ? _viewportBounds : _contentViewportBounds;
+
+        public void ScrollToMax() => _scrollOffset = _maxOffset;
 
         public void Reset()
         {

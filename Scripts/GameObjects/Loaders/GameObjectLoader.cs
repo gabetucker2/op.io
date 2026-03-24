@@ -3,11 +3,12 @@ using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 
-using CollisionMode = op.io.Attributes.CollisionMode;
-using DestructionMode = op.io.Attributes.DestructionMode;
-using PhysicsAttributes = op.io.Attributes.Physics;
-using PhysicsMotion = op.io.Attributes.PhysicsMotion;
-using ShapeAttributes = op.io.Attributes.Shape;
+using Attributes = op.io.Transform;
+using CollisionMode = op.io.Transform.CollisionMode;
+using DestructionMode = op.io.Transform.DestructionMode;
+using PhysicsAttributes = op.io.Transform.Physics;
+using PhysicsMotion = op.io.Transform.PhysicsMotion;
+using ShapeAttributes = op.io.Transform.Shape;
 
 namespace op.io
 {

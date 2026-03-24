@@ -1,61 +1,17 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Microsoft.Xna.Framework;
 
 namespace op.io
 {
-    public struct Attributes_Barrel
-    {
-        public float BulletDamage { get; set; }
-        public float BulletPenetration { get; set; }
-        public float BulletSpeed { get; set; }
-        public float BulletRange { get; set; }
-        public float ReloadSpeed { get; set; }
-        public float BulletHealth { get; set; }
-        public float BulletMaxLifespan { get; set; }
-        public string BulletSpecialBuff { get; set; }
-    }
-
-    public struct Attributes_Body
-    {
-        public float MaxHealth { get; set; }
-        public float HealthRegen { get; set; }
-        public float HealthArmor { get; set; }
-
-        public float MaxShield { get; set; }
-        public float ShieldRegen { get; set; }
-        public float ShieldArmor { get; set; }
-        
-        public float BodyPenetration { get; set; }
-        public float BodyCollisionDamage { get; set; }
-        public float BodyKnockback { get; set; }
-        
-        public float CollisionDamageResistance { get; set; }
-        public float BulletDamageResistance { get; set; }
-        
-        public float Speed { get; set; }
-        public float RotationSpeed { get; set; }
-        public float BodySpecialBuff { get; set; }
-    }
-
-    public struct Attributes_Misc
-    {
-        public float BodySwitchSpeed { get; set; }
-        public float BarrelSwitchSpeed { get; set; }
-        public float DeathPointReward { get; set; }
-    }
-
-    public struct Attributes_Meta
-    {        
-        public string Name { get; set; }
-        public string Notes { get; set; }
-    }
-
     public struct Properties
     {
         public enum RowKind
         {
             Text,
-            Color
+            Color,
+            BulletList
         }
 
         public readonly struct Row
@@ -66,6 +22,7 @@ namespace op.io
                 Label = label ?? string.Empty;
                 Value = value ?? string.Empty;
                 Color = default;
+                Items = Array.Empty<string>();
             }
 
             public Row(string label, Color color, string value)
@@ -74,12 +31,36 @@ namespace op.io
                 Label = label ?? string.Empty;
                 Value = value ?? string.Empty;
                 Color = color;
+                Items = Array.Empty<string>();
+            }
+
+            public Row(string label, string[] items)
+            {
+                Kind = RowKind.BulletList;
+                Label = label ?? string.Empty;
+                Value = string.Empty;
+                Color = default;
+                Items = items ?? Array.Empty<string>();
             }
 
             public RowKind Kind { get; }
             public string Label { get; }
             public string Value { get; }
             public Color Color { get; }
+            public string[] Items { get; }
+            public int LineCount => Kind == RowKind.BulletList ? Math.Max(1, Items?.Length ?? 1) : 1;
+        }
+
+        public readonly struct Section
+        {
+            public Section(string title, IEnumerable<Row> rows)
+            {
+                Title = title ?? string.Empty;
+                Rows = rows ?? Array.Empty<Row>();
+            }
+
+            public string Title { get; }
+            public IEnumerable<Row> Rows { get; }
         }
 
         private InspectableObjectInfo _target;
@@ -113,42 +94,78 @@ namespace op.io
 
         public string LockedTag => IsLocked ? "LOCKED" : string.Empty;
 
-        public IEnumerable<Row> Rows
+        public IEnumerable<Section> Sections
         {
             get
             {
                 if (!HasTarget)
-                {
                     yield break;
+
+                yield return new Section("Transform", TransformRows());
+
+                if (_target.Source is Agent agent)
+                {
+                    yield return BuildStructSection("Body", agent.BodyAttributes);
+                    if (agent.IsPlayer)
+                        yield return BuildStructSection("Meta", agent.MetaAttributes);
                 }
-
-                yield return new Row("Type", $"{_target.Type} (ID {_target.Id})");
-                yield return new Row("Flags", BuildFlags());
-                yield return new Row("Position", $"{_target.Position.X:0.0}, {_target.Position.Y:0.0}");
-
-                float rotationDeg = MathHelper.ToDegrees(_target.Rotation);
-                yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
-
-                yield return new Row("Size", BuildSizeText());
-                yield return new Row("Mass", $"{_target.Mass:0.##}");
-                yield return new Row("Fill", _target.FillColor, ToHex(_target.FillColor));
-                yield return new Row("Outline", _target.OutlineColor, ToHex(_target.OutlineColor));
             }
         }
 
-        private string BuildFlags()
+        private static Section BuildStructSection(string title, object structValue)
+        {
+            return new Section(title, ReflectAttributeStruct(structValue));
+        }
+
+        private IEnumerable<Row> TransformRows()
+        {
+            yield return new Row("Type", $"{_target.Type} (ID {_target.Id})");
+            yield return BuildFlagsRow();
+            yield return new Row("Position", $"{_target.Position.X:0.0}, {_target.Position.Y:0.0}");
+
+            float rotationDeg = MathHelper.ToDegrees(_target.Rotation);
+            yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
+
+            yield return new Row("Size", BuildSizeText());
+            yield return new Row("Mass", $"{_target.Mass:0.##}");
+            yield return new Row("Fill", _target.FillColor, ToHex(_target.FillColor));
+            yield return new Row("Outline", _target.OutlineColor, ToHex(_target.OutlineColor));
+        }
+
+        private Row BuildFlagsRow()
         {
             List<string> parts = new();
             if (_target.IsPlayer)
-            {
                 parts.Add("Player");
-            }
-
             parts.Add(_target.StaticPhysics ? "Static" : "Dynamic");
             parts.Add(_target.IsCollidable ? "Collidable" : "Non-collidable");
             parts.Add(_target.IsDestructible ? "Destructible" : "Indestructible");
+            return new Row("Flags", parts.ToArray());
+        }
 
-            return string.Join(" | ", parts);
+        private static IEnumerable<Row> ReflectAttributeStruct(object attrStruct)
+        {
+            if (attrStruct == null)
+                yield break;
+
+            foreach (PropertyInfo prop in attrStruct.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                object value = prop.GetValue(attrStruct);
+                yield return MakeRow(prop.Name, value);
+            }
+        }
+
+        private static Row MakeRow(string label, object value)
+        {
+            return value switch
+            {
+                Color color => new Row(label, color, ToHex(color)),
+                float f => new Row(label, $"{f:0.##}"),
+                double d => new Row(label, $"{d:0.##}"),
+                int i => new Row(label, i.ToString()),
+                bool b => new Row(label, b ? "Yes" : "No"),
+                _ => new Row(label, value?.ToString() ?? "-")
+            };
         }
 
         private string BuildSizeText()
@@ -156,13 +173,9 @@ namespace op.io
             string sizeText = $"{_target.Width} x {_target.Height}";
             Shape shape = _target.Shape;
             if (shape != null && shape.ShapeType == "Polygon" && _target.Sides > 0)
-            {
                 sizeText = $"{sizeText} ({_target.Sides}-sided polygon)";
-            }
             else if (shape != null)
-            {
                 sizeText = $"{sizeText} ({shape.ShapeType})";
-            }
 
             return sizeText;
         }
@@ -171,135 +184,5 @@ namespace op.io
         {
             return $"#{color.R:X2}{color.G:X2}{color.B:X2}{color.A:X2}";
         }
-    }
-}
-
-namespace op.io.Attributes
-{
-    public readonly struct Identity
-    {
-        public Identity(int id, string name, string type)
-        {
-            Id = id;
-            Name = name ?? string.Empty;
-            Type = type ?? string.Empty;
-        }
-
-        public int Id { get; }
-        public string Name { get; }
-        public string Type { get; }
-    }
-
-    public readonly struct Transform
-    {
-        public Transform(Vector2 position, float rotation)
-        {
-            Position = position;
-            Rotation = rotation;
-        }
-
-        public Vector2 Position { get; }
-        public float Rotation { get; }
-    }
-
-    public readonly struct Geometry
-    {
-        public Geometry(string shapeType, int width, int height, Shape shapeAttributes)
-        {
-            ShapeType = string.IsNullOrWhiteSpace(shapeType) ? "Rectangle" : shapeType;
-            Width = width;
-            Height = height;
-            ShapeAttributes = shapeAttributes;
-        }
-
-        public string ShapeType { get; }
-        public int Width { get; }
-        public int Height { get; }
-        public Shape ShapeAttributes { get; }
-    }
-
-    public readonly struct Appearance
-    {
-        public Appearance(Color fillColor, Color outlineColor, int outlineWidth)
-        {
-            FillColor = fillColor;
-            OutlineColor = outlineColor;
-            OutlineWidth = outlineWidth;
-        }
-
-        public Color FillColor { get; }
-        public Color OutlineColor { get; }
-        public int OutlineWidth { get; }
-    }
-
-    public enum PhysicsMotion
-    {
-        Static,
-        Dynamic
-    }
-
-    public enum CollisionMode
-    {
-        Collidable,
-        NonCollidable
-    }
-
-    public enum DestructionMode
-    {
-        Destructible,
-        Indestructible
-    }
-
-    public struct Physics
-    {
-        public PhysicsMotion Motion { get; set; }
-        public CollisionMode Collision { get; set; }
-        public DestructionMode Destruction { get; set; }
-        public float Mass { get; set; }
-
-        public Physics(PhysicsMotion motion, CollisionMode collision, DestructionMode destruction)
-        {
-            Motion = motion;
-            Collision = collision;
-            Destruction = destruction;
-            Mass = 0f;
-        }
-
-        public Physics(PhysicsMotion motion, CollisionMode collision, DestructionMode destruction, float mass)
-        {
-            Motion = motion;
-            Collision = collision;
-            Destruction = destruction;
-            Mass = mass;
-        }
-
-        public bool StaticPhysics => Motion == PhysicsMotion.Static;
-        public bool IsCollidable => Collision == CollisionMode.Collidable;
-        public bool IsDestructible => Destruction == DestructionMode.Destructible;
-
-        public void ApplyTo(global::op.io.GameObject target)
-        {
-            if (target == null)
-            {
-                return;
-            }
-
-            target.StaticPhysics = StaticPhysics;
-            target.IsCollidable = IsCollidable;
-            target.IsDestructible = IsDestructible;
-            target.Mass = Mass;
-        }
-    }
-
-    public struct Shape
-    {
-        public int Sides { get; set; }
-
-        public Shape(int sides)
-        {
-            Sides = sides;
-        }
-
-        public bool IsPolygon => Sides >= 3;
     }
 }

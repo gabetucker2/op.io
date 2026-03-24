@@ -20,29 +20,31 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int RowSpacing = 4;
         private const int LockButtonSize = 44;
         private const int LockButtonPadding = 8;
+        private const int SectionSpacing = 8;
 
         private static Texture2D _pixel;
         private static Texture2D _lockedIcon;
         private static Texture2D _unlockedIcon;
         private static MouseState _lastMouseState;
         private static readonly Dictionary<Shape, Texture2D> PreviewCache = new();
+        private static readonly BlockScrollPanel ScrollPanel = new();
 
         private readonly struct PropertiesLayout
         {
-            public PropertiesLayout(Rectangle inspectButton, Rectangle modeLabel, Rectangle previewBounds, Rectangle detailsBounds, Rectangle lockButtonBounds)
+            public PropertiesLayout(Rectangle modeLabel, Rectangle previewBounds, Rectangle detailsBounds, Rectangle lockButtonBounds, Rectangle infoArea)
             {
-                InspectButton = inspectButton;
                 ModeLabel = modeLabel;
                 PreviewBounds = previewBounds;
                 DetailsBounds = detailsBounds;
                 LockButtonBounds = lockButtonBounds;
+                InfoArea = infoArea;
             }
 
-            public Rectangle InspectButton { get; }
             public Rectangle ModeLabel { get; }
             public Rectangle PreviewBounds { get; }
             public Rectangle DetailsBounds { get; }
             public Rectangle LockButtonBounds { get; }
+            public Rectangle InfoArea { get; }
         }
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
@@ -80,28 +82,22 @@ namespace op.io.UI.BlockScripts.Blocks
                     InspectModeState.LockTarget(activeTarget);
                 }
             }
-            else if (!blockLocked && leftClickReleased)
+            else if (!blockLocked && leftClickReleased && InspectModeState.InspectModeEnabled && cursorInGameBlock)
             {
-                bool clickedInspectButton = layout.InspectButton.Contains(mouseState.Position);
-                if (clickedInspectButton)
+                if (hovered != null)
                 {
-                    if (!InspectModeState.HasLockedTarget)
-                    {
-                        InspectModeState.ClearLock();
-                    }
+                    InspectModeState.LockHovered();
                 }
-                else if (InspectModeState.InspectModeEnabled && !InspectModeState.HasLockedTarget)
+                else
                 {
-                    if (hovered != null)
-                    {
-                        InspectModeState.LockHovered();
-                    }
-                    else
-                    {
-                        InspectModeState.ClearLock();
-                    }
+                    InspectModeState.ClearLock();
                 }
             }
+
+            InspectableObjectInfo scrollTarget = InspectModeState.GetActiveTarget();
+            InspectableObjectInfo scrollLocked = InspectModeState.GetLockedTarget();
+            float contentHeight = CalculateDetailsContentHeight(scrollTarget, scrollLocked);
+            ScrollPanel.Update(layout.InfoArea, contentHeight, mouseState, previousMouseState);
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -114,15 +110,6 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureResources(spriteBatch.GraphicsDevice);
             PropertiesLayout layout = BuildLayout(contentBounds);
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Properties);
-            bool buttonHovered = layout.InspectButton.Contains(_lastMouseState.Position);
-
-            UIButtonRenderer.Draw(
-                spriteBatch,
-                layout.InspectButton,
-                "Inspect nothing",
-                UIButtonRenderer.ButtonStyle.Grey,
-                buttonHovered,
-                blockLocked);
 
             DrawModeBadge(spriteBatch, layout.ModeLabel);
 
@@ -142,31 +129,33 @@ namespace op.io.UI.BlockScripts.Blocks
 
             DrawPreview(spriteBatch, layout.PreviewBounds, target);
             DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
-            DrawDetails(spriteBatch, layout.DetailsBounds, target);
+
+            Rectangle detailsViewport = ScrollPanel.ContentViewportBounds == Rectangle.Empty
+                ? layout.InfoArea
+                : ScrollPanel.ContentViewportBounds;
+            DrawDetails(spriteBatch, detailsViewport, target, ScrollPanel.ScrollOffset);
+            ScrollPanel.Draw(spriteBatch);
         }
 
         private static PropertiesLayout BuildLayout(Rectangle contentBounds)
         {
-            int buttonWidth = Math.Clamp(contentBounds.Width / 3, 140, 240);
-            Rectangle inspectButton = new(contentBounds.X, contentBounds.Y, Math.Min(buttonWidth, contentBounds.Width), ButtonHeight);
+            Rectangle modeLabel = new(contentBounds.X, contentBounds.Y, contentBounds.Width, ButtonHeight);
 
-            int modeWidth = Math.Max(0, contentBounds.Width - inspectButton.Width - Padding);
-            Rectangle modeLabel = new(inspectButton.Right + Padding, inspectButton.Y, modeWidth, ButtonHeight);
+            int contentTop = modeLabel.Bottom + Padding;
+            int contentAreaHeight = Math.Max(0, contentBounds.Bottom - contentTop);
+            Rectangle contentArea = new(contentBounds.X, contentTop, contentBounds.Width, contentAreaHeight);
 
-            int infoTop = inspectButton.Bottom + Padding;
-            int infoHeight = Math.Max(0, contentBounds.Bottom - infoTop);
-            Rectangle infoArea = new(contentBounds.X, infoTop, contentBounds.Width, infoHeight);
-
-            int previewSize = Math.Min(infoArea.Height, Math.Min(infoArea.Width / 2, PreviewMaxSize));
+            // Preview is left-aligned at the top, above all text
+            int previewSize = Math.Min(contentArea.Width, PreviewMaxSize);
             Rectangle previewBounds = previewSize >= 80
-                ? new Rectangle(infoArea.X, infoArea.Y, previewSize, previewSize)
+                ? new Rectangle(contentArea.X, contentArea.Y, previewSize, previewSize)
                 : Rectangle.Empty;
 
-            int detailsX = previewBounds == Rectangle.Empty ? infoArea.X : previewBounds.Right + Padding;
-            int detailsWidth = previewBounds == Rectangle.Empty
-                ? infoArea.Width
-                : Math.Max(0, infoArea.Width - previewBounds.Width - Padding);
-            Rectangle detailsBounds = new(detailsX, infoArea.Y, detailsWidth, infoArea.Height);
+            // Info area (scroll panel viewport) and details are below the preview
+            int infoTop = previewBounds == Rectangle.Empty ? contentArea.Y : previewBounds.Bottom + Padding;
+            int infoHeight = Math.Max(0, contentArea.Bottom - infoTop);
+            Rectangle infoArea = new(contentArea.X, infoTop, contentArea.Width, infoHeight);
+            Rectangle detailsBounds = infoArea;
 
             Rectangle lockButtonBounds = Rectangle.Empty;
             if (previewBounds != Rectangle.Empty)
@@ -183,7 +172,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
 
-            return new PropertiesLayout(inspectButton, modeLabel, previewBounds, detailsBounds, lockButtonBounds);
+            return new PropertiesLayout(modeLabel, previewBounds, detailsBounds, lockButtonBounds, infoArea);
         }
 
         private static void EnsureResources(GraphicsDevice graphicsDevice)
@@ -247,7 +236,7 @@ namespace op.io.UI.BlockScripts.Blocks
             tech.DrawString(spriteBatch, hoverText, new Vector2(details.X, y), UIStyle.MutedTextColor);
             y += tech.LineHeight + RowSpacing;
 
-            string lockText = "Click the lock on the preview to pin the target.";
+            string lockText = "Click an object with inspect mode on to pin the target.";
             tech.DrawString(spriteBatch, lockText, new Vector2(details.X, y), UIStyle.MutedTextColor);
 
             if (layout.PreviewBounds != Rectangle.Empty)
@@ -351,57 +340,140 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawDetails(SpriteBatch spriteBatch, Rectangle bounds, InspectableObjectInfo target)
+        private static float CalculateDetailsContentHeight(InspectableObjectInfo target, InspectableObjectInfo locked)
+        {
+            UIStyle.UIFont heading = UIStyle.FontHBody;
+            UIStyle.UIFont body = UIStyle.FontBody;
+            UIStyle.UIFont tech = UIStyle.FontTech;
+            if (!heading.IsAvailable || !body.IsAvailable || !tech.IsAvailable || target == null || !target.IsValid)
+                return 0f;
+
+            Properties properties = new(target, locked);
+            float height = heading.LineHeight + HeaderSpacing;
+
+            bool firstSection = true;
+            foreach (Properties.Section section in properties.Sections)
+            {
+                if (!firstSection)
+                    height += SectionSpacing;
+                firstSection = false;
+
+                height += body.LineHeight + RowSpacing;
+                foreach (Properties.Row row in section.Rows)
+                    height += row.LineCount * (tech.LineHeight + RowSpacing);
+            }
+
+            return height;
+        }
+
+        private static void DrawDetails(SpriteBatch spriteBatch, Rectangle bounds, InspectableObjectInfo target, float scrollOffset)
         {
             UIStyle.UIFont heading = UIStyle.FontHBody;
             UIStyle.UIFont body = UIStyle.FontBody;
             UIStyle.UIFont tech = UIStyle.FontTech;
             if (!heading.IsAvailable || !body.IsAvailable || !tech.IsAvailable)
-            {
                 return;
-            }
 
-            float y = bounds.Y;
             InspectableObjectInfo locked = InspectModeState.GetLockedTarget();
             Properties properties = new(target, locked);
-            Vector2 headingSize = heading.MeasureString(properties.Title);
-            heading.DrawString(spriteBatch, properties.Title, new Vector2(bounds.X, y), UIStyle.TextColor);
 
-            string lockedTag = properties.LockedTag;
-            if (!string.IsNullOrWhiteSpace(lockedTag))
+            float y = bounds.Y - scrollOffset;
+
+            Vector2 headingSize = heading.MeasureString(properties.Title);
+            if (IsRowVisible(y, headingSize.Y, bounds))
             {
-                Vector2 tagSize = tech.MeasureString(lockedTag);
-                Vector2 tagPos = new(bounds.Right - tagSize.X, y + Math.Max(0, (headingSize.Y - tagSize.Y) / 2));
-                tech.DrawString(spriteBatch, lockedTag, tagPos, UIStyle.AccentColor);
+                heading.DrawString(spriteBatch, properties.Title, new Vector2(bounds.X, y), UIStyle.TextColor);
+
+                string lockedTag = properties.LockedTag;
+                if (!string.IsNullOrWhiteSpace(lockedTag))
+                {
+                    Vector2 tagSize = tech.MeasureString(lockedTag);
+                    Vector2 tagPos = new(bounds.Right - tagSize.X, y + Math.Max(0, (headingSize.Y - tagSize.Y) / 2));
+                    tech.DrawString(spriteBatch, lockedTag, tagPos, UIStyle.AccentColor);
+                }
             }
 
             y += headingSize.Y + HeaderSpacing;
 
-            foreach (Properties.Row row in properties.Rows)
+            bool firstSection = true;
+            bool stopped = false;
+            foreach (Properties.Section section in properties.Sections)
             {
-                if (row.Kind == Properties.RowKind.Color)
+                if (stopped)
+                    break;
+
+                if (!firstSection)
                 {
-                    DrawColorRow(spriteBatch, tech, bounds.X, ref y, row.Label, row.Color, row.Value);
+                    y += SectionSpacing;
                 }
-                else
+                firstSection = false;
+
+                if (y > bounds.Bottom)
+                    break;
+
+                if (IsRowVisible(y, body.LineHeight, bounds))
+                    DrawSectionHeader(spriteBatch, body, section.Title, bounds.X, y);
+
+                y += body.LineHeight + RowSpacing;
+
+                foreach (Properties.Row row in section.Rows)
                 {
-                    DrawRow(spriteBatch, tech, row.Label, row.Value, bounds.X, ref y);
+                    if (y > bounds.Bottom) { stopped = true; break; }
+
+                    float rowH = row.LineCount * (tech.LineHeight + RowSpacing);
+
+                    if (IsRowVisible(y, rowH, bounds))
+                    {
+                        if (row.Kind == Properties.RowKind.BulletList)
+                            DrawBulletListRow(spriteBatch, tech, bounds.X, y, row.Label, row.Items);
+                        else if (row.Kind == Properties.RowKind.Color)
+                            DrawColorRow(spriteBatch, tech, bounds.X, y, row.Label, row.Color, row.Value);
+                        else
+                            DrawRow(spriteBatch, tech, row.Label, row.Value, bounds.X, y);
+                    }
+
+                    y += rowH;
                 }
             }
         }
 
-        private static void DrawRow(SpriteBatch spriteBatch, UIStyle.UIFont font, string label, string value, float x, ref float y)
+        private static void DrawBulletListRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y, string label, string[] items)
+        {
+            if (items == null || items.Length == 0)
+                return;
+
+            font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
+
+            Vector2 labelSize = font.MeasureString(label);
+            float bulletX = x + Math.Max(labelSize.X + Padding, 120f);
+
+            for (int i = 0; i < items.Length; i++)
+            {
+                float lineY = y + i * (font.LineHeight + RowSpacing);
+                font.DrawString(spriteBatch, $"- {items[i]}", new Vector2(bulletX, lineY), UIStyle.TextColor);
+            }
+        }
+
+        private static bool IsRowVisible(float y, float height, Rectangle bounds)
+        {
+            return y + height >= bounds.Y && y <= bounds.Bottom;
+        }
+
+        private static void DrawSectionHeader(SpriteBatch spriteBatch, UIStyle.UIFont font, string title, float x, float y)
+        {
+            font.DrawString(spriteBatch, title, new Vector2(x, y), UIStyle.AccentColor);
+        }
+
+        private static void DrawRow(SpriteBatch spriteBatch, UIStyle.UIFont font, string label, string value, float x, float y)
         {
             Vector2 labelSize = font.MeasureString(label);
             font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
 
             float valueX = x + Math.Max(labelSize.X + Padding, 120f);
             font.DrawString(spriteBatch, value, new Vector2(valueX, y), UIStyle.TextColor);
-
-            y += font.LineHeight + RowSpacing;
         }
 
-        private static void DrawColorRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, ref float y, string label, Color color, string hex)
+        private static void DrawColorRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y, string label, Color color, string hex)
         {
             Vector2 labelSize = font.MeasureString(label);
             font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
@@ -413,8 +485,6 @@ namespace op.io.UI.BlockScripts.Blocks
 
             float textX = swatch.Right + Padding;
             font.DrawString(spriteBatch, hex, new Vector2(textX, y), UIStyle.TextColor);
-
-            y += font.LineHeight + RowSpacing;
         }
 
         private static Texture2D GetPreviewTexture(GraphicsDevice graphicsDevice, Shape shape)

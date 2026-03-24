@@ -24,6 +24,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int OpenFolderButtonWidth = 130;
         private const int CopyButtonWidth = 90;
         private const double CopyFeedbackDurationSeconds = 2.0;
+        private const int MaxDisplayedEntries = 100;
 
         private static readonly BlockScrollPanel ScrollPanel = new();
         private static readonly List<RenderedLine> Lines = new();
@@ -120,10 +121,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 CopyLogsToClipboard();
             }
 
+            int prevEntryCount = _lastEntryCount;
             int availableWidth = Math.Max(1, layout.LogViewport.Width - (TextPadding * 2));
             RefreshLines(font, availableWidth);
+            bool hasNewEntries = _lastEntryCount > prevEntryCount;
 
-            float contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2);
+            float bottomPadding = layout.LogViewport.Height / 3f;
+            float contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2) + bottomPadding;
             ScrollPanel.Update(layout.LogViewport, contentHeight, mouseState, previousMouseState);
 
             Rectangle viewport = ScrollPanel.ContentViewportBounds == Rectangle.Empty
@@ -134,8 +138,13 @@ namespace op.io.UI.BlockScripts.Blocks
             if (adjustedWidth != _lastTextWidth)
             {
                 RefreshLines(font, adjustedWidth);
-                contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2);
+                contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2) + bottomPadding;
                 ScrollPanel.Update(layout.LogViewport, contentHeight, mouseState, previousMouseState);
+            }
+
+            if (hasNewEntries)
+            {
+                ScrollPanel.ScrollToMax();
             }
 
             HandleKeyboardShortcuts(blockLocked);
@@ -179,7 +188,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             for (int i = startIndex; i < Lines.Count; i++)
             {
-                float lineY = y + ((i - startIndex) * lineHeight);
+                float lineY = y + (i * lineHeight);
                 if (lineY > viewport.Bottom)
                 {
                     break;
@@ -228,10 +237,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
-            foreach (var entry in entries)
+            int startIndex = Math.Max(0, entries.Length - MaxDisplayedEntries);
+            for (int i = startIndex; i < entries.Length; i++)
             {
-                Color lineColor = ToUiColor(entry.Color);
-                string text = entry.Message ?? string.Empty;
+                Color lineColor = ToUiColor(entries[i].Color);
+                string text = entries[i].Message ?? string.Empty;
                 AppendWrappedLine(text, font, availableWidth, lineColor);
             }
         }
