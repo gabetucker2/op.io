@@ -616,7 +616,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                 new ControlBindingSnapshot { SettingKey = "MoveLeft", InputKey = "A", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 3, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "MoveRight", InputKey = "D", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 4, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "MoveTowardsCursor", InputKey = "LeftClick", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 5, LockMode = false },
-                new ControlBindingSnapshot { SettingKey = "MoveAwayFromCursor", InputKey = "RightClick", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 6, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = "MoveAwayFromCursor", InputKey = "", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 6, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "Sprint", InputKey = "LeftShift", InputType = "Hold", SwitchStartState = 0, MetaControl = false, RenderOrder = 7, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "Crouch", InputKey = "LeftControl", InputType = "NoSaveSwitch", SwitchStartState = 0, MetaControl = false, RenderOrder = 8, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "ReturnCursorToPlayer", InputKey = "Space", InputType = "Trigger", SwitchStartState = 0, MetaControl = false, RenderOrder = 9, LockMode = false },

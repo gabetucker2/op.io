@@ -289,7 +289,8 @@ namespace op.io.UI.BlockScripts.Blocks
                     InputType parsedType = ParseInputTypeLabel(typeLabel);
 
                     string actionLabel = row.TryGetValue("SettingKey", out object action) ? action?.ToString() ?? "Action" : "Action";
-                    string inputLabel = row.TryGetValue("InputKey", out object key) ? key?.ToString() ?? "Key" : "Key";
+                    string rawInputKey = row.TryGetValue("InputKey", out object key) ? key?.ToString() ?? "" : "";
+                    string inputLabel = string.IsNullOrWhiteSpace(rawInputKey) ? "[UNBOUND]" : rawInputKey;
                     int orderValue = row.TryGetValue("ControlOrder", out object orderObj) ? Convert.ToInt32(orderObj) : fallbackOrder;
                     int resolvedOrder = storedOrders.TryGetValue(actionLabel, out int storedOrder) ? storedOrder : orderValue;
 

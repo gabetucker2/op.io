@@ -17,6 +17,16 @@ namespace op.io
                 return;
             }
 
+            // Fire Action
+            if (InputManager.IsInputActive("Fire"))
+            {
+                Agent player = Core.Instance.Player;
+                if (player != null)
+                {
+                    Fire(player);
+                }
+            }
+
             // Exit Action
             if (ExitHotkeyEnabled && InputManager.IsInputActive("Exit"))
             {
@@ -39,10 +49,6 @@ namespace op.io
                 Cursor.Position = TypeConversionFunctions.Vector2ToPoint(playerPosition);
                 DebugLogger.PrintUI($"Cursor returned to player position: {playerPosition}");
             }
-            else
-            {
-                DebugLogger.PrintUI("ReturnCursorToPlayer input not active.");
-            }
 
             if (InputManager.IsInputActive(ControlKeyMigrations.PreviousConfigurationKey))
             {
@@ -58,6 +64,22 @@ namespace op.io
                     DockingSetupsBlock.TryApplyNextSetup(allowWhileLocked: true);
                 }
             }
+        }
+
+        // Fires a bullet from the given agent. Can be called for both the player and NPC agents.
+        public static void Fire(Agent agent)
+        {
+            if (agent == null) return;
+            if (agent.TriggerCooldown > 0) return;
+
+            BulletManager.SpawnBullet(agent);
+
+            float reloadTime = agent.BarrelAttributes.ReloadSpeed > 0
+                ? agent.BarrelAttributes.ReloadSpeed
+                : 0.25f;
+            agent.TriggerCooldown = reloadTime;
+
+            DebugLogger.PrintPlayer($"Agent {agent.ID} fired. Cooldown: {reloadTime:F2}s");
         }
 
         public static void Move(GameObject gameObject, Vector2 direction, float speed)

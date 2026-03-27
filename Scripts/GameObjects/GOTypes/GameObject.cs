@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -21,9 +22,56 @@ namespace op.io
         public Color OutlineColor { get; set; }
         public int OutlineWidth { get; set; }
 
+        // Parent/child hierarchy (bidirectional)
+        public GameObject Parent { get; private set; }
+        private readonly List<GameObject> _children = new();
+        public IReadOnlyList<GameObject> Children => _children;
+
+        public void AddChild(GameObject child)
+        {
+            if (child == null || child == this || _children.Contains(child)) return;
+            child.Parent?.RemoveChild(child);
+            _children.Add(child);
+            child.Parent = this;
+        }
+
+        public void RemoveChild(GameObject child)
+        {
+            if (child == null) return;
+            if (_children.Remove(child))
+                child.Parent = null;
+        }
+
         // Computed property for BoundingRadius based on Shape size
         public float BoundingRadius =>
             Shape != null ? MathF.Sqrt(Shape.Width * Shape.Width + Shape.Height * Shape.Height) / 2f : 0f;
+
+        // World position of this object's own body center.
+        // For root objects (no parent) this equals Position.
+        // For children, Position is a local offset, so the parent's world position is used.
+        public Vector2 ParentPosition => Parent?.Position ?? Position;
+
+        // World-space centroid of this object's body and all its children.
+        // Child positions are local offsets rotated by this object's current orientation.
+        public Vector2 ObjectPosition
+        {
+            get
+            {
+                if (_children.Count == 0)
+                    return Position;
+
+                float cos = MathF.Cos(Rotation);
+                float sin = MathF.Sin(Rotation);
+                Vector2 sum = Position;
+                foreach (GameObject child in _children)
+                {
+                    sum += new Vector2(
+                        Position.X + child.Position.X * cos - child.Position.Y * sin,
+                        Position.Y + child.Position.X * sin + child.Position.Y * cos);
+                }
+                return sum / (_children.Count + 1);
+            }
+        }
 
         // Constructor to initialize the GameObject with mandatory fields
         public GameObject(
@@ -93,6 +141,9 @@ namespace op.io
         // Explicitly manage resource cleanup
         public void Dispose()
         {
+            // Unlink from parent
+            Parent?.RemoveChild(this);
+
             // If the GameObject is registered, unregister it upon disposal
             GameObjectRegister.UnregisterGameObject(this);
 

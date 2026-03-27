@@ -22,7 +22,7 @@ namespace op.io
             {
                 if (gameObject.Shape == null)
                 {
-                    DebugLogger.PrintWarning($"GameObject ID={gameObject.ID} has no Shape — skipping draw.");
+                    DebugLogger.PrintWarning($"GameObject ID={gameObject.ID} has no Shape ï¿½ skipping draw.");
                     continue;
                 }
 
@@ -30,6 +30,15 @@ namespace op.io
                 {
                     DebugLogger.PrintDebug($"Skipping draw for prototype shape ID={gameObject.ID}.");
                     continue;
+                }
+
+                // Draw barrel behind body for agents
+                // Offset by half the barrel length so the back sits at the unit center and the front extends outward
+                if (gameObject is Agent agent && agent.BarrelShape != null)
+                {
+                    float halfLength = agent.BarrelShape.Width / 2f;
+                    Vector2 barrelOffset = new Vector2(MathF.Cos(agent.Rotation), MathF.Sin(agent.Rotation)) * halfLength;
+                    agent.BarrelShape.DrawAt(spriteBatch, agent.Position + barrelOffset, agent.Rotation);
                 }
 
                 gameObject.Shape.Draw(spriteBatch, gameObject);

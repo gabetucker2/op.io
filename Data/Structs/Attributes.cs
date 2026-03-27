@@ -9,6 +9,7 @@ namespace op.io
         public float ReloadSpeed { get; set; }
         public float BulletHealth { get; set; }
         public float BulletMaxLifespan { get; set; }
+        public float BulletMass { get; set; }
     }
 
     public struct Attributes_Body
@@ -32,11 +33,11 @@ namespace op.io
         public float RotationSpeed { get; set; }
     }
 
-    public struct Attributes_Meta
+    public struct Attributes_Unit
     {
         public string Name { get; set; }
+        public float DeathPointReward { get; set; }
         public float BodySwitchSpeed { get; set; }
         public float BarrelSwitchSpeed { get; set; }
-        public float DeathPointReward { get; set; }
     }
 }

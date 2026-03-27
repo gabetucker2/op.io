@@ -7,25 +7,28 @@ namespace op.io
     {
         public SimpleGameObject(
             Attributes.Identity identity,
-            Attributes.Transform transform,
+            Body body,
             Attributes.Physics physics,
             Attributes.Geometry geometry,
             Attributes.Appearance appearance,
+            Unit unit = default,
             GameObjectStructSet structSet = GameObjectStructSet.Base)
         {
             Identity = identity;
-            Transform = transform;
+            Body = body;
             Physics = physics;
             Geometry = geometry;
             Appearance = appearance;
+            Unit = unit;
             StructSet = structSet;
         }
 
         public Attributes.Identity Identity { get; }
-        public Attributes.Transform Transform { get; }
+        public Body Body { get; }
         public Attributes.Physics Physics { get; }
         public Attributes.Geometry Geometry { get; }
         public Attributes.Appearance Appearance { get; }
+        public Unit Unit { get; }
         public GameObjectStructSet StructSet { get; }
 
         public bool Has(GameObjectStructSet set) => (StructSet & set) == set;
@@ -40,7 +43,7 @@ namespace op.io
             }
 
             Attributes.Identity identity = new(source.ID, source.Name, source.Type);
-            Attributes.Transform transform = new(source.Position, source.Rotation);
+            Attributes.Transform bodyTransform = new(source.Position, source.Rotation);
             Attributes.Physics physics = new(
                 source.StaticPhysics ? Attributes.PhysicsMotion.Static : Attributes.PhysicsMotion.Dynamic,
                 source.IsCollidable ? Attributes.CollisionMode.Collidable : Attributes.CollisionMode.NonCollidable,
@@ -59,9 +62,12 @@ namespace op.io
                 source.OutlineColor,
                 source.OutlineWidth);
 
+            Attributes_Body bodyAttributes = source is Agent agent ? agent.BodyAttributes : default;
+            Body body = new(bodyAttributes, bodyTransform);
+
             archetype = new SimpleGameObject(
                 identity,
-                transform,
+                body,
                 physics,
                 geometry,
                 appearance);
@@ -89,8 +95,8 @@ namespace op.io
                 Identity.Id,
                 Identity.Name,
                 Identity.Type,
-                Transform.Position,
-                Transform.Rotation,
+                Body.BodyTransform.Position,
+                Body.BodyTransform.Rotation,
                 Physics.Mass,
                 Physics.IsDestructible,
                 Physics.IsCollidable,
@@ -105,13 +111,15 @@ namespace op.io
         public SimpleGameObject WithTransform(int id, Vector2 position, float rotation)
         {
             Attributes.Identity identity = new(id, Identity.Name, Identity.Type);
-            Attributes.Transform transform = new(position, rotation);
+            Attributes.Transform bodyTransform = new(position, rotation);
+            Body body = new(Body.BodyAttributes, bodyTransform);
             return new SimpleGameObject(
                 identity,
-                transform,
+                body,
                 Physics,
                 Geometry,
                 Appearance,
+                Unit,
                 StructSet);
         }
     }

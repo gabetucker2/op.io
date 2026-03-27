@@ -53,14 +53,16 @@ namespace op.io
 
         public readonly struct Section
         {
-            public Section(string title, IEnumerable<Row> rows)
+            public Section(string title, IEnumerable<Row> rows, int depth = 0)
             {
                 Title = title ?? string.Empty;
                 Rows = rows ?? Array.Empty<Row>();
+                Depth = depth;
             }
 
             public string Title { get; }
             public IEnumerable<Row> Rows { get; }
+            public int Depth { get; }
         }
 
         private InspectableObjectInfo _target;
@@ -101,38 +103,104 @@ namespace op.io
                 if (!HasTarget)
                     yield break;
 
-                yield return new Section("Transform", TransformRows());
+                // Object (depth 0) — base identity, physics flags, geometry, appearance
+                yield return new Section("Object", ObjectRows(), 0);
+
+                // Body (depth 1) — groups body transform + body attributes
+                yield return new Section("Body", [], 1);
+                yield return new Section("Body Transform", BodyTransformRows(), 2);
 
                 if (_target.Source is Agent agent)
                 {
-                    yield return BuildStructSection("Body", agent.BodyAttributes);
-                    if (agent.IsPlayer)
-                        yield return BuildStructSection("Meta", agent.MetaAttributes);
+                    yield return new Section("Body Attributes", ReflectAttributeStruct(agent.BodyAttributes), 2);
+
+                    // Unit (depth 1) — character-level attributes + player + barrel sub-structs
+                    yield return new Section("Unit", UnitRows(agent), 1);
+                    yield return new Section("Player", PlayerRows(agent), 2);
+
+                    // Barrel (depth 2) — groups barrel attributes + barrel transform
+                    yield return new Section("Barrel", [], 2);
+                    yield return new Section("Barrel Attributes", ReflectAttributeStruct(agent.BarrelAttributes), 3);
+                    yield return new Section("Barrel Transform", BarrelTransformRows(agent), 3);
                 }
             }
         }
 
-        private static Section BuildStructSection(string title, object structValue)
+        // Object-level rows: identity, physics flags, and parent/child relationships
+        private IEnumerable<Row> ObjectRows()
         {
-            return new Section(title, ReflectAttributeStruct(structValue));
+            yield return new Row("ID", _target.Id.ToString());
+            yield return new Row("Type", _target.Type);
+            yield return BuildFlagsRow();
+
+            if (_target.Source?.Parent != null)
+            {
+                GameObject p = _target.Source.Parent;
+                yield return new Row("Parent", string.IsNullOrEmpty(p.Name) ? $"{p.Type} (ID {p.ID})" : $"{p.Name} (ID {p.ID})");
+            }
+
+            if (_target.Source?.Children != null && _target.Source.Children.Count > 0)
+            {
+                string[] childNames = new string[_target.Source.Children.Count];
+                for (int i = 0; i < _target.Source.Children.Count; i++)
+                {
+                    GameObject c = _target.Source.Children[i];
+                    childNames[i] = string.IsNullOrEmpty(c.Name) ? (c.Type ?? "Child") : c.Name;
+                }
+                yield return new Row("Children", childNames);
+            }
         }
 
-        private IEnumerable<Row> TransformRows()
+        // Body Transform rows: position, rotation, size, shape, mass, colors
+        private readonly IEnumerable<Row> BodyTransformRows()
         {
-            yield return new Row("Type", $"{_target.Type} (ID {_target.Id})");
-            yield return BuildFlagsRow();
             yield return new Row("Position", $"{_target.Position.X:0.0}, {_target.Position.Y:0.0}");
-
             float rotationDeg = MathHelper.ToDegrees(_target.Rotation);
             yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
-
-            yield return new Row("Size", BuildSizeText());
+            yield return new Row("Size", $"{_target.Width} x {_target.Height}");
+            yield return new Row("Shape", BuildShapeText());
             yield return new Row("Mass", $"{_target.Mass:0.##}");
             yield return new Row("Fill", _target.FillColor, ToHex(_target.FillColor));
             yield return new Row("Outline", _target.OutlineColor, ToHex(_target.OutlineColor));
         }
 
-        private Row BuildFlagsRow()
+        // Unit-level character rows
+        private static IEnumerable<Row> UnitRows(Agent agent)
+        {
+            yield return new Row("Name", string.IsNullOrWhiteSpace(agent.UnitAttributes.Name) ? "-" : agent.UnitAttributes.Name);
+            yield return new Row("Base Speed", $"{agent.BaseSpeed:0.##}");
+            yield return new Row("Death Reward", $"{agent.UnitAttributes.DeathPointReward:0.##}");
+            yield return new Row("Body Switch Speed", $"{agent.UnitAttributes.BodySwitchSpeed:0.##}");
+            yield return new Row("Barrel Switch Speed", $"{agent.UnitAttributes.BarrelSwitchSpeed:0.##}");
+        }
+
+        // Player-specific rows
+        private static IEnumerable<Row> PlayerRows(Agent agent)
+        {
+            yield return new Row("Player ID", agent.PlayerID.ToString());
+        }
+
+        // Barrel Transform rows — sourced from the agent's BarrelObject child
+        private static IEnumerable<Row> BarrelTransformRows(Agent agent)
+        {
+            GameObject barrel = agent.BarrelObject;
+            if (barrel == null)
+            {
+                yield return new Row("Offset", "0.0, 0.0");
+                yield return new Row("Rotation", "0.0 deg");
+                yield break;
+            }
+
+            Vector2 offset = barrel.Position;
+            yield return new Row("Offset", $"{offset.X:0.0}, {offset.Y:0.0}");
+            float rotDeg = MathHelper.ToDegrees(agent.Rotation);
+            yield return new Row("Rotation", $"{rotDeg:0.0} deg");
+            yield return new Row("Size", $"{barrel.Shape.Width} x {barrel.Shape.Height}");
+            yield return new Row("Fill", barrel.FillColor, ToHex(barrel.FillColor));
+            yield return new Row("Outline", barrel.OutlineColor, ToHex(barrel.OutlineColor));
+        }
+
+        private readonly Row BuildFlagsRow()
         {
             List<string> parts = new();
             if (_target.IsPlayer)
@@ -168,16 +236,12 @@ namespace op.io
             };
         }
 
-        private string BuildSizeText()
+        private readonly string BuildShapeText()
         {
-            string sizeText = $"{_target.Width} x {_target.Height}";
             Shape shape = _target.Shape;
             if (shape != null && shape.ShapeType == "Polygon" && _target.Sides > 0)
-                sizeText = $"{sizeText} ({_target.Sides}-sided polygon)";
-            else if (shape != null)
-                sizeText = $"{sizeText} ({shape.ShapeType})";
-
-            return sizeText;
+                return $"Polygon ({_target.Sides} sides)";
+            return shape?.ShapeType ?? "-";
         }
 
         private static string ToHex(Color color)

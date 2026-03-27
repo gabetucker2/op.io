@@ -30,3 +30,8 @@ CREATE TABLE IF NOT EXISTS ControlSettings (
     SettingKey TEXT PRIMARY KEY,
     Value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS PhysicsSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);

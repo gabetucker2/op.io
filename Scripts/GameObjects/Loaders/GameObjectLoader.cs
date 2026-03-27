@@ -157,7 +157,7 @@ namespace op.io
                 }
 
                 Attributes.Identity identity = new(id, name, type);
-                Attributes.Transform transform = new(position, rotation);
+                Attributes.Transform bodyTransform = new(position, rotation);
                 PhysicsAttributes physics = new(
                     staticPhysics ? PhysicsMotion.Static : PhysicsMotion.Dynamic,
                     isCollidable ? CollisionMode.Collidable : CollisionMode.NonCollidable,
@@ -167,10 +167,11 @@ namespace op.io
                 ShapeAttributes shapeAttributes = new(sides);
                 Attributes.Geometry geometry = new(shapeType, width, height, shapeAttributes);
                 Attributes.Appearance appearance = new(fillColor, outlineColor, outlineWidth);
+                Body body = new(default, bodyTransform);
 
                 archetype = new SimpleGameObject(
                     identity,
-                    transform,
+                    body,
                     physics,
                     geometry,
                     appearance);

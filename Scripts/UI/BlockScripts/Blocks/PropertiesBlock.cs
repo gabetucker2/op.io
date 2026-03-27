@@ -21,6 +21,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int LockButtonSize = 44;
         private const int LockButtonPadding = 8;
         private const int SectionSpacing = 8;
+        private const int SectionIndent = 12;
 
         private static Texture2D _pixel;
         private static Texture2D _lockedIcon;
@@ -50,7 +51,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             _lastMouseState = mouseState;
-            PropertiesLayout layout = BuildLayout(contentBounds);
+            PropertiesLayout layout = BuildLayout(contentBounds, ScrollPanel.ScrollOffset);
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released &&
                 previousMouseState.LeftButton == ButtonState.Pressed;
 
@@ -96,8 +97,8 @@ namespace op.io.UI.BlockScripts.Blocks
 
             InspectableObjectInfo scrollTarget = InspectModeState.GetActiveTarget();
             InspectableObjectInfo scrollLocked = InspectModeState.GetLockedTarget();
-            float contentHeight = CalculateDetailsContentHeight(scrollTarget, scrollLocked);
-            ScrollPanel.Update(layout.InfoArea, contentHeight, mouseState, previousMouseState);
+            float totalContentHeight = CalculateTotalContentHeight(scrollTarget, scrollLocked, contentBounds);
+            ScrollPanel.Update(contentBounds, totalContentHeight, mouseState, previousMouseState);
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -108,10 +109,12 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             EnsureResources(spriteBatch.GraphicsDevice);
-            PropertiesLayout layout = BuildLayout(contentBounds);
+            float scroll = ScrollPanel.ScrollOffset;
+            PropertiesLayout layout = BuildLayout(contentBounds, scroll);
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Properties);
 
-            DrawModeBadge(spriteBatch, layout.ModeLabel);
+            if (layout.ModeLabel.Bottom > contentBounds.Y && layout.ModeLabel.Y < contentBounds.Bottom)
+                DrawModeBadge(spriteBatch, layout.ModeLabel);
 
             InspectableObjectInfo target = InspectModeState.GetActiveTarget();
             bool lockHovered = layout.LockButtonBounds.Contains(_lastMouseState.Position);
@@ -120,41 +123,54 @@ namespace op.io.UI.BlockScripts.Blocks
             if (target == null || !target.IsValid)
             {
                 DrawEmptyState(spriteBatch, layout);
-                if (InspectModeState.HasLockedTarget)
+                if (InspectModeState.HasLockedTarget
+                    && layout.LockButtonBounds != Rectangle.Empty
+                    && layout.LockButtonBounds.Bottom > contentBounds.Y
+                    && layout.LockButtonBounds.Y < contentBounds.Bottom)
                 {
                     DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
                 }
                 return;
             }
 
-            DrawPreview(spriteBatch, layout.PreviewBounds, target);
-            DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
+            if (layout.PreviewBounds != Rectangle.Empty
+                && layout.PreviewBounds.Bottom > contentBounds.Y
+                && layout.PreviewBounds.Y < contentBounds.Bottom)
+            {
+                DrawPreview(spriteBatch, layout.PreviewBounds, target);
+            }
 
-            Rectangle detailsViewport = ScrollPanel.ContentViewportBounds == Rectangle.Empty
-                ? layout.InfoArea
-                : ScrollPanel.ContentViewportBounds;
-            DrawDetails(spriteBatch, detailsViewport, target, ScrollPanel.ScrollOffset);
+            if (layout.LockButtonBounds != Rectangle.Empty
+                && layout.LockButtonBounds.Bottom > contentBounds.Y
+                && layout.LockButtonBounds.Y < contentBounds.Bottom)
+            {
+                DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
+            }
+
+            Rectangle clipBounds = ScrollPanel.ContentViewportBounds == Rectangle.Empty
+                ? contentBounds
+                : new Rectangle(contentBounds.X, contentBounds.Y, ScrollPanel.ContentViewportBounds.Width, contentBounds.Height);
+            DrawDetails(spriteBatch, clipBounds, target, layout.InfoArea.Y);
             ScrollPanel.Draw(spriteBatch);
         }
 
-        private static PropertiesLayout BuildLayout(Rectangle contentBounds)
+        private static PropertiesLayout BuildLayout(Rectangle contentBounds, float scrollOffset = 0f)
         {
-            Rectangle modeLabel = new(contentBounds.X, contentBounds.Y, contentBounds.Width, ButtonHeight);
+            int scrolledY = contentBounds.Y - (int)MathF.Round(scrollOffset);
+            Rectangle modeLabel = new(contentBounds.X, scrolledY, contentBounds.Width, ButtonHeight);
 
             int contentTop = modeLabel.Bottom + Padding;
-            int contentAreaHeight = Math.Max(0, contentBounds.Bottom - contentTop);
-            Rectangle contentArea = new(contentBounds.X, contentTop, contentBounds.Width, contentAreaHeight);
 
             // Preview is left-aligned at the top, above all text
-            int previewSize = Math.Min(contentArea.Width, PreviewMaxSize);
+            int previewSize = Math.Min(contentBounds.Width, PreviewMaxSize);
             Rectangle previewBounds = previewSize >= 80
-                ? new Rectangle(contentArea.X, contentArea.Y, previewSize, previewSize)
+                ? new Rectangle(contentBounds.X, contentTop, previewSize, previewSize)
                 : Rectangle.Empty;
 
-            // Info area (scroll panel viewport) and details are below the preview
-            int infoTop = previewBounds == Rectangle.Empty ? contentArea.Y : previewBounds.Bottom + Padding;
-            int infoHeight = Math.Max(0, contentArea.Bottom - infoTop);
-            Rectangle infoArea = new(contentArea.X, infoTop, contentArea.Width, infoHeight);
+            // Info area and details are below the preview; bottom clips to the visible viewport
+            int infoTop = previewBounds == Rectangle.Empty ? contentTop : previewBounds.Bottom + Padding;
+            int infoHeight = Math.Max(0, contentBounds.Bottom - infoTop);
+            Rectangle infoArea = new(contentBounds.X, infoTop, contentBounds.Width, infoHeight);
             Rectangle detailsBounds = infoArea;
 
             Rectangle lockButtonBounds = Rectangle.Empty;
@@ -173,6 +189,18 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return new PropertiesLayout(modeLabel, previewBounds, detailsBounds, lockButtonBounds, infoArea);
+        }
+
+        private static float CalculateTotalContentHeight(InspectableObjectInfo target, InspectableObjectInfo locked, Rectangle contentBounds)
+        {
+            float height = ButtonHeight + Padding;
+
+            int previewSize = Math.Min(contentBounds.Width, PreviewMaxSize);
+            if (previewSize >= 80)
+                height += previewSize + Padding;
+
+            height += CalculateDetailsContentHeight(target, locked);
+            return height;
         }
 
         private static void EnsureResources(GraphicsDevice graphicsDevice)
@@ -254,17 +282,79 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             DrawRect(spriteBatch, previewBounds, ColorPalette.BlockBackground * 0.9f);
-            Texture2D preview = GetPreviewTexture(spriteBatch.GraphicsDevice, target.Shape);
-            if (preview != null && !preview.IsDisposed)
-            {
-                Vector2 origin = new(preview.Width / 2f, preview.Height / 2f);
-                Vector2 center = new(previewBounds.Center.X, previewBounds.Center.Y);
-                float scale = Math.Min(
-                    (previewBounds.Width - Padding * 2) / (float)preview.Width,
-                    (previewBounds.Height - Padding * 2) / (float)preview.Height);
-                scale = Math.Max(0.1f, scale);
 
-                spriteBatch.Draw(preview, center, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+            if (target.Shape != null)
+            {
+                float parentRotation = target.Source?.Rotation ?? target.Rotation;
+                float cos = MathF.Cos(parentRotation);
+                float sin = MathF.Sin(parentRotation);
+
+                // Store shapes with their local-frame offsets (unrotated) for stable bbox/zoom,
+                // and per-shape local rotation relative to parent.
+                var shapes = new List<(Shape shape, Vector2 localOffset, float localRotation)>
+                {
+                    (target.Shape, Vector2.Zero, 0f)
+                };
+                if (target.Source != null)
+                {
+                    foreach (GameObject child in target.Source.Children)
+                    {
+                        if (child?.Shape == null) continue;
+                        shapes.Add((child.Shape, child.Position, child.Rotation));
+                    }
+                }
+
+                // Compute bbox using local (unrotated) offsets for a stable scale.
+                // Extent is measured symmetrically from the parent center (local origin) so that
+                // the parent body always maps to the center of the preview — child offsets cannot
+                // push the parent body off-center.
+                float minX = float.MaxValue, maxX = float.MinValue,
+                      minY = float.MaxValue, maxY = float.MinValue;
+                foreach (var (s, off, _) in shapes)
+                {
+                    float halfDiag = MathF.Sqrt(s.Width * s.Width + s.Height * s.Height) / 2f;
+                    minX = Math.Min(minX, off.X - halfDiag);
+                    maxX = Math.Max(maxX, off.X + halfDiag);
+                    minY = Math.Min(minY, off.Y - halfDiag);
+                    maxY = Math.Max(maxY, off.Y + halfDiag);
+                }
+
+                // Symmetric extents from the parent center ensure equal padding on both sides.
+                float extentX = Math.Max(1f, Math.Max(Math.Abs(minX), Math.Abs(maxX)));
+                float extentY = Math.Max(1f, Math.Max(Math.Abs(minY), Math.Abs(maxY)));
+
+                float worldScale = Math.Min(
+                    (previewBounds.Width / 2f - Padding) / extentX,
+                    (previewBounds.Height / 2f - Padding) / extentY);
+                worldScale = Math.Max(0.1f, worldScale);
+
+                // Parent body center (local origin) always maps to the preview center.
+                Vector2 worldOrigin = new(previewBounds.Center.X, previewBounds.Center.Y);
+
+                // Draw children first (behind body), then body on top.
+                // Apply parentRotation to each shape's offset and rotation for rendering.
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    for (int i = 0; i < shapes.Count; i++)
+                    {
+                        bool isBody = (i == 0);
+                        if (isBody == (pass == 0)) continue; // pass 0 = children, pass 1 = body
+
+                        var (s, localOff, localRot) = shapes[i];
+                        Texture2D tex = GetPreviewTexture(spriteBatch.GraphicsDevice, s);
+                        if (tex == null || tex.IsDisposed) continue;
+
+                        Vector2 rotatedOff = new(
+                            localOff.X * cos - localOff.Y * sin,
+                            localOff.X * sin + localOff.Y * cos);
+
+                        float texScale = worldScale * s.Width / (float)tex.Width;
+                        texScale = Math.Max(0.1f, texScale);
+                        Vector2 pos = worldOrigin + rotatedOff * worldScale;
+                        Vector2 origin = new(tex.Width / 2f, tex.Height / 2f);
+                        spriteBatch.Draw(tex, pos, null, Color.White, parentRotation + localRot, origin, texScale, SpriteEffects.None, 0f);
+                    }
+                }
             }
 
             DrawRectOutline(spriteBatch, previewBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
@@ -354,7 +444,7 @@ namespace op.io.UI.BlockScripts.Blocks
             bool firstSection = true;
             foreach (Properties.Section section in properties.Sections)
             {
-                if (!firstSection)
+                if (!firstSection && section.Depth <= 1)
                     height += SectionSpacing;
                 firstSection = false;
 
@@ -366,7 +456,7 @@ namespace op.io.UI.BlockScripts.Blocks
             return height;
         }
 
-        private static void DrawDetails(SpriteBatch spriteBatch, Rectangle bounds, InspectableObjectInfo target, float scrollOffset)
+        private static void DrawDetails(SpriteBatch spriteBatch, Rectangle clipBounds, InspectableObjectInfo target, float contentStartY)
         {
             UIStyle.UIFont heading = UIStyle.FontHBody;
             UIStyle.UIFont body = UIStyle.FontBody;
@@ -377,18 +467,18 @@ namespace op.io.UI.BlockScripts.Blocks
             InspectableObjectInfo locked = InspectModeState.GetLockedTarget();
             Properties properties = new(target, locked);
 
-            float y = bounds.Y - scrollOffset;
+            float y = contentStartY;
 
             Vector2 headingSize = heading.MeasureString(properties.Title);
-            if (IsRowVisible(y, headingSize.Y, bounds))
+            if (IsRowVisible(y, headingSize.Y, clipBounds))
             {
-                heading.DrawString(spriteBatch, properties.Title, new Vector2(bounds.X, y), UIStyle.TextColor);
+                heading.DrawString(spriteBatch, properties.Title, new Vector2(clipBounds.X, y), UIStyle.TextColor);
 
                 string lockedTag = properties.LockedTag;
                 if (!string.IsNullOrWhiteSpace(lockedTag))
                 {
                     Vector2 tagSize = tech.MeasureString(lockedTag);
-                    Vector2 tagPos = new(bounds.Right - tagSize.X, y + Math.Max(0, (headingSize.Y - tagSize.Y) / 2));
+                    Vector2 tagPos = new(clipBounds.Right - tagSize.X, y + Math.Max(0, (headingSize.Y - tagSize.Y) / 2));
                     tech.DrawString(spriteBatch, lockedTag, tagPos, UIStyle.AccentColor);
                 }
             }
@@ -402,34 +492,34 @@ namespace op.io.UI.BlockScripts.Blocks
                 if (stopped)
                     break;
 
-                if (!firstSection)
-                {
+                if (!firstSection && section.Depth <= 1)
                     y += SectionSpacing;
-                }
                 firstSection = false;
 
-                if (y > bounds.Bottom)
+                if (y > clipBounds.Bottom)
                     break;
 
-                if (IsRowVisible(y, body.LineHeight, bounds))
-                    DrawSectionHeader(spriteBatch, body, section.Title, bounds.X, y);
+                int indent = section.Depth * SectionIndent;
+
+                if (IsRowVisible(y, body.LineHeight, clipBounds))
+                    DrawSectionHeader(spriteBatch, body, section.Title, clipBounds.X + indent, y);
 
                 y += body.LineHeight + RowSpacing;
 
                 foreach (Properties.Row row in section.Rows)
                 {
-                    if (y > bounds.Bottom) { stopped = true; break; }
+                    if (y > clipBounds.Bottom) { stopped = true; break; }
 
                     float rowH = row.LineCount * (tech.LineHeight + RowSpacing);
 
-                    if (IsRowVisible(y, rowH, bounds))
+                    if (IsRowVisible(y, rowH, clipBounds))
                     {
                         if (row.Kind == Properties.RowKind.BulletList)
-                            DrawBulletListRow(spriteBatch, tech, bounds.X, y, row.Label, row.Items);
+                            DrawBulletListRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Items);
                         else if (row.Kind == Properties.RowKind.Color)
-                            DrawColorRow(spriteBatch, tech, bounds.X, y, row.Label, row.Color, row.Value);
+                            DrawColorRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Color, row.Value);
                         else
-                            DrawRow(spriteBatch, tech, row.Label, row.Value, bounds.X, y);
+                            DrawRow(spriteBatch, tech, row.Label, row.Value, clipBounds.X + indent, y);
                     }
 
                     y += rowH;

@@ -116,6 +116,7 @@ namespace op.io
                         SeedBindingState(settingKey, isOn);
                         RegisterComboKeyMembership(settingKey, inputKey);
 
+                        bool isComboInput = inputKey.Split('+', StringSplitOptions.RemoveEmptyEntries).Length > 1;
                         bool mapped = TrySeedSwitchState(inputKey, isOn);
 
                         if (DebugModeHandler.DEBUGENABLED)
@@ -123,6 +124,10 @@ namespace op.io
                             if (mapped)
                             {
                                 DebugLogger.PrintDebug($"Initialized switch state for '{settingKey}' ({inputKey}) to {(isOn ? "ON" : "OFF")}.");
+                            }
+                            else if (isComboInput)
+                            {
+                                DebugLogger.PrintDebug($"Initialized combo switch '{settingKey}' ({inputKey}) — state tracked via chord, not key cache.");
                             }
                             else
                             {

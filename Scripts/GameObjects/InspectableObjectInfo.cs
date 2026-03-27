@@ -17,6 +17,8 @@ namespace op.io
         public string Name { get; private set; }
         public string Type { get; private set; }
         public Vector2 Position { get; private set; }
+        public Vector2 ParentPosition { get; private set; }
+        public Vector2 ObjectPosition { get; private set; }
         public float Rotation { get; private set; }
         public float Mass { get; private set; }
         public bool IsCollidable { get; private set; }
@@ -46,6 +48,8 @@ namespace op.io
             Name = Source.Name;
             Type = Source.Type;
             Position = Source.Position;
+            ParentPosition = Source.ParentPosition;
+            ObjectPosition = Source.ObjectPosition;
             Rotation = Source.Rotation;
             Mass = Source.Mass;
             IsCollidable = Source.IsCollidable;
@@ -118,7 +122,8 @@ namespace op.io
         {
             return gameObject != null &&
                 gameObject.Shape != null &&
-                !gameObject.Shape.IsPrototype;
+                !gameObject.Shape.IsPrototype &&
+                !gameObject.Shape.SkipHover;
         }
 
         private static bool IsPointInside(GameObject gameObject, Vector2 point, out float score)

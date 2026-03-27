@@ -48,6 +48,15 @@ namespace op.io
                 }
             }
 
+            // Load barrel shapes for agents
+            foreach (GameObject obj in Core.Instance.GameObjects)
+            {
+                if (obj is Agent agent)
+                {
+                    agent.BarrelShape?.LoadContent(Core.Instance.GraphicsDevice);
+                }
+            }
+
             DebugLogger.Print("GameRenderer: Graphics and GameObjects loaded successfully.");
         }
 

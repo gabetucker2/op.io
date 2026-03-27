@@ -80,7 +80,7 @@ namespace op.io
             {
                 SimpleGameObject baseObject = archetype.BaseObject;
                 Vector2 position = new Vector2(archetype.FarmData.Count * 50, 100);
-                SimpleGameObject instance = archetype.CreateInstance(archetype.FarmData.ID, position, baseObject.Transform.Rotation);
+                SimpleGameObject instance = archetype.CreateInstance(archetype.FarmData.ID, position, baseObject.Body.BodyTransform.Rotation);
                 GameObject farmObject = instance.ToGameObject();
 
                 // Load the shape content (e.g., texture) for this farm object

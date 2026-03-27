@@ -53,9 +53,12 @@ namespace op.io
         }
 
         public bool IsPlayer { get; private set; }
+        public long PlayerID { get; set; }
         public Attributes_Barrel BarrelAttributes { get; set; }
         public Attributes_Body BodyAttributes { get; set; }
-        public Attributes_Meta MetaAttributes { get; set; }
+        public Attributes_Unit UnitAttributes { get; set; }
+        public Shape BarrelShape { get; private set; }
+        public GameObject BarrelObject { get; private set; }
 
         private float _baseSpeed;
 
@@ -115,6 +118,33 @@ namespace op.io
             BaseSpeed = baseSpeed;
             BarrelAttributes = barrelAttributes;
             BodyAttributes = bodyAttributes;
+
+            // Build barrel shape: height = bodyRadius*2/5, length = 4*bodyRadius
+            int bodyRadius = shape.Width / 2;
+            int bw = Math.Max(1, bodyRadius * 4 / 5);
+            int bl = bodyRadius * 2;
+            BarrelShape = new Shape("Rectangle", bl, bw, 0,
+                new Color(192, 192, 192),
+                new Color(64, 64, 64),
+                1)
+            {
+                SkipHover = true
+            };
+
+            // Register barrel as a child for parent/child tracking.
+            // Position stores the relative offset from this agent center (forward = +X at rotation 0),
+            // matching the halfLength offset used in ShapeManager.DrawShapes.
+            // isPrototype=true prevents registration in GameObjectRegister, so ShapeManager
+            // won't draw it through the standard path — the existing barrel draw logic still handles it.
+            float halfBarrelLength = bl / 2f;
+            BarrelObject = new GameObject(
+                id, "Barrel", "Barrel",
+                new Vector2(halfBarrelLength, 0f), 0f,
+                0f, false, false, true,
+                BarrelShape,
+                new Color(192, 192, 192), new Color(64, 64, 64), 1,
+                isPrototype: true);
+            AddChild(BarrelObject);
 
             // Log agent creation without loading cooldowns
             DebugLogger.PrintPlayer($"Agent created with TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");

@@ -108,7 +108,11 @@ namespace op.io
                     inputType = InputType.SaveSwitch;
                 }
 
-                if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, lockMode, out ControlBinding binding))
+                if (string.IsNullOrWhiteSpace(inputKey))
+                {
+                    // No binding assigned — valid unbound state, skip silently.
+                }
+                else if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, lockMode, out ControlBinding binding))
                 {
                     _controlBindings[settingKey] = binding;
                 }

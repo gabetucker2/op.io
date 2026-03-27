@@ -43,6 +43,8 @@ namespace op.io
                 ControlKeyData.ApplyMetaControlFlags(MetaControlKeys);
                 EnsureCrouchUsesNoSaveSwitch();
                 LockExitBinding();
+                EnsureMoveAwayFromCursorUnbound();
+                EnsureFireControl();
 
                 _applied = true;
             }
@@ -316,6 +318,36 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             {
                 DebugLogger.PrintError($"Failed to lock Exit binding: {ex.Message}");
             }
+        }
+
+        private static void EnsureMoveAwayFromCursorUnbound()
+        {
+            try
+            {
+                const string sql = "UPDATE ControlKey SET InputKey = '' WHERE SettingKey = 'MoveAwayFromCursor' AND InputKey = 'RightClick';";
+                DatabaseQuery.ExecuteNonQuery(sql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to unbind MoveAwayFromCursor: {ex.Message}");
+            }
+        }
+
+        private static void EnsureFireControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = "Fire",
+                InputKey = "RightClick",
+                InputType = "Hold",
+                SwitchStartState = 0,
+                MetaControl = false,
+                RenderOrder = 19,
+                LockMode = false
+            });
+
+            ControlKeyData.SetInputType("Fire", "Hold");
+            ControlKeyData.EnsureInputKey("Fire", "RightClick");
         }
 
         private static void MigrateLegacySwitchType()

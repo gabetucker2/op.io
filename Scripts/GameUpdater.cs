@@ -48,6 +48,12 @@ namespace op.io
                 DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
 
+            // Update all active bullets
+            BulletManager.Update();
+
+            // Resolve bullet collisions against world objects
+            BulletCollisionResolver.ResolveCollisions(BulletManager.GetBullets(), Core.Instance.GameObjects);
+
             // Apply physics step
             PhysicsManager.Update(Core.Instance.GameObjects);
 

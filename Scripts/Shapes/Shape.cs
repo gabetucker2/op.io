@@ -14,6 +14,7 @@ namespace op.io
         public Color OutlineColor => _outlineColor;
         public int OutlineWidth => _outlineWidth;
         public bool IsPrototype { get; set; } = false;
+        public bool SkipHover { get; set; } = false;
 
         private Color _fillColor;
         private Color _outlineColor;
@@ -83,6 +84,11 @@ namespace op.io
         public void Draw(SpriteBatch spriteBatch, GameObject GO)
         {
             _renderer.Draw(spriteBatch, GO);
+        }
+
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation)
+        {
+            _renderer.DrawAt(spriteBatch, position, rotation);
         }
 
         // Dispose method to clean up resources
