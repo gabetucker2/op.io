@@ -17,14 +17,28 @@ namespace op.io
                 return;
             }
 
-            // Fire Action
+            // Fire Action — silently ignored when player has no barrels equipped
             if (InputManager.IsInputActive("Fire"))
             {
                 Agent player = Core.Instance.Player;
-                if (player != null)
+                if (player != null && player.BarrelCount > 0)
                 {
                     Fire(player);
                 }
+            }
+
+            // Barrel carousel — Q rotates left (clockwise), E rotates right; no-op with <2 barrels
+            if (InputManager.IsInputActive("BarrelLeft"))
+            {
+                Agent player = Core.Instance.Player;
+                if (player != null && player.BarrelCount >= 2)
+                    player.SwitchBarrelLeft();
+            }
+            if (InputManager.IsInputActive("BarrelRight"))
+            {
+                Agent player = Core.Instance.Player;
+                if (player != null && player.BarrelCount >= 2)
+                    player.SwitchBarrelRight();
             }
 
             // Exit Action
@@ -70,6 +84,7 @@ namespace op.io
         public static void Fire(Agent agent)
         {
             if (agent == null) return;
+            if (agent.BarrelCount == 0) return;
             if (agent.TriggerCooldown > 0) return;
 
             BulletManager.SpawnBullet(agent);

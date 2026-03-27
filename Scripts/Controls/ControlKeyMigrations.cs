@@ -45,6 +45,7 @@ namespace op.io
                 LockExitBinding();
                 EnsureMoveAwayFromCursorUnbound();
                 EnsureFireControl();
+                EnsureBarrelSwitchControls();
 
                 _applied = true;
             }
@@ -348,6 +349,33 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
 
             ControlKeyData.SetInputType("Fire", "Hold");
             ControlKeyData.EnsureInputKey("Fire", "RightClick");
+        }
+
+        private static void EnsureBarrelSwitchControls()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = "BarrelLeft",
+                InputKey = "Q",
+                InputType = "Trigger",
+                SwitchStartState = 0,
+                MetaControl = false,
+                RenderOrder = 20
+            });
+            ControlKeyData.SetInputType("BarrelLeft", "Trigger");
+            ControlKeyData.EnsureInputKey("BarrelLeft", "Q");
+
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = "BarrelRight",
+                InputKey = "E",
+                InputType = "Trigger",
+                SwitchStartState = 0,
+                MetaControl = false,
+                RenderOrder = 21
+            });
+            ControlKeyData.SetInputType("BarrelRight", "Trigger");
+            ControlKeyData.EnsureInputKey("BarrelRight", "E");
         }
 
         private static void MigrateLegacySwitchType()

@@ -36,12 +36,13 @@ INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '25')
 
 ---------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('AirResistance', '2.12');     -- global scalar: drag = AirResistance * bulletVolume / bulletRange
-INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('BounceVelocityLoss', '0.2'); -- base fraction of bullet speed lost per bounce (scaled by object mass ratio)
+INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('AirResistanceScalar', '2.12');   -- drag scalar: drag = AirResistanceScalar * bulletVolume / bulletRange
+INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('BounceVelocityLoss', '0.2'); -- fraction of bullet speed lost per bounce off static objects (scaled by object mass ratio)
+INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('HitVelocityLoss', '0.2');   -- fraction of bullet speed lost per hit through non-static objects (scaled by object mass ratio)
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('DefaultBulletSpeed', '400');    -- fallback bullet speed (px/s) when barrel attrs are unset
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('DefaultBulletLifespan', '3');   -- fallback bullet lifespan (seconds) when barrel attrs are unset
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('DefaultBulletRange', '800');    -- fallback bullet range (px) when barrel attrs are unset
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('DefaultBulletMass', '1');       -- fallback bullet mass when barrel attrs are unset
-INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('BulletRadius', '6');            -- bullet collision/render radius (px)
+INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('BulletRadiusScalar', '6');       -- bullet radius scalar: radius = sqrt(mass) * BulletRadiusScalar
 
 ---------------------------------------------------------------------------------------------------------------------------

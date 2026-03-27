@@ -12,14 +12,14 @@ namespace op.io
         public static IReadOnlyList<Bullet> GetBullets() => _bullets;
         private static int _nextId = 100000;
 
-        private static float? _cachedAirResistance = null;
-        public static float AirResistance
+        private static float? _cachedAirResistanceScalar = null;
+        public static float AirResistanceScalar
         {
             get
             {
-                if (!_cachedAirResistance.HasValue)
-                    _cachedAirResistance = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "AirResistance"); // scalar: drag = AirResistance * volume / range
-                return _cachedAirResistance.Value;
+                if (!_cachedAirResistanceScalar.HasValue)
+                    _cachedAirResistanceScalar = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "AirResistanceScalar");
+                return _cachedAirResistanceScalar.Value;
             }
         }
 
@@ -89,22 +89,27 @@ namespace op.io
             }
         }
 
-        private static int? _cachedBulletRadius = null;
-        public static int BulletRadius
+        private static float? _cachedBulletRadiusScalar = null;
+        public static float BulletRadiusScalar
         {
             get
             {
-                if (!_cachedBulletRadius.HasValue)
-                    _cachedBulletRadius = DatabaseFetch.GetValue<int>("PhysicsSettings", "Value", "SettingKey", "BulletRadius");
-                return _cachedBulletRadius.Value;
+                if (!_cachedBulletRadiusScalar.HasValue)
+                    _cachedBulletRadiusScalar = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "BulletRadiusScalar");
+                return _cachedBulletRadiusScalar.Value;
             }
         }
 
-        // Spawns a bullet from an agent using its barrel attributes and current rotation.
-        // Designed to be called for both the player and NPC agents.
+        // Computes bullet radius from mass: radius = sqrt(mass) * BulletRadiusScalar
+        public static float ComputeBulletRadius(float mass)
+        {
+            return MathF.Sqrt(MathF.Max(mass, 0.01f)) * BulletRadiusScalar;
+        }
+
+        // Spawns a bullet from an agent using its active barrel attributes and current rotation.
         public static void SpawnBullet(Agent agent)
         {
-            if (agent == null) return;
+            if (agent == null || agent.BarrelCount == 0) return;
 
             Attributes_Barrel attrs = agent.BarrelAttributes;
             float speed = attrs.BulletSpeed > 0 ? attrs.BulletSpeed : DefaultBulletSpeed;
@@ -119,8 +124,9 @@ namespace op.io
             float barrelLength = agent.BarrelShape?.Width ?? 0f;
             Vector2 spawnPos = agent.Position + dir * barrelLength;
 
-            int bulletRadius = BulletRadius;
-            var shape = new Shape("Circle", bulletRadius * 2, bulletRadius * 2, 0,
+            float radius = ComputeBulletRadius(mass);
+            int diameter = Math.Max(1, (int)MathF.Round(radius * 2));
+            var shape = new Shape("Circle", diameter, diameter, 0,
                 Color.Red, new Color(139, 0, 0), 2);
             shape.LoadContent(Core.Instance.GraphicsDevice);
 

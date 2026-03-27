@@ -1,11 +1,52 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
 namespace op.io
 {
     public class Agent : GameObject
     {
-        // Agent-specific properties
+        // ── Barrel slot ─────────────────────────────────────────────────────────
+        // Holds one barrel's attributes, full-size shape, and animated height scale.
+        public class BarrelSlot
+        {
+            public Attributes_Barrel Attrs;
+            public Shape FullShape;
+            public float CurrentHeightScale;
+            public float TargetHeightScale;
+
+            public BarrelSlot(Attributes_Barrel attrs, Shape shape, float initialScale)
+            {
+                Attrs = attrs;
+                FullShape = shape;
+                CurrentHeightScale = initialScale;
+                TargetHeightScale = initialScale;
+            }
+        }
+
+        // ── Barrel list & carousel ───────────────────────────────────────────────
+        private readonly List<BarrelSlot> _barrels = new();
+        public IReadOnlyList<BarrelSlot> Barrels => _barrels;
+        public int BarrelCount => _barrels.Count;
+        public int ActiveBarrelIndex { get; private set; } = 0;
+
+        // Carousel angle tracks the cumulative rotation of the barrel ring (radians).
+        // Barrel i is displayed at: agentRotation + i*(2π/N) - _carouselAngle
+        private float _carouselAngle = 0f;
+        private float _targetCarouselAngle = 0f;
+        public float CarouselAngle => _carouselAngle;
+
+        private const float StandbyHeightScale = 0.18f;
+        private const float SwitchAnimSpeed = 15f; // exponential lerp speed (units/s)
+
+        // Computed: delegates to the active barrel (or default when none equipped).
+        public Attributes_Barrel BarrelAttributes => BarrelCount > 0 ? _barrels[ActiveBarrelIndex].Attrs : default;
+        public Shape BarrelShape => BarrelCount > 0 ? _barrels[ActiveBarrelIndex].FullShape : null;
+        // Legacy compat: BarrelObject is surfaced as null; callers that checked for
+        // null already handle this gracefully (e.g. GOProperties.BarrelTransformRows).
+        public GameObject BarrelObject => null;
+
+        // ── Agent-specific properties ────────────────────────────────────────────
         public float TriggerCooldown { get; set; }
         public float SwitchCooldown { get; set; }
 
@@ -13,11 +54,11 @@ namespace op.io
         {
             if (_mode == -1)
             {
-                if (ControlStateManager.ContainsSwitchState(modeSettingName)) // If it exists as a switch state
+                if (ControlStateManager.ContainsSwitchState(modeSettingName))
                 {
                     _crouchMode = TypeConversionFunctions.BoolToInt(ControlStateManager.GetSwitchState(modeSettingName));
                 }
-                else // Else it's probably Hold, just default it to 0
+                else
                 {
                     _crouchMode = 0;
                 }
@@ -26,43 +67,26 @@ namespace op.io
             return _mode;
         }
 
-        private int _crouchMode = -1; // -1 = Not initialized, 0 = False, 1 = True
+        private int _crouchMode = -1;
         public bool IsCrouching
         {
-            get
-            {
-                return TypeConversionFunctions.IntToBool(GetMode(_crouchMode, "Crouch"));
-            }
-            set
-            {
-                _crouchMode = TypeConversionFunctions.BoolToInt(value);
-            }
+            get => TypeConversionFunctions.IntToBool(GetMode(_crouchMode, "Crouch"));
+            set => _crouchMode = TypeConversionFunctions.BoolToInt(value);
         }
 
-        private int _sprintMode = -1; // -1 = Not initialized, 0 = False, 1 = True
+        private int _sprintMode = -1;
         public bool IsSprinting
         {
-            get
-            {
-                return TypeConversionFunctions.IntToBool(GetMode(_sprintMode, "Sprint"));
-            }
-            set
-            {
-                _sprintMode = TypeConversionFunctions.BoolToInt(value);
-            }
+            get => TypeConversionFunctions.IntToBool(GetMode(_sprintMode, "Sprint"));
+            set => _sprintMode = TypeConversionFunctions.BoolToInt(value);
         }
 
         public bool IsPlayer { get; private set; }
         public long PlayerID { get; set; }
-        public Attributes_Barrel BarrelAttributes { get; set; }
         public Attributes_Body BodyAttributes { get; set; }
         public Attributes_Unit UnitAttributes { get; set; }
-        public Shape BarrelShape { get; private set; }
-        public GameObject BarrelObject { get; private set; }
 
         private float _baseSpeed;
-
-        // Static variables for cached cooldown values
         private static float? cachedTriggerCooldown = null;
         private static float? cachedSwitchCooldown = null;
 
@@ -73,22 +97,13 @@ namespace op.io
             {
                 _baseSpeed = value;
                 if (value < 0)
-                {
                     DebugLogger.PrintWarning($"BaseSpeed updated to negative value: {value}");
-                }
             }
         }
 
-        // Calculate the effective speed based on crouching/sprinting
-        public float Speed
-        {
-            get
-            {
-                return BaseSpeed * InputManager.SpeedMultiplier(); // Use InputManager to handle the multiplier
-            }
-        }
+        public float Speed => BaseSpeed * InputManager.SpeedMultiplier();
 
-        // Constructor that initializes the Agent by calling the base GameObject constructor
+        // ── Constructor ──────────────────────────────────────────────────────────
         public Agent(
             int id,
             string name,
@@ -116,50 +131,101 @@ namespace op.io
             IsSprinting = false;
             IsPlayer = isPlayer;
             BaseSpeed = baseSpeed;
-            BarrelAttributes = barrelAttributes;
             BodyAttributes = bodyAttributes;
 
-            // Build barrel shape: height = bodyRadius*2/5, length = 4*bodyRadius
-            int bodyRadius = shape.Width / 2;
+            // Seed the first barrel using the passed-in attributes (default = use
+            // physics-settings fallbacks at fire time).  Callers may add further
+            // barrels via AddBarrel().
+            AddBarrel(barrelAttributes);
+
+            DebugLogger.PrintPlayer($"Agent created with TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");
+        }
+
+        // ── Barrel management ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Attaches a new barrel to this agent. The first barrel added is always
+        /// the active one; subsequent barrels start in standby (very small height).
+        /// </summary>
+        public void AddBarrel(Attributes_Barrel attrs)
+        {
+            int bodyRadius = Shape.Width / 2;
             int bw = Math.Max(1, bodyRadius * 4 / 5);
             int bl = bodyRadius * 2;
-            BarrelShape = new Shape("Rectangle", bl, bw, 0,
-                new Color(192, 192, 192),
-                new Color(64, 64, 64),
-                1)
+
+            float initialScale = _barrels.Count == 0 ? 1f : StandbyHeightScale;
+
+            var shape = new Shape("Rectangle", bl, bw, 0,
+                new Color(192, 192, 192), new Color(64, 64, 64), 1)
             {
                 SkipHover = true
             };
 
-            // Register barrel as a child for parent/child tracking.
-            // Position stores the relative offset from this agent center (forward = +X at rotation 0),
-            // matching the halfLength offset used in ShapeManager.DrawShapes.
-            // isPrototype=true prevents registration in GameObjectRegister, so ShapeManager
-            // won't draw it through the standard path — the existing barrel draw logic still handles it.
-            float halfBarrelLength = bl / 2f;
-            BarrelObject = new GameObject(
-                id, "Barrel", "Barrel",
-                new Vector2(halfBarrelLength, 0f), 0f,
-                0f, false, false, true,
-                BarrelShape,
-                new Color(192, 192, 192), new Color(64, 64, 64), 1,
-                isPrototype: true);
-            AddChild(BarrelObject);
+            // Load GPU content immediately if the graphics device is already ready
+            // (e.g. barrels added at runtime rather than during initialization).
+            if (Core.Instance?.GraphicsDevice != null)
+                shape.LoadContent(Core.Instance.GraphicsDevice);
 
-            // Log agent creation without loading cooldowns
-            DebugLogger.PrintPlayer($"Agent created with TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");
+            _barrels.Add(new BarrelSlot(attrs, shape, initialScale));
+            RefreshTargetScales();
         }
 
-        // Load TriggerCooldown value from the database or cache it
+        /// <summary>
+        /// Removes all barrels, disposing their shapes, and resets carousel state.
+        /// Call before re-applying a build from JSON deserialization.
+        /// </summary>
+        public void ClearBarrels()
+        {
+            foreach (var slot in _barrels)
+                slot.FullShape?.Dispose();
+            _barrels.Clear();
+            ActiveBarrelIndex = 0;
+            _carouselAngle = 0f;
+            _targetCarouselAngle = 0f;
+        }
+
+        /// <summary>
+        /// Rotates the barrel carousel left (Q key).
+        /// All barrels rotate clockwise; the barrel previously counter-clockwise of
+        /// the active slot advances to the primary (forward-facing) position.
+        /// No-op when fewer than 2 barrels are equipped.
+        /// </summary>
+        public void SwitchBarrelLeft()
+        {
+            if (BarrelCount < 2) return;
+            ActiveBarrelIndex = (ActiveBarrelIndex - 1 + BarrelCount) % BarrelCount;
+            _targetCarouselAngle -= MathF.Tau / BarrelCount;
+            RefreshTargetScales();
+        }
+
+        /// <summary>
+        /// Rotates the barrel carousel right (E key).
+        /// All barrels rotate counter-clockwise; the barrel previously clockwise of
+        /// the active slot advances to the primary position.
+        /// No-op when fewer than 2 barrels are equipped.
+        /// </summary>
+        public void SwitchBarrelRight()
+        {
+            if (BarrelCount < 2) return;
+            ActiveBarrelIndex = (ActiveBarrelIndex + 1) % BarrelCount;
+            _targetCarouselAngle += MathF.Tau / BarrelCount;
+            RefreshTargetScales();
+        }
+
+        private void RefreshTargetScales()
+        {
+            for (int i = 0; i < _barrels.Count; i++)
+                _barrels[i].TargetHeightScale = (i == ActiveBarrelIndex) ? 1f : StandbyHeightScale;
+        }
+
+        // ── Cooldown loading ─────────────────────────────────────────────────────
         public void LoadTriggerCooldown()
         {
             if (!cachedTriggerCooldown.HasValue)
             {
                 TriggerCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "TriggerCooldown");
                 if (TriggerCooldown == 0)
-                {
                     DebugLogger.PrintError("TriggerCooldown is 0 after loading from the database.");
-                }
                 DebugLogger.PrintPlayer($"TriggerCooldown loaded: {TriggerCooldown}");
                 cachedTriggerCooldown = TriggerCooldown;
             }
@@ -170,16 +236,13 @@ namespace op.io
             }
         }
 
-        // Load SwitchCooldown value from the database or cache it
         public void LoadSwitchCooldown()
         {
             if (!cachedSwitchCooldown.HasValue)
             {
                 SwitchCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "SwitchCooldown");
                 if (SwitchCooldown == 0)
-                {
                     DebugLogger.PrintError("SwitchCooldown is 0 after loading from the database.");
-                }
                 DebugLogger.PrintPlayer($"SwitchCooldown loaded: {SwitchCooldown}");
                 cachedSwitchCooldown = SwitchCooldown;
             }
@@ -190,22 +253,28 @@ namespace op.io
             }
         }
 
-        // Update method to manage cooldowns
+        // ── Update ───────────────────────────────────────────────────────────────
         public override void Update()
         {
-            // Decrease cooldowns only if greater than 0
             if (TriggerCooldown > 0)
-            {
                 TriggerCooldown -= Core.DELTATIME;
-            }
 
             if (SwitchCooldown > 0)
-            {
                 SwitchCooldown -= Core.DELTATIME;
-            }
 
-            // Log cooldowns after update to confirm they are being handled
-            //DebugLogger.PrintPlayer($"TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");
+            // Animate carousel angle and barrel height scales toward their targets.
+            float t = Math.Min(SwitchAnimSpeed * Core.DELTATIME, 1f);
+
+            _carouselAngle += (_targetCarouselAngle - _carouselAngle) * t;
+            if (MathF.Abs(_carouselAngle - _targetCarouselAngle) < 0.001f)
+                _carouselAngle = _targetCarouselAngle;
+
+            foreach (var slot in _barrels)
+            {
+                slot.CurrentHeightScale += (slot.TargetHeightScale - slot.CurrentHeightScale) * t;
+                if (MathF.Abs(slot.CurrentHeightScale - slot.TargetHeightScale) < 0.001f)
+                    slot.CurrentHeightScale = slot.TargetHeightScale;
+            }
         }
     }
 }

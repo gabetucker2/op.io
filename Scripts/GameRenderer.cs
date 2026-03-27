@@ -48,12 +48,13 @@ namespace op.io
                 }
             }
 
-            // Load barrel shapes for agents
+            // Load barrel shapes for all barrel slots on each agent
             foreach (GameObject obj in Core.Instance.GameObjects)
             {
                 if (obj is Agent agent)
                 {
-                    agent.BarrelShape?.LoadContent(Core.Instance.GraphicsDevice);
+                    foreach (var slot in agent.Barrels)
+                        slot.FullShape?.LoadContent(Core.Instance.GraphicsDevice);
                 }
             }
 

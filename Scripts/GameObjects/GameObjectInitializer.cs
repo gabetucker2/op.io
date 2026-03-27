@@ -186,6 +186,25 @@ namespace op.io
 
                 if (agents.Count != 0)
                 {
+                    // Attach barrels to every agent.  All agents receive a second default
+                    // barrel so the carousel system has something to rotate through.
+                    // The player's second barrel fires much heavier (and therefore larger)
+                    // bullets than the first.
+                    foreach (var agent in agents)
+                    {
+                        if (agent.IsPlayer)
+                        {
+                            // Heavy barrel: high mass → large radius via sqrt(mass)*BulletRadiusScalar
+                            var heavyBarrel = new Attributes_Barrel { BulletMass = 6f };
+                            agent.AddBarrel(heavyBarrel);
+                        }
+                        else
+                        {
+                            // Non-player agents get a plain second barrel matching the first
+                            agent.AddBarrel(default);
+                        }
+                    }
+
                     Core.Instance.GameObjects.AddRange(agents);
                     Core.Instance.Player = agents.FirstOrDefault(a => a.IsPlayer);
 

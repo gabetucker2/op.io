@@ -44,7 +44,7 @@ namespace op.io
             if (Core.DELTATIME <= 0) return;
 
             _age += Core.DELTATIME;
-            float drag = BulletManager.AirResistance * _volume / MathF.Max(_range, 0.0001f);
+            float drag = BulletManager.AirResistanceScalar * _volume / MathF.Max(_range, 0.0001f);
             Velocity *= MathF.Max(1f - drag * Core.DELTATIME, 0f);
             Position += Velocity * Core.DELTATIME;
 

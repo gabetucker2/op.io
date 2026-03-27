@@ -105,6 +105,17 @@ namespace op.io
             spriteBatch.Draw(_texture, position, null, Color.White, rotation, _origin, 1f, SpriteEffects.None, 0f);
         }
 
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale)
+        {
+            if (_texture == null)
+            {
+                DebugLogger.PrintError("ShapeRenderer attempted to draw without texture. Call LoadContent first.");
+                return;
+            }
+
+            spriteBatch.Draw(_texture, position, null, Color.White, rotation, _origin, scale, SpriteEffects.None, 0f);
+        }
+
         public void Dispose()
         {
             _texture?.Dispose();
