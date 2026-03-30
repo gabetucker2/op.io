@@ -13,6 +13,7 @@ namespace op.io
         internal const string PreviousConfigurationKey = "UsePreviousConfiguration";
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
         private static bool _applied;
+        internal const string CombatTextKey = "CombatText";
         private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey, NextConfigurationKey, PreviousConfigurationKey];
 
         public static void EnsureApplied()
@@ -46,6 +47,9 @@ namespace op.io
                 EnsureMoveAwayFromCursorUnbound();
                 EnsureFireControl();
                 EnsureBarrelSwitchControls();
+                EnsureCombatTextControl();
+                EnsureHealthBarControl();
+                EnsureAllowGameInputFreezeIsEnum();
 
                 _applied = true;
             }
@@ -376,6 +380,94 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             });
             ControlKeyData.SetInputType("BarrelRight", "Trigger");
             ControlKeyData.EnsureInputKey("BarrelRight", "E");
+        }
+
+        private static void EnsureCombatTextControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey      = CombatTextKey,
+                InputKey        = "Shift + T",
+                InputType       = "SaveSwitch",
+                SwitchStartState = 1,
+                MetaControl     = false,
+                RenderOrder     = 23
+            });
+
+            ControlKeyData.SetInputType(CombatTextKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(CombatTextKey, 1);
+            ControlKeyData.EnsureInputKey(CombatTextKey, "Shift + T");
+
+            // One-time migration: force default ON for existing DBs where SwitchStartState was 0.
+            // EnsureSwitchStartState uses COALESCE (only sets if NULL) and the schema default is 0,
+            // so rows pre-dating this migration would stay 0 without this direct update.
+            string markerOn = Path.Combine(DatabaseConfig.DatabaseDirectory, ".combat_text_default_on_applied");
+            if (!File.Exists(markerOn))
+            {
+                const string sql = "UPDATE ControlKey SET SwitchStartState = 1 WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = CombatTextKey });
+                File.WriteAllText(markerOn, DateTime.UtcNow.ToString("O"));
+            }
+        }
+
+        internal const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
+        internal static readonly string[] AllowGameInputFreezeOptions = ["None", "Focus", "MouseLeave"];
+
+        internal const string HealthBarKey = "HealthBar";
+
+        private static void EnsureHealthBarControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey      = HealthBarKey,
+                InputKey        = "Shift + H",
+                InputType       = "SaveSwitch",
+                SwitchStartState = 1,
+                MetaControl     = false,
+                RenderOrder     = 24
+            });
+
+            ControlKeyData.SetInputType(HealthBarKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(HealthBarKey, 1);
+            ControlKeyData.EnsureInputKey(HealthBarKey, "Shift + H");
+
+            string markerOn = Path.Combine(DatabaseConfig.DatabaseDirectory, ".health_bar_default_on_applied");
+            if (!File.Exists(markerOn))
+            {
+                const string sql = "UPDATE ControlKey SET SwitchStartState = 1 WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = HealthBarKey });
+                File.WriteAllText(markerOn, DateTime.UtcNow.ToString("O"));
+            }
+        }
+
+        private static void EnsureAllowGameInputFreezeIsEnum()
+        {
+            // Register enum options so ControlStateManager can load the index correctly.
+            // Options: 0=None, 1=Focus, 2=MouseLeave. Default index 1 (Focus).
+            ControlStateManager.RegisterEnumOptions(AllowGameInputFreezeKey, AllowGameInputFreezeOptions, defaultIndex: 1, persist: true);
+
+            try
+            {
+                // Convert from SaveSwitch to SaveEnum if still the old type.
+                const string migrateSql = "UPDATE ControlKey SET InputType = 'SaveEnum' WHERE SettingKey = @key AND InputType IN ('SaveSwitch', 'Switch');";
+                DatabaseQuery.ExecuteNonQuery(migrateSql, new System.Collections.Generic.Dictionary<string, object> { ["@key"] = AllowGameInputFreezeKey });
+
+                // Ensure the control exists as SaveEnum with default index 1 (Focus).
+                ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+                {
+                    SettingKey = AllowGameInputFreezeKey,
+                    InputKey = "Shift + C",
+                    InputType = "SaveEnum",
+                    SwitchStartState = 1,
+                    MetaControl = true,
+                    RenderOrder = 14
+                });
+                ControlKeyData.SetInputType(AllowGameInputFreezeKey, "SaveEnum");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to migrate AllowGameInputFreeze to SaveEnum: {ex.Message}");
+            }
         }
 
         private static void MigrateLegacySwitchType()

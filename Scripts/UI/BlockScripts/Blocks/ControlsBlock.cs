@@ -26,6 +26,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
         private static string _hoveredKeyAction;
+        private static string _tooltipRowKey;
+
+        public static string GetHoveredRowKey() => _tooltipRowKey;
         private static float _lineHeightCache;
         private static string _hoveredTypeKey;
         private static bool _hoveredTypeIndicator;
@@ -61,6 +64,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static bool IsSwitchType(InputType inputType) =>
             inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
+
+        private static bool IsEnumType(InputType inputType) =>
+            inputType == InputType.SaveEnum || inputType == InputType.NoSaveEnum;
 
         private static bool IsPersistentSwitch(InputType inputType) => inputType == InputType.SaveSwitch;
 
@@ -109,7 +115,9 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             bool allowInteraction = !blockLocked && pointerInsideList;
-            _hoveredRowKey = allowInteraction ? HitTestRow(mouseState.Position) : null;
+            string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            _hoveredRowKey = allowInteraction ? hitRow : null;
+            _tooltipRowKey = hitRow;
             if (allowInteraction)
             {
                 _hoveredTypeKey = HitTestTypeToggle(mouseState.Position, listBounds, out bool indicatorArea);
@@ -298,7 +306,8 @@ namespace op.io.UI.BlockScripts.Blocks
                     string canonicalKey = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Controls, actionLabel);
                     if (storedRowData.TryGetValue(canonicalKey, out string storedData) &&
                         TryParseRowData(storedData, out InputType storedType, out bool storedTriggerAuto) &&
-                        !IsPersistentSwitch(storedType))
+                        !IsPersistentSwitch(storedType) &&
+                        !IsEnumType(parsedType))
                     {
                         parsedType = storedType;
                         triggerAuto = storedTriggerAuto;
@@ -460,6 +469,17 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 bool state = GetSwitchState(row.Action);
                 BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, state);
+            }
+            else if (IsEnumType(row.InputType))
+            {
+                string enumValue = ControlStateManager.GetEnumValue(row.Action);
+                if (!string.IsNullOrEmpty(enumValue))
+                {
+                    Vector2 enumTextSize = regularFont.MeasureString(enumValue);
+                    float enumX = contentBounds.Right - enumTextSize.X - 4;
+                    float enumY = rowBounds.Y + (lineHeight - enumTextSize.Y) / 2f;
+                    regularFont.DrawString(spriteBatch, enumValue, new Vector2(enumX, enumY), UIStyle.TextColor);
+                }
             }
         }
 
@@ -668,6 +688,12 @@ namespace op.io.UI.BlockScripts.Blocks
                 return false;
             }
 
+            if (IsEnumType(row.InputType))
+            {
+                ControlStateManager.CycleEnum(row.Action);
+                return true;
+            }
+
             InputType nextType = row.InputType;
             bool triggerAuto = row.TriggerAutoFire;
 
@@ -702,12 +728,13 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static bool GetSwitchState(string settingKey)
         {
+            bool liveState = InputManager.IsInputActive(settingKey);
             if (ControlStateManager.ContainsSwitchState(settingKey))
             {
-                return ControlStateManager.GetSwitchState(settingKey);
+                return liveState || ControlStateManager.GetSwitchState(settingKey);
             }
 
-            return InputManager.IsInputActive(settingKey);
+            return liveState;
         }
 
         private static void EnsurePixelTexture()

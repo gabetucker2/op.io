@@ -12,7 +12,7 @@ public static class MapObjectLoader
         {
             DebugLogger.PrintGO("Loading map objects from database...");
 
-            var results = DatabaseQuery.ExecuteQuery("SELECT g.ID, g.Name, g.Type, g.PositionX, g.PositionY, g.Rotation, g.Width, g.Height, g.Sides, g.FillR, g.FillG, g.FillB, g.FillA, g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth, g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics, g.Shape FROM MapData s INNER JOIN GameObjects g ON s.ID = g.ID");
+            var results = DatabaseQuery.ExecuteQuery("SELECT g.ID, g.Name, g.Type, g.PositionX, g.PositionY, g.Rotation, g.Width, g.Height, g.Sides, g.FillR, g.FillG, g.FillB, g.FillA, g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth, g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics, g.Shape, s.MaxHealth, s.DeathPointReward FROM MapData s INNER JOIN GameObjects g ON s.ID = g.ID");
 
             if (results.Count == 0)
             {
@@ -30,6 +30,11 @@ public static class MapObjectLoader
 
                     if (mapObject != null)
                     {
+                        float maxHealth = Convert.ToSingle(row["MaxHealth"]);
+                        mapObject.MaxHealth     = maxHealth;
+                        mapObject.CurrentHealth = maxHealth;
+                        mapObject.DeathPointReward = row.TryGetValue("DeathPointReward", out object dprObj) && dprObj != null && dprObj != DBNull.Value
+                            ? Convert.ToSingle(dprObj) : 0f;
                         mapObjects.Add(mapObject);
                         DebugLogger.PrintDebug($"Loaded map object ID={mapObject.ID}.");
                     }

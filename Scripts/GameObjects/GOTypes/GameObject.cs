@@ -42,6 +42,60 @@ namespace op.io
                 child.Parent = null;
         }
 
+        public float Opacity   { get; set; } = 1f;
+        public float HitFlash  { get; set; } = 0f;
+
+        // ── Base identity ────────────────────────────────────────────────────
+        public float CurrentXP { get; set; } = 0f;
+
+        // ── Destructible (only meaningful when IsDestructible = true) ────────
+        public float CurrentHealth    { get; set; }
+        public float MaxHealth        { get; set; }
+        public float CurrentShield    { get; set; }
+        public float MaxShield        { get; set; }
+        public float DeathPointReward { get; set; }
+
+        // ID of the agent whose bullet last dealt damage to this object (for XP award on death).
+        public int LastDamagedByAgentID { get; set; } = -1;
+
+        /// <summary>
+        /// Triggers a hit-flash with smooth interruption: if the object is already
+        /// partially white from a previous flash, the fade-in is proportionally
+        /// shorter so the transition feels instantaneous rather than restarting.
+        /// </summary>
+        public void TriggerHitFlash()
+        {
+            float fadeIn  = BulletManager.HitFlashFadeIn;
+            float fadeOut = BulletManager.HitFlashFadeOut;
+            float currentAlpha;
+            if (HitFlash > fadeOut)
+                currentAlpha = (fadeIn + fadeOut - HitFlash) / MathF.Max(fadeIn, 0.001f);
+            else
+                currentAlpha = HitFlash / MathF.Max(fadeOut, 0.001f);
+            // Set HitFlash so fade-in duration scales with how far from full-white we are.
+            HitFlash = fadeOut + fadeIn * (1f - MathHelper.Clamp(currentAlpha, 0f, 1f));
+        }
+
+        public GOProperties GOProperties => new GOProperties
+        {
+            Id               = ID,
+            Type             = Type,
+            Flags            = ComputeFlags(),
+            CurrentXP        = CurrentXP,
+            DeathPointReward = DeathPointReward,
+            CurrentHealth    = CurrentHealth,
+            CurrentShield    = CurrentShield,
+        };
+
+        protected virtual GOFlags ComputeFlags()
+        {
+            GOFlags f = GOFlags.None;
+            if (StaticPhysics)  f |= GOFlags.Static;
+            if (IsCollidable)   f |= GOFlags.Collidable;
+            if (IsDestructible) f |= GOFlags.Destructible;
+            return f;
+        }
+
         // Computed property for BoundingRadius based on Shape size
         public float BoundingRadius =>
             Shape != null ? MathF.Sqrt(Shape.Width * Shape.Width + Shape.Height * Shape.Height) / 2f : 0f;
@@ -135,7 +189,8 @@ namespace op.io
                 return;
             }
 
-            // General update behavior (can be extended for specific objects)
+            if (HitFlash > 0f)
+                HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
         }
 
         // Explicitly manage resource cleanup

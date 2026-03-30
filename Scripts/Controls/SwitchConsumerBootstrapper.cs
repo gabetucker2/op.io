@@ -21,14 +21,6 @@ namespace op.io
                 ApplyWindowClickThrough();
             });
 
-            SwitchRegistry.RegisterConsumer("AllowGameInputFreeze", value =>
-            {
-                if (!value)
-                {
-                    GameTracker.FreezeGameInputs = false;
-                }
-            });
-
             SwitchRegistry.RegisterConsumer("DebugMode", value =>
             {
                 DebugModeHandler.ApplySwitchState(value);

@@ -22,6 +22,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int LockButtonPadding = 8;
         private const int SectionSpacing = 8;
         private const int SectionIndent = 12;
+        private const int BarRowHeight = 14;
+        private const int BarSegmentGap = 2;
 
         private static Texture2D _pixel;
         private static Texture2D _lockedIcon;
@@ -117,6 +119,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 DrawModeBadge(spriteBatch, layout.ModeLabel);
 
             InspectableObjectInfo target = InspectModeState.GetActiveTarget();
+            target?.Refresh(); // keep health / shield live every frame
             bool lockHovered = layout.LockButtonBounds.Contains(_lastMouseState.Position);
             bool targetLocked = InspectModeState.IsTargetLocked(target);
 
@@ -450,7 +453,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 height += body.LineHeight + RowSpacing;
                 foreach (Properties.Row row in section.Rows)
-                    height += row.LineCount * (tech.LineHeight + RowSpacing);
+                    height += row.Kind == Properties.RowKind.BarGraph
+                        ? BarRowHeight + RowSpacing
+                        : row.LineCount * (tech.LineHeight + RowSpacing);
             }
 
             return height;
@@ -510,7 +515,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     if (y > clipBounds.Bottom) { stopped = true; break; }
 
-                    float rowH = row.LineCount * (tech.LineHeight + RowSpacing);
+                    float rowH = row.Kind == Properties.RowKind.BarGraph
+                        ? BarRowHeight + RowSpacing
+                        : row.LineCount * (tech.LineHeight + RowSpacing);
 
                     if (IsRowVisible(y, rowH, clipBounds))
                     {
@@ -518,11 +525,59 @@ namespace op.io.UI.BlockScripts.Blocks
                             DrawBulletListRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Items);
                         else if (row.Kind == Properties.RowKind.Color)
                             DrawColorRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Color, row.Value);
+                        else if (row.Kind == Properties.RowKind.BarGraph)
+                            DrawBarRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.CurrentValue, row.MaxValue, row.SegmentCount, clipBounds);
                         else
                             DrawRow(spriteBatch, tech, row.Label, row.Value, clipBounds.X + indent, y);
                     }
 
                     y += rowH;
+                }
+            }
+        }
+
+        private static void DrawBarRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y,
+            string label, float current, float max, int segmentCount, Rectangle clipBounds)
+        {
+            font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
+
+            string healthText = $"{(int)MathF.Round(current)} / {(int)MathF.Round(max)}";
+            Vector2 textSize  = font.MeasureString(healthText);
+
+            // Bar starts after: label + gap + health text + gap.
+            // This pushes valueX right to reserve space, naturally shrinking the bar.
+            float valueX     = x + Math.Max(font.MeasureString(label).X + Padding + textSize.X + Padding, 120f);
+            float totalWidth = clipBounds.Right - Padding - valueX;
+            if (totalWidth < 20f || segmentCount <= 0 || max <= 0f) return;
+
+            font.DrawString(spriteBatch, healthText, new Vector2(valueX - textSize.X - Padding, y), UIStyle.MutedTextColor);
+
+            int n = segmentCount;
+            float segW = Math.Max(2f, (totalWidth - BarSegmentGap * (n - 1)) / n);
+            float fraction = MathF.Max(0f, MathF.Min(1f, current / max));
+            int filled = (int)MathF.Round(fraction * n);
+
+            Color fillColor  = Color.Lerp(new Color(200, 50, 50), new Color(50, 200, 80), fraction);
+            Color emptyColor = new(35, 35, 35, 210);
+            Color corner     = ColorPalette.BlockBackground;
+
+            for (int i = 0; i < n; i++)
+            {
+                int sx  = (int)(valueX + i * (segW + BarSegmentGap));
+                int sy  = (int)y;
+                int sw  = (int)segW;
+                int sh  = BarRowHeight;
+                Color c = i < filled ? fillColor : emptyColor;
+
+                DrawRect(spriteBatch, new Rectangle(sx, sy, sw, sh), c);
+
+                // Trim 1-pixel corners to approximate rounded look
+                if (sw >= 4 && sh >= 4)
+                {
+                    DrawRect(spriteBatch, new Rectangle(sx,          sy,          1, 1), corner);
+                    DrawRect(spriteBatch, new Rectangle(sx + sw - 1, sy,          1, 1), corner);
+                    DrawRect(spriteBatch, new Rectangle(sx,          sy + sh - 1, 1, 1), corner);
+                    DrawRect(spriteBatch, new Rectangle(sx + sw - 1, sy + sh - 1, 1, 1), corner);
                 }
             }
         }

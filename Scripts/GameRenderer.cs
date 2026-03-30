@@ -107,6 +107,21 @@ namespace op.io
 
             Core.Instance.SpriteBatch.End();
 
+            // Additive pass for hit-flash: adds brightness without washing to pure white
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
+            ShapeManager.Instance.DrawFlashes(Core.Instance.SpriteBatch);
+            Core.Instance.SpriteBatch.End();
+
+            // Health bar pass — drawn on top of game world, below damage numbers and UI
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            HealthBarManager.Draw(Core.Instance.SpriteBatch);
+            Core.Instance.SpriteBatch.End();
+
+            // Damage number pass — drawn on top of game world, below UI
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            DamageNumberManager.Draw(Core.Instance.SpriteBatch);
+            Core.Instance.SpriteBatch.End();
+
             if (usingDockedLayout)
             {
                 BlockManager.CompleteDockedFrame(Core.Instance.SpriteBatch);

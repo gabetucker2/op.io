@@ -89,9 +89,14 @@ namespace op.io
 
             BulletManager.SpawnBullet(agent);
 
-            float reloadTime = agent.BarrelAttributes.ReloadSpeed > 0
-                ? agent.BarrelAttributes.ReloadSpeed
-                : 0.25f;
+            float rs = agent.BarrelAttributes.ReloadSpeed;
+            float reloadTime;
+            if (rs < 0)
+                reloadTime = 1.0f / 3.0f;   // -1 → use default (3 shots/sec)
+            else if (rs == 0)
+                reloadTime = float.MaxValue; // 0 → never fire again
+            else
+                reloadTime = 1.0f / rs;      // shots/sec → seconds per shot
             agent.TriggerCooldown = reloadTime;
 
             DebugLogger.PrintPlayer($"Agent {agent.ID} fired. Cooldown: {reloadTime:F2}s");

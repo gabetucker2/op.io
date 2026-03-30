@@ -35,3 +35,8 @@ CREATE TABLE IF NOT EXISTS PhysicsSettings (
     SettingKey TEXT PRIMARY KEY,
     Value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS UITooltips (
+    RowKey TEXT PRIMARY KEY,
+    TooltipText TEXT NOT NULL
+);

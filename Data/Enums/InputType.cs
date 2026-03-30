@@ -5,6 +5,8 @@
         Hold,
         Trigger,
         SaveSwitch,
-        NoSaveSwitch
+        NoSaveSwitch,
+        SaveEnum,
+        NoSaveEnum
     }
 }

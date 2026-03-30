@@ -76,12 +76,11 @@ namespace op.io
 
         private static bool IsAllowGameInputFreezeEnabled()
         {
-            if (!ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
-            {
-                return true;
-            }
-
-            return ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
+            if (ControlStateManager.ContainsEnumState(AllowGameInputFreezeKey))
+                return !string.Equals(ControlStateManager.GetEnumValue(AllowGameInputFreezeKey), "None", StringComparison.OrdinalIgnoreCase);
+            if (ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
+                return ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
+            return true;
         }
 
         public readonly struct GameTrackerVariable

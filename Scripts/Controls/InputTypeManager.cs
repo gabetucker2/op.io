@@ -24,7 +24,7 @@ namespace op.io
         private static readonly Dictionary<string, string> _settingKeyToInputKey = [];
         private static readonly Dictionary<string, List<string>> _inputKeyToSettingKeys = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<Keys, List<string>> _keyToComboBindings = new();
-        private static readonly string[] _criticalSwitchSettings = ["DebugMode", "AllowGameInputFreeze"];
+        private static readonly string[] _criticalSwitchSettings = ["DebugMode"];
         private static bool _switchStatesInitialized;
 
         private static readonly Dictionary<string, bool> _bindingSwitchStates = new(StringComparer.OrdinalIgnoreCase);
@@ -67,7 +67,7 @@ namespace op.io
 
             try
             {
-                const string sql = "SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch');";
+                const string sql = "SELECT SettingKey, InputKey, InputType, SwitchStartState FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');";
                 var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
@@ -91,6 +91,19 @@ namespace op.io
                         }
 
                         string inputTypeLabel = row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty;
+
+                        // Enum types use trigger semantics: register for scanning but skip switch state seeding.
+                        if (string.Equals(inputTypeLabel, "SaveEnum", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(inputTypeLabel, "NoSaveEnum", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _switchStateCache[settingKey] = false;
+                            _settingKeyToInputKey[settingKey] = inputKey;
+                            RegisterInputKeyForSetting(settingKey, inputKey);
+                            RegisterComboKeyMembership(settingKey, inputKey);
+                            DebugLogger.PrintDebug($"Registered enum control '{settingKey}' ({inputKey}) for scanning.");
+                            continue;
+                        }
+
                         bool saveToBackend = !IsNoSaveSwitch(inputTypeLabel);
                         ControlStateManager.RegisterSwitchPersistence(settingKey, saveToBackend);
 

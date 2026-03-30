@@ -155,7 +155,14 @@ namespace op.io
             float newRotation = (float)(random.NextDouble() * MathF.Tau);
 
             SimpleGameObject instance = archetype.CreateInstance(GameObjectManager.GetNextID(), newPosition, newRotation);
-            return instance.ToGameObject();
+            GameObject farmObject = instance.ToGameObject();
+
+            float maxHealth = archetype.FarmData.MaxHealth;
+            farmObject.MaxHealth         = maxHealth;
+            farmObject.CurrentHealth     = maxHealth;
+            farmObject.DeathPointReward  = archetype.FarmData.DeathPointReward;
+
+            return farmObject;
         }
 
         private static void InitializeBlocks()
@@ -186,22 +193,15 @@ namespace op.io
 
                 if (agents.Count != 0)
                 {
-                    // Attach barrels to every agent.  All agents receive a second default
-                    // barrel so the carousel system has something to rotate through.
-                    // The player's second barrel fires much heavier (and therefore larger)
-                    // bullets than the first.
                     foreach (var agent in agents)
                     {
-                        if (agent.IsPlayer)
+                        var barrels = BarrelLoader.LoadBarrelsForAgent(agent.ID);
+                        if (barrels.Count > 0)
                         {
-                            // Heavy barrel: high mass → large radius via sqrt(mass)*BulletRadiusScalar
-                            var heavyBarrel = new Attributes_Barrel { BulletMass = 6f };
-                            agent.AddBarrel(heavyBarrel);
-                        }
-                        else
-                        {
-                            // Non-player agents get a plain second barrel matching the first
-                            agent.AddBarrel(default);
+                            // Clear the constructor-seeded placeholder before applying DB barrels.
+                            agent.ClearBarrels();
+                            foreach (var barrel in barrels)
+                                agent.AddBarrel(barrel);
                         }
                     }
 

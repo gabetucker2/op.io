@@ -132,6 +132,59 @@ namespace op.io // TODO: Migrate this script elsewhere
         }
 
         /// <summary>
+        /// Loads all rows from UITooltips and returns them as a RowKey-keyed dictionary.
+        /// </summary>
+        public static Dictionary<string, string> LoadBlockTooltips()
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            using var connection = DatabaseManager.OpenConnection();
+            if (connection == null)
+            {
+                return result;
+            }
+
+            try
+            {
+                using var command = new SQLiteCommand("SELECT RowKey, TooltipText FROM UITooltips;", connection);
+                using SQLiteDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    result[reader.GetString(0)] = reader.GetString(1);
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load block tooltips: {ex.Message}");
+            }
+            finally
+            {
+                DatabaseManager.CloseConnection(connection);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Retrieves a FadeIn|Hold|FadeOut animation triplet stored as "x|y|z" in PhysicsSettings.
+        /// </summary>
+        public static (float FadeIn, float Hold, float FadeOut) GetAnimSetting(
+            string key, float defaultFadeIn = 0f, float defaultHold = 0f, float defaultFadeOut = 0f)
+        {
+            string raw = GetSetting<string>("PhysicsSettings", "Value", "SettingKey", key, null);
+            if (raw != null)
+            {
+                var parts = raw.Split('|');
+                if (parts.Length == 3 &&
+                    float.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fi) &&
+                    float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float h) &&
+                    float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fo))
+                    return (fi, h, fo);
+            }
+            return (defaultFadeIn, defaultHold, defaultFadeOut);
+        }
+
+        /// <summary>
         /// Retrieves a color value from the database.
         /// </summary>
         public static Color GetColor(string tableName, string conditionColumn, object conditionValue)

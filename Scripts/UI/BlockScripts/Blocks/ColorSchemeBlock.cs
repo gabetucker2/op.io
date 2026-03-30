@@ -74,6 +74,10 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _colorWheelTexture;
         private static float _lineHeight;
         private static string _hoveredRowKey;
+        private static string _tooltipRowKey;
+
+        public static string GetHoveredRowKey() => _tooltipRowKey;
+
         private static ColorEditorState _editor;
         private static readonly UIDropdown _schemeDropdown = new();
         private static Rectangle _schemeToolbarBounds;
@@ -231,7 +235,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 FocusModeManager.SetFocusActive(HexFocusOwner, false);
             }
 
-            _hoveredRowKey = !blockLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            _hoveredRowKey = !blockLocked ? hitRow : null;
+            _tooltipRowKey = hitRow;
 
             if (_dragState.IsDragging)
             {

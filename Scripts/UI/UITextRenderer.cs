@@ -15,7 +15,7 @@ namespace op.io
             Wide
         }
 
-        public const int DefaultSpaceWidthMultiplier = 2;
+        public const int DefaultSpaceWidthMultiplier = 3;
         public const int WideSpaceWidthMultiplier = 3;
 
         public static Vector2 Measure(UIStyle.UIFont font, string text, SpacingMode spacingMode = SpacingMode.Normal)

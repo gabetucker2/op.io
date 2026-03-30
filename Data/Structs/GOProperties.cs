@@ -5,13 +5,25 @@ using Microsoft.Xna.Framework;
 
 namespace op.io
 {
+    public struct GOProperties
+    {
+        public int     Id               { get; set; }
+        public string  Type             { get; set; }
+        public GOFlags Flags            { get; set; }
+        public float   CurrentXP        { get; set; }
+        public float   DeathPointReward { get; set; }
+        public float   CurrentHealth    { get; set; }
+        public float   CurrentShield    { get; set; }
+    }
+
     public struct Properties
     {
         public enum RowKind
         {
             Text,
             Color,
-            BulletList
+            BulletList,
+            BarGraph
         }
 
         public readonly struct Row
@@ -23,6 +35,9 @@ namespace op.io
                 Value = value ?? string.Empty;
                 Color = default;
                 Items = Array.Empty<string>();
+                CurrentValue = 0f;
+                MaxValue = 0f;
+                SegmentCount = 0;
             }
 
             public Row(string label, Color color, string value)
@@ -32,6 +47,9 @@ namespace op.io
                 Value = value ?? string.Empty;
                 Color = color;
                 Items = Array.Empty<string>();
+                CurrentValue = 0f;
+                MaxValue = 0f;
+                SegmentCount = 0;
             }
 
             public Row(string label, string[] items)
@@ -41,6 +59,21 @@ namespace op.io
                 Value = string.Empty;
                 Color = default;
                 Items = items ?? Array.Empty<string>();
+                CurrentValue = 0f;
+                MaxValue = 0f;
+                SegmentCount = 0;
+            }
+
+            public Row(string label, float currentValue, float maxValue, int segmentCount = 10)
+            {
+                Kind = RowKind.BarGraph;
+                Label = label ?? string.Empty;
+                Value = $"{currentValue:0.##} / {maxValue:0.##}";
+                Color = default;
+                Items = [];
+                CurrentValue = currentValue;
+                MaxValue = maxValue;
+                SegmentCount = segmentCount;
             }
 
             public RowKind Kind { get; }
@@ -48,6 +81,9 @@ namespace op.io
             public string Value { get; }
             public Color Color { get; }
             public string[] Items { get; }
+            public float CurrentValue { get; }
+            public float MaxValue { get; }
+            public int SegmentCount { get; }
             public int LineCount => Kind == RowKind.BulletList ? Math.Max(1, Items?.Length ?? 1) : 1;
         }
 
@@ -103,8 +139,8 @@ namespace op.io
                 if (!HasTarget)
                     yield break;
 
-                // Object (depth 0) — base identity, physics flags, geometry, appearance
-                yield return new Section("Object", ObjectRows(), 0);
+                // GameObject (depth 0) — base identity, physics flags, geometry, appearance
+                yield return new Section("GameObject", ObjectRows(), 0);
 
                 // Body (depth 1) — groups body transform + body attributes
                 yield return new Section("Body", [], 1);
@@ -130,8 +166,17 @@ namespace op.io
         private IEnumerable<Row> ObjectRows()
         {
             yield return new Row("ID", _target.Id.ToString());
+            yield return new Row("Name", string.IsNullOrWhiteSpace(_target.Name) ? "-" : _target.Name);
             yield return new Row("Type", _target.Type);
             yield return BuildFlagsRow();
+            yield return new Row("Current XP", $"{_target.CurrentXP:0.##}");
+            yield return new Row("Death Reward", $"{_target.DeathPointReward:0.##}");
+            yield return _target.MaxHealth > 0
+                ? new Row("CurrentHealth", _target.CurrentHealth, _target.MaxHealth)
+                : new Row("CurrentHealth", $"{_target.CurrentHealth:0.##}");
+            yield return _target.MaxShield > 0
+                ? new Row("CurrentShield", _target.CurrentShield, _target.MaxShield)
+                : new Row("CurrentShield", $"{_target.CurrentShield:0.##}");
 
             if (_target.Source?.Parent != null)
             {
@@ -167,7 +212,6 @@ namespace op.io
         // Unit-level character rows
         private static IEnumerable<Row> UnitRows(Agent agent)
         {
-            yield return new Row("Name", string.IsNullOrWhiteSpace(agent.UnitAttributes.Name) ? "-" : agent.UnitAttributes.Name);
             yield return new Row("Base Speed", $"{agent.BaseSpeed:0.##}");
             yield return new Row("Death Reward", $"{agent.UnitAttributes.DeathPointReward:0.##}");
             yield return new Row("Body Switch Speed", $"{agent.UnitAttributes.BodySwitchSpeed:0.##}");

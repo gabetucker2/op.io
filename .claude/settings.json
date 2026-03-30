@@ -9,7 +9,9 @@
       "Bash(find /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts -name *Network* -o -name *Server* -o -name *Client* -o -name *Socket* -o -name *Http*)",
       "Bash(grep -r \"using.*Http\\\\|using.*Socket\\\\|using.*Net\\\\|namespace.*Network\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts --include=*.cs)",
       "Bash(wc -l /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Scripts/**/*.cs)",
-      "Bash(grep -r \"namespace.*Attributes\\\\|class.*Attributes\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Data --include=*.cs)"
+      "Bash(grep -r \"namespace.*Attributes\\\\|class.*Attributes\" /c/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Data --include=*.cs)",
+      "Bash(sqlite3 Data/op.io.db \".tables\")",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

@@ -86,6 +86,11 @@ namespace op.io
                 // Load the shape content (e.g., texture) for this farm object
                 farmObject.LoadContent(Core.Instance.GraphicsDevice);
 
+                float maxHealth = archetype.FarmData.MaxHealth;
+                farmObject.MaxHealth        = maxHealth;
+                farmObject.CurrentHealth    = maxHealth;
+                farmObject.DeathPointReward = archetype.FarmData.DeathPointReward;
+
                 return farmObject;
             }
             catch (Exception ex)

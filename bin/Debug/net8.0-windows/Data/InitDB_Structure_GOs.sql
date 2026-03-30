@@ -33,7 +33,21 @@ CREATE TABLE IF NOT EXISTS Agents (
     IsPlayer BOOLEAN,
     TriggerCooldown REAL,
     SwitchCooldown REAL,
-    BaseSpeed REAL,  -- Base speed of agent, used to calculate effective speed in C#
+    BaseSpeed REAL,              -- Base movement speed, multiplied by input modifiers at runtime
+    -- Body Attributes (Attributes_Body)
+    MaxHealth REAL DEFAULT 100,
+    HealthRegen REAL DEFAULT 0,
+    HealthArmor REAL DEFAULT 0,
+    MaxShield REAL DEFAULT 0,
+    ShieldRegen REAL DEFAULT 0,
+    ShieldArmor REAL DEFAULT 0,
+    BodyPenetration REAL DEFAULT 0,
+    BodyCollisionDamage REAL DEFAULT 0,
+    BodyKnockback REAL DEFAULT 0,
+    CollisionDamageResistance REAL DEFAULT 0,
+    BulletDamageResistance REAL DEFAULT 0,
+    Speed REAL DEFAULT 0,        -- Body speed stat (distinct from BaseSpeed)
+    RotationSpeed REAL DEFAULT 0,
     FOREIGN KEY (ID) REFERENCES GameObjects(ID)
 );
 
@@ -44,6 +58,8 @@ CREATE TABLE IF NOT EXISTS Agents (
 CREATE TABLE IF NOT EXISTS FarmData (
     ID INTEGER PRIMARY KEY,
     Count INTEGER,
+    MaxHealth REAL DEFAULT 50,
+    DeathPointReward REAL DEFAULT 0,
     FOREIGN KEY (ID) REFERENCES GameObjects(ID)
 );
 
@@ -53,5 +69,7 @@ CREATE TABLE IF NOT EXISTS FarmData (
 
 CREATE TABLE IF NOT EXISTS MapData (
     ID INTEGER PRIMARY KEY,
+    MaxHealth REAL DEFAULT 0,
+    DeathPointReward REAL DEFAULT 0,
     FOREIGN KEY (ID) REFERENCES GameObjects(ID)
 );

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Xna.Framework;
 
 namespace op.io
 {
@@ -34,22 +35,34 @@ namespace op.io
         [JsonPropertyName("bulletDamage")]      public float BulletDamage      { get; set; }
         [JsonPropertyName("bulletPenetration")] public float BulletPenetration { get; set; }
         [JsonPropertyName("bulletSpeed")]       public float BulletSpeed       { get; set; }
-        [JsonPropertyName("bulletRange")]       public float BulletRange       { get; set; }
+        [JsonPropertyName("bulletDragFactor")]   public float BulletDragFactor  { get; set; }
         [JsonPropertyName("reloadSpeed")]       public float ReloadSpeed       { get; set; }
         [JsonPropertyName("bulletHealth")]      public float BulletHealth      { get; set; }
         [JsonPropertyName("bulletMaxLifespan")] public float BulletMaxLifespan { get; set; }
         [JsonPropertyName("bulletMass")]        public float BulletMass        { get; set; }
+        [JsonPropertyName("bulletFillR")]       public byte  BulletFillR       { get; set; }
+        [JsonPropertyName("bulletFillG")]       public byte  BulletFillG       { get; set; }
+        [JsonPropertyName("bulletFillB")]       public byte  BulletFillB       { get; set; }
+        [JsonPropertyName("bulletFillA")]       public byte  BulletFillA       { get; set; }
+        [JsonPropertyName("bulletOutlineR")]    public byte  BulletOutlineR    { get; set; }
+        [JsonPropertyName("bulletOutlineG")]    public byte  BulletOutlineG    { get; set; }
+        [JsonPropertyName("bulletOutlineB")]    public byte  BulletOutlineB    { get; set; }
+        [JsonPropertyName("bulletOutlineA")]    public byte  BulletOutlineA    { get; set; }
+        [JsonPropertyName("bulletOutlineWidth")]public int   BulletOutlineWidth { get; set; }
 
         public Attributes_Barrel ToAttributes() => new()
         {
             BulletDamage      = BulletDamage,
             BulletPenetration = BulletPenetration,
             BulletSpeed       = BulletSpeed,
-            BulletRange       = BulletRange,
+            BulletDragFactor  = BulletDragFactor,
             ReloadSpeed       = ReloadSpeed,
             BulletHealth      = BulletHealth,
             BulletMaxLifespan = BulletMaxLifespan,
             BulletMass        = BulletMass,
+            BulletFillColor    = new Color(BulletFillR, BulletFillG, BulletFillB, BulletFillA),
+            BulletOutlineColor = new Color(BulletOutlineR, BulletOutlineG, BulletOutlineB, BulletOutlineA),
+            BulletOutlineWidth = BulletOutlineWidth,
         };
 
         public static BarrelBuildData FromAttributes(Attributes_Barrel a) => new()
@@ -57,11 +70,20 @@ namespace op.io
             BulletDamage      = a.BulletDamage,
             BulletPenetration = a.BulletPenetration,
             BulletSpeed       = a.BulletSpeed,
-            BulletRange       = a.BulletRange,
+            BulletDragFactor  = a.BulletDragFactor,
             ReloadSpeed       = a.ReloadSpeed,
             BulletHealth      = a.BulletHealth,
             BulletMaxLifespan = a.BulletMaxLifespan,
             BulletMass        = a.BulletMass,
+            BulletFillR       = a.BulletFillColor.R,
+            BulletFillG       = a.BulletFillColor.G,
+            BulletFillB       = a.BulletFillColor.B,
+            BulletFillA       = a.BulletFillColor.A,
+            BulletOutlineR    = a.BulletOutlineColor.R,
+            BulletOutlineG    = a.BulletOutlineColor.G,
+            BulletOutlineB    = a.BulletOutlineColor.B,
+            BulletOutlineA    = a.BulletOutlineColor.A,
+            BulletOutlineWidth = a.BulletOutlineWidth,
         };
     }
 
@@ -172,10 +194,12 @@ namespace op.io
         /// </summary>
         public static UnitBuild Snapshot(Agent agent)
         {
+            Attributes_Unit unitAttrs = agent.UnitAttributes;
+            unitAttrs.Name = agent.Name; // always snapshot from the authoritative field
             var build = new UnitBuild
             {
                 Body = BodyBuildData.FromAttributes(agent.BodyAttributes),
-                Unit = UnitBuildData.FromAttributes(agent.UnitAttributes),
+                Unit = UnitBuildData.FromAttributes(unitAttrs),
             };
             foreach (var slot in agent.Barrels)
                 build.Barrels.Add(BarrelBuildData.FromAttributes(slot.Attrs));
@@ -193,8 +217,11 @@ namespace op.io
             foreach (var barrelData in build.Barrels)
                 agent.AddBarrel(barrelData.ToAttributes());
 
-            agent.BodyAttributes = build.Body.ToAttributes();
-            agent.UnitAttributes = build.Unit.ToAttributes();
+            agent.BodyAttributes   = build.Body.ToAttributes();
+            agent.UnitAttributes   = build.Unit.ToAttributes(); // setter syncs Name → GameObject.Name
+            agent.DeathPointReward = agent.UnitAttributes.DeathPointReward;
+            if (!string.IsNullOrWhiteSpace(build.Unit.Name))
+                agent.Name = build.Unit.Name;
         }
     }
 }

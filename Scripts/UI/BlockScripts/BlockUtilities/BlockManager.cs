@@ -26,8 +26,7 @@ namespace op.io
         private const string SpecsBlockKey = "specs";
         private const string DebugLogsBlockKey = "debuglogs";
         private const string BlockMenuControlKey = "BlockMenu";
-        private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
-        private const string DockingSetupActiveRowKey = "__ActiveSetup";
+private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const string OverlayInputFocusOwner = "BlockManager.OverlayNumeric";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
@@ -67,6 +66,13 @@ namespace op.io
         private static readonly Dictionary<string, BlockNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, string> _blockToPanel = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, BlankBlockHoverState> _blankBlockHoverStates = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, string> _blockTooltips = new(StringComparer.OrdinalIgnoreCase);
+        private static bool _tooltipsLoaded;
+        private static string _tooltipHoveredRowKey;
+        private static double _tooltipHoverElapsed;
+        private const double TooltipDelaySeconds = 0.6d;
+        private const int TooltipMaxWidth = 230;
+        private const int TooltipPadding = 8;
         private static readonly List<DockBlock> _orderedBlocks = [];
         private static readonly List<string> _orderedPanelIds = new();
         private static readonly Dictionary<string, bool> _blockLockStates = new(StringComparer.OrdinalIgnoreCase);
@@ -282,6 +288,7 @@ namespace op.io
             }
 
             UpdateInteractiveBlocks(gameTime, virtualMouseState, _previousVirtualMouseState, keyboardState, _previousKeyboardState);
+            UpdateTooltipHoverState(elapsedSeconds, leftClickHeld);
             ApplyPendingDockingSetup();
             UpdateTransparentBlockClickThrough();
             _previousMouseState = mouseState;
@@ -400,6 +407,7 @@ namespace op.io
             ColorSchemeBlock.DrawOverlay(spriteBatch, _layoutBounds);
             DrawOverlayMenu(spriteBatch);
             ControlsBlock.DrawRebindOverlay(spriteBatch);
+            DrawTooltip(spriteBatch);
             spriteBatch.End();
 
             _renderingDockedFrame = false;
@@ -408,6 +416,17 @@ namespace op.io
         private static void EnsureBlocks()
         {
             EnsureBlockMenuEntries();
+
+            if (!_tooltipsLoaded)
+            {
+                var loaded = DatabaseFetch.LoadBlockTooltips();
+                foreach (var pair in loaded)
+                {
+                    _blockTooltips[pair.Key] = pair.Value;
+                }
+                _tooltipsLoaded = true;
+            }
+
             if (_blockDefinitionsReady)
             {
                 return;
@@ -4883,6 +4902,136 @@ namespace op.io
             }
         }
 
+        private static void UpdateTooltipHoverState(double elapsedSeconds, bool mouseButtonHeld)
+        {
+            if (mouseButtonHeld || _draggingBlock != null || _draggingPanel != null ||
+                _activeResizeEdge != null || _activeCornerHandle != null)
+            {
+                _tooltipHoveredRowKey = null;
+                _tooltipHoverElapsed = 0d;
+                return;
+            }
+
+            string rowKey = ControlsBlock.GetHoveredRowKey()
+                ?? BackendBlock.GetHoveredRowKey()
+                ?? SpecsBlock.GetHoveredRowKey()
+                ?? ColorSchemeBlock.GetHoveredRowKey();
+
+            if (!string.Equals(rowKey, _tooltipHoveredRowKey, StringComparison.OrdinalIgnoreCase))
+            {
+                _tooltipHoveredRowKey = rowKey;
+                _tooltipHoverElapsed = 0d;
+            }
+            else if (rowKey != null)
+            {
+                _tooltipHoverElapsed += elapsedSeconds;
+            }
+        }
+
+        private static void DrawTooltip(SpriteBatch spriteBatch)
+        {
+            if (_tooltipHoverElapsed < TooltipDelaySeconds || string.IsNullOrEmpty(_tooltipHoveredRowKey))
+            {
+                return;
+            }
+
+            if (!_blockTooltips.TryGetValue(_tooltipHoveredRowKey, out string tooltipText) || string.IsNullOrEmpty(tooltipText))
+            {
+                return;
+            }
+
+            UIStyle.UIFont font = UIStyle.FontTech;
+            if (!font.IsAvailable)
+            {
+                return;
+            }
+
+            List<string> lines = WrapTooltipText(font, tooltipText, TooltipMaxWidth - TooltipPadding * 2);
+            if (lines.Count == 0)
+            {
+                return;
+            }
+
+            float maxLineWidth = 0f;
+            foreach (string line in lines)
+            {
+                float w = font.MeasureString(line).X;
+                if (w > maxLineWidth) maxLineWidth = w;
+            }
+
+            float lineHeight = font.LineHeight;
+            int boxWidth = (int)maxLineWidth + TooltipPadding * 2;
+            int boxHeight = (int)(lines.Count * lineHeight) + TooltipPadding * 2;
+
+            int tipX = _mousePosition.X + 14;
+            int tipY = _mousePosition.Y + 18;
+
+            if (tipX + boxWidth > _layoutBounds.Right)
+            {
+                tipX = _mousePosition.X - boxWidth - 4;
+            }
+
+            if (tipY + boxHeight > _layoutBounds.Bottom)
+            {
+                tipY = _mousePosition.Y - boxHeight - 4;
+            }
+
+            tipX = Math.Max(_layoutBounds.X, tipX);
+            tipY = Math.Max(_layoutBounds.Y, tipY);
+
+            Rectangle bgRect = new(tipX, tipY, boxWidth, boxHeight);
+            DrawRect(spriteBatch, bgRect, Color.White);
+            DrawRectOutline(spriteBatch, bgRect, new Color(180, 180, 180), UIStyle.BlockBorderThickness);
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                Vector2 textPos = new(tipX + TooltipPadding, tipY + TooltipPadding + i * lineHeight);
+                font.DrawString(spriteBatch, lines[i], textPos, Color.Black);
+            }
+        }
+
+        private static List<string> WrapTooltipText(UIStyle.UIFont font, string text, int maxWidth)
+        {
+            var lines = new List<string>();
+            if (string.IsNullOrEmpty(text) || !font.IsAvailable || maxWidth <= 0)
+            {
+                return lines;
+            }
+
+            string[] words = text.Split(' ');
+            var current = new System.Text.StringBuilder();
+
+            foreach (string word in words)
+            {
+                if (current.Length == 0)
+                {
+                    current.Append(word);
+                }
+                else
+                {
+                    string candidate = current + " " + word;
+                    if (font.MeasureString(candidate).X > maxWidth)
+                    {
+                        lines.Add(current.ToString());
+                        current.Clear();
+                        current.Append(word);
+                    }
+                    else
+                    {
+                        current.Append(' ');
+                        current.Append(word);
+                    }
+                }
+            }
+
+            if (current.Length > 0)
+            {
+                lines.Add(current.ToString());
+            }
+
+            return lines;
+        }
+
         private static void UpdateBlankBlockHoverState(DockBlock block, double elapsedSeconds)
         {
             BlankBlockHoverState state = EnsureBlankBlockHoverState(block);
@@ -5773,15 +5922,10 @@ namespace op.io
 
         public static bool IsInputBlocked() => _overlayMenuVisible || ControlsBlock.IsRebindOverlayOpen() || ColorSchemeBlock.IsEditorOpen;
 
-        private static bool ShouldLockPanelInteractions()
-        {
-            if (!ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
-            {
-                return false;
-            }
+        public static bool IsDraggingLayout =>
+            _activeResizeEdge.HasValue || _activeCornerHandle.HasValue;
 
-            return !ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
-        }
+        private static bool ShouldLockPanelInteractions() => false;
 
         public static bool IsCursorWithinGameBlock()
         {

@@ -1,3 +1,5 @@
+using Microsoft.Xna.Framework;
+
 namespace op.io
 {
     public struct Attributes_Barrel
@@ -5,11 +7,16 @@ namespace op.io
         public float BulletDamage { get; set; }
         public float BulletPenetration { get; set; }
         public float BulletSpeed { get; set; }
-        public float BulletRange { get; set; }
+        public float BulletDragFactor { get; set; }
         public float ReloadSpeed { get; set; }
         public float BulletHealth { get; set; }
         public float BulletMaxLifespan { get; set; }
         public float BulletMass { get; set; }
+        public Color BulletFillColor    { get; set; }
+        public Color BulletOutlineColor { get; set; }
+        public int   BulletOutlineWidth { get; set; }
+        public int   BulletFillAlphaRaw    { get; set; }  // raw DB int; -1 → use default fill color
+        public int   BulletOutlineAlphaRaw { get; set; }  // raw DB int; -1 → use default outline color
     }
 
     public struct Attributes_Body

@@ -15,6 +15,15 @@ namespace op.io
             DebugLogger.PrintSystem("ShapeManager initialized.");
         }
 
+        public void DrawFlashes(SpriteBatch spriteBatch)
+        {
+            foreach (GameObject gameObject in GameObjectRegister.GetRegisteredGameObjects())
+            {
+                if (gameObject.Shape == null || gameObject.Shape.IsPrototype || gameObject.HitFlash <= 0f) continue;
+                gameObject.Shape.DrawFlash(spriteBatch, gameObject);
+            }
+        }
+
         // Draws all registered GameObjects by fetching them from GameObjectRegister
         public void DrawShapes(SpriteBatch spriteBatch)
         {

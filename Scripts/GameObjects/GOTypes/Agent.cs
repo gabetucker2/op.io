@@ -84,7 +84,18 @@ namespace op.io
         public bool IsPlayer { get; private set; }
         public long PlayerID { get; set; }
         public Attributes_Body BodyAttributes { get; set; }
-        public Attributes_Unit UnitAttributes { get; set; }
+
+        private Attributes_Unit _unitAttributes;
+        public Attributes_Unit UnitAttributes
+        {
+            get => _unitAttributes;
+            set
+            {
+                _unitAttributes = value;
+                if (!string.IsNullOrWhiteSpace(value.Name))
+                    Name = value.Name;
+            }
+        }
 
         private float _baseSpeed;
         private static float? cachedTriggerCooldown = null;
@@ -132,6 +143,10 @@ namespace op.io
             IsPlayer = isPlayer;
             BaseSpeed = baseSpeed;
             BodyAttributes = bodyAttributes;
+            CurrentHealth = bodyAttributes.MaxHealth;
+            MaxHealth     = bodyAttributes.MaxHealth;
+            CurrentShield = bodyAttributes.MaxShield;
+            MaxShield     = bodyAttributes.MaxShield;
 
             // Seed the first barrel using the passed-in attributes (default = use
             // physics-settings fallbacks at fire time).  Callers may add further
@@ -253,9 +268,20 @@ namespace op.io
             }
         }
 
+        // ── Flags ────────────────────────────────────────────────────────────────
+        protected override GOFlags ComputeFlags()
+        {
+            GOFlags f = base.ComputeFlags();
+            if (IsPlayer) f |= GOFlags.Player;
+            return f;
+        }
+
         // ── Update ───────────────────────────────────────────────────────────────
         public override void Update()
         {
+            if (HitFlash > 0f)
+                HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
+
             if (TriggerCooldown > 0)
                 TriggerCooldown -= Core.DELTATIME;
 

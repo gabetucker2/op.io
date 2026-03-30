@@ -10,6 +10,12 @@ namespace op.io
         private static Dictionary<string, bool> _prevSwitchStates = [];
         private static readonly Dictionary<string, bool> _switchPersistence = new(StringComparer.OrdinalIgnoreCase);
 
+        // Enum type state
+        private static readonly HashSet<string> _enumTypes = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, int> _enumIndices = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, string[]> _enumOptions = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, bool> _enumPersistence = new(StringComparer.OrdinalIgnoreCase);
+
         public static void Tickwise_PrevSwitchTrackUpdate()
         {
             foreach (var kvp in _switchStateBuffer)
@@ -52,11 +58,88 @@ namespace op.io
             }
         }
 
+        // ── Enum state API ────────────────────────────────────────────────────
+
+        public static void RegisterEnumOptions(string settingKey, string[] options, int defaultIndex, bool persist)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || options == null || options.Length == 0) return;
+            _enumTypes.Add(settingKey);
+            _enumOptions[settingKey] = options;
+            _enumPersistence[settingKey] = persist;
+            int clamped = Math.Clamp(defaultIndex, 0, options.Length - 1);
+            if (!_enumIndices.ContainsKey(settingKey))
+                _enumIndices[settingKey] = clamped;
+        }
+
+        public static void LoadEnumState(string settingKey, int index, bool persist)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey)) return;
+            _enumTypes.Add(settingKey);
+            _enumPersistence[settingKey] = persist;
+            if (_enumOptions.TryGetValue(settingKey, out string[] opts) && opts.Length > 0)
+                index = Math.Clamp(index, 0, opts.Length - 1);
+            _enumIndices[settingKey] = index;
+        }
+
+        public static bool ContainsEnumState(string settingKey) =>
+            _enumTypes.Contains(settingKey);
+
+        public static int GetEnumIndex(string settingKey)
+        {
+            if (_enumIndices.TryGetValue(settingKey, out int idx)) return idx;
+            return 0;
+        }
+
+        public static string GetEnumValue(string settingKey)
+        {
+            if (!_enumOptions.TryGetValue(settingKey, out string[] opts) || opts.Length == 0)
+                return string.Empty;
+            int idx = GetEnumIndex(settingKey);
+            return opts[Math.Clamp(idx, 0, opts.Length - 1)];
+        }
+
+        public static string[] GetEnumOptions(string settingKey)
+        {
+            return _enumOptions.TryGetValue(settingKey, out string[] opts) ? opts : System.Array.Empty<string>();
+        }
+
+        public static void SetEnumIndex(string settingKey, int index, string source = null)
+        {
+            if (!_enumTypes.Contains(settingKey)) return;
+            if (_enumOptions.TryGetValue(settingKey, out string[] opts) && opts.Length > 0)
+                index = Math.Clamp(index, 0, opts.Length - 1);
+            _enumIndices[settingKey] = index;
+            if (_enumPersistence.TryGetValue(settingKey, out bool persist) && persist)
+                SaveEnumState(settingKey, index);
+        }
+
+        public static void CycleEnum(string settingKey)
+        {
+            if (!_enumTypes.Contains(settingKey)) return;
+            int current = GetEnumIndex(settingKey);
+            int count = _enumOptions.TryGetValue(settingKey, out string[] opts) ? opts.Length : 1;
+            int next = count > 1 ? (current + 1) % count : 0;
+            SetEnumIndex(settingKey, next, "ControlStateManager.CycleEnum");
+        }
+
+        private static void SaveEnumState(string settingKey, int index)
+        {
+            DatabaseConfig.UpdateSetting("ControlKey", "SwitchStartState", settingKey, index);
+        }
+
+        // ── Switch state API ──────────────────────────────────────────────────
+
         /// <summary>
         /// Sets the state of a switch (used by GameInitializer when loading settings).
         /// </summary>
         public static void SetSwitchState(string settingKey, bool state, string source = null)
         {
+            // Enum types: true = cycle to next option, false = no-op
+            if (_enumTypes.Contains(settingKey))
+            {
+                if (state) CycleEnum(settingKey);
+                return;
+            }
             bool isDockingSwitch = string.Equals(settingKey, "DockingMode", StringComparison.OrdinalIgnoreCase);
             bool hasPersistenceFlag = _switchPersistence.ContainsKey(settingKey);
 
@@ -191,7 +274,7 @@ namespace op.io
             try
             {
                 // Fetch all control keys with SwitchStartState from the database
-                const string sql = "SELECT SettingKey, SwitchStartState, InputType, InputKey FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch');";
+                const string sql = "SELECT SettingKey, SwitchStartState, InputType, InputKey FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');";
                 var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
@@ -205,17 +288,30 @@ namespace op.io
                     if (row.ContainsKey("SettingKey") && row.ContainsKey("SwitchStartState"))
                     {
                         string settingKey = row["SettingKey"].ToString();
+                        string inputTypeLabel = row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty;
                         object switchStateObj = row.TryGetValue("SwitchStartState", out object rawState) ? rawState : null;
                         int switchState = switchStateObj == null || switchStateObj == DBNull.Value ? 0 : Convert.ToInt32(switchStateObj);
-                        bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
-                        bool saveToBackend = !string.Equals(row.TryGetValue("InputType", out object typeObj) ? typeObj?.ToString() : string.Empty, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase);
                         string inputKey = row.TryGetValue("InputKey", out object inputObj) ? inputObj?.ToString() : string.Empty;
+
+                        bool isEnum = string.Equals(inputTypeLabel, "SaveEnum", StringComparison.OrdinalIgnoreCase) ||
+                                      string.Equals(inputTypeLabel, "NoSaveEnum", StringComparison.OrdinalIgnoreCase);
+
+                        if (isEnum)
+                        {
+                            bool persist = !string.Equals(inputTypeLabel, "NoSaveEnum", StringComparison.OrdinalIgnoreCase);
+                            LoadEnumState(settingKey, switchState, persist);
+                            DebugLogger.PrintDatabase($"Loaded enum state: {settingKey} = index {switchState} ({GetEnumValue(settingKey)})");
+                            continue;
+                        }
+
+                        bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
+                        bool saveToBackend = !string.Equals(inputTypeLabel, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase);
 
                         DockingDiagnostics.RecordRawControlState(
                             "ControlStateManager.LoadControlSwitchStates",
                             settingKey,
                             inputKey,
-                            row.TryGetValue("InputType", out object typeLabelObj) ? typeLabelObj?.ToString() : string.Empty,
+                            inputTypeLabel,
                             switchState,
                             switchStateBool,
                             saveToBackend,

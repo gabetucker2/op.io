@@ -31,7 +31,7 @@ namespace op.io
                 DebugLogger.PrintDatabase("Loading farm data from database...");
 
                 // Query to load farm count data
-                string query = "SELECT ID, Count FROM FarmData";
+                string query = "SELECT ID, Count, MaxHealth, DeathPointReward FROM FarmData";
                 var results = DatabaseQuery.ExecuteQuery(query);
 
                 if (results.Count == 0)
@@ -55,10 +55,15 @@ namespace op.io
                             continue;
                         }
 
+                        float maxHealth = Convert.ToSingle(row["MaxHealth"]);
+                        float deathPointReward = row.TryGetValue("DeathPointReward", out object dprObj) && dprObj != null && dprObj != DBNull.Value
+                            ? Convert.ToSingle(dprObj) : 0f;
                         farmDataList.Add(new FarmData
                         {
                             ID = id,
-                            Count = count
+                            Count = count,
+                            MaxHealth = maxHealth,
+                            DeathPointReward = deathPointReward
                         });
                     }
                     catch (Exception exRow)

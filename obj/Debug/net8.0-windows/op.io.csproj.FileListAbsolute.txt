@@ -261,3 +261,7 @@ C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows\r
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows\op.io.pdb
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows\op.io.genruntimeconfig.cache
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows\ref\op.io.dll
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.combat_text_default_on_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.health_bar_default_on_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Barrels.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_Structure_Barrels.sql

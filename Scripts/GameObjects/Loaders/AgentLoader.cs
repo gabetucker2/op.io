@@ -17,7 +17,12 @@ namespace op.io
                 string query = GameObjectManager.BuildJoinQuery(
                     secondaryTable: "Agents",
                     whereClause: "g.ID = @ID",
-                    extraColumns: "s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed"
+                    extraColumns: "s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed, " +
+                                  "s.MaxHealth, s.HealthRegen, s.HealthArmor, " +
+                                  "s.MaxShield, s.ShieldRegen, s.ShieldArmor, " +
+                                  "s.BodyPenetration, s.BodyCollisionDamage, s.BodyKnockback, " +
+                                  "s.CollisionDamageResistance, s.BulletDamageResistance, " +
+                                  "s.Speed, s.RotationSpeed"
                 );
 
                 var result = DatabaseQuery.ExecuteQuery(query, new Dictionary<string, object> { { "@ID", agentId } });
@@ -64,7 +69,12 @@ namespace op.io
 
                 string query = GameObjectManager.BuildJoinQuery(
                     secondaryTable: "Agents",
-                    extraColumns: "s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed"
+                    extraColumns: "s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed, " +
+                                  "s.MaxHealth, s.HealthRegen, s.HealthArmor, " +
+                                  "s.MaxShield, s.ShieldRegen, s.ShieldArmor, " +
+                                  "s.BodyPenetration, s.BodyCollisionDamage, s.BodyKnockback, " +
+                                  "s.CollisionDamageResistance, s.BulletDamageResistance, " +
+                                  "s.Speed, s.RotationSpeed"
                 );
 
                 var results = DatabaseQuery.ExecuteQuery(query);
@@ -116,7 +126,24 @@ namespace op.io
                 float baseSpeed = Convert.ToSingle(row["BaseSpeed"]);
                 bool isPlayer = Convert.ToBoolean(row["IsPlayer"]);
 
-                PlayerGameObject archetype = new(baseObject, baseSpeed, isPlayer, default, default);
+                Attributes_Body bodyAttributes = new()
+                {
+                    MaxHealth                 = Convert.ToSingle(row["MaxHealth"]),
+                    HealthRegen               = Convert.ToSingle(row["HealthRegen"]),
+                    HealthArmor               = Convert.ToSingle(row["HealthArmor"]),
+                    MaxShield                 = Convert.ToSingle(row["MaxShield"]),
+                    ShieldRegen               = Convert.ToSingle(row["ShieldRegen"]),
+                    ShieldArmor               = Convert.ToSingle(row["ShieldArmor"]),
+                    BodyPenetration           = Convert.ToSingle(row["BodyPenetration"]),
+                    BodyCollisionDamage       = Convert.ToSingle(row["BodyCollisionDamage"]),
+                    BodyKnockback             = Convert.ToSingle(row["BodyKnockback"]),
+                    CollisionDamageResistance = Convert.ToSingle(row["CollisionDamageResistance"]),
+                    BulletDamageResistance    = Convert.ToSingle(row["BulletDamageResistance"]),
+                    Speed                     = Convert.ToSingle(row["Speed"]),
+                    RotationSpeed             = Convert.ToSingle(row["RotationSpeed"]),
+                };
+
+                PlayerGameObject archetype = new(baseObject, baseSpeed, isPlayer, default, bodyAttributes);
                 return archetype.ToAgent();
             }
             catch (Exception ex)

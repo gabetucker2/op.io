@@ -29,6 +29,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _pixelTexture;
         private static float _lineHeightCache;
         private static string _hoveredRowKey;
+        private static string _tooltipRowKey;
+
+        public static string GetHoveredRowKey() => _tooltipRowKey;
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
@@ -67,7 +70,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 _dragState.Reset();
             }
 
-            _hoveredRowKey = !blockLocked && pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
+            _hoveredRowKey = !blockLocked ? hitRow : null;
+            _tooltipRowKey = hitRow;
 
             if (_dragState.IsDragging)
             {

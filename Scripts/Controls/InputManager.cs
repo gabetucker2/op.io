@@ -44,6 +44,9 @@ namespace op.io
         private static bool IsSwitchType(InputType inputType) =>
             inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
 
+        private static bool IsEnumType(InputType inputType) =>
+            inputType == InputType.SaveEnum || inputType == InputType.NoSaveEnum;
+
         private static InputType ParseInputType(string inputTypeLabel)
         {
             if (string.IsNullOrWhiteSpace(inputTypeLabel))
@@ -348,6 +351,11 @@ namespace op.io
             {
                 ControlKeyData.EnsureSwitchStartState(settingKey, 0);
                 InputTypeManager.EnsureSwitchRegistration(settingKey);
+                SwitchStateScanner.RefreshSwitchKeys();
+            }
+            else if (IsEnumType(newType))
+            {
+                // Enum types are tracked by the scanner via _switchStateCache; refresh scanner key list.
                 SwitchStateScanner.RefreshSwitchKeys();
             }
             SetTriggerOverride(settingKey, triggerOverride && newType == InputType.Trigger);
@@ -798,6 +806,15 @@ namespace op.io
                         DebugLogger.PrintDebug($"[INPUT] Suppressing combo '{DisplayLabel}' while binding disallowed; consumed keys.");
                     }
 
+                    // Preserve the current toggle state for switch bindings so the SwitchStateScanner
+                    // does not overwrite a live toggle to OFF while inputs are frozen.
+                    if (IsSwitchType(InputType) && ControlStateManager.ContainsSwitchState(SettingKey))
+                    {
+                        bool preserved = ControlStateManager.GetSwitchState(SettingKey);
+                        DebugLogger.PrintDebug($"[INPUT] Switch '{SettingKey}' suppressed while frozen; preserving state={preserved}");
+                        return preserved;
+                    }
+
                     return false;
                 }
 
@@ -825,6 +842,7 @@ namespace op.io
                     InputType.Hold => modifiersHeld && primary.IsHeld(),
                     InputType.Trigger => modifiersHeld && primary.IsTriggered(),
                     InputType.SaveSwitch or InputType.NoSaveSwitch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
+                    InputType.SaveEnum or InputType.NoSaveEnum => modifiersHeld && primary.IsTriggered(),
                     _ => false
                 };
             }
@@ -916,7 +934,7 @@ namespace op.io
                 return true;
             }
 
-            if (BlockManager.IsInputBlocked())
+            if (BlockManager.IsInputBlocked() || BlockManager.IsDraggingLayout)
             {
                 GameTracker.FreezeGameInputs = true;
                 return true;
@@ -928,25 +946,35 @@ namespace op.io
                 return false;
             }
 
-            if (!IsGameInputFreezeAllowed())
+            string mode = GetGameInputFreezeMode();
+            bool shouldFreeze;
+            if (string.Equals(mode, "None", StringComparison.OrdinalIgnoreCase))
             {
-                GameTracker.FreezeGameInputs = false;
-                return false;
+                shouldFreeze = false;
+            }
+            else if (string.Equals(mode, "Focus", StringComparison.OrdinalIgnoreCase))
+            {
+                shouldFreeze = !Core.Instance.IsActive;
+            }
+            else // "MouseLeave" or any unrecognised value
+            {
+                shouldFreeze = !BlockManager.IsCursorWithinGameBlock();
             }
 
-            bool shouldFreeze = !BlockManager.IsCursorWithinGameBlock();
             GameTracker.FreezeGameInputs = shouldFreeze;
             return shouldFreeze;
         }
 
-        private static bool IsGameInputFreezeAllowed()
+        private static string GetGameInputFreezeMode()
         {
-            if (ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
-            {
-                return ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
-            }
+            if (ControlStateManager.ContainsEnumState(AllowGameInputFreezeKey))
+                return ControlStateManager.GetEnumValue(AllowGameInputFreezeKey);
 
-            return true;
+            // Legacy bool-switch fallback
+            if (ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
+                return ControlStateManager.GetSwitchState(AllowGameInputFreezeKey) ? "MouseLeave" : "None";
+
+            return "Focus";
         }
 
         public static void SetTriggerOverride(string settingKey, bool isActive)

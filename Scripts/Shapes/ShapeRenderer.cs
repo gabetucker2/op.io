@@ -7,6 +7,7 @@ namespace op.io
     public class ShapeRenderer : IDisposable
     {
         private Texture2D _texture;
+        private Texture2D _flashTexture;
         private Vector2 _origin;
 
         public void LoadContent(Shape shape, GraphicsDevice graphicsDevice)
@@ -63,6 +64,13 @@ namespace op.io
 
             _texture.SetData(data);
             _origin = new Vector2(textureWidth / 2f, textureHeight / 2f);
+
+            // White flash overlay texture: same shape but all opaque pixels become white
+            Color[] flashData = new Color[textureWidth * textureHeight];
+            for (int i = 0; i < flashData.Length; i++)
+                flashData[i] = data[i].A > 0 ? Color.White : Color.Transparent;
+            _flashTexture = new Texture2D(graphicsDevice, textureWidth, textureHeight);
+            _flashTexture.SetData(flashData);
         }
 
         private bool RenderPolygonPixel(int x, int y, int textureWidth, int textureHeight, int sides, float radius)
@@ -91,7 +99,20 @@ namespace op.io
                 return;
             }
 
-            spriteBatch.Draw(_texture, GO.Position, null, Color.White, GO.Rotation, _origin, 1f, SpriteEffects.None, 0f);
+            spriteBatch.Draw(_texture, GO.Position, null, Color.White * GO.Opacity, GO.Rotation, _origin, 1f, SpriteEffects.None, 0f);
+        }
+
+        public void DrawFlash(SpriteBatch spriteBatch, GameObject GO)
+        {
+            if (_flashTexture == null || GO.HitFlash <= 0f) return;
+
+            float fadeIn  = BulletManager.HitFlashFadeIn;
+            float fadeOut = BulletManager.HitFlashFadeOut;
+            float t = GO.HitFlash; // total → 0 over duration
+            float alpha = t > fadeOut
+                ? (fadeIn + fadeOut - t) / MathF.Max(fadeIn, 0.001f)   // fade-in phase
+                : t / MathF.Max(fadeOut, 0.001f);                       // fade-out phase
+            spriteBatch.Draw(_flashTexture, GO.Position, null, new Color((byte)255, (byte)255, (byte)255, (byte)(180 * alpha)), GO.Rotation, _origin, 1f, SpriteEffects.None, 0f);
         }
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation)
@@ -119,6 +140,7 @@ namespace op.io
         public void Dispose()
         {
             _texture?.Dispose();
+            _flashTexture?.Dispose();
         }
     }
 }

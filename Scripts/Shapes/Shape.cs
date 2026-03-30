@@ -86,6 +86,11 @@ namespace op.io
             _renderer.Draw(spriteBatch, GO);
         }
 
+        public void DrawFlash(SpriteBatch spriteBatch, GameObject GO)
+        {
+            _renderer.DrawFlash(spriteBatch, GO);
+        }
+
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation)
         {
             _renderer.DrawAt(spriteBatch, position, rotation);
