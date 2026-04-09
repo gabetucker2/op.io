@@ -51,11 +51,19 @@ namespace op.io
         private static readonly Dictionary<Keys, double> _lastKeyTriggerTime = new();
         private static readonly Dictionary<string, double> _lastMouseTriggerTime = new();
 
+        // Ctrl-key release time for the post-release combo buffer
+        private static float _ctrlKeyReleaseTime = -1f;
+
+        // Scroll wheel accumulators — carry fractional notch deltas across frames
+        // so each ScrollIncrement fires exactly one trigger.
+        private static float _scrollUpAccumulator;
+        private static float _scrollDownAccumulator;
+
         // Cache cooldown values to avoid redundant loading
         private static float? _cachedTriggerCooldown = null;
         private static float? _cachedSwitchCooldown = null;
         private static bool _hasPreviousState;
-        private static bool IsFocusBlocked() => FocusModeManager.IsFocusModeActive;
+        private static bool IsFocusBlocked() => FocusModeManager.IsFocusModeActive && InputManager.IsFocusModeBlocking();
 
         public static void InitializeControlStates()
         {
@@ -86,7 +94,6 @@ namespace op.io
 
                         if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
                         {
-                            DebugLogger.PrintWarning("Encountered a switch control with missing SettingKey or InputKey.");
                             continue;
                         }
 
@@ -173,6 +180,30 @@ namespace op.io
             return Keyboard.GetState().IsKeyDown(key);
         }
 
+        public static bool WasKeyHeld(Keys key)
+        {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
+            return _previousKeyboardState.IsKeyDown(key);
+        }
+
+        /// <summary>
+        /// Returns true if the Ctrl key was released within the configured CtrlBuffer window
+        /// and is not currently held. Used to allow Ctrl+key combos to register slightly after Ctrl is lifted.
+        /// </summary>
+        public static bool IsCtrlWithinBuffer()
+        {
+            if (_ctrlKeyReleaseTime < 0f) return false;
+            // Don't double-count: if Ctrl is held right now, IsHeld() already covers it.
+            bool ctrlCurrentlyHeld = Keyboard.GetState().IsKeyDown(Keys.LeftControl) || Keyboard.GetState().IsKeyDown(Keys.RightControl);
+            if (ctrlCurrentlyHeld) return false;
+            float buffer = ControlStateManager.GetFloat(ControlKeyMigrations.CtrlBufferKey, 0.2f);
+            return (Core.GAMETIME - _ctrlKeyReleaseTime) <= buffer;
+        }
+
         public static bool IsMouseButtonHeld(string mouseKey)
         {
             if (IsFocusBlocked())
@@ -224,16 +255,8 @@ namespace op.io
 
             EnsurePreviousState();
 
-            if (Core.Instance.Player == null)
-            {
-                DebugLogger.PrintError("Player instance is null. Cannot check TriggerCooldown.");
-                return false;
-            }
-
             if (!_cachedTriggerCooldown.HasValue)
-            {
                 LoadCooldownValues();
-            }
 
             KeyboardState currentState = Keyboard.GetState();
 
@@ -295,35 +318,43 @@ namespace op.io
 
             EnsurePreviousState();
 
+            // Scroll events use the per-increment accumulator and bypass TriggerCooldown.
+            if (string.Equals(mouseKey, "ScrollUp", StringComparison.OrdinalIgnoreCase))
+            {
+                float increment = ControlStateManager.GetFloat(ControlKeyMigrations.ScrollIncrementKey, 120f);
+                if (increment <= 0f) increment = 120f;
+                if (_scrollUpAccumulator >= increment)
+                {
+                    _scrollUpAccumulator -= increment;
+                    return true;
+                }
+                return false;
+            }
+
+            if (string.Equals(mouseKey, "ScrollDown", StringComparison.OrdinalIgnoreCase))
+            {
+                float increment = ControlStateManager.GetFloat(ControlKeyMigrations.ScrollIncrementKey, 120f);
+                if (increment <= 0f) increment = 120f;
+                if (_scrollDownAccumulator >= increment)
+                {
+                    _scrollDownAccumulator -= increment;
+                    return true;
+                }
+                return false;
+            }
+
             MouseState currentMouseState = Mouse.GetState();
 
             if (!_lastMouseTriggerTime.ContainsKey(mouseKey))
                 _lastMouseTriggerTime[mouseKey] = 0;
 
-            if (Core.Instance.Player == null)
-            {
-                DebugLogger.PrintError("Player instance is null. Cannot check TriggerCooldown.");
-                return false;
-            }
-
-            // Lazy load TriggerCooldown if not cached
             if (!_cachedTriggerCooldown.HasValue)
-            {
                 LoadCooldownValues();
-            }
 
             bool isCooldownPassed = (Core.GAMETIME - _lastMouseTriggerTime[mouseKey]) >= _cachedTriggerCooldown.Value;
             bool triggered = false;
 
-            if (string.Equals(mouseKey, "ScrollUp", StringComparison.OrdinalIgnoreCase) && IsScrollUp(currentMouseState, _previousMouseState) && isCooldownPassed)
-            {
-                triggered = true;
-            }
-            else if (string.Equals(mouseKey, "ScrollDown", StringComparison.OrdinalIgnoreCase) && IsScrollDown(currentMouseState, _previousMouseState) && isCooldownPassed)
-            {
-                triggered = true;
-            }
-            else if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.LeftButton == ButtonState.Released &&
+            if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.LeftButton == ButtonState.Released &&
                      _previousMouseState.LeftButton == ButtonState.Pressed && isCooldownPassed)
             {
                 triggered = true;
@@ -373,12 +404,6 @@ namespace op.io
 
             if (!_lastMouseSwitchTime.ContainsKey(mouseKey))
                 _lastMouseSwitchTime[mouseKey] = 0;
-
-            if (Core.Instance.Player == null)
-            {
-                DebugLogger.PrintError("Player instance is null. Cannot check SwitchCooldown.");
-                return false;
-            }
 
             // Lazy load SwitchCooldown if not cached
             if (!_cachedSwitchCooldown.HasValue)
@@ -484,16 +509,8 @@ namespace op.io
             }
 
             // Normal single-key switch toggle on release with cooldown.
-            if (Core.Instance.Player == null)
-            {
-                DebugLogger.PrintError("Player instance is null. Cannot check SwitchCooldown.");
-                return _keySwitchStates[key];
-            }
-
             if (!_cachedSwitchCooldown.HasValue)
-            {
                 LoadCooldownValues();
-            }
 
             if (isReleased && (Core.GAMETIME - _lastKeySwitchTime[key] >= _cachedSwitchCooldown.Value))
             {
@@ -543,7 +560,20 @@ namespace op.io
             }
         }
 
-        public static void BeginFrame() => EnsurePreviousState();
+        public static void BeginFrame()
+        {
+            EnsurePreviousState();
+            AccumulateScroll();
+        }
+
+        private static void AccumulateScroll()
+        {
+            if (!_hasPreviousState) return;
+            MouseState current = Mouse.GetState();
+            int delta = current.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
+            if (delta > 0) _scrollUpAccumulator += delta;
+            else if (delta < 0) _scrollDownAccumulator += (-delta);
+        }
 
         private static void NotifySwitchStateFromInput(string inputKey, bool state)
         {
@@ -940,25 +970,21 @@ namespace op.io
         // Lazy load cooldown values from the Agent instance or database if not cached
         private static void LoadCooldownValues()
         {
-            if (Core.Instance.Player != null)
-            {
-                // Load the cooldown values from the agent (or cache them)
-                Core.Instance.Player.LoadTriggerCooldown();
-                Core.Instance.Player.LoadSwitchCooldown();
-
-                // Cache the values
-                _cachedTriggerCooldown = Core.Instance.Player.TriggerCooldown;
-                _cachedSwitchCooldown = Core.Instance.Player.SwitchCooldown;
-            }
-            else
-            {
-                DebugLogger.PrintError("Player instance is null. Cannot load cooldown values.");
-            }
+            _cachedTriggerCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "TriggerCooldown");
+            _cachedSwitchCooldown  = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "SwitchCooldown");
         }
 
         public static void Update()
         {
-            _previousKeyboardState = Keyboard.GetState();
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            // Track when Ctrl is released so IsCtrlWithinBuffer() can detect the post-release window.
+            bool ctrlWasHeld = _previousKeyboardState.IsKeyDown(Keys.LeftControl) || _previousKeyboardState.IsKeyDown(Keys.RightControl);
+            bool ctrlIsHeld  = currentKeyboardState.IsKeyDown(Keys.LeftControl)   || currentKeyboardState.IsKeyDown(Keys.RightControl);
+            if (ctrlWasHeld && !ctrlIsHeld)
+                _ctrlKeyReleaseTime = Core.GAMETIME;
+
+            _previousKeyboardState = currentKeyboardState;
             _previousMouseState = Mouse.GetState();
             _hasPreviousState = true;
 
@@ -1019,6 +1045,18 @@ namespace op.io
             }
         }
 
+        /// <summary>
+        /// Programmatically overrides the internal binding toggle state for a switch so the
+        /// SwitchStateScanner reflects the forced state on the next tick instead of re-applying
+        /// the old toggle value.
+        /// </summary>
+        public static void ForceSwitchBindingState(string settingKey, bool state)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey)) return;
+            EnsureBindingTracking(settingKey);
+            _bindingSwitchStates[settingKey] = state;
+        }
+
         public static bool EvaluateComboSwitch(string settingKey, bool allTokensHeld, IEnumerable<Keys> chordKeys)
         {
             if (string.IsNullOrWhiteSpace(settingKey))
@@ -1064,12 +1102,6 @@ namespace op.io
                     _comboActiveKeys.Remove(key);
                     _comboBreakGuard.Add(key);
                 }
-            }
-
-            if (Core.Instance.Player == null)
-            {
-                DebugLogger.PrintError("Player instance is null. Cannot check SwitchCooldown.");
-                return _bindingSwitchStates[settingKey];
             }
 
             if (!_cachedSwitchCooldown.HasValue)

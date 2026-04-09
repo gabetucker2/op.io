@@ -22,6 +22,12 @@ namespace op.io
                 if (gameObject.Shape == null || gameObject.Shape.IsPrototype || gameObject.HitFlash <= 0f) continue;
                 gameObject.Shape.DrawFlash(spriteBatch, gameObject);
             }
+            // Also flash bullets — they are not in GameObjectRegister
+            foreach (var bullet in BulletManager.GetBullets())
+            {
+                if (bullet == null || bullet.Shape == null || bullet.Shape.IsPrototype || bullet.HitFlash <= 0f) continue;
+                bullet.Shape.DrawFlash(spriteBatch, bullet);
+            }
         }
 
         // Draws all registered GameObjects by fetching them from GameObjectRegister
@@ -63,7 +69,7 @@ namespace op.io
                         float halfLength = slot.FullShape.Width / 2f;
                         Vector2 offset = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle)) * halfLength;
                         slot.FullShape.DrawAt(spriteBatch, agent.Position + offset, barrelAngle,
-                            new Vector2(slot.CurrentHeightScale, 1f));
+                            new Vector2(slot.CurrentHeightScale, 1f), agent.Opacity);
                     }
 
                     // Pass 2: active barrel (drawn last so it appears in front of standby ones)
@@ -75,7 +81,7 @@ namespace op.io
                             float halfLength = active.FullShape.Width / 2f;
                             Vector2 offset = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle)) * halfLength;
                             active.FullShape.DrawAt(spriteBatch, agent.Position + offset, barrelAngle,
-                                new Vector2(active.CurrentHeightScale, 1f));
+                                new Vector2(active.CurrentHeightScale, 1f), agent.Opacity);
                         }
                     }
                 }

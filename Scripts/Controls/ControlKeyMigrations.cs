@@ -14,7 +14,20 @@ namespace op.io
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
         private static bool _applied;
         internal const string CombatTextKey = "CombatText";
-        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey, NextConfigurationKey, PreviousConfigurationKey];
+        internal const string RespawnKey = "Respawn";
+        internal const string AutoTurnInspectModeOffKey = "AutoTurnInspectModeOff";
+        internal const string TabSwitchRequiresBlockModeKey = "TabSwitchRequiresBlockMode";
+        internal const string CameraLockModeKey = "CameraLockMode";
+        internal static readonly string[] CameraLockModeOptions = ["Locked", "Free", "Scout"];
+        internal const string CameraSnapToPlayerKey = "CameraSnapToPlayer";
+        internal const string ScrollInKey           = "ScrollIn";
+        internal const string ScrollOutKey          = "ScrollOut";
+        internal const string ScrollMinDistanceKey  = "ScrollMinDistance";
+        internal const string ScrollMaxDistanceKey  = "ScrollMaxDistance";
+        internal const string ScrollIncrementKey    = "ScrollIncrement";
+        internal const string CtrlBufferKey         = "CtrlBuffer";
+        internal const string ShowHiddenAttrsKey    = "ShowHiddenAttrs";
+        private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, AutoTurnInspectModeOffKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey, NextConfigurationKey, PreviousConfigurationKey, TabSwitchRequiresBlockModeKey, RespawnKey, CameraLockModeKey, CameraSnapToPlayerKey, ScrollInKey, ScrollOutKey, ScrollMinDistanceKey, ScrollMaxDistanceKey, ScrollIncrementKey, CtrlBufferKey, ShowHiddenAttrsKey];
 
         public static void EnsureApplied()
         {
@@ -31,16 +44,18 @@ namespace op.io
             try
             {
                 EnsureRenderOrderColumn();
+                EnsureLockModeColumn();
+                EnsureMetaControlColumn();
+                EnsureFloatStartStateColumn();
                 EnsureBlockMenuControl();
                 EnsureExitControl();
                 EnsureTransparentTabBlockingControl();
                 EnsureHoldInputsControl();
                 EnsureInspectModeControl();
+                EnsureAutoTurnInspectModeOffControl();
                 EnsureConfigurationCycleControls();
                 EnsureDockingModeDefaultOff();
-                EnsureLockModeColumn();
                 MigrateLegacySwitchType();
-                EnsureMetaControlColumn();
                 ControlKeyData.ApplyMetaControlFlags(MetaControlKeys);
                 EnsureCrouchUsesNoSaveSwitch();
                 LockExitBinding();
@@ -48,8 +63,19 @@ namespace op.io
                 EnsureFireControl();
                 EnsureBarrelSwitchControls();
                 EnsureCombatTextControl();
-                EnsureHealthBarControl();
+                RemoveHealthBarControl();
+                RemoveXPBarControl();
+                RemoveCombineHealthShieldBarControl();
                 EnsureAllowGameInputFreezeIsEnum();
+                EnsureTabSwitchRequiresBlockModeControl();
+                EnsureRespawnControl();
+                EnsureCameraLockModeControl();
+                EnsureCameraSnapToPlayerControl();
+                RemoveMouseSensitivityMultiplierControl();
+                EnsureScrollControls();
+                EnsureCtrlBufferControl();
+                EnsureShowHiddenAttrsControl();
+                EnsureControlTooltips();
 
                 _applied = true;
             }
@@ -192,6 +218,46 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             ControlKeyData.SetInputType(InspectModeState.InspectModeKey, "NoSaveSwitch");
             ControlKeyData.EnsureSwitchStartState(InspectModeState.InspectModeKey, 0);
             ControlKeyData.EnsureInputKey(InspectModeState.InspectModeKey, "Shift + I");
+        }
+
+        private static void EnsureAutoTurnInspectModeOffControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = AutoTurnInspectModeOffKey,
+                InputKey = "",
+                InputType = "SaveSwitch",
+                SwitchStartState = 1,
+                MetaControl = true,
+                RenderOrder = 18
+            });
+
+            ControlKeyData.SetInputType(AutoTurnInspectModeOffKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(AutoTurnInspectModeOffKey, 1);
+
+            string markerOn = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".autoturn_inspectmode_default_on_applied");
+            if (!File.Exists(markerOn))
+            {
+                const string sql = "UPDATE ControlKey SET SwitchStartState = 1 WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = AutoTurnInspectModeOffKey });
+                File.WriteAllText(markerOn, DateTime.UtcNow.ToString("O"));
+            }
+        }
+
+        private static void EnsureTabSwitchRequiresBlockModeControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = TabSwitchRequiresBlockModeKey,
+                InputKey = "",
+                InputType = "SaveSwitch",
+                SwitchStartState = 1,
+                MetaControl = true,
+                RenderOrder = 19
+            });
+
+            ControlKeyData.SetInputType(TabSwitchRequiresBlockModeKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(TabSwitchRequiresBlockModeKey, 1);
         }
 
         private static void EnsureDockingModeDefaultOff()
@@ -411,39 +477,126 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
         }
 
         internal const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
-        internal static readonly string[] AllowGameInputFreezeOptions = ["None", "Focus", "MouseLeave"];
+        // 0=Limited (suppress mouse on clicks + keyboard on text focus), 1=Focus (suppress when window unfocused),
+        // 2=MouseLeave (suppress when cursor outside game), 3=None (never suppress).
+        internal static readonly string[] AllowGameInputFreezeOptions = ["Limited", "Focus", "MouseLeave", "None"];
 
         internal const string HealthBarKey = "HealthBar";
+        internal const string XPBarKey    = "XPBar";
+        // CombineHealthShieldBarKey kept for migration only — replaced by BarConfigManager row system.
+        internal const string CombineHealthShieldBarKey = "CombineHealthShieldBar";
 
-        private static void EnsureHealthBarControl()
+        private static void RemoveHealthBarControl()
+        {
+            try
+            {
+                const string sql = "DELETE FROM ControlKey WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = HealthBarKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to remove {HealthBarKey}: {ex.Message}");
+            }
+        }
+
+        private static void RemoveXPBarControl()
+        {
+            try
+            {
+                const string sql = "DELETE FROM ControlKey WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = XPBarKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to remove {XPBarKey}: {ex.Message}");
+            }
+        }
+
+        private static void RemoveCombineHealthShieldBarControl()
+        {
+            // CombineHealthShieldBar has been replaced by the BarConfigManager row system.
+            // Remove it from the Controls block by deleting the row if it exists.
+            try
+            {
+                const string sql = "DELETE FROM ControlKey WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = CombineHealthShieldBarKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to remove {CombineHealthShieldBarKey}: {ex.Message}");
+            }
+        }
+
+        private static void EnsureCombineHealthShieldBarControl()
         {
             ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
             {
-                SettingKey      = HealthBarKey,
-                InputKey        = "Shift + H",
-                InputType       = "SaveSwitch",
+                SettingKey       = CombineHealthShieldBarKey,
+                InputKey         = "",
+                InputType        = "SaveSwitch",
                 SwitchStartState = 1,
-                MetaControl     = false,
-                RenderOrder     = 24
+                MetaControl      = false,
+                RenderOrder      = 25
             });
 
-            ControlKeyData.SetInputType(HealthBarKey, "SaveSwitch");
-            ControlKeyData.EnsureSwitchStartState(HealthBarKey, 1);
-            ControlKeyData.EnsureInputKey(HealthBarKey, "Shift + H");
+            ControlKeyData.SetInputType(CombineHealthShieldBarKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(CombineHealthShieldBarKey, 1);
 
-            string markerOn = Path.Combine(DatabaseConfig.DatabaseDirectory, ".health_bar_default_on_applied");
+            try
+            {
+                const string tooltipSql = "INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @tip);";
+                DatabaseQuery.ExecuteNonQuery(tooltipSql, new Dictionary<string, object>
+                {
+                    ["@key"] = CombineHealthShieldBarKey,
+                    ["@tip"] = "When enabled, health and shield share a single combined bar. When disabled, each has its own separate bar."
+                });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to insert tooltip for {CombineHealthShieldBarKey}: {ex.Message}");
+            }
+
+            string markerOn = Path.Combine(DatabaseConfig.DatabaseDirectory, ".combine_healthshieldbar_default_on_applied");
             if (!File.Exists(markerOn))
             {
                 const string sql = "UPDATE ControlKey SET SwitchStartState = 1 WHERE SettingKey = @key;";
-                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = HealthBarKey });
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = CombineHealthShieldBarKey });
                 File.WriteAllText(markerOn, DateTime.UtcNow.ToString("O"));
+            }
+        }
+
+        private static void EnsureRespawnControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey  = RespawnKey,
+                InputKey    = "Shift + R",
+                InputType   = "Trigger",
+                SwitchStartState = 0,
+                MetaControl = true,
+                RenderOrder = 24
+            });
+
+            ControlKeyData.SetInputType(RespawnKey, "Trigger");
+            ControlKeyData.EnsureInputKey(RespawnKey, "Shift + R");
+
+            // Ensure MetaControl = 1 for existing DBs where it was created as 0.
+            // Respawn must be a meta-control so inspect mode doesn't suppress it.
+            try
+            {
+                const string sql = "UPDATE ControlKey SET MetaControl = 1 WHERE SettingKey = @key AND MetaControl = 0;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = RespawnKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to set MetaControl for {RespawnKey}: {ex.Message}");
             }
         }
 
         private static void EnsureAllowGameInputFreezeIsEnum()
         {
             // Register enum options so ControlStateManager can load the index correctly.
-            // Options: 0=None, 1=Focus, 2=MouseLeave. Default index 1 (Focus).
+            // Options: 0=Limited, 1=Focus, 2=MouseLeave, 3=None. Default index 1 (Focus).
             ControlStateManager.RegisterEnumOptions(AllowGameInputFreezeKey, AllowGameInputFreezeOptions, defaultIndex: 1, persist: true);
 
             try
@@ -470,6 +623,162 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             }
         }
 
+        private static void EnsureCameraLockModeControl()
+        {
+            // Register enum options before loading so LoadControlSwitchStates can clamp the index.
+            ControlStateManager.RegisterEnumOptions(CameraLockModeKey, CameraLockModeOptions, defaultIndex: 0, persist: true);
+
+            // Migrate any existing SaveSwitch row to SaveEnum (index 0 = Locked).
+            try
+            {
+                const string migrateSql = "UPDATE ControlKey SET InputType = 'SaveEnum', SwitchStartState = 0 WHERE SettingKey = @key AND InputType IN ('SaveSwitch', 'Switch', 'NoSaveSwitch');";
+                DatabaseQuery.ExecuteNonQuery(migrateSql, new Dictionary<string, object> { ["@key"] = CameraLockModeKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to migrate {CameraLockModeKey} to SaveEnum: {ex.Message}");
+            }
+
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey       = CameraLockModeKey,
+                InputKey         = "C",
+                InputType        = "SaveEnum",
+                SwitchStartState = 0,
+                MetaControl      = true,
+                RenderOrder      = 26
+            });
+
+            ControlKeyData.SetInputType(CameraLockModeKey, "SaveEnum");
+            ControlKeyData.EnsureSwitchStartState(CameraLockModeKey, 0);
+
+            // Force SwitchStartState to 0 (Locked) — handles migration from old index order
+            // where Locked was index 2 and any stale saved config values.
+            try
+            {
+                const string setDefaultSql = "UPDATE ControlKey SET SwitchStartState = 0 WHERE SettingKey = @key AND SwitchStartState != 0;";
+                DatabaseQuery.ExecuteNonQuery(setDefaultSql, new Dictionary<string, object> { ["@key"] = CameraLockModeKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to update {CameraLockModeKey} default to Locked: {ex.Message}");
+            }
+
+            ControlKeyData.EnsureInputKey(CameraLockModeKey, "C");
+        }
+
+        private static void EnsureCameraSnapToPlayerControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey       = CameraSnapToPlayerKey,
+                InputKey         = "Ctrl + Space",
+                InputType        = "Trigger",
+                SwitchStartState = 0,
+                MetaControl      = true,
+                RenderOrder      = 27
+            });
+
+            ControlKeyData.SetInputType(CameraSnapToPlayerKey, "Trigger");
+            ControlKeyData.SetInputKey(CameraSnapToPlayerKey, "Ctrl + Space");
+        }
+
+        private static void EnsureFloatStartStateColumn()
+        {
+            const string column = "FloatStartState";
+            if (!ControlKeyData.ColumnExists(column))
+            {
+                ControlKeyData.AddColumn(column, "REAL DEFAULT NULL");
+            }
+        }
+
+        private static void EnsureScrollControls()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey  = ScrollInKey,
+                InputKey    = "ScrollUp",
+                InputType   = "Trigger",
+                MetaControl = true,
+                RenderOrder = 28
+            });
+
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey  = ScrollOutKey,
+                InputKey    = "ScrollDown",
+                InputType   = "Trigger",
+                MetaControl = true,
+                RenderOrder = 29
+            });
+
+            ControlKeyData.SetInputType(ScrollInKey,  "Trigger");
+            ControlKeyData.SetInputType(ScrollOutKey, "Trigger");
+
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey     = ScrollMinDistanceKey,
+                InputKey       = "",
+                InputType      = "Float",
+                FloatStartState = 200f,
+                MetaControl    = true,
+                RenderOrder    = 30
+            });
+
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey     = ScrollMaxDistanceKey,
+                InputKey       = "",
+                InputType      = "Float",
+                FloatStartState = 2000f,
+                MetaControl    = true,
+                RenderOrder    = 31
+            });
+
+            ControlKeyData.EnsureFloatStartState(ScrollMinDistanceKey, 200f);
+            ControlKeyData.EnsureFloatStartState(ScrollMaxDistanceKey, 2000f);
+
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey      = ScrollIncrementKey,
+                InputKey        = "",
+                InputType       = "Float",
+                FloatStartState = 120f,
+                MetaControl     = true,
+                RenderOrder     = 32
+            });
+
+            ControlKeyData.EnsureFloatStartState(ScrollIncrementKey, 120f);
+        }
+
+        private static void EnsureCtrlBufferControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey      = CtrlBufferKey,
+                InputKey        = "",
+                InputType       = "Float",
+                FloatStartState = 0.2f,
+                MetaControl     = true,
+                RenderOrder     = 33
+            });
+
+            ControlKeyData.EnsureFloatStartState(CtrlBufferKey, 0.2f);
+        }
+
+        private static void RemoveMouseSensitivityMultiplierControl()
+        {
+            try
+            {
+                const string sql = "DELETE FROM ControlKey WHERE SettingKey = 'MouseSensitivityMultiplier';";
+                DatabaseQuery.ExecuteNonQuery(sql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to remove MouseSensitivityMultiplier: {ex.Message}");
+            }
+        }
+
         private static void MigrateLegacySwitchType()
         {
             try
@@ -480,6 +789,88 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to migrate legacy switch input types: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Forces CameraLockMode to Locked (index 0) in both the database and in-memory state.
+        /// Called from GameInitializer after LoadControlSwitchStates because UpsertBindings
+        /// may overwrite CameraLockMode with a stale saved config value.
+        /// </summary>
+        internal static void ForceCameraLockModeDefault()
+        {
+            try
+            {
+                const string sql = "UPDATE ControlKey SET SwitchStartState = 0 WHERE SettingKey = @key AND SwitchStartState != 0;";
+                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = CameraLockModeKey });
+
+                if (ControlStateManager.ContainsEnumState(CameraLockModeKey))
+                {
+                    int currentIndex = ControlStateManager.GetEnumIndex(CameraLockModeKey);
+                    if (currentIndex != 0)
+                    {
+                        ControlStateManager.SetEnumIndex(CameraLockModeKey, 0, "ForceCameraLockModeDefault");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to force {CameraLockModeKey} default to Locked: {ex.Message}");
+            }
+        }
+
+        private static void EnsureShowHiddenAttrsControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey       = ShowHiddenAttrsKey,
+                InputKey         = "",
+                InputType        = "SaveSwitch",
+                SwitchStartState = 1,
+                MetaControl      = true,
+                RenderOrder      = 34
+            });
+
+            ControlKeyData.SetInputType(ShowHiddenAttrsKey, "SaveSwitch");
+            ControlKeyData.EnsureSwitchStartState(ShowHiddenAttrsKey, 1);
+        }
+
+        private static void EnsureControlTooltips()
+        {
+            const string sql = "INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @tip);";
+            var tooltips = new (string Key, string Tip)[]
+            {
+                (InspectModeState.InspectModeKey,   "Toggle inspect mode to hover and examine game objects."),
+                (TabSwitchRequiresBlockModeKey,     "When enabled, the tab key only switches panels while Block Menu is open."),
+                ("Fire",                            "Fire the equipped weapon."),
+                ("BarrelLeft",                      "Rotate barrel selection counter-clockwise."),
+                ("BarrelRight",                     "Rotate barrel selection clockwise."),
+                (CombatTextKey,                     "Toggle floating damage numbers and XP text during combat."),
+                (CameraLockModeKey,                 "Camera follow mode: Free (no follow), Scout (always centered), or Locked (fixed offset)."),
+                (CameraSnapToPlayerKey,             "Snap the camera to center on the player. In Locked mode, resets the offset."),
+                (RespawnKey,                        "Respawn the player after death."),
+                (ScrollInKey,                       "Scroll in (zoom in) the camera view."),
+                (ScrollOutKey,                      "Scroll out (zoom out) the camera view."),
+                (ScrollMinDistanceKey,              "Minimum camera scroll distance (closest zoom)."),
+                (ScrollMaxDistanceKey,              "Maximum camera scroll distance (furthest zoom)."),
+                (ScrollIncrementKey,               "Scroll wheel units per zoom step (default 120 = one notch)."),
+                (CtrlBufferKey,                     "Seconds after releasing Ctrl that a Ctrl+key combo still registers (e.g. release Ctrl then press Space within this window)."),
+                (ShowHiddenAttrsKey,                "Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately."),
+            };
+            foreach (var (key, tip) in tooltips)
+            {
+                try
+                {
+                    DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object>
+                    {
+                        ["@key"] = key,
+                        ["@tip"] = tip
+                    });
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.PrintError($"Failed to insert tooltip for {key}: {ex.Message}");
+                }
             }
         }
     }

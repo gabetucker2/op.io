@@ -101,6 +101,11 @@ namespace op.io
             _renderer.DrawAt(spriteBatch, position, rotation, scale);
         }
 
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity)
+        {
+            _renderer.DrawAt(spriteBatch, position, rotation, scale, opacity);
+        }
+
         // Dispose method to clean up resources
         public void Dispose()
         {

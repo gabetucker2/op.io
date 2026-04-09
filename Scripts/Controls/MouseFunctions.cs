@@ -1,11 +1,24 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using System;
+using System; // Math.Atan2
 
 namespace op.io
 {
     public static class MouseFunctions
     {
+        /// <summary>
+        /// Called once per frame (before rotation logic).
+        /// Mouse-sensitivity dampening has been removed; this is kept as a no-op
+        /// so call-sites don't need to change.
+        /// </summary>
+        public static void Tick() { }
+
+        /// <summary>
+        /// Returns the cursor position in game space, accounting for the current camera offset.
+        /// Equivalent to <see cref="GetMousePosition"/>; retained for call-site compatibility.
+        /// </summary>
+        public static Vector2 GetMousePositionWithSensitivity() => GetMousePosition();
+
         public static float GetAngleToMouse(Vector2 playerPosition)
         {
             if (float.IsNaN(playerPosition.X) || float.IsNaN(playerPosition.Y))

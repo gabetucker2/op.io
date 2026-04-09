@@ -7,6 +7,11 @@ namespace op.io
 {
     public static class SystemSpecsProvider
     {
+        private static readonly Process _currentProcess = Process.GetCurrentProcess();
+        private static long _cachedWorkingSet;
+        private static long _workingSetLastRefreshTick = long.MinValue;
+        private const long WorkingSetRefreshIntervalMs = 1000L;
+
         public static IReadOnlyList<SystemSpec> GetSpecs()
         {
             List<SystemSpec> specs = new();
@@ -55,8 +60,14 @@ namespace op.io
 
             try
             {
-                long workingSet = Process.GetCurrentProcess().WorkingSet64;
-                specs.Add(new SystemSpec("process_memory", "Process Memory", FormatBytes(workingSet)));
+                long now = Environment.TickCount64;
+                if (now - _workingSetLastRefreshTick >= WorkingSetRefreshIntervalMs)
+                {
+                    _currentProcess.Refresh();
+                    _cachedWorkingSet = _currentProcess.WorkingSet64;
+                    _workingSetLastRefreshTick = now;
+                }
+                specs.Add(new SystemSpec("process_memory", "Process Memory", FormatBytes(_cachedWorkingSet)));
             }
             catch
             {

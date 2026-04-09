@@ -13,48 +13,53 @@
 --   BulletFill        RGBA(255,0,0,255)
 --   BulletOutline     RGBA(139,0,0,255)  width = 2
 
+-- Hidden attributes (BulletHealth, BulletRadius, BulletDrag) are computed from BulletMass via AttributeDerived.
+-- Medium: mass=3 → health≈10, radius≈10.4px, drag≈0.90/s
+
 INSERT INTO BarrelPrototypes (
     Name,
-    BulletDamage, BulletPenetration, BulletSpeed, BulletDragFactor,
-    ReloadSpeed,  BulletHealth,      BulletMaxLifespan, BulletMass,
+    BarrelMass,
+    BulletDamage, BulletPenetration, BulletSpeed,
+    ReloadSpeed,  BulletMaxLifespan, BulletMass,
     BulletFillR,    BulletFillG,    BulletFillB,    BulletFillA,
     BulletOutlineR, BulletOutlineG, BulletOutlineB, BulletOutlineA,
     BulletOutlineWidth
 ) VALUES (
     'Medium',
-    4,  -- BulletDamage      (0 → 10)
-    0,  -- BulletPenetration
-    400,  -- BulletSpeed       (0 → 400)
-    1600,  -- BulletDragFactor       (0 → 800)
-    3,  -- ReloadSpeed
-    10,  -- BulletHealth      (0 → 10)
-    3,  -- BulletMaxLifespan (0 → 3)
-    3,  -- BulletMass        (0 → 1)
+    1.0, -- BarrelMass (recoil multiplier)
+    4,   -- BulletDamage
+    0,   -- BulletPenetration
+    400, -- BulletSpeed
+    3,   -- ReloadSpeed (shots/sec)
+    3,   -- BulletMaxLifespan
+    3,   -- BulletMass (→ health=10, radius≈10.4px)
     255, 0,   0, 255,   -- Fill    RGBA
     139, 0,   0, 255,   -- Outline RGBA
-    0.5               -- OutlineWidth (0 → 2)
+    1                   -- OutlineWidth
 );
+
+-- Heavy: mass=6 → health≈20, radius≈14.7px, drag≈1.80/s
 
 INSERT INTO BarrelPrototypes (
     Name,
-    BulletDamage, BulletPenetration, BulletSpeed, BulletDragFactor,
-    ReloadSpeed,  BulletHealth,      BulletMaxLifespan, BulletMass,
+    BarrelMass,
+    BulletDamage, BulletPenetration, BulletSpeed,
+    ReloadSpeed,  BulletMaxLifespan, BulletMass,
     BulletFillR,    BulletFillG,    BulletFillB,    BulletFillA,
     BulletOutlineR, BulletOutlineG, BulletOutlineB, BulletOutlineA,
     BulletOutlineWidth
 ) VALUES (
     'Heavy',
+    3.0, -- BarrelMass (recoil multiplier; 3× more kickback than Medium)
     15,  -- BulletDamage
     0,   -- BulletPenetration
     600, -- BulletSpeed
-    800, -- BulletDragFactor
     1,   -- ReloadSpeed (shots/sec)
-    10,  -- BulletHealth
     3,   -- BulletMaxLifespan
-    6,   -- BulletMass        (radius = sqrt(6)*6 ≈ 14.7)
+    6,   -- BulletMass (→ health≈20, radius≈14.7px)
     200, 200, 200, 255,   -- Fill    RGBA
     150, 150, 150, 255,   -- Outline RGBA
-    2              -- OutlineWidth
+    2                     -- OutlineWidth
 );
 
 -- ================================

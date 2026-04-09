@@ -289,7 +289,8 @@ namespace op.io
                     continue;
                 }
 
-                if (!ShouldAllowBinding(binding.IsMetaControl))
+                bool bindingIsMouse = binding.Tokens != null && binding.Tokens.Count > 0 && binding.Tokens[^1].IsMouse;
+                if (!ShouldAllowBinding(binding.IsMetaControl, bindingIsMouse))
                 {
                     continue;
                 }
@@ -775,17 +776,19 @@ namespace op.io
                     return false;
                 }
 
+                bool primaryIsMouse = Tokens[^1].IsMouse;
+
                 if (IsLatchedHold(SettingKey, InputType))
                 {
                     // Keep global freeze bookkeeping in sync even though the latch bypasses suppression checks.
-                    _ = ShouldAllowBinding(IsMetaControl);
+                    _ = ShouldAllowBinding(IsMetaControl, primaryIsMouse);
                     return true;
                 }
 
                 if (_holdLatchEnabled && !IsMetaControl && InputType == InputType.Hold)
                 {
                     // When the hold latch is active, block any fresh non-meta hold bindings from activating.
-                    _ = ShouldAllowBinding(IsMetaControl);
+                    _ = ShouldAllowBinding(IsMetaControl, primaryIsMouse);
                     return false;
                 }
 
@@ -797,7 +800,7 @@ namespace op.io
 
                 bool anyTokenHeld = Tokens.Any(t => t.IsHeld());
 
-                if (!ShouldAllowBinding(IsMetaControl))
+                if (!ShouldAllowBinding(IsMetaControl, primaryIsMouse))
                 {
                     // Even if binding is suppressed (e.g., non-meta when inputs are frozen), prevent chord keys from toggling solo switches.
                     if (IsSwitchType(InputType) && Tokens.Count > 1 && anyTokenHeld)
@@ -824,7 +827,13 @@ namespace op.io
 
                 for (int i = 0; i < modifierCount; i++)
                 {
-                    if (!Tokens[i].IsHeld())
+                    // For Trigger type, also accept the modifier if it was held last frame.
+                    // This handles the common case of releasing modifier + primary simultaneously.
+                    // IsWithinCtrlBuffer() extends this to a tunable post-release window for Ctrl.
+                    bool modifierOk = Tokens[i].IsHeld() ||
+                                      (InputType == InputType.Trigger && Tokens[i].WasHeld()) ||
+                                      Tokens[i].IsWithinCtrlBuffer();
+                    if (!modifierOk)
                     {
                         modifiersHeld = false;
                         if (!IsSwitchType(InputType))
@@ -837,6 +846,11 @@ namespace op.io
 
                 InputBindingToken primary = Tokens[^1];
 
+                // Suppress solo bindings when a chord binding sharing the same primary key
+                // has all its modifier tokens held (e.g. Space fires but Shift+Space should win).
+                if (!hasModifiers && IsChordSupersetActive(primary))
+                    return false;
+
                 return InputType switch
                 {
                     InputType.Hold => modifiersHeld && primary.IsHeld(),
@@ -845,6 +859,41 @@ namespace op.io
                     InputType.SaveEnum or InputType.NoSaveEnum => modifiersHeld && primary.IsTriggered(),
                     _ => false
                 };
+            }
+
+            private bool IsChordSupersetActive(InputBindingToken primary)
+            {
+                foreach (ControlBinding other in _controlBindings.Values)
+                {
+                    if (other == this || other.TokenCount <= 1)
+                        continue;
+
+                    if (!TokensOverlap(primary, other.Tokens[^1]))
+                        continue;
+
+                    bool allModHeld = true;
+                    for (int i = 0; i < other.Tokens.Count - 1; i++)
+                    {
+                        if (!other.Tokens[i].IsHeld() && !other.Tokens[i].IsWithinCtrlBuffer())
+                        {
+                            allModHeld = false;
+                            break;
+                        }
+                    }
+
+                    if (allModHeld)
+                        return true;
+                }
+                return false;
+            }
+
+            private static bool TokensOverlap(InputBindingToken a, InputBindingToken b)
+            {
+                if (a.IsMouse != b.IsMouse)
+                    return false;
+                if (a.IsMouse)
+                    return string.Equals(a.MouseButton, b.MouseButton, StringComparison.OrdinalIgnoreCase);
+                return a.Keys.Any(k => b.Keys.Contains(k));
             }
 
             public bool AreHoldTokensHeld()
@@ -916,53 +965,90 @@ namespace op.io
             }
         }
 
-        private static bool ShouldAllowBinding(bool isMetaControl)
+        private static bool ShouldAllowBinding(bool isMetaControl, bool isMouseBinding = false)
         {
             if (isMetaControl)
             {
                 return true;
             }
 
-            return !ShouldSuppressNonMetaControls();
+            return !ShouldSuppressNonMetaControls(isMouseBinding);
         }
 
-        private static bool ShouldSuppressNonMetaControls()
+        private static bool ShouldSuppressNonMetaControls(bool isMouseBinding)
         {
-            if (InspectModeState.IsNonMetaSuppressed)
-            {
-                GameTracker.FreezeGameInputs = true;
-                return true;
-            }
-
-            if (BlockManager.IsInputBlocked() || BlockManager.IsDraggingLayout)
-            {
-                GameTracker.FreezeGameInputs = true;
-                return true;
-            }
-
-            if (Core.Instance == null)
-            {
-                GameTracker.FreezeGameInputs = false;
-                return false;
-            }
-
             string mode = GetGameInputFreezeMode();
-            bool shouldFreeze;
-            if (string.Equals(mode, "None", StringComparison.OrdinalIgnoreCase))
-            {
-                shouldFreeze = false;
-            }
-            else if (string.Equals(mode, "Focus", StringComparison.OrdinalIgnoreCase))
-            {
-                shouldFreeze = !Core.Instance.IsActive;
-            }
-            else // "MouseLeave" or any unrecognised value
-            {
-                shouldFreeze = !BlockManager.IsCursorWithinGameBlock();
-            }
+            bool isNone    = string.Equals(mode, "None",    StringComparison.OrdinalIgnoreCase);
+            bool isLimited = string.Equals(mode, "Limited", StringComparison.OrdinalIgnoreCase);
+            bool isFocus   = string.Equals(mode, "Focus",   StringComparison.OrdinalIgnoreCase);
 
-            GameTracker.FreezeGameInputs = shouldFreeze;
-            return shouldFreeze;
+            // Mouse-interaction suppression only applies to mouse bindings in Limited/Focus modes.
+            bool mouseInteracting  = isMouseBinding && (isLimited || isFocus);
+            bool draggingLayout    = mouseInteracting && BlockManager.IsDraggingLayout;
+            bool guiInteracting    = mouseInteracting && !draggingLayout && BlockManager.IsAnyGuiInteracting;
+
+            // Focus mode suppresses when window is inactive.
+            bool focusLost = isFocus && Core.Instance != null && !Core.Instance.IsActive;
+
+            // MouseLeave (and any unrecognised) mode suppresses when cursor leaves the game block.
+            bool cursorOutside = !isNone && !isLimited && !isFocus && !BlockManager.IsCursorWithinGameBlock();
+
+            string modeLabel = isLimited ? "Limited mode" : isFocus ? "Focus mode" : mode;
+
+            return ApplyFreezeGameInputs(
+                noneMode:       isNone,
+                inspectMode:    InspectModeState.IsNonMetaSuppressed,
+                inputBlocked:   BlockManager.IsInputBlocked(),
+                focusLost:      focusLost,
+                draggingLayout: draggingLayout,
+                guiInteracting: guiInteracting,
+                cursorOutside:  cursorOutside,
+                modeLabel:      modeLabel);
+        }
+
+        /// <summary>
+        /// Centralised freeze decision: evaluates each discrete freeze condition in priority order,
+        /// writes <see cref="GameTracker.FreezeGameInputs"/> and <see cref="GameTracker.FreezeGameInputsReason"/>,
+        /// and returns whether inputs are suppressed.
+        /// </summary>
+        private static bool ApplyFreezeGameInputs(
+            bool   noneMode,
+            bool   inspectMode,
+            bool   inputBlocked,
+            bool   focusLost,
+            bool   draggingLayout,
+            bool   guiInteracting,
+            bool   cursorOutside,
+            string modeLabel)
+        {
+            if (noneMode)
+                return Freeze(false, string.Empty);
+            if (inspectMode)
+                return Freeze(true, "InspectMode: non-meta controls suppressed");
+            if (inputBlocked)
+                return Freeze(true, $"BlockManager.IsInputBlocked (interacting: {BlockManager.GetInteractingBlockKind() ?? "none"})");
+            if (focusLost)
+                return Freeze(true, "Focus mode: window not focused");
+            if (draggingLayout)
+                return Freeze(true, $"{modeLabel}: mouse suppressed (dragging layout)");
+            if (guiInteracting)
+                return Freeze(true, $"{modeLabel}: mouse suppressed (GUI interaction: {BlockManager.GetInteractingBlockKind() ?? "unknown"})");
+            if (cursorOutside)
+                return Freeze(true, $"MouseLeave mode: cursor outside game block (mode={modeLabel})");
+            return Freeze(false, string.Empty);
+        }
+
+        private static bool Freeze(bool frozen, string reason)
+        {
+            GameTracker.FreezeGameInputs = frozen;
+            GameTracker.FreezeGameInputsReason = reason;
+            return frozen;
+        }
+
+        internal static bool IsFocusModeBlocking()
+        {
+            string mode = GetGameInputFreezeMode();
+            return !string.Equals(mode, "None", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GetGameInputFreezeMode()
@@ -1038,6 +1124,34 @@ namespace op.io
                     }
                 }
 
+                return false;
+            }
+
+            public bool WasHeld()
+            {
+                if (IsMouse) return false;
+
+                foreach (Keys key in Keys)
+                {
+                    if (InputTypeManager.WasKeyHeld(key))
+                        return true;
+                }
+
+                return false;
+            }
+
+            /// <summary>
+            /// Returns true when this token represents a Ctrl key and the key was released within the CtrlBuffer window.
+            /// Allows Ctrl+key combos to register even if Ctrl is lifted slightly before the secondary key.
+            /// </summary>
+            public bool IsWithinCtrlBuffer()
+            {
+                if (IsMouse) return false;
+                foreach (Keys key in Keys)
+                {
+                    if (key == Microsoft.Xna.Framework.Input.Keys.LeftControl || key == Microsoft.Xna.Framework.Input.Keys.RightControl)
+                        return InputTypeManager.IsCtrlWithinBuffer();
+                }
                 return false;
             }
 

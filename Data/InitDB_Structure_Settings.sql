@@ -36,6 +36,26 @@ CREATE TABLE IF NOT EXISTS PhysicsSettings (
     Value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS BulletPhysics (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS BulletDefaults (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS BarSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS FXSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS UITooltips (
     RowKey TEXT PRIMARY KEY,
     TooltipText TEXT NOT NULL

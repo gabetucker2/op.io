@@ -1,9 +1,10 @@
 ﻿using op.io;
+using System;
 using System.Collections.Generic;
 
 public static class GameObjectManager
 {
-    private static int _nextAvailableID = 1;
+    private static int _nextAvailableID = 0;
 
     public static List<GameObject> GameObjects { get; private set; } = new();
     public static List<GameObject> StaticObjects { get; private set; } = new();
@@ -24,6 +25,22 @@ public static class GameObjectManager
         LoadFarmObjects(farmProtos);  // Handle farm objects instantiation based on loaded farm data
 
         LoadMapObjects();
+    }
+
+    public static void SeedNextID()
+    {
+        try
+        {
+            var result = DatabaseQuery.ExecuteQuery("SELECT MAX(ID) AS MaxID FROM GameObjects;");
+            if (result.Count > 0 && result[0]["MaxID"] != DBNull.Value)
+                _nextAvailableID = Convert.ToInt32(result[0]["MaxID"]) + 1;
+            else
+                _nextAvailableID = 1;
+        }
+        catch
+        {
+            _nextAvailableID = 1;
+        }
     }
 
     public static int GetNextID()

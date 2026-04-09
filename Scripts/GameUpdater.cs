@@ -6,6 +6,12 @@ namespace op.io
 {
     public static class GameUpdater
     {
+        private static readonly List<GameObject> _dyingObjects = new();
+
+        private static float? _deathFadeOut;
+        private static float DeathFadeOut =>
+            _deathFadeOut ??= DatabaseFetch.GetAnimSetting("DeathFadeAnim", 0f, 0f, 0.5f).FadeOut;
+
         public static void Update(GameTime gameTime)
         {
             try
@@ -26,7 +32,7 @@ namespace op.io
             List<GameObject> dead = null;
             foreach (var go in gameObjects)
             {
-                if (go.IsDestructible && go.CurrentHealth <= 0f)
+                if (go.IsDestructible && go.CurrentHealth <= 0f && !go.IsDying)
                 {
                     dead ??= new List<GameObject>();
                     dead.Add(go);
@@ -35,25 +41,99 @@ namespace op.io
 
             if (dead == null) return;
 
+            // Build a fast agent lookup so we don't O(n)-search per death.
+            Dictionary<int, Agent> agentById = null;
             foreach (var go in dead)
             {
                 // Award XP to the agent who landed the killing blow.
                 if (go.LastDamagedByAgentID >= 0)
                 {
-                    foreach (var obj in gameObjects)
+                    if (agentById == null)
                     {
-                        if (obj is Agent agent && agent.ID == go.LastDamagedByAgentID)
-                        {
-                            agent.CurrentXP += go.DeathPointReward;
-                            break;
-                        }
+                        agentById = new Dictionary<int, Agent>();
+                        foreach (var obj in gameObjects)
+                            if (obj is Agent a) agentById[a.ID] = a;
                     }
+                    if (agentById.TryGetValue(go.LastDamagedByAgentID, out Agent killer))
+                        killer.CurrentXP += go.DeathPointReward;
                 }
 
                 gameObjects.Remove(go);
                 Core.Instance.StaticObjects?.Remove(go);
-                go.Dispose();
-                DebugLogger.PrintGO($"Destroyed GameObject ID={go.ID} (Name={go.Name}, Reward={go.DeathPointReward} XP).");
+
+                float fadeOut = DeathFadeOut;
+                if (fadeOut > 0f)
+                {
+                    go.IsDying = true;
+                    go.DeathFadeTimer = fadeOut;
+                    go.Opacity = 1f;
+                    if (go.DeathImpulse != Vector2.Zero)
+                        go.PhysicsVelocity = go.DeathImpulse;
+                    _dyingObjects.Add(go);
+                    DebugLogger.PrintGO($"Death fade started for GameObject ID={go.ID} (Name={go.Name}, Reward={go.DeathPointReward} XP, FadeOut={fadeOut}s).");
+                }
+                else
+                {
+                    go.Dispose();
+                    DebugLogger.PrintGO($"Destroyed GameObject ID={go.ID} (Name={go.Name}, Reward={go.DeathPointReward} XP).");
+                }
+            }
+        }
+
+        private static void UpdateDyingObjects()
+        {
+            if (_dyingObjects.Count == 0) return;
+            float fadeOut = DeathFadeOut;
+            for (int i = _dyingObjects.Count - 1; i >= 0; i--)
+            {
+                GameObject go = _dyingObjects[i];
+                go.Update(); // keep physics velocity applied during fade
+                go.DeathFadeTimer -= Core.DELTATIME;
+                go.Opacity = MathHelper.Clamp(go.DeathFadeTimer / MathF.Max(fadeOut, 0.001f), 0f, 1f);
+                if (go.DeathFadeTimer <= 0f)
+                {
+                    _dyingObjects.RemoveAt(i);
+                    go.Dispose();
+                    DebugLogger.PrintGO($"Death fade complete, disposed GameObject ID={go.ID}.");
+                }
+            }
+        }
+
+        private static void RegenerateStats(float dt)
+        {
+            float now = Core.GAMETIME;
+            foreach (var go in Core.Instance.GameObjects)
+            {
+                if (go is Agent agent)
+                {
+                    Attributes_Body body = agent.BodyAttributes;
+
+                    if (body.HealthRegen > 0f && agent.CurrentHealth > 0f && agent.CurrentHealth < agent.MaxHealth &&
+                        now - agent.LastHealthDamageTime >= body.HealthRegenDelay)
+                    {
+                        agent.CurrentHealth = MathF.Min(agent.CurrentHealth + body.HealthRegen * dt, agent.MaxHealth);
+                    }
+
+                    if (agent.MaxShield > 0f && body.ShieldRegen > 0f && agent.CurrentShield < agent.MaxShield &&
+                        now - agent.LastShieldDamageTime >= body.ShieldRegenDelay)
+                    {
+                        agent.CurrentShield = MathF.Min(agent.CurrentShield + body.ShieldRegen * dt, agent.MaxShield);
+                    }
+                }
+                else if (go.IsDestructible)
+                {
+                    if (go.HealthRegen > 0f && go.CurrentHealth < go.MaxHealth &&
+                        now - go.LastHealthDamageTime >= go.HealthRegenDelay)
+                    {
+                        go.CurrentHealth = MathF.Min(go.CurrentHealth + go.HealthRegen * dt, go.MaxHealth);
+                    }
+
+                    if (go.MaxShield > 0f && go.ShieldRegen > 0f && go.CurrentShield < go.MaxShield &&
+                        now - go.LastShieldDamageTime >= go.ShieldRegenDelay)
+                    {
+                        go.CurrentShield = MathF.Min(go.CurrentShield + go.ShieldRegen * dt, go.MaxShield);
+                    }
+                }
             }
         }
 
@@ -66,6 +146,9 @@ namespace op.io
 
             DebugHelperFunctions.DeltaTimeZeroWarning();
 
+            // Update sensitivity-adjusted virtual cursor (must run before rotation logic)
+            MouseFunctions.Tick();
+
             // Prime previous input snapshots so the first frame doesn't register phantom releases.
             InputTypeManager.BeginFrame();
 
@@ -73,28 +156,86 @@ namespace op.io
             SwitchStateScanner.Tick();
 
             // Process general actions (toggles, switches, etc.)
+            FrameProfiler.BeginSample("ActionHandler.Tickwise_CheckActions", "ActionHandler");
             ActionHandler.Tickwise_CheckActions();
+            FrameProfiler.EndSample("ActionHandler.Tickwise_CheckActions");
 
-            // Handle player transform
-            Vector2 direction = InputManager.GetMoveVector();
-            if (direction != Vector2.Zero)
+            // Snapshot positions before any movement so CollisionResolver can compute approach velocity.
+            foreach (var go in Core.Instance.GameObjects)
+                go.PreviousPosition = go.Position;
+
+            // Resolve which UI elements own the left click BEFORE movement is evaluated so that
+            // IsAnyGuiInteracting returns the current-frame answer instead of last frame's cached state.
+            BlockManager.PreUpdateInteractionStates();
+
+            // Handle player transform — suppress when the UI is actively consuming mouse input
+            // (dragging a slider, resize handle, block, etc.) so UI interactions don't move the player.
+            bool uiConsumingMouse = BlockManager.IsConsumingMouseInput();
+
+            FrameProfiler.BeginSample("Player.Movement", "GameUpdater");
+            Agent player = Core.Instance.Player;
+            if (player != null)
             {
-                ActionHandler.Move(Core.Instance.Player, direction, Core.Instance.Player.Speed);
+                Vector2 direction = uiConsumingMouse ? Vector2.Zero : InputManager.GetMoveVector();
+                float accelDelay = AttributeDerived.AccelerationDelay(player.BodyAttributes.Control);
+                if (accelDelay <= 0f)
+                {
+                    // Instant movement — snap directly to full speed with no ramp-up.
+                    player.MovementVelocity = Vector2.Zero;
+                    if (direction != Vector2.Zero)
+                        ActionHandler.Move(player, direction, player.Speed);
+                }
+                else
+                {
+                    // Delay-based acceleration — higher delay means slower ramp-up.
+                    Vector2 targetVelocity = direction != Vector2.Zero
+                        ? Vector2.Normalize(direction) * player.Speed
+                        : Vector2.Zero;
+                    float t = MathHelper.Clamp(Core.DELTATIME / accelDelay, 0f, 1f);
+                    player.MovementVelocity += (targetVelocity - player.MovementVelocity) * t;
+                    if (player.MovementVelocity.LengthSquared() < 1f)
+                        player.MovementVelocity = Vector2.Zero;
+                    player.Position += player.MovementVelocity * Core.DELTATIME;
+                }
+                if (InputManager.TryGetHoldLatchRotation(out float lockedRotation))
+                {
+                    player.Rotation = lockedRotation;
+                }
+                else if (!uiConsumingMouse)
+                {
+                    Vector2 cursorPos = MouseFunctions.GetMousePositionWithSensitivity();
+                    Vector2 playerPos = player.Position;
+                    if (Vector2.DistanceSquared(cursorPos, playerPos) > 0.25f)
+                    {
+                        Vector2 aimDelta = cursorPos - playerPos;
+                        float targetAngle = MathF.Atan2(aimDelta.Y, aimDelta.X);
+                        float rotDelay = AttributeDerived.RotationDelay(player.BodyAttributes.Control);
+                        if (rotDelay <= 0f)
+                        {
+                            player.Rotation = targetAngle;
+                        }
+                        else
+                        {
+                            // rotDelay = seconds to turn 180°; higher = slower rotation.
+                            float current = player.Rotation;
+                            float diff = targetAngle - current;
+                            while (diff >  MathF.PI) diff -= MathF.Tau;
+                            while (diff < -MathF.PI) diff += MathF.Tau;
+                            float maxDelta = MathF.PI / rotDelay * Core.DELTATIME;
+                            player.Rotation = current + MathHelper.Clamp(diff, -maxDelta, maxDelta);
+                        }
+                    }
+                }
             }
-            if (InputManager.TryGetHoldLatchRotation(out float lockedRotation))
-            {
-                Core.Instance.Player.Rotation = lockedRotation;
-            }
-            else
-            {
-                Core.Instance.Player.Rotation = MouseFunctions.GetAngleToMouse(Core.Instance.Player.Position);
-            }
+            FrameProfiler.EndSample("Player.Movement");
 
             // Update all GameObjects
+            FrameProfiler.BeginSample("GameObjects.Update", "GameUpdater");
             foreach (var gameObject in Core.Instance.GameObjects)
             {
                 gameObject.Update();
             }
+            FrameProfiler.EndSample("GameObjects.Update");
 
             if (Core.Instance.GameObjects.Count == 0)
             {
@@ -102,29 +243,51 @@ namespace op.io
             }
 
             // Update all active bullets
+            FrameProfiler.BeginSample("BulletManager.Update", "BulletManager");
             BulletManager.Update();
+            FrameProfiler.EndSample("BulletManager.Update");
 
             // Resolve bullet collisions against world objects
+            FrameProfiler.BeginSample("BulletCollisionResolver.ResolveCollisions", "BulletCollisionResolver");
             BulletCollisionResolver.ResolveCollisions(BulletManager.GetBullets(), Core.Instance.GameObjects);
+            FrameProfiler.EndSample("BulletCollisionResolver.ResolveCollisions");
 
             // Resolve bullet-enemy damage, penetration, expiry, and depenetration
+            FrameProfiler.BeginSample("BulletCollisionSystem.Update", "BulletCollisionSystem");
             BulletCollisionSystem.Update(Core.DELTATIME);
+            FrameProfiler.EndSample("BulletCollisionSystem.Update");
+
+            // Regenerate health and shields for agents with regen stats
+            FrameProfiler.BeginSample("RegenerateStats", "GameUpdater");
+            RegenerateStats(Core.DELTATIME);
+            FrameProfiler.EndSample("RegenerateStats");
 
             // Apply physics step
+            FrameProfiler.BeginSample("PhysicsManager.Update", "PhysicsManager");
             PhysicsManager.Update(Core.Instance.GameObjects);
+            FrameProfiler.EndSample("PhysicsManager.Update");
 
             // Remove dead destructible objects and award XP to the last bullet-owner who dealt damage.
             // CollisionResolver no longer removes objects inline, so this is the single death authority.
+            FrameProfiler.BeginSample("ProcessDeaths", "GameUpdater");
             ProcessDeaths();
+            UpdateDyingObjects();
+            FrameProfiler.EndSample("ProcessDeaths");
 
             // Flush accumulated damage notifications and advance active damage numbers
+            FrameProfiler.BeginSample("DamageNumberManager", "DamageNumberManager");
             DamageNumberManager.Flush();
             DamageNumberManager.Update(Core.DELTATIME);
+            FrameProfiler.EndSample("DamageNumberManager");
 
             // Advance health bar fade state
+            FrameProfiler.BeginSample("HealthBarManager.Update", "HealthBarManager");
             HealthBarManager.Update(Core.DELTATIME);
+            FrameProfiler.EndSample("HealthBarManager.Update");
 
+            FrameProfiler.BeginSample("BlockManager.Update", "BlockManager");
             BlockManager.Update(gameTime);
+            FrameProfiler.EndSample("BlockManager.Update");
 
             // Reset triggers
             TriggerManager.Tickwise_TriggerReset();

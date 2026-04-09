@@ -132,11 +132,11 @@ namespace op.io // TODO: Migrate this script elsewhere
         }
 
         /// <summary>
-        /// Loads all rows from UITooltips and returns them as a RowKey-keyed dictionary.
+        /// Loads all rows from UITooltips and returns them as a RowKey-keyed dictionary of (Text, DataType).
         /// </summary>
-        public static Dictionary<string, string> LoadBlockTooltips()
+        public static Dictionary<string, (string Text, string DataType)> LoadBlockTooltips()
         {
-            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase);
 
             using var connection = DatabaseManager.OpenConnection();
             if (connection == null)
@@ -146,11 +146,14 @@ namespace op.io // TODO: Migrate this script elsewhere
 
             try
             {
-                using var command = new SQLiteCommand("SELECT RowKey, TooltipText FROM UITooltips;", connection);
+                using var command = new SQLiteCommand("SELECT RowKey, TooltipText, DataType FROM UITooltips;", connection);
                 using SQLiteDataReader reader = command.ExecuteReader();
                 while (reader.Read())
                 {
-                    result[reader.GetString(0)] = reader.GetString(1);
+                    string rowKey = reader.GetString(0);
+                    string text = reader.GetString(1);
+                    string dataType = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
+                    result[rowKey] = (text, dataType);
                 }
             }
             catch (Exception ex)
@@ -166,12 +169,13 @@ namespace op.io // TODO: Migrate this script elsewhere
         }
 
         /// <summary>
-        /// Retrieves a FadeIn|Hold|FadeOut animation triplet stored as "x|y|z" in PhysicsSettings.
+        /// Retrieves a FadeIn|Hold|FadeOut animation triplet stored as "x|y|z" in the given settings table.
         /// </summary>
         public static (float FadeIn, float Hold, float FadeOut) GetAnimSetting(
-            string key, float defaultFadeIn = 0f, float defaultHold = 0f, float defaultFadeOut = 0f)
+            string key, float defaultFadeIn = 0f, float defaultHold = 0f, float defaultFadeOut = 0f,
+            string tableName = "FXSettings")
         {
-            string raw = GetSetting<string>("PhysicsSettings", "Value", "SettingKey", key, null);
+            string raw = GetSetting<string>(tableName, "Value", "SettingKey", key, null);
             if (raw != null)
             {
                 var parts = raw.Split('|');

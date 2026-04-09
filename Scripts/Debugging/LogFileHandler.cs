@@ -11,6 +11,8 @@ namespace op.io
         private static readonly string ProjectRoot = ResolveProjectRoot();
         private static readonly string LogsRoot = Path.Combine(ProjectRoot, "Logs");
         private static string _currentLogFilePath = string.Empty;
+        private static string _currentRedFlagsFilePath = string.Empty;
+        private static readonly HashSet<string> _redFlagsSeenMessages = [];
         private static bool _initialized;
         private static int _maxLogFiles = DefaultMaxLogFiles;
 
@@ -26,6 +28,29 @@ namespace op.io
             }
 
             return LogsRoot;
+        }
+
+        public static void AppendRedFlagLog(string message)
+        {
+            try
+            {
+                EnsureInitialized();
+
+                if (string.IsNullOrWhiteSpace(_currentRedFlagsFilePath))
+                    return;
+
+                lock (SyncRoot)
+                {
+                    if (!_redFlagsSeenMessages.Add(message))
+                        return;
+
+                    File.AppendAllText(_currentRedFlagsFilePath, $"{message}{Environment.NewLine}");
+                }
+            }
+            catch
+            {
+                // Logging failures should never crash the game. Swallow exceptions silently.
+            }
         }
 
         public static void AppendLog(string message, bool appendNewLine = true)
@@ -69,6 +94,7 @@ namespace op.io
                 Directory.CreateDirectory(LogsRoot);
                 EnforceLogRetention();
                 _currentLogFilePath = CreateLogFile();
+                _currentRedFlagsFilePath = CreateRedFlagsFile(_currentLogFilePath);
                 _initialized = true;
             }
         }
@@ -90,7 +116,7 @@ namespace op.io
             }
 
             List<FileInfo> logFiles = [];
-            string[] files = Directory.GetFiles(LogsRoot, "*.txt", SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles(LogsRoot, "*_Log.txt", SearchOption.AllDirectories);
 
             foreach (string path in files)
             {
@@ -128,6 +154,25 @@ namespace op.io
                 {
                     // Swallow errors when deleting old logs.
                 }
+
+                try
+                {
+                    string baseName = Path.GetFileNameWithoutExtension(oldest.FullName); // e.g. "2026_04_04_12_00_00_Log"
+                    string redFlagsName = baseName.EndsWith("_Log")
+                        ? baseName[..^4] + "_RedFlags.txt"
+                        : baseName + "_RedFlags.txt";
+                    string redFlagsPath = Path.Combine(oldest.DirectoryName ?? LogsRoot, redFlagsName);
+                    if (File.Exists(redFlagsPath))
+                    {
+                        FileInfo rf = new(redFlagsPath);
+                        rf.IsReadOnly = false;
+                        rf.Delete();
+                    }
+                }
+                catch
+                {
+                    // Swallow errors when deleting paired red flags log.
+                }
             }
         }
 
@@ -152,6 +197,20 @@ namespace op.io
             {
                 stream.WriteLine($"Log created at {now:O}");
             }
+
+            return fullPath;
+        }
+
+        private static string CreateRedFlagsFile(string logFilePath)
+        {
+            string dir = Path.GetDirectoryName(logFilePath) ?? LogsRoot;
+            string baseName = Path.GetFileNameWithoutExtension(logFilePath); // e.g. "2026_04_04_12_00_00_Log"
+            string redFlagsFileName = baseName.EndsWith("_Log")
+                ? baseName[..^4] + "_RedFlags.txt"
+                : baseName + "_RedFlags.txt";
+            string fullPath = Path.Combine(dir, redFlagsFileName);
+
+            using var stream = File.AppendText(fullPath);
 
             return fullPath;
         }

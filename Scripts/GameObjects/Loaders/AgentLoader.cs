@@ -18,11 +18,14 @@ namespace op.io
                     secondaryTable: "Agents",
                     whereClause: "g.ID = @ID",
                     extraColumns: "s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed, " +
-                                  "s.MaxHealth, s.HealthRegen, s.HealthArmor, " +
-                                  "s.MaxShield, s.ShieldRegen, s.ShieldArmor, " +
-                                  "s.BodyPenetration, s.BodyCollisionDamage, s.BodyKnockback, " +
+                                  "COALESCE(s.Mass, g.Mass) AS BodyMass, " +
+                                  "s.HealthRegen, s.HealthRegenDelay, s.HealthArmor, " +
+                                  "s.MaxShield, s.ShieldRegen, s.ShieldRegenDelay, s.ShieldArmor, " +
+                                  "s.BodyPenetration, s.BodyCollisionDamage, " +
                                   "s.CollisionDamageResistance, s.BulletDamageResistance, " +
-                                  "s.Speed, s.RotationSpeed"
+                                  "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, " +
+                                  "COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, " +
+                                  "COALESCE(s.MaxXP, 0) AS MaxXP"
                 );
 
                 var result = DatabaseQuery.ExecuteQuery(query, new Dictionary<string, object> { { "@ID", agentId } });
@@ -70,11 +73,14 @@ namespace op.io
                 string query = GameObjectManager.BuildJoinQuery(
                     secondaryTable: "Agents",
                     extraColumns: "s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed, " +
-                                  "s.MaxHealth, s.HealthRegen, s.HealthArmor, " +
-                                  "s.MaxShield, s.ShieldRegen, s.ShieldArmor, " +
-                                  "s.BodyPenetration, s.BodyCollisionDamage, s.BodyKnockback, " +
+                                  "COALESCE(s.Mass, g.Mass) AS BodyMass, " +
+                                  "s.HealthRegen, s.HealthRegenDelay, s.HealthArmor, " +
+                                  "s.MaxShield, s.ShieldRegen, s.ShieldRegenDelay, s.ShieldArmor, " +
+                                  "s.BodyPenetration, s.BodyCollisionDamage, " +
                                   "s.CollisionDamageResistance, s.BulletDamageResistance, " +
-                                  "s.Speed, s.RotationSpeed"
+                                  "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, " +
+                                  "COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, " +
+                                  "COALESCE(s.MaxXP, 0) AS MaxXP"
                 );
 
                 var results = DatabaseQuery.ExecuteQuery(query);
@@ -128,23 +134,29 @@ namespace op.io
 
                 Attributes_Body bodyAttributes = new()
                 {
-                    MaxHealth                 = Convert.ToSingle(row["MaxHealth"]),
+                    Mass                      = row.ContainsKey("BodyMass") ? Convert.ToSingle(row["BodyMass"]) : Convert.ToSingle(row["Mass"]),
                     HealthRegen               = Convert.ToSingle(row["HealthRegen"]),
+                    HealthRegenDelay          = Convert.ToSingle(row["HealthRegenDelay"]),
                     HealthArmor               = Convert.ToSingle(row["HealthArmor"]),
                     MaxShield                 = Convert.ToSingle(row["MaxShield"]),
                     ShieldRegen               = Convert.ToSingle(row["ShieldRegen"]),
+                    ShieldRegenDelay          = Convert.ToSingle(row["ShieldRegenDelay"]),
                     ShieldArmor               = Convert.ToSingle(row["ShieldArmor"]),
                     BodyPenetration           = Convert.ToSingle(row["BodyPenetration"]),
                     BodyCollisionDamage       = Convert.ToSingle(row["BodyCollisionDamage"]),
-                    BodyKnockback             = Convert.ToSingle(row["BodyKnockback"]),
                     CollisionDamageResistance = Convert.ToSingle(row["CollisionDamageResistance"]),
                     BulletDamageResistance    = Convert.ToSingle(row["BulletDamageResistance"]),
-                    Speed                     = Convert.ToSingle(row["Speed"]),
-                    RotationSpeed             = Convert.ToSingle(row["RotationSpeed"]),
+                    Speed                     = row.ContainsKey("Speed")   ? Convert.ToSingle(row["Speed"])   : 1.0f,
+                    Control                   = row.ContainsKey("Control") ? Convert.ToSingle(row["Control"]) : 1.0f,
+                    BodyActionBuff            = row.ContainsKey("BodyActionBuff") ? Convert.ToSingle(row["BodyActionBuff"]) : 0.0f,
                 };
 
+                float maxXP = row.ContainsKey("MaxXP") ? Convert.ToSingle(row["MaxXP"]) : 0f;
                 PlayerGameObject archetype = new(baseObject, baseSpeed, isPlayer, default, bodyAttributes);
-                return archetype.ToAgent();
+                Agent agent = archetype.ToAgent();
+                agent.Mass = bodyAttributes.Mass; // override GO mass with body attribute mass
+                agent.MaxXP = maxXP;
+                return agent;
             }
             catch (Exception ex)
             {

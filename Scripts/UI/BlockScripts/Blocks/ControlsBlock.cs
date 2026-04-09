@@ -6,6 +6,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.BlockUtilities;
+using op.io.UI.FunCol;
+using op.io.UI.FunCol.Features;
 
 namespace op.io.UI.BlockScripts.Blocks
 {
@@ -17,6 +19,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static readonly List<KeybindDisplayRow> _keybindCache = new();
         private static bool _keybindCacheLoaded;
+        private static bool _headerVisibleLoaded;
         private static readonly StringBuilder _stringBuilder = new();
         private static readonly BlockDragState<KeybindDisplayRow> _dragState = new(row => row.Action, row => row.Bounds, (row, isDragging) =>
         {
@@ -25,16 +28,22 @@ namespace op.io.UI.BlockScripts.Blocks
         });
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
-        private static string _hoveredKeyAction;
         private static string _tooltipRowKey;
 
         public static string GetHoveredRowKey() => _tooltipRowKey;
+
+        public static string GetHoveredRowLabel() => _tooltipRowKey;
         private static float _lineHeightCache;
-        private static string _hoveredTypeKey;
-        private static bool _hoveredTypeIndicator;
         private static readonly BlockScrollPanel _scrollPanel = new();
-        private static string _pressedRowKey;
+        private static string _pressedDragRowKey;   // row where col 3 (drag handle) was pressed
+        private static string _pressedRebindRowKey; // row where col 1 (keybind) was pressed
         private static Point _pressStartPosition;
+
+        // ── Per-row FunColInterfaces (Green=name, Blue=key, Red=type, Orange=value) ──
+        private static readonly Dictionary<string, FunColInterface> _rowFunCols =
+            new(StringComparer.OrdinalIgnoreCase);
+        // Static drag-ghost funCol reused when rendering the dragging row ghost
+        private static FunColInterface _dragGhostFunCol;
         private static bool _rebindOverlayVisible;
         private static string _rebindAction;
         private static string _rebindCurrentInput;
@@ -44,22 +53,40 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Rectangle _rebindModalBounds;
         private static Rectangle _rebindConfirmButtonBounds;
         private static Rectangle _rebindUnbindButtonBounds;
+        private static Rectangle _rebindCancelButtonBounds;
         private static bool _rebindCaptured;
         private static bool _suppressNextCapture;
         private static string _rebindConflictWarning;
         private static bool _rebindConfirmHovered;
         private static bool _rebindUnbindHovered;
+        private static bool _rebindCancelHovered;
         private static bool _rebindPendingUnbind;
 
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
         private const int ValueHighlightPadding = 2;
         private const int DragStartThreshold = 6;
+        private const int ControlsHeaderHeight = 16;
+
+        // ── Float widget constants ────────────────────────────────────────────
+        private const int FloatArrowW  = 16;
+        private const int FloatInputW  = 48;
+        private const int FloatWidgetH = 16;
+        private const float FloatStep  = 0.1f;
+        private const float FloatMin   = 0.01f;
+
+        // ── Float editing state ───────────────────────────────────────────────
+        private static string _editingFloatKey;
+        private static string _floatInputBuffer = string.Empty;
+        private static readonly KeyRepeatTracker _floatInputTracker = new();
+        private static KeyboardState _prevFloatKeyboard;
 
         internal static void InvalidateCache()
         {
             _keybindCacheLoaded = false;
             _keybindCache.Clear();
+            _rowFunCols.Clear();
+            _dragGhostFunCol = null;
         }
 
         private static bool IsSwitchType(InputType inputType) =>
@@ -67,6 +94,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static bool IsEnumType(InputType inputType) =>
             inputType == InputType.SaveEnum || inputType == InputType.NoSaveEnum;
+
+        private static bool IsFloatType(InputType inputType) =>
+            inputType == InputType.Float;
 
         private static bool IsPersistentSwitch(InputType inputType) => inputType == InputType.SaveSwitch;
 
@@ -90,18 +120,29 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             EnsureKeybindCache();
+
+            var headerFunColEarly = GetOrEnsureHeaderFunCol();
+            if (!_headerVisibleLoaded)
+            {
+                Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Controls);
+                if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
+                    headerFunColEarly.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                _headerVisibleLoaded = true;
+            }
+
             _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
             float contentHeight = _keybindCache.Count * _lineHeightCache;
-            _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
+            int headerH = headerFunColEarly.HeaderVisible ? ControlsHeaderHeight : 0;
+            var listArea = new Rectangle(contentBounds.X, contentBounds.Y + headerH, contentBounds.Width, Math.Max(0, contentBounds.Height - headerH));
+            _scrollPanel.Update(listArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
             {
-                listBounds = contentBounds;
+                listBounds = listArea;
             }
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             UpdateRowBounds(listBounds);
-            UpdateTypeToggleBounds(boldFont);
-            UpdateKeyValueBounds(boldFont, regularFont);
 
             bool leftDown = mouseState.LeftButton == ButtonState.Pressed;
             bool leftDownPrev = previousMouseState.LeftButton == ButtonState.Pressed;
@@ -114,26 +155,32 @@ namespace op.io.UI.BlockScripts.Blocks
                 _dragState.Reset();
             }
 
+            // Update per-row FunColInterfaces (suppress hover animation during drag)
+            bool suppressHover = _dragState.IsDragging;
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (row.Bounds == Rectangle.Empty) continue;
+                GetOrCreateRowFunCol(row.Action)
+                    .Update(row.Bounds, mouseState, dt, suppressHover || blockLocked);
+            }
+
             bool allowInteraction = !blockLocked && pointerInsideList;
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             _hoveredRowKey = allowInteraction ? hitRow : null;
             _tooltipRowKey = hitRow;
-            if (allowInteraction)
-            {
-                _hoveredTypeKey = HitTestTypeToggle(mouseState.Position, listBounds, out bool indicatorArea);
-                _hoveredTypeIndicator = indicatorArea;
-                _hoveredKeyAction = HitTestKeyValue(mouseState.Position);
-            }
-            else
-            {
-                _hoveredTypeKey = null;
-                _hoveredTypeIndicator = false;
-                _hoveredKeyAction = null;
-            }
 
             if (!allowInteraction)
             {
-                _pressedRowKey = null;
+                _pressedDragRowKey   = null;
+                _pressedRebindRowKey = null;
+            }
+
+            // Determine which column is hovered on the hovered row
+            int hoveredCol = -1;
+            if (!string.IsNullOrEmpty(_hoveredRowKey) &&
+                _rowFunCols.TryGetValue(_hoveredRowKey, out var hovFunCol))
+            {
+                hoveredCol = hovFunCol.HoveredColumn;
             }
 
             if (_dragState.IsDragging)
@@ -144,57 +191,133 @@ namespace op.io.UI.BlockScripts.Blocks
                     if (_dragState.TryCompleteDrag(_keybindCache, out bool orderChanged))
                     {
                         NormalizeCacheOrder();
-                        if (orderChanged)
-                        {
-                            PersistRowOrder();
-                        }
+                        if (orderChanged) PersistRowOrder();
                     }
+                    _pressedDragRowKey   = null;
+                    _pressedRebindRowKey = null;
                 }
-            }
-            else if (allowInteraction && leftClickStarted && TryToggleInputType(_hoveredTypeKey, boldFont, _hoveredTypeIndicator))
-            {
-                // Interaction consumed by type toggle.
             }
             else
             {
                 if (allowInteraction && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
                 {
-                    _pressedRowKey = _hoveredRowKey;
-                    _pressStartPosition = mouseState.Position;
+                    if (hoveredCol == 2)
+                    {
+                        // Col 2 (Red): type label — cycle input type (Hold ↔ Switch) only, skip enums
+                        int rowIdx2 = GetRowIndex(_hoveredRowKey);
+                        if (rowIdx2 >= 0 && !IsEnumType(_keybindCache[rowIdx2].InputType))
+                            TryToggleInputType(_hoveredRowKey, boldFont, clickedIndicator: false);
+                    }
+                    else if (hoveredCol == 3)
+                    {
+                        // Col 3 (Orange): value — toggle switch state or cycle enum
+                        int rowIdx3 = GetRowIndex(_hoveredRowKey);
+                        if (rowIdx3 >= 0)
+                        {
+                            var vRow = _keybindCache[rowIdx3];
+                            if (IsSwitchType(vRow.InputType) || IsPersistentSwitch(vRow.InputType) || IsEnumType(vRow.InputType))
+                                TryToggleInputType(_hoveredRowKey, boldFont, clickedIndicator: true);
+                        }
+                    }
+                    else if (GetOrCreateRowFunCol(_hoveredRowKey).DragHandleClicked)
+                    {
+                        // Col 0 (Green): action name — drag handle
+                        _pressedDragRowKey = _hoveredRowKey;
+                        _pressStartPosition = mouseState.Position;
+                    }
+                    else if (hoveredCol == 1)
+                    {
+                        // Col 1 (Blue): keybind — press tracked for rebind on release
+                        // Skip rebind tracking for Float rows (they have no key to rebind)
+                        int floatCheckIdx = GetRowIndex(_hoveredRowKey);
+                        if (floatCheckIdx < 0 || !IsFloatType(_keybindCache[floatCheckIdx].InputType))
+                            _pressedRebindRowKey = _hoveredRowKey;
+                    }
                 }
 
-                if (allowInteraction && _pressedRowKey != null && leftDown && !_dragState.IsDragging)
+                // Drag threshold check
+                if (_pressedDragRowKey != null && leftDown)
                 {
                     if (HasDragExceededThreshold(mouseState.Position))
                     {
-                        _dragState.TryStartDrag(_keybindCache, _pressedRowKey, mouseState);
-                        _pressedRowKey = null;
+                        _dragState.TryStartDrag(_keybindCache, _pressedDragRowKey, mouseState);
+                        _pressedDragRowKey = null;
                     }
                 }
 
                 if (leftClickReleased)
                 {
-                    if (_dragState.IsDragging)
+                    bool handledByFloat = false;
+                    if (!string.IsNullOrEmpty(_hoveredRowKey) && hoveredCol == 3)
                     {
-                        if (_dragState.TryCompleteDrag(_keybindCache, out bool orderChanged))
+                        int floatIdx = GetRowIndex(_hoveredRowKey);
+                        if (floatIdx >= 0 && IsFloatType(_keybindCache[floatIdx].InputType))
                         {
-                            NormalizeCacheOrder();
-                            if (orderChanged)
-                            {
-                                PersistRowOrder();
-                            }
+                            HandleFloatWidgetClick(mouseState.Position, _keybindCache[floatIdx]);
+                            handledByFloat = true;
                         }
                     }
-                    else if (allowInteraction &&
-                        !string.IsNullOrEmpty(_pressedRowKey) &&
-                        string.Equals(_pressedRowKey, _hoveredRowKey, StringComparison.OrdinalIgnoreCase))
+
+                    // Commit float edit when clicking away from the float row's col 3
+                    if (!handledByFloat && _editingFloatKey != null)
                     {
-                        BeginRebindFlow(_pressedRowKey);
+                        CommitFloatInput();
+                        _editingFloatKey = null;
                     }
 
-                    _pressedRowKey = null;
+                    if (!handledByFloat &&
+                        !string.IsNullOrEmpty(_pressedRebindRowKey) &&
+                        string.Equals(_pressedRebindRowKey, _hoveredRowKey, StringComparison.OrdinalIgnoreCase) &&
+                        hoveredCol == 1)
+                    {
+                        BeginRebindFlow(_pressedRebindRowKey);
+                    }
+                    _pressedDragRowKey   = null;
+                    _pressedRebindRowKey = null;
                 }
             }
+
+            // Float textbox keyboard input
+            if (_editingFloatKey != null && !blockLocked)
+            {
+                KeyboardState ks = Keyboard.GetState();
+                double elapsedSec = gameTime.ElapsedGameTime.TotalSeconds;
+                foreach (Keys k in _floatInputTracker.GetKeysWithRepeat(ks, _prevFloatKeyboard, elapsedSec))
+                {
+                    if (k == Keys.Enter)
+                    {
+                        CommitFloatInput();
+                        _editingFloatKey = null;
+                        break;
+                    }
+                    if (k == Keys.Escape)
+                    {
+                        _editingFloatKey = null;
+                        _floatInputBuffer = string.Empty;
+                        break;
+                    }
+                    if (k == Keys.Back)
+                    {
+                        if (_floatInputBuffer.Length > 0)
+                            _floatInputBuffer = _floatInputBuffer[..^1];
+                        continue;
+                    }
+                    char? c = FloatKeyToChar(k, ks, _floatInputBuffer);
+                    if (c.HasValue && _floatInputBuffer.Length < 8)
+                        _floatInputBuffer += c.Value;
+                }
+                _prevFloatKeyboard = ks;
+            }
+
+            // Update header hover so DrawHeader can show column tooltips + hide toggle
+            int headerH2 = headerFunColEarly.HeaderVisible ? ControlsHeaderHeight : 0;
+            var headerBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, headerH2);
+            var headerFunCol = headerFunColEarly;
+            headerFunCol.ShowHeaderToggle = BlockManager.DockingModeEnabled;
+            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
+            headerFunCol.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
+            if (headerFunCol.HeaderToggleClicked)
+                BlockDataStore.SetRowData(DockBlockKind.Controls, "FunColHeaderVisible", headerFunCol.HeaderVisible ? "true" : "false");
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -223,46 +346,70 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             EnsurePixelTexture();
-            UpdateTypeToggleBounds(boldFont);
 
             float lineHeight = _lineHeightCache;
+
+            // Clip row drawing to the scroll viewport so partially-scrolled rows don't bleed outside.
+            var gd = spriteBatch.GraphicsDevice;
+            float uiScale = BlockManager.UIScale;
+            Rectangle scissorRect = uiScale > 0f && uiScale != 1f
+                ? new Rectangle(
+                    (int)(listBounds.X      * uiScale),
+                    (int)(listBounds.Y      * uiScale),
+                    (int)(listBounds.Width  * uiScale),
+                    (int)(listBounds.Height * uiScale))
+                : listBounds;
+            var viewport = gd.Viewport;
+            scissorRect.X      = Math.Clamp(scissorRect.X,      0, viewport.Width);
+            scissorRect.Y      = Math.Clamp(scissorRect.Y,      0, viewport.Height);
+            scissorRect.Width  = Math.Clamp(scissorRect.Width,  0, viewport.Width  - scissorRect.X);
+            scissorRect.Height = Math.Clamp(scissorRect.Height, 0, viewport.Height - scissorRect.Y);
+
+            spriteBatch.End();
+            var scissorState = new RasterizerState { CullMode = CullMode.None, ScissorTestEnable = true };
+            gd.ScissorRectangle = scissorRect;
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, scissorState, null, BlockManager.CurrentUITransform);
+
             foreach (KeybindDisplayRow row in _keybindCache)
             {
                 Rectangle rowBounds = row.Bounds;
-                if (rowBounds == Rectangle.Empty)
-                {
-                    continue;
-                }
+                if (rowBounds == Rectangle.Empty) continue;
+                if (rowBounds.Y >= listBounds.Bottom) break;
+                if (rowBounds.Bottom <= listBounds.Y) continue;
 
-                if (rowBounds.Y >= listBounds.Bottom)
-                {
-                    break;
-                }
-
-                if (rowBounds.Bottom <= listBounds.Y)
-                {
-                    continue;
-                }
-
-                bool isDraggingRow = _dragState.IsDragging && string.Equals(row.Action, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
+                bool isDraggingRow = _dragState.IsDragging &&
+                    string.Equals(row.Action, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
                 if (!isDraggingRow)
                 {
                     DrawRowBackground(spriteBatch, row, rowBounds, blockLocked);
-                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds, blockLocked);
+                    DrawRowWithFunCol(spriteBatch, row, rowBounds, boldFont);
+                    if (IsFloatType(row.InputType) && !blockLocked)
+                        DrawFloatWidget(spriteBatch, row, rowBounds, boldFont);
                 }
             }
 
             if (!blockLocked && _dragState.IsDragging && _dragState.HasSnapshot)
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
-                {
                     FillRect(spriteBatch, _dragState.DropIndicatorBounds, ColorPalette.DropIndicator);
-                }
 
-                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont, blockLocked);
+                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont);
             }
 
-            _scrollPanel.Draw(spriteBatch);
+            spriteBatch.End();
+            scissorState.Dispose();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, RasterizerState.CullNone, null, BlockManager.CurrentUITransform);
+
+            _scrollPanel.Draw(spriteBatch, blockLocked);
+
+            // Draw header strip last so it always renders on top of scrolled content
+            var hfc = GetOrEnsureHeaderFunCol();
+            int hdrH = hfc.HeaderVisible ? ControlsHeaderHeight : 0;
+            hfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
+            var headerStrip = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, hdrH);
+            hfc.DrawHeader(spriteBatch, headerStrip, boldFont, _pixelTexture);
         }
 
         private static void EnsureKeybindCache()
@@ -298,13 +445,16 @@ namespace op.io.UI.BlockScripts.Blocks
 
                     string actionLabel = row.TryGetValue("SettingKey", out object action) ? action?.ToString() ?? "Action" : "Action";
                     string rawInputKey = row.TryGetValue("InputKey", out object key) ? key?.ToString() ?? "" : "";
-                    string inputLabel = string.IsNullOrWhiteSpace(rawInputKey) ? "[UNBOUND]" : rawInputKey;
+                    string inputLabel = IsFloatType(parsedType)
+                        ? ControlStateManager.GetFloat(actionLabel, 1.0f).ToString("F2")
+                        : (string.IsNullOrWhiteSpace(rawInputKey) ? "[UNBOUND]" : rawInputKey);
                     int orderValue = row.TryGetValue("ControlOrder", out object orderObj) ? Convert.ToInt32(orderObj) : fallbackOrder;
                     int resolvedOrder = storedOrders.TryGetValue(actionLabel, out int storedOrder) ? storedOrder : orderValue;
 
                     bool triggerAuto = false;
                     string canonicalKey = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Controls, actionLabel);
-                    if (storedRowData.TryGetValue(canonicalKey, out string storedData) &&
+                    if (!IsFloatType(parsedType) &&
+                        storedRowData.TryGetValue(canonicalKey, out string storedData) &&
                         TryParseRowData(storedData, out InputType storedType, out bool storedTriggerAuto) &&
                         !IsPersistentSwitch(storedType) &&
                         !IsEnumType(parsedType))
@@ -319,7 +469,7 @@ namespace op.io.UI.BlockScripts.Blocks
                         triggerAuto = false;
                     }
 
-                    bool toggleLocked = InputManager.IsTypeLocked(actionLabel);
+                    bool toggleLocked = InputManager.IsTypeLocked(actionLabel) || IsFloatType(parsedType);
 
                     string parsedTypeLabel = parsedType.ToString();
                     if (!string.Equals(typeLabel, parsedTypeLabel, StringComparison.OrdinalIgnoreCase))
@@ -383,104 +533,103 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void DrawRowBackground(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle bounds, bool blockLocked)
         {
-            if (blockLocked || bounds == Rectangle.Empty || _pixelTexture == null)
-            {
-                return;
-            }
-
+            if (blockLocked || bounds == Rectangle.Empty || _pixelTexture == null) return;
             if (ShouldHighlightRow(row, blockLocked))
-            {
                 FillRect(spriteBatch, bounds, ColorPalette.RowHover);
-            }
         }
 
-        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, bool blockLocked)
+        /// <summary>Draws a row using its per-row FunColInterface (4 columns).</summary>
+        private static void DrawRowWithFunCol(SpriteBatch spriteBatch, KeybindDisplayRow row,
+            Rectangle rowBounds, UIStyle.UIFont boldFont)
+        {
+            var funCol = GetOrCreateRowFunCol(row.Action);
+
+            // Update feature texts each frame before drawing
+            if (funCol.GetFeature(0) is TextLabelFeature nameF)
+                nameF.Text = row.Action;
+
+            if (funCol.GetFeature(1) is TextLabelFeature keyF)
+            {
+                // Float rows: leave text empty — the widget draws its own content on top
+                keyF.Text = IsFloatType(row.InputType)
+                    ? string.Empty
+                    : (string.IsNullOrWhiteSpace(row.Input) ? "[UNBOUND]" : row.Input);
+            }
+
+            if (funCol.GetFeature(2) is TextLabelFeature typeF)
+                typeF.Text = row.TypeLabel;
+
+            if (funCol.GetFeature(3) is CyclerFeature valueF)
+            {
+                valueF.IsLocked = row.ToggleLocked;
+                if (IsSwitchType(row.InputType) || IsPersistentSwitch(row.InputType))
+                {
+                    valueF.IsBoolean    = true;
+                    valueF.BoolState    = GetSwitchState(row.Action);
+                    valueF.CurrentValue = string.Empty;
+                }
+                else if (IsEnumType(row.InputType))
+                {
+                    valueF.IsBoolean    = false;
+                    valueF.CurrentValue = ControlStateManager.GetEnumValue(row.Action) ?? string.Empty;
+                }
+                else
+                {
+                    valueF.IsBoolean    = false;
+                    valueF.CurrentValue = string.Empty;
+                }
+            }
+
+            funCol.Draw(spriteBatch, rowBounds, boldFont, _pixelTexture);
+        }
+
+        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds,
+            float lineHeight, UIStyle.UIFont boldFont)
         {
             Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, lineHeight);
-            if (dragBounds == Rectangle.Empty)
-            {
-                return;
-            }
+            if (dragBounds == Rectangle.Empty) return;
 
             FillRect(spriteBatch, dragBounds, ColorPalette.RowDragging);
 
             KeybindDisplayRow row = _dragState.DraggingSnapshot;
-            row.Bounds = dragBounds;
-            row.TypeToggleBounds = Rectangle.Empty;
-            row.KeyValueBounds = Rectangle.Empty;
-            DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds, blockLocked);
-        }
-
-        private static void DrawRowContents(SpriteBatch spriteBatch, KeybindDisplayRow row, Rectangle rowBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, Rectangle contentBounds, bool blockLocked)
-        {
-            Vector2 labelPosition = new(rowBounds.X, rowBounds.Y);
-
-            bool showToggle = !blockLocked && row.IsToggleCandidate && row.TypeToggleBounds != Rectangle.Empty;
-            if (showToggle)
+            // Reuse or create a ghost funCol with equal widths (no hover animation)
+            if (_dragGhostFunCol == null)
             {
-                bool hovered = string.Equals(_hoveredTypeKey, row.Action, StringComparison.OrdinalIgnoreCase);
-                Color fill = row.InputType == InputType.Trigger && row.TriggerAutoFire ? ColorPalette.ToggleActive : ColorPalette.ToggleIdle;
-                if (hovered)
+                _dragGhostFunCol = new FunColInterface(
+                    new float[] { 0.35f, 0.25f, 0.22f, 0.18f },
+                    new TextLabelFeature("Action", FunColTextAlign.Right),
+                    new TextLabelFeature("Key",    FunColTextAlign.Left),
+                    new TextLabelFeature("Type",   FunColTextAlign.Left),
+                    new CyclerFeature("Value") { TextAlign = FunColTextAlign.Center }
+                );
+                _dragGhostFunCol.DisableExpansion = true;
+                _dragGhostFunCol.DisableColors = true;
+                _dragGhostFunCol.SuppressTooltipWarnings = true;
+            }
+
+            if (_dragGhostFunCol.GetFeature(0) is TextLabelFeature gn) gn.Text = row.Action;
+            if (_dragGhostFunCol.GetFeature(1) is TextLabelFeature gk) gk.Text = row.Input;
+            if (_dragGhostFunCol.GetFeature(2) is TextLabelFeature gt) gt.Text = row.TypeLabel;
+            if (_dragGhostFunCol.GetFeature(3) is CyclerFeature gv)
+            {
+                gv.IsLocked = row.ToggleLocked;
+                if (IsSwitchType(row.InputType) || IsPersistentSwitch(row.InputType))
                 {
-                    fill = ColorPalette.ToggleHover;
+                    gv.IsBoolean = true; gv.BoolState = GetSwitchState(row.Action);
                 }
-
-                FillRect(spriteBatch, row.TypeToggleBounds, fill);
-            }
-
-            _stringBuilder.Clear();
-            _stringBuilder.Append(row.Action);
-            _stringBuilder.Append(' ');
-            _stringBuilder.Append('[');
-            _stringBuilder.Append(row.TypeLabel);
-            _stringBuilder.Append(']');
-            string header = _stringBuilder.ToString();
-            Vector2 headerSize = boldFont.MeasureString(header);
-            boldFont.DrawString(spriteBatch, header, labelPosition, UIStyle.TextColor);
-
-            _stringBuilder.Clear();
-            _stringBuilder.Append(":  ");
-            _stringBuilder.Append(row.Input);
-            string value = _stringBuilder.ToString();
-            float valueX = labelPosition.X + headerSize.X;
-
-            // Build a background aligned to the keybind text (after the ":  " prefix) so it visually sits behind the clickable keys.
-            Rectangle keyValueBounds = row.KeyValueBounds;
-            if (keyValueBounds == Rectangle.Empty && !string.IsNullOrWhiteSpace(row.Input))
-            {
-                float keyTextX = valueX + regularFont.MeasureString(":  ").X;
-                float keyTextWidth = regularFont.MeasureString(row.Input).X;
-                keyValueBounds = new Rectangle(
-                    (int)MathF.Floor(keyTextX) - ValueHighlightPadding,
-                    rowBounds.Y,
-                    (int)MathF.Ceiling(keyTextWidth) + (ValueHighlightPadding * 2),
-                    rowBounds.Height);
-            }
-
-            if (!blockLocked && keyValueBounds != Rectangle.Empty)
-            {
-                bool keyHovered = string.Equals(_hoveredKeyAction, row.Action, StringComparison.OrdinalIgnoreCase);
-                Color fill = keyHovered ? ColorPalette.ToggleHover : ColorPalette.ToggleIdle;
-                FillRect(spriteBatch, keyValueBounds, fill);
-            }
-            regularFont.DrawString(spriteBatch, value, new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
-
-            if (IsSwitchType(row.InputType))
-            {
-                bool state = GetSwitchState(row.Action);
-                BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, state);
-            }
-            else if (IsEnumType(row.InputType))
-            {
-                string enumValue = ControlStateManager.GetEnumValue(row.Action);
-                if (!string.IsNullOrEmpty(enumValue))
+                else if (IsEnumType(row.InputType))
                 {
-                    Vector2 enumTextSize = regularFont.MeasureString(enumValue);
-                    float enumX = contentBounds.Right - enumTextSize.X - 4;
-                    float enumY = rowBounds.Y + (lineHeight - enumTextSize.Y) / 2f;
-                    regularFont.DrawString(spriteBatch, enumValue, new Vector2(enumX, enumY), UIStyle.TextColor);
+                    gv.IsBoolean = false;
+                    gv.CurrentValue = ControlStateManager.GetEnumValue(row.Action) ?? string.Empty;
+                }
+                else
+                {
+                    gv.IsBoolean = false;
+                    gv.CurrentValue = string.Empty;
                 }
             }
+
+            _dragGhostFunCol.Draw(spriteBatch, dragBounds, boldFont, _pixelTexture);
         }
 
         private static void UpdateRowBounds(Rectangle contentBounds)
@@ -517,6 +666,45 @@ namespace op.io.UI.BlockScripts.Blocks
                 string.Equals(_hoveredRowKey, row.Action, StringComparison.OrdinalIgnoreCase);
         }
 
+        private static FunColInterface GetOrCreateRowFunCol(string action)
+        {
+            if (_rowFunCols.TryGetValue(action, out var existing)) return existing;
+            var fc = new FunColInterface(
+                new float[] { 0.35f, 0.25f, 0.22f, 0.18f },
+                new TextLabelFeature("Action", FunColTextAlign.Right),
+                new TextLabelFeature("Key",    FunColTextAlign.Left),
+                new TextLabelFeature("Type",   FunColTextAlign.Left),
+                new CyclerFeature("Value") { TextAlign = FunColTextAlign.Center }
+            );
+            fc.DisableExpansion = true;
+            fc.DisableColors = true;
+            fc.RowDragEnabled = true;
+            fc.SuppressTooltipWarnings = true;
+            _rowFunCols[action] = fc;
+            return fc;
+        }
+
+        private static FunColInterface _headerFunCol;
+        private static FunColInterface GetOrEnsureHeaderFunCol()
+        {
+            if (_headerFunCol != null) return _headerFunCol;
+            _headerFunCol = new FunColInterface(
+                new float[] { 0.35f, 0.25f, 0.22f, 0.18f },
+                new TextLabelFeature("Action", FunColTextAlign.Right)
+                    { HeaderTooltipTexts = ["Name of the game action"] },
+                new TextLabelFeature("Key",    FunColTextAlign.Left)
+                    { HeaderTooltipTexts = ["Keybinding assigned to this action"] },
+                new TextLabelFeature("Type",   FunColTextAlign.Left)
+                    { HeaderTooltipTexts = ["Input type: Hold, Switch, Trigger, or Float"] },
+                new CyclerFeature("Value") { TextAlign = FunColTextAlign.Center,
+                    HeaderTooltipTexts = ["Current state or value"] }
+            );
+            _headerFunCol.DisableExpansion = true;
+            _headerFunCol.DisableColors = true;
+            _headerFunCol.ShowHeaderTooltips = true;
+            return _headerFunCol;
+        }
+
         private static void UpdateTypeToggleBounds(UIStyle.UIFont boldFont)
         {
             if (_lineHeightCache <= 0f || !boldFont.IsAvailable)
@@ -543,6 +731,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 int y = row.Bounds.Y;
                 int height = row.Bounds.Height > 0 ? row.Bounds.Height : (int)MathF.Ceiling(_lineHeightCache);
                 int width = (int)MathF.Ceiling(typeSize.X) + (TypeTogglePadding * 2);
+                int indicatorStart = row.Bounds.Right - TypeIndicatorDiameter - 4;
+                if (x + width > indicatorStart - 4)
+                {
+                    width = Math.Max(0, indicatorStart - 4 - x);
+                }
 
                 row.TypeToggleBounds = new Rectangle(x, y, width, height);
                 _keybindCache[i] = row;
@@ -606,25 +799,28 @@ namespace op.io.UI.BlockScripts.Blocks
             indicatorArea = false;
             foreach (KeybindDisplayRow row in _keybindCache)
             {
-                if (IsPersistentSwitch(row.InputType) || row.TypeToggleBounds == Rectangle.Empty)
+                // Check type toggle label (not for persistent switches or empty bounds)
+                if (!IsPersistentSwitch(row.InputType) && row.TypeToggleBounds != Rectangle.Empty)
                 {
-                    continue;
-                }
-
-                if (row.TypeToggleBounds.Contains(position))
-                {
-                    return row.Action;
-                }
-
-                if (row.InputType == InputType.Trigger && _lineHeightCache > 0f && row.IsToggleCandidate)
-                {
-                    int indicatorX = Math.Max(contentBounds.X, contentBounds.Right - TypeIndicatorDiameter - 4);
-                    int indicatorY = (int)(row.Bounds.Y + ((_lineHeightCache - TypeIndicatorDiameter) / 2f));
-                    Rectangle indicatorBounds = new(indicatorX, indicatorY, TypeIndicatorDiameter, TypeIndicatorDiameter);
-                    if (indicatorBounds.Contains(position))
-                    {
-                        indicatorArea = true;
+                    if (row.TypeToggleBounds.Contains(position))
                         return row.Action;
+                }
+
+                // Check indicator dot for switches and Trigger autofire toggle
+                if (_lineHeightCache > 0f && row.Bounds != Rectangle.Empty)
+                {
+                    bool checkIndicator = IsSwitchType(row.InputType) ||
+                                         (row.InputType == InputType.Trigger && row.IsToggleCandidate);
+                    if (checkIndicator)
+                    {
+                        int indicatorX = Math.Max(contentBounds.X, contentBounds.Right - TypeIndicatorDiameter - 4);
+                        int indicatorH = row.Bounds.Height > 0 ? row.Bounds.Height : (int)MathF.Ceiling(_lineHeightCache);
+                        Rectangle indicatorBounds = new(indicatorX, row.Bounds.Y, contentBounds.Right - indicatorX, indicatorH);
+                        if (indicatorBounds.Contains(position))
+                        {
+                            indicatorArea = true;
+                            return row.Action;
+                        }
                     }
                 }
             }
@@ -678,13 +874,37 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             var row = _keybindCache[index];
-            if (IsPersistentSwitch(row.InputType) || row.InputType == InputType.Trigger)
+            if (IsPersistentSwitch(row.InputType))
+            {
+                if (clickedIndicator && ControlStateManager.ContainsSwitchState(settingKey))
+                {
+                    bool newState = !ControlStateManager.GetSwitchState(settingKey);
+                    if (!InputTypeManager.OverrideSwitchState(settingKey, newState))
+                        ControlStateManager.SetSwitchState(settingKey, newState, "ControlsBlock.TryToggleInputType");
+                    return true;
+                }
+                return false;
+            }
+
+            if (row.InputType == InputType.Trigger)
             {
                 return false;
             }
 
             if (row.ToggleLocked)
             {
+                return false;
+            }
+
+            if (IsSwitchType(row.InputType) && clickedIndicator)
+            {
+                if (ControlStateManager.ContainsSwitchState(settingKey))
+                {
+                    bool newState = !ControlStateManager.GetSwitchState(settingKey);
+                    if (!InputTypeManager.OverrideSwitchState(settingKey, newState))
+                        ControlStateManager.SetSwitchState(settingKey, newState, "ControlsBlock.TryToggleInputType");
+                    return true;
+                }
                 return false;
             }
 
@@ -718,11 +938,6 @@ namespace op.io.UI.BlockScripts.Blocks
             ControlKeyData.SetInputType(row.Action, nextType.ToString());
             InputManager.UpdateBindingInputType(row.Action, nextType, triggerAuto);
 
-            if (boldFont.IsAvailable)
-            {
-                UpdateTypeToggleBounds(boldFont);
-            }
-
             return true;
         }
 
@@ -735,6 +950,130 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return liveState;
+        }
+
+        // ── Float widget helpers ──────────────────────────────────────────────
+
+        private static void DrawFloatWidget(SpriteBatch sb, KeybindDisplayRow row, Rectangle rowBounds, UIStyle.UIFont font)
+        {
+            if (_pixelTexture == null) return;
+            var funCol = GetOrCreateRowFunCol(row.Action);
+            Rectangle col3 = funCol.GetColumnBounds(3, rowBounds);
+            if (col3.Width < FloatArrowW * 2 + FloatInputW + 8) return;
+
+            int arrowY = col3.Y + (col3.Height - FloatWidgetH) / 2;
+            int fx = col3.X + 3;
+
+            // [-] button
+            var downRect = new Rectangle(fx, arrowY, FloatArrowW, FloatWidgetH);
+            FillRect(sb, downRect, new Color(55, 55, 60));
+            DrawRectOutline(sb, downRect, UIStyle.BlockBorder, 1);
+            if (font.IsAvailable)
+                font.DrawString(sb, "-", new Vector2(downRect.X + FloatArrowW / 2f - 3f, arrowY + 1f), UIStyle.TextColor);
+            fx += FloatArrowW + 2;
+
+            // Textbox
+            string displayVal = string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase)
+                ? _floatInputBuffer
+                : ControlStateManager.GetFloat(row.Action, 1.0f).ToString("F2");
+            var inputRect = new Rectangle(fx, arrowY, FloatInputW, FloatWidgetH);
+            FillRect(sb, inputRect, new Color(28, 28, 32));
+            Color inputBorder = string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase)
+                ? UIStyle.AccentColor : UIStyle.BlockBorder;
+            DrawRectOutline(sb, inputRect, inputBorder, 1);
+            if (font.IsAvailable)
+                font.DrawString(sb, displayVal,
+                    new Vector2(fx + 3f, arrowY + (FloatWidgetH - font.LineHeight) / 2f), UIStyle.TextColor);
+            fx += FloatInputW + 2;
+
+            // [+] button
+            var upRect = new Rectangle(fx, arrowY, FloatArrowW, FloatWidgetH);
+            FillRect(sb, upRect, new Color(55, 55, 60));
+            DrawRectOutline(sb, upRect, UIStyle.BlockBorder, 1);
+            if (font.IsAvailable)
+                font.DrawString(sb, "+", new Vector2(upRect.X + FloatArrowW / 2f - 3f, arrowY + 1f), UIStyle.TextColor);
+        }
+
+        private static void HandleFloatWidgetClick(Point mousePos, KeybindDisplayRow row)
+        {
+            if (row.Bounds == Rectangle.Empty) return;
+            var funCol = GetOrCreateRowFunCol(row.Action);
+            Rectangle col3 = funCol.GetColumnBounds(3, row.Bounds);
+            if (col3.Width < FloatArrowW * 2 + FloatInputW + 8) return;
+
+            int arrowY = col3.Y + (col3.Height - FloatWidgetH) / 2;
+            int fx = col3.X + 3;
+
+            var downRect  = new Rectangle(fx, arrowY, FloatArrowW, FloatWidgetH);
+            fx += FloatArrowW + 2;
+            var inputRect = new Rectangle(fx, arrowY, FloatInputW, FloatWidgetH);
+            fx += FloatInputW + 2;
+            var upRect    = new Rectangle(fx, arrowY, FloatArrowW, FloatWidgetH);
+
+            if (downRect.Contains(mousePos))
+            {
+                float cur = ControlStateManager.GetFloat(row.Action, 1.0f);
+                ControlStateManager.SetFloat(row.Action, MathF.Max(FloatMin, MathF.Round(cur - FloatStep, 2)));
+                RefreshFloatCacheValue(row.Action);
+            }
+            else if (upRect.Contains(mousePos))
+            {
+                float cur = ControlStateManager.GetFloat(row.Action, 1.0f);
+                ControlStateManager.SetFloat(row.Action, MathF.Round(cur + FloatStep, 2));
+                RefreshFloatCacheValue(row.Action);
+            }
+            else if (inputRect.Contains(mousePos))
+            {
+                if (string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase))
+                {
+                    CommitFloatInput();
+                    _editingFloatKey = null;
+                }
+                else
+                {
+                    _editingFloatKey = row.Action;
+                    _floatInputBuffer = ControlStateManager.GetFloat(row.Action, 1.0f).ToString("F2");
+                }
+            }
+        }
+
+        private static void CommitFloatInput()
+        {
+            if (string.IsNullOrWhiteSpace(_editingFloatKey) || string.IsNullOrWhiteSpace(_floatInputBuffer)) return;
+            if (!float.TryParse(_floatInputBuffer.Trim(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out float val)) return;
+            val = MathF.Max(FloatMin, MathF.Round(val, 2));
+            ControlStateManager.SetFloat(_editingFloatKey, val);
+            RefreshFloatCacheValue(_editingFloatKey);
+        }
+
+        private static void RefreshFloatCacheValue(string settingKey)
+        {
+            int idx = GetRowIndex(settingKey);
+            if (idx < 0) return;
+            var row = _keybindCache[idx];
+            row.Input = ControlStateManager.GetFloat(settingKey, 1.0f).ToString("F2");
+            _keybindCache[idx] = row;
+        }
+
+        private static char? FloatKeyToChar(Keys key, KeyboardState ks, string current)
+        {
+            return key switch
+            {
+                Keys.D0 or Keys.NumPad0 => '0',
+                Keys.D1 or Keys.NumPad1 => '1',
+                Keys.D2 or Keys.NumPad2 => '2',
+                Keys.D3 or Keys.NumPad3 => '3',
+                Keys.D4 or Keys.NumPad4 => '4',
+                Keys.D5 or Keys.NumPad5 => '5',
+                Keys.D6 or Keys.NumPad6 => '6',
+                Keys.D7 or Keys.NumPad7 => '7',
+                Keys.D8 or Keys.NumPad8 => '8',
+                Keys.D9 or Keys.NumPad9 => '9',
+                Keys.OemPeriod or Keys.Decimal when !current.Contains('.') => '.',
+                _ => null
+            };
         }
 
         private static void EnsurePixelTexture()
@@ -756,6 +1095,33 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             spriteBatch.Draw(_pixelTexture, bounds, color);
+        }
+
+        private static string TruncateWithEllipsis(string text, float maxWidth, UIStyle.UIFont font)
+        {
+            if (maxWidth <= 0f || string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            if (font.MeasureString(text).X <= maxWidth)
+                return text;
+
+            const string ellipsis = "...";
+            float ellipsisWidth = font.MeasureString(ellipsis).X;
+
+            if (ellipsisWidth >= maxWidth)
+                return string.Empty;
+
+            int lo = 0, hi = text.Length - 1;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                if (font.MeasureString(text[..mid]).X + ellipsisWidth <= maxWidth)
+                    lo = mid;
+                else
+                    hi = mid - 1;
+            }
+
+            return lo == 0 ? string.Empty : text[..lo] + ellipsis;
         }
 
         private static string SerializeRowData(InputType inputType, bool triggerAuto)
@@ -808,10 +1174,18 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _rebindConfirmHovered = UIButtonRenderer.IsHovered(_rebindConfirmButtonBounds, mouseState.Position);
             _rebindUnbindHovered = UIButtonRenderer.IsHovered(_rebindUnbindButtonBounds, mouseState.Position);
+            _rebindCancelHovered = UIButtonRenderer.IsHovered(_rebindCancelButtonBounds, mouseState.Position);
 
             bool leftReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool pointerOnConfirm = _rebindConfirmHovered;
             bool pointerOnUnbind = _rebindUnbindHovered;
+            bool pointerOnCancel = _rebindCancelHovered;
+
+            if (leftReleased && pointerOnCancel)
+            {
+                ResetRebindOverlay();
+                return;
+            }
 
             if (!(pointerOnConfirm && leftReleased) && !(pointerOnUnbind && leftReleased))
             {
@@ -879,6 +1253,21 @@ namespace op.io.UI.BlockScripts.Blocks
             Vector2 titlePosition = new(_rebindModalBounds.X + (_rebindModalBounds.Width - titleSize.X) / 2f, _rebindModalBounds.Y + 12);
             headerFont.DrawString(spriteBatch, title, titlePosition, UIStyle.TextColor);
 
+            if (_rebindCancelButtonBounds != Rectangle.Empty)
+            {
+                UIButtonRenderer.Draw(
+                    spriteBatch,
+                    _rebindCancelButtonBounds,
+                    "X",
+                    UIButtonRenderer.ButtonStyle.Grey,
+                    _rebindCancelHovered,
+                    isDisabled: false,
+                    textColorOverride: _rebindCancelHovered ? ColorPalette.CloseGlyphHover : ColorPalette.CloseGlyph,
+                    fillOverride: ColorPalette.CloseOverlayBackground,
+                    hoverFillOverride: ColorPalette.CloseOverlayHoverBackground,
+                    borderOverride: ColorPalette.CloseOverlayBorder);
+            }
+
             float lineHeight = MathF.Max(20f, bodyFont.LineHeight);
             int textX = _rebindModalBounds.X + 20;
             float textY = _rebindModalBounds.Y + titleSize.Y + 24f;
@@ -934,7 +1323,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             _dragState.Reset();
-            _pressedRowKey = null;
+            _pressedDragRowKey   = null;
+            _pressedRebindRowKey = null;
 
             _rebindOverlayVisible = true;
             _rebindAction = row.Action;
@@ -954,8 +1344,10 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindModalBounds = Rectangle.Empty;
             _rebindConfirmButtonBounds = Rectangle.Empty;
             _rebindUnbindButtonBounds = Rectangle.Empty;
+            _rebindCancelButtonBounds = Rectangle.Empty;
             _rebindConfirmHovered = false;
             _rebindUnbindHovered = false;
+            _rebindCancelHovered = false;
             EvaluateBindingConflicts(_rebindCurrentCanonical);
         }
 
@@ -1061,9 +1453,11 @@ namespace op.io.UI.BlockScripts.Blocks
             _rebindModalBounds = Rectangle.Empty;
             _rebindConfirmButtonBounds = Rectangle.Empty;
             _rebindUnbindButtonBounds = Rectangle.Empty;
+            _rebindCancelButtonBounds = Rectangle.Empty;
             _rebindConflictWarning = null;
             _rebindConfirmHovered = false;
             _rebindUnbindHovered = false;
+            _rebindCancelHovered = false;
             _rebindPendingUnbind = false;
         }
 
@@ -1089,6 +1483,8 @@ namespace op.io.UI.BlockScripts.Blocks
             int buttonWidth = _rebindModalBounds.Width - (padding * 2);
             _rebindUnbindButtonBounds = new Rectangle(_rebindModalBounds.X + padding, _rebindModalBounds.Bottom - padding - (buttonHeight * 2) - 8, buttonWidth, buttonHeight);
             _rebindConfirmButtonBounds = new Rectangle(_rebindModalBounds.X + padding, _rebindModalBounds.Bottom - padding - buttonHeight, buttonWidth, buttonHeight);
+            const int cancelSize = 24;
+            _rebindCancelButtonBounds = new Rectangle(_rebindModalBounds.Right - cancelSize - 10, _rebindModalBounds.Y + 10, cancelSize, cancelSize);
         }
 
         private static Rectangle GetViewportBounds()
@@ -1169,6 +1565,51 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return null;
+        }
+
+        private static string HitTestEnumValue(Point position)
+        {
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (row.EnumValueBounds != Rectangle.Empty && row.EnumValueBounds.Contains(position))
+                    return row.Action;
+            }
+
+            return null;
+        }
+
+        private static void UpdateEnumValueBounds(UIStyle.UIFont regularFont)
+        {
+            if (_lineHeightCache <= 0f || !regularFont.IsAvailable)
+                return;
+
+            for (int i = 0; i < _keybindCache.Count; i++)
+            {
+                var row = _keybindCache[i];
+                if (!IsEnumType(row.InputType) || row.Bounds == Rectangle.Empty)
+                {
+                    row.EnumValueBounds = Rectangle.Empty;
+                    _keybindCache[i] = row;
+                    continue;
+                }
+
+                string enumValue = ControlStateManager.GetEnumValue(row.Action);
+                if (string.IsNullOrEmpty(enumValue))
+                {
+                    row.EnumValueBounds = Rectangle.Empty;
+                    _keybindCache[i] = row;
+                    continue;
+                }
+
+                Vector2 enumTextSize = regularFont.MeasureString(enumValue);
+                int x = (int)MathF.Floor(row.Bounds.Right - enumTextSize.X - 4) - ValueHighlightPadding;
+                int y = row.Bounds.Y;
+                int width = (int)MathF.Ceiling(enumTextSize.X) + (ValueHighlightPadding * 2);
+                int height = row.Bounds.Height > 0 ? row.Bounds.Height : (int)MathF.Ceiling(_lineHeightCache);
+
+                row.EnumValueBounds = new Rectangle(x, y, width, height);
+                _keybindCache[i] = row;
+            }
         }
 
         private static string GetReleasedMouseButton(MouseState mouseState, MouseState previousMouseState)
@@ -1365,6 +1806,7 @@ namespace op.io.UI.BlockScripts.Blocks
             public Rectangle Bounds;
             public Rectangle TypeToggleBounds;
             public Rectangle KeyValueBounds;
+            public Rectangle EnumValueBounds;
             public bool IsDragging;
             public bool TriggerAutoFire;
             public bool ToggleLocked;

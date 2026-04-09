@@ -67,6 +67,7 @@ namespace op.io
         private static SpriteFont _fontMonospaceNeonBold;
         private static SpriteFont _fontMonospaceNeonItalic;
         private static readonly Dictionary<(FontFamilyKey, FontVariant), UIFont> _variantFonts = new();
+        private static readonly Dictionary<SpriteFont, HashSet<char>> _fontCharSets = new();
 
         public static Color ScreenBackground => ColorPalette.ScreenBackground;
         public static Color BlockBackground => ColorPalette.BlockBackground;
@@ -316,7 +317,8 @@ namespace op.io
                     return Vector2.Zero;
                 }
 
-                return Font.MeasureString(text) * Scale;
+                string safe = FilterUnsupported(text);
+                return string.IsNullOrEmpty(safe) ? Vector2.Zero : Font.MeasureString(safe) * Scale;
             }
 
             internal Vector2 MeasureRawString(StringBuilder builder)
@@ -326,7 +328,7 @@ namespace op.io
                     return Vector2.Zero;
                 }
 
-                return Font.MeasureString(builder) * Scale;
+                return MeasureRawString(builder.ToString());
             }
 
             public void DrawString(SpriteBatch spriteBatch, string text, Vector2 position, Color color)
@@ -356,7 +358,9 @@ namespace op.io
                     return;
                 }
 
-                spriteBatch.DrawString(Font, text, position, color, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+                string safe = FilterUnsupported(text);
+                if (!string.IsNullOrEmpty(safe))
+                    spriteBatch.DrawString(Font, safe, position, color, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
             }
 
             internal void DrawRawString(SpriteBatch spriteBatch, StringBuilder builder, Vector2 position, Color color)
@@ -366,7 +370,30 @@ namespace op.io
                     return;
                 }
 
-                spriteBatch.DrawString(Font, builder, position, color, 0f, Vector2.Zero, Scale, SpriteEffects.None, 0f);
+                DrawRawString(spriteBatch, builder.ToString(), position, color);
+            }
+
+            private string FilterUnsupported(string text)
+            {
+                if (!_fontCharSets.TryGetValue(Font, out HashSet<char> supported))
+                {
+                    supported = new HashSet<char>(Font.Characters);
+                    _fontCharSets[Font] = supported;
+                }
+
+                foreach (char c in text)
+                {
+                    if (!supported.Contains(c))
+                    {
+                        var sb = new StringBuilder(text.Length);
+                        foreach (char ch in text)
+                        {
+                            if (supported.Contains(ch)) sb.Append(ch);
+                        }
+                        return sb.ToString();
+                    }
+                }
+                return text;
             }
         }
     }

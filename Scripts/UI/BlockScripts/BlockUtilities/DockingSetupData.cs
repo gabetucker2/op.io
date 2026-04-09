@@ -26,6 +26,12 @@ namespace op.io
 
         [JsonPropertyName("panelLocks")]
         public Dictionary<string, bool> PanelLocks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        [JsonPropertyName("overlays")]
+        public List<DockingSetupOverlay> Overlays { get; set; } = new();
+
+        [JsonPropertyName("blockOpacities")]
+        public Dictionary<string, float> BlockOpacities { get; set; } = new();
     }
 
     internal sealed class DockingSetupMenuEntry
@@ -74,5 +80,26 @@ namespace op.io
 
         [JsonPropertyName("second")]
         public DockingSetupLayoutNode Second { get; set; }
+    }
+
+    internal sealed class DockingSetupOverlay
+    {
+        [JsonPropertyName("blockId")]
+        public string BlockId { get; set; }
+
+        [JsonPropertyName("parentId")]
+        public string ParentId { get; set; }
+
+        [JsonPropertyName("x")]
+        public float X { get; set; }
+
+        [JsonPropertyName("y")]
+        public float Y { get; set; }
+
+        [JsonPropertyName("w")]
+        public float W { get; set; }
+
+        [JsonPropertyName("h")]
+        public float H { get; set; }
     }
 }

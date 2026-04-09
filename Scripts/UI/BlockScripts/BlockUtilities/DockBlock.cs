@@ -6,7 +6,6 @@ namespace op.io
     public enum DockBlockKind
     {
         Game,
-        Transparent,
         Blank,
         Properties,
         ColorScheme,
@@ -16,7 +15,11 @@ namespace op.io
         DockingSetups,
         Backend,
         Specs,
-        DebugLogs
+        DebugLogs,
+        Bars,
+        Chat,
+        Performance,
+        Math
     }
 
     public sealed class DockBlock
@@ -36,6 +39,13 @@ namespace op.io
         public Rectangle Bounds { get; set; }
         public int MinWidth { get; set; } = 10;
         public int MinHeight { get; set; } = 10;
+        public float BackgroundOpacity { get; set; } = 1.0f;
+        public bool IsOverlay { get; set; }
+        public string OverlayParentId { get; set; }
+        public float OverlayRelX { get; set; }
+        public float OverlayRelY { get; set; }
+        public float OverlayRelWidth { get; set; } = 0.4f;
+        public float OverlayRelHeight { get; set; } = 0.4f;
 
         public Rectangle GetDragBarBounds(int dragBarHeight)
         {

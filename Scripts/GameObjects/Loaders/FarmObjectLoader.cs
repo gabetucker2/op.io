@@ -86,10 +86,24 @@ namespace op.io
                 // Load the shape content (e.g., texture) for this farm object
                 farmObject.LoadContent(Core.Instance.GraphicsDevice);
 
-                float maxHealth = archetype.FarmData.MaxHealth;
-                farmObject.MaxHealth        = maxHealth;
-                farmObject.CurrentHealth    = maxHealth;
-                farmObject.DeathPointReward = archetype.FarmData.DeathPointReward;
+                FarmData data = archetype.FarmData;
+                farmObject.MaxHealth                  = data.MaxHealth;
+                farmObject.CurrentHealth              = data.MaxHealth;
+                farmObject.HealthRegen                = data.HealthRegen;
+                farmObject.HealthRegenDelay           = data.HealthRegenDelay;
+                farmObject.HealthArmor                = data.HealthArmor;
+                farmObject.MaxShield                  = data.MaxShield;
+                farmObject.CurrentShield              = data.MaxShield;
+                farmObject.ShieldRegen                = data.ShieldRegen;
+                farmObject.ShieldRegenDelay           = data.ShieldRegenDelay;
+                farmObject.ShieldArmor                = data.ShieldArmor;
+                farmObject.BodyPenetration            = data.BodyPenetration;
+                farmObject.BodyCollisionDamage        = data.BodyCollisionDamage;
+                farmObject.CollisionDamageResistance  = data.CollisionDamageResistance;
+                farmObject.BulletDamageResistance     = data.BulletDamageResistance;
+                farmObject.Speed                      = data.Speed;
+                farmObject.RotationSpeed              = data.RotationSpeed;
+                farmObject.DeathPointReward           = data.DeathPointReward;
 
                 return farmObject;
             }

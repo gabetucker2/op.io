@@ -6,7 +6,7 @@ namespace op.io
     public class Bullet : GameObject
     {
         public Vector2 Velocity { get; set; }
-        public Vector2 PreviousPosition { get; set; }
+        public new Vector2 PreviousPosition { get; set; }
         public int OwnerID  { get; set; } = -1;
         // Unique identifier for the (owner, barrel) pair that fired this bullet.
         // Computed at spawn as HashCode.Combine(ownerID, barrelIndex) so bullets
@@ -18,7 +18,7 @@ namespace op.io
         public float BulletPenetration { get; }
         public float MaxLifespan { get; }
         public float DragFactor { get; }
-        public bool IsDying { get; private set; } = false;
+        public new bool IsDying { get; private set; } = false;
 
         private float _dyingTimer = 0f;
         private readonly float _volume;

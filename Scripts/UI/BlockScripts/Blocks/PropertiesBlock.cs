@@ -18,8 +18,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ButtonHeight = 32;
         private const int HeaderSpacing = 6;
         private const int RowSpacing = 4;
-        private const int LockButtonSize = 44;
-        private const int LockButtonPadding = 8;
+        private const int LockButtonPadding = 6;
         private const int SectionSpacing = 8;
         private const int SectionIndent = 12;
         private const int BarRowHeight = 14;
@@ -32,14 +31,130 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly Dictionary<Shape, Texture2D> PreviewCache = new();
         private static readonly BlockScrollPanel ScrollPanel = new();
 
+        // ── Per-GO hidden attribute toggle ────────────────────────────────────────
+        private static readonly Dictionary<int, bool> _showHiddenPerGO = new();
+
+        private static bool GetShowHidden(int goId)
+        {
+            if (_showHiddenPerGO.TryGetValue(goId, out bool v))
+                return v;
+            return ControlStateManager.GetSwitchState(ControlKeyMigrations.ShowHiddenAttrsKey);
+        }
+
+        private static void SetShowHidden(int goId, bool value)
+        {
+            _showHiddenPerGO[goId] = value;
+        }
+
+        // ── Button hover tooltip ───────────────────────────────────────────────────
+        private static string _hoveredButtonKey;
+        public static string GetHoveredButtonKey() => _hoveredButtonKey;
+
+        // ── Properties row hover tooltip (all text rows, hidden and non-hidden) ──
+        private static string _hoveredPropRowKey;
+        private static string _hoveredPropRowLabel;
+        public static string GetHoveredPropRowKey()   => _hoveredPropRowKey;
+        public static string GetHoveredPropRowLabel() => _hoveredPropRowLabel;
+
+        // Descriptions for all properties text rows (displayed as the first tooltip).
+        private static readonly Dictionary<string, string> _propDescriptions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Unit
+            ["Body Switch Speed"]     = "Speed at which this agent cycles through body configurations",
+            ["Barrel Switch Speed"]   = "Speed at which this agent cycles through barrel configurations",
+            // Player
+            ["Player ID"]             = "The player's unique network identifier",
+            // GameObject
+            ["Name"]                  = "Display name of this game object",
+            ["Type"]                  = "Game object type or category",
+            ["ID"]                    = "Unique identifier for this object in the game world",
+            // Destructible
+            ["Death XP Reward"]       = "XP points awarded to the attacker when this object is destroyed",
+            ["Current Health"]        = "Current health relative to maximum health",
+            ["Current Shield"]        = "Current shield points relative to maximum shield",
+            // Body Transform
+            ["Position"]              = "Current world-space coordinates of this object",
+            ["Rotation"]              = "Current facing angle in degrees",
+            ["Size"]                  = "Width and height of this object's collision bounds",
+            ["Shape"]                 = "Geometry type used for the physics body",
+            ["Mass"]                  = "Physical mass affecting physics and derived combat stats",
+            ["Offset"]                = "Position offset of the barrel relative to the agent's body center",
+            // Body Attributes (non-hidden, Agent)
+            ["Health Regen"]          = "HP regenerated per second after the damage delay expires",
+            ["Health Armor"]          = "Multiplier that reduces incoming health damage",
+            ["Dmg Regen Delay"]       = "Seconds after taking health damage before HP regen resumes",
+            ["Max Shield"]            = "Maximum shield point capacity",
+            ["Shield Regen"]          = "Shield points regenerated per second after the damage delay expires",
+            ["Shield Armor"]          = "Multiplier that reduces incoming shield damage",
+            ["Dmg Shield Delay"]      = "Seconds after taking shield damage before shield regen resumes",
+            ["Body Coll. Damage"]     = "Damage dealt to other objects on physical contact",
+            ["Body Penetration"]      = "Ability to pass through or reduce collision force against barriers",
+            ["Coll. Dmg Resist"]      = "Resistance reducing collision-based damage received",
+            ["Bullet Dmg Resist"]     = "Resistance reducing bullet damage received",
+            ["Speed"]                 = "Base movement speed of this agent",
+            ["Control"]               = "Maneuverability stat affecting rotation and acceleration",
+            ["Action Buff"]           = "Buff multiplier applied to action-based abilities",
+            // Hidden Body Attributes (Agent)
+            ["Max Health"]            = "Maximum health capacity of this unit",
+            ["Body Knockback"]        = "Force applied to other objects on collision",
+            ["Rotation Speed"]        = "Maximum rotation rate in degrees per second",
+            ["Accel. Speed"]          = "Acceleration force applied per second",
+            // Barrel Attributes (non-hidden)
+            ["Bullet Damage"]         = "Base damage dealt by each bullet on hit",
+            ["Bullet Penetration"]    = "Ability of bullets to pass through targets",
+            ["Reload Speed"]          = "Rate at which this barrel reloads between shots",
+            ["Bullet Mass"]           = "Physical mass of each bullet, affecting size, drag, and durability",
+            ["Bullet Speed"]          = "Initial velocity of bullets when fired",
+            ["Bullet Lifespan"]       = "Maximum time in seconds a bullet can travel before disappearing",
+            // Hidden Barrel Attributes
+            ["Bullet Health"]         = "Durability of each bullet before it is destroyed on impact",
+            ["Bullet Radius"]         = "Physical radius of each bullet in pixels",
+            ["Bullet Drag"]           = "Air resistance slowing bullets as they travel",
+            // Non-agent Body Attributes
+            ["Health Regen Delay"]    = "Seconds after taking damage before HP regeneration resumes",
+            ["Shield Regen Delay"]    = "Seconds after taking damage before shield regeneration resumes",
+            ["Body Collision Damage"] = "Damage dealt to other objects on physical contact",
+            ["Coll. Dmg Resistance"]  = "Resistance reducing collision-based damage received",
+            ["Bullet Dmg Resistance"] = "Resistance reducing bullet damage received",
+        };
+
+        // "Derived from" text for hidden (derived) attribute rows (displayed as second tooltip).
+        private static readonly Dictionary<string, string> _hiddenAttrDerivedFrom = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Max Health"]      = "Derived from: Mass",
+            ["Body Knockback"]  = "Derived from: Mass",
+            ["Rotation Speed"]  = "Derived from: Control",
+            ["Accel. Speed"]    = "Derived from: Control",
+            ["Bullet Health"]   = "Derived from: Bullet Mass",
+            ["Bullet Radius"]   = "Derived from: Bullet Mass",
+            ["Bullet Drag"]     = "Derived from: Bullet Mass",
+        };
+
+        /// <summary>
+        /// Returns tooltip entry arrays for all properties text rows.
+        /// Hidden rows get two entries (description + "Derived from: X").
+        /// Non-hidden rows get one entry (description only).
+        /// </summary>
+        public static IEnumerable<(string Key, (string Text, string DataType)[] Entries)> GetAllPropRowTooltipEntries()
+        {
+            foreach (var (label, desc) in _propDescriptions)
+            {
+                if (_hiddenAttrDerivedFrom.TryGetValue(label, out string derivedFrom))
+                    yield return ("props_attr:" + label, [(desc, string.Empty), (derivedFrom, string.Empty)]);
+                else
+                    yield return ("props_row:" + label, [(desc, string.Empty)]);
+            }
+        }
+
         private readonly struct PropertiesLayout
         {
-            public PropertiesLayout(Rectangle modeLabel, Rectangle previewBounds, Rectangle detailsBounds, Rectangle lockButtonBounds, Rectangle infoArea)
+            public PropertiesLayout(Rectangle modeLabel, Rectangle previewBounds, Rectangle detailsBounds, Rectangle lockButtonBounds, Rectangle hiddenToggleBounds, Rectangle infoArea)
             {
                 ModeLabel = modeLabel;
                 PreviewBounds = previewBounds;
                 DetailsBounds = detailsBounds;
                 LockButtonBounds = lockButtonBounds;
+                HiddenToggleBounds = hiddenToggleBounds;
                 InfoArea = infoArea;
             }
 
@@ -47,15 +162,30 @@ namespace op.io.UI.BlockScripts.Blocks
             public Rectangle PreviewBounds { get; }
             public Rectangle DetailsBounds { get; }
             public Rectangle LockButtonBounds { get; }
+            public Rectangle HiddenToggleBounds { get; }
             public Rectangle InfoArea { get; }
         }
 
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             _lastMouseState = mouseState;
-            PropertiesLayout layout = BuildLayout(contentBounds, ScrollPanel.ScrollOffset);
+            InspectableObjectInfo earlyTarget = InspectModeState.GetActiveTarget();
+            bool hasHiddenRows = earlyTarget?.Source is Agent;
+            PropertiesLayout layout = BuildLayout(contentBounds, ScrollPanel.ScrollOffset, hasHiddenRows);
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released &&
                 previousMouseState.LeftButton == ButtonState.Pressed;
+
+            // ── Per-GO hidden-attrs toggle ───────────────────────────────────────
+            int activeGoId = earlyTarget?.Id ?? -1;
+            bool blockLocked0 = BlockManager.IsBlockLocked(DockBlockKind.Properties);
+            if (!blockLocked0 && leftClickReleased
+                && layout.HiddenToggleBounds != Rectangle.Empty
+                && layout.HiddenToggleBounds.Contains(mouseState.Position)
+                && activeGoId >= 0)
+            {
+                bool current = GetShowHidden(activeGoId);
+                SetShowHidden(activeGoId, !current);
+            }
 
             InspectableObjectInfo hovered = null;
             bool cursorInGameBlock = BlockManager.IsCursorWithinGameBlock();
@@ -74,6 +204,7 @@ namespace op.io.UI.BlockScripts.Blocks
             bool lockButtonHovered = hasActiveTarget && layout.LockButtonBounds.Contains(mouseState.Position);
             bool lockButtonClicked = !blockLocked && lockButtonHovered && leftClickReleased;
 
+            bool inspectClickFired = false;
             if (lockButtonClicked)
             {
                 if (InspectModeState.IsTargetLocked(activeTarget))
@@ -84,8 +215,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     InspectModeState.LockTarget(activeTarget);
                 }
+                inspectClickFired = true;
             }
-            else if (!blockLocked && leftClickReleased && InspectModeState.InspectModeEnabled && cursorInGameBlock)
+            else if (leftClickReleased && InspectModeState.InspectModeEnabled && cursorInGameBlock)
             {
                 if (hovered != null)
                 {
@@ -95,12 +227,29 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     InspectModeState.ClearLock();
                 }
+                inspectClickFired = true;
             }
+
+            if (inspectClickFired && InspectModeState.InspectModeEnabled &&
+                ControlStateManager.GetSwitchState(ControlKeyMigrations.AutoTurnInspectModeOffKey))
+            {
+                InputTypeManager.ForceSwitchBindingState(InspectModeState.InspectModeKey, false);
+                ControlStateManager.SetSwitchState(InspectModeState.InspectModeKey, false, "AutoTurnInspectModeOff");
+            }
+
+            bool targetLocked = InspectModeState.IsTargetLocked(activeTarget);
+            bool toggleHovered = layout.HiddenToggleBounds != Rectangle.Empty && layout.HiddenToggleBounds.Contains(mouseState.Position);
+            if (!blockLocked && lockButtonHovered)
+                _hoveredButtonKey = targetLocked ? "props_btn:lock:unlock" : "props_btn:lock:lock";
+            else if (!blockLocked && toggleHovered)
+                _hoveredButtonKey = (activeGoId >= 0 && GetShowHidden(activeGoId)) ? "props_btn:hidden:hide" : "props_btn:hidden:show";
+            else
+                _hoveredButtonKey = null;
 
             InspectableObjectInfo scrollTarget = InspectModeState.GetActiveTarget();
             InspectableObjectInfo scrollLocked = InspectModeState.GetLockedTarget();
-            float totalContentHeight = CalculateTotalContentHeight(scrollTarget, scrollLocked, contentBounds);
-            ScrollPanel.Update(contentBounds, totalContentHeight, mouseState, previousMouseState);
+            float totalContentHeight = CalculateTotalContentHeight(scrollTarget, scrollLocked, contentBounds, scrollTarget?.Source is Agent);
+            ScrollPanel.Update(contentBounds, totalContentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -112,7 +261,8 @@ namespace op.io.UI.BlockScripts.Blocks
 
             EnsureResources(spriteBatch.GraphicsDevice);
             float scroll = ScrollPanel.ScrollOffset;
-            PropertiesLayout layout = BuildLayout(contentBounds, scroll);
+            InspectableObjectInfo drawTarget = InspectModeState.GetActiveTarget();
+            PropertiesLayout layout = BuildLayout(contentBounds, scroll, drawTarget?.Source is Agent);
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Properties);
 
             if (layout.ModeLabel.Bottom > contentBounds.Y && layout.ModeLabel.Y < contentBounds.Bottom)
@@ -150,14 +300,24 @@ namespace op.io.UI.BlockScripts.Blocks
                 DrawLockToggle(spriteBatch, layout.LockButtonBounds, targetLocked, lockHovered, blockLocked);
             }
 
+            if (layout.HiddenToggleBounds != Rectangle.Empty
+                && layout.HiddenToggleBounds.Bottom > contentBounds.Y
+                && layout.HiddenToggleBounds.Y < contentBounds.Bottom)
+            {
+                bool toggleHovered = layout.HiddenToggleBounds.Contains(_lastMouseState.Position);
+                int drawGoId = target?.Id ?? -1;
+                bool showHidden = drawGoId >= 0 && GetShowHidden(drawGoId);
+                DrawHiddenToggle(spriteBatch, layout.HiddenToggleBounds, showHidden, toggleHovered, blockLocked);
+            }
+
             Rectangle clipBounds = ScrollPanel.ContentViewportBounds == Rectangle.Empty
                 ? contentBounds
                 : new Rectangle(contentBounds.X, contentBounds.Y, ScrollPanel.ContentViewportBounds.Width, contentBounds.Height);
             DrawDetails(spriteBatch, clipBounds, target, layout.InfoArea.Y);
-            ScrollPanel.Draw(spriteBatch);
+            ScrollPanel.Draw(spriteBatch, blockLocked);
         }
 
-        private static PropertiesLayout BuildLayout(Rectangle contentBounds, float scrollOffset = 0f)
+        private static PropertiesLayout BuildLayout(Rectangle contentBounds, float scrollOffset = 0f, bool hasHiddenRows = false)
         {
             int scrolledY = contentBounds.Y - (int)MathF.Round(scrollOffset);
             Rectangle modeLabel = new(contentBounds.X, scrolledY, contentBounds.Width, ButtonHeight);
@@ -170,37 +330,52 @@ namespace op.io.UI.BlockScripts.Blocks
                 ? new Rectangle(contentBounds.X, contentTop, previewSize, previewSize)
                 : Rectangle.Empty;
 
-            // Info area and details are below the preview; bottom clips to the visible viewport
-            int infoTop = previewBounds == Rectangle.Empty ? contentTop : previewBounds.Bottom + Padding;
+            Rectangle lockButtonBounds   = Rectangle.Empty;
+            Rectangle hiddenToggleBounds = Rectangle.Empty;
+            if (previewBounds != Rectangle.Empty)
+            {
+                // Lock button: procedural size, top-right corner of preview
+                int shortSide = Math.Min(previewBounds.Width, previewBounds.Height);
+                int maxSize   = Math.Clamp((int)(shortSide * 0.09f), 10, 24);
+                int available = Math.Max(0, previewBounds.Height - LockButtonPadding * 2);
+                maxSize       = Math.Min(maxSize, available);
+
+                if (maxSize > 0)
+                {
+                    int bx    = Math.Max(previewBounds.Right - maxSize - LockButtonPadding, previewBounds.X);
+                    int lockY = previewBounds.Y + LockButtonPadding;
+                    lockButtonBounds = new Rectangle(bx, lockY, maxSize, maxSize);
+                }
+
+                // Hidden-attrs toggle only shown for objects that actually have hidden rows (agents)
+                if (hasHiddenRows)
+                    hiddenToggleBounds = new Rectangle(contentBounds.X, previewBounds.Bottom + 4, contentBounds.Width, ButtonHeight);
+            }
+
+            // Info area starts below the toggle button (if present), otherwise below the preview
+            int infoTop = hiddenToggleBounds != Rectangle.Empty
+                ? hiddenToggleBounds.Bottom + Padding
+                : (previewBounds != Rectangle.Empty ? previewBounds.Bottom + Padding : contentTop);
             int infoHeight = Math.Max(0, contentBounds.Bottom - infoTop);
             Rectangle infoArea = new(contentBounds.X, infoTop, contentBounds.Width, infoHeight);
             Rectangle detailsBounds = infoArea;
 
-            Rectangle lockButtonBounds = Rectangle.Empty;
-            if (previewBounds != Rectangle.Empty)
-            {
-                int maxSize = Math.Min(LockButtonSize, Math.Min(previewBounds.Width, previewBounds.Height));
-                int availableHeight = Math.Max(0, previewBounds.Height - (LockButtonPadding * 2));
-                maxSize = Math.Min(maxSize, availableHeight);
-
-                if (maxSize > 0)
-                {
-                    int x = Math.Max(previewBounds.Right - maxSize - LockButtonPadding, previewBounds.X);
-                    int y = previewBounds.Y + LockButtonPadding;
-                    lockButtonBounds = new Rectangle(x, y, maxSize, maxSize);
-                }
-            }
-
-            return new PropertiesLayout(modeLabel, previewBounds, detailsBounds, lockButtonBounds, infoArea);
+            return new PropertiesLayout(modeLabel, previewBounds, detailsBounds, lockButtonBounds, hiddenToggleBounds, infoArea);
         }
 
-        private static float CalculateTotalContentHeight(InspectableObjectInfo target, InspectableObjectInfo locked, Rectangle contentBounds)
+        private static float CalculateTotalContentHeight(InspectableObjectInfo target, InspectableObjectInfo locked, Rectangle contentBounds, bool hasHiddenRows = false)
         {
             float height = ButtonHeight + Padding;
 
             int previewSize = Math.Min(contentBounds.Width, PreviewMaxSize);
             if (previewSize >= 80)
-                height += previewSize + Padding;
+            {
+                height += previewSize + 4; // preview + gap
+                if (hasHiddenRows)
+                    height += ButtonHeight + Padding; // toggle button (only for agents)
+                else
+                    height += Padding; // just padding below preview
+            }
 
             height += CalculateDetailsContentHeight(target, locked);
             return height;
@@ -280,40 +455,74 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void DrawPreview(SpriteBatch spriteBatch, Rectangle previewBounds, InspectableObjectInfo target)
         {
             if (previewBounds == Rectangle.Empty || spriteBatch.GraphicsDevice == null)
-            {
                 return;
-            }
 
             DrawRect(spriteBatch, previewBounds, ColorPalette.BlockBackground * 0.9f);
 
+            // Determine which bar rows are visible for this target
+            bool hasHealth = target.MaxHealth > 0f;
+            bool hasShield = target.MaxShield > 0f;
+            bool hasXP     = target.MaxXP    > 0f;
+            var allRowGroups = BarConfigManager.GetGroupedByRow();
+            var previewBarRows = new List<List<BarConfigManager.BarEntry>>();
+            foreach (var group in allRowGroups)
+            {
+                var filtered = new List<BarConfigManager.BarEntry>();
+                foreach (var e in group)
+                {
+                    if (e.IsHidden) continue;
+                    if ((e.Type == BarType.Health && hasHealth)
+                     || (e.Type == BarType.Shield && hasShield)
+                     || (e.Type == BarType.XP     && hasXP))
+                        filtered.Add(e);
+                }
+                if (filtered.Count > 0) previewBarRows.Add(filtered);
+            }
+
+            int numBarRows = previewBarRows.Count;
+
+            // Build shapes list early so we can compute extents before totalBarsH,
+            // enabling proportional bar heights that match the worldScale of the drawn shape.
+            float parentRotation = target.Source?.Rotation ?? target.Rotation;
+            float cos = MathF.Cos(parentRotation);
+            float sin = MathF.Sin(parentRotation);
+            var shapes = new List<(Shape shape, Vector2 localOffset, float localRotation, float heightScale)>();
+
             if (target.Shape != null)
             {
-                float parentRotation = target.Source?.Rotation ?? target.Rotation;
-                float cos = MathF.Cos(parentRotation);
-                float sin = MathF.Sin(parentRotation);
+                shapes.Add((target.Shape, Vector2.Zero, 0f, 1f));
 
-                // Store shapes with their local-frame offsets (unrotated) for stable bbox/zoom,
-                // and per-shape local rotation relative to parent.
-                var shapes = new List<(Shape shape, Vector2 localOffset, float localRotation)>
+                if (target.Source is Agent agentSrc && agentSrc.BarrelCount > 0)
                 {
-                    (target.Shape, Vector2.Zero, 0f)
-                };
-                if (target.Source != null)
+                    int N      = agentSrc.BarrelCount;
+                    float step = N > 1 ? MathF.Tau / N : 0f;
+                    for (int i = 0; i < N; i++)
+                    {
+                        var slot = agentSrc.Barrels[i];
+                        if (slot.FullShape == null) continue;
+                        float localAngle = i * step - agentSrc.CarouselAngle;
+                        float halfLen    = slot.FullShape.Width / 2f;
+                        Vector2 localOff = new(MathF.Cos(localAngle) * halfLen, MathF.Sin(localAngle) * halfLen);
+                        shapes.Add((slot.FullShape, localOff, localAngle, slot.CurrentHeightScale));
+                    }
+                }
+                else if (target.Source != null)
                 {
                     foreach (GameObject child in target.Source.Children)
                     {
                         if (child?.Shape == null) continue;
-                        shapes.Add((child.Shape, child.Position, child.Rotation));
+                        shapes.Add((child.Shape, child.Position, child.Rotation, 1f));
                     }
                 }
+            }
 
-                // Compute bbox using local (unrotated) offsets for a stable scale.
-                // Extent is measured symmetrically from the parent center (local origin) so that
-                // the parent body always maps to the center of the preview — child offsets cannot
-                // push the parent body off-center.
+            // Compute extents to derive a provisional worldScale for proportional bar sizing
+            float extentX = 1f, extentY = 1f;
+            if (shapes.Count > 0)
+            {
                 float minX = float.MaxValue, maxX = float.MinValue,
                       minY = float.MaxValue, maxY = float.MinValue;
-                foreach (var (s, off, _) in shapes)
+                foreach (var (s, off, _, _) in shapes)
                 {
                     float halfDiag = MathF.Sqrt(s.Width * s.Width + s.Height * s.Height) / 2f;
                     minX = Math.Min(minX, off.X - halfDiag);
@@ -321,29 +530,49 @@ namespace op.io.UI.BlockScripts.Blocks
                     minY = Math.Min(minY, off.Y - halfDiag);
                     maxY = Math.Max(maxY, off.Y + halfDiag);
                 }
+                extentX = Math.Max(1f, Math.Max(MathF.Abs(minX), MathF.Abs(maxX)));
+                extentY = Math.Max(1f, Math.Max(MathF.Abs(minY), MathF.Abs(maxY)));
+            }
 
-                // Symmetric extents from the parent center ensure equal padding on both sides.
-                float extentX = Math.Max(1f, Math.Max(Math.Abs(minX), Math.Abs(maxX)));
-                float extentY = Math.Max(1f, Math.Max(Math.Abs(minY), Math.Abs(maxY)));
+            // Provisional scale using full preview bounds — used only to size bars proportionally
+            float provisionalScale = Math.Max(0.1f, Math.Min(
+                (previewBounds.Width  / 2f - Padding) / extentX,
+                (previewBounds.Height / 2f - Padding) / extentY));
 
-                float worldScale = Math.Min(
-                    (previewBounds.Width / 2f - Padding) / extentX,
-                    (previewBounds.Height / 2f - Padding) / extentY);
+            int barH = numBarRows > 0 ? HealthBarManager.BarHeight : 0;
+            int barG = numBarRows > 0 ? Math.Max(1, (int)MathF.Round(2f * provisionalScale)) : 0;
+            int barP = numBarRows > 0 ? Math.Max(2, (int)MathF.Round(HealthBarManager.OffsetY * provisionalScale)) : 0;
+
+            int totalBarsH = numBarRows > 0
+                ? barP * 2 + numBarRows * barH + (numBarRows - 1) * barG
+                : 0;
+
+            // Shape draws in the upper portion; bar rows fill the bottom strip
+            Rectangle shapeArea = new(
+                previewBounds.X,
+                previewBounds.Y,
+                previewBounds.Width,
+                Math.Max(20, previewBounds.Height - totalBarsH));
+
+            float worldScale = 0.1f;
+            if (shapes.Count > 0)
+            {
+                worldScale = Math.Min(
+                    (shapeArea.Width  / 2f - Padding) / extentX,
+                    (shapeArea.Height / 2f - Padding) / extentY);
                 worldScale = Math.Max(0.1f, worldScale);
 
-                // Parent body center (local origin) always maps to the preview center.
-                Vector2 worldOrigin = new(previewBounds.Center.X, previewBounds.Center.Y);
+                Vector2 worldOrigin = new(shapeArea.Center.X, shapeArea.Center.Y);
 
-                // Draw children first (behind body), then body on top.
-                // Apply parentRotation to each shape's offset and rotation for rendering.
+                // Draw non-body shapes first (barrels/children), then body on top.
                 for (int pass = 0; pass < 2; pass++)
                 {
                     for (int i = 0; i < shapes.Count; i++)
                     {
                         bool isBody = (i == 0);
-                        if (isBody == (pass == 0)) continue; // pass 0 = children, pass 1 = body
+                        if (isBody == (pass == 0)) continue; // pass 0 = non-body, pass 1 = body
 
-                        var (s, localOff, localRot) = shapes[i];
+                        var (s, localOff, localRot, hScale) = shapes[i];
                         Texture2D tex = GetPreviewTexture(spriteBatch.GraphicsDevice, s);
                         if (tex == null || tex.IsDisposed) continue;
 
@@ -351,16 +580,90 @@ namespace op.io.UI.BlockScripts.Blocks
                             localOff.X * cos - localOff.Y * sin,
                             localOff.X * sin + localOff.Y * cos);
 
-                        float texScale = worldScale * s.Width / (float)tex.Width;
-                        texScale = Math.Max(0.1f, texScale);
-                        Vector2 pos = worldOrigin + rotatedOff * worldScale;
+                        float baseScale = worldScale * s.Width / tex.Width;
+                        baseScale = Math.Max(0.1f, baseScale);
+                        Vector2 pos    = worldOrigin + rotatedOff * worldScale;
                         Vector2 origin = new(tex.Width / 2f, tex.Height / 2f);
-                        spriteBatch.Draw(tex, pos, null, Color.White, parentRotation + localRot, origin, texScale, SpriteEffects.None, 0f);
+                        spriteBatch.Draw(tex, pos, null, Color.White,
+                            parentRotation + localRot, origin,
+                            new Vector2(baseScale * hScale, baseScale),
+                            SpriteEffects.None, 0f);
                     }
                 }
             }
 
+            // Draw bar rows at the bottom of the preview, width proportional to rendered player
+            if (numBarRows > 0)
+            {
+                // Bars span the same horizontal extent as the player shape in this viewport
+                float scaledPlayerW = shapes.Count > 0 ? extentX * 2f * worldScale : previewBounds.Width - Padding * 2f;
+                int barW = Math.Max(20, Math.Min((int)scaledPlayerW, previewBounds.Width - Padding * 2));
+                int barX = previewBounds.X + (previewBounds.Width - barW) / 2;
+                int barY = previewBounds.Bottom - barP - numBarRows * barH - (numBarRows - 1) * barG;
+                foreach (var rowEntries in previewBarRows)
+                {
+                    DrawPreviewBarRow(spriteBatch, barX, barY, barW, barH, rowEntries, target);
+                    barY += barH + barG;
+                }
+            }
+
             DrawRectOutline(spriteBatch, previewBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+        }
+
+        private static void DrawPreviewBarRow(SpriteBatch spriteBatch, int x, int y, int width, int height,
+            List<BarConfigManager.BarEntry> entries, InspectableObjectInfo target)
+        {
+            if (width <= 0 || entries.Count == 0 || _pixel == null) return;
+
+            float totalMax = 0f;
+            foreach (var e in entries)
+            {
+                totalMax += e.Type switch
+                {
+                    BarType.Health => target.MaxHealth,
+                    BarType.Shield => target.MaxShield,
+                    BarType.XP     => target.MaxXP,
+                    _              => 0f
+                };
+            }
+            if (totalMax <= 0f) return;
+
+            int bxStart = x;
+            for (int vi = 0; vi < entries.Count; vi++)
+            {
+                var   entry    = entries[vi];
+                float entryMax = entry.Type switch
+                {
+                    BarType.Health => target.MaxHealth,
+                    BarType.Shield => target.MaxShield,
+                    BarType.XP     => target.MaxXP,
+                    _              => 0f
+                };
+                float current = entry.Type switch
+                {
+                    BarType.Health => target.CurrentHealth,
+                    BarType.Shield => target.CurrentShield,
+                    BarType.XP     => target.CurrentXP,
+                    _              => 0f
+                };
+                if (entryMax <= 0f) continue;
+
+                bool isLast = vi == entries.Count - 1;
+                int bw = isLast ? (x + width - bxStart) : (int)(width * entryMax / totalMax);
+                if (bw <= 0) { bxStart += bw; continue; }
+
+                Color fill = entry.Type switch
+                {
+                    BarType.Health => HealthBarManager.GetHealthFillColor(current, entryMax),
+                    BarType.Shield => HealthBarManager.ShieldFillColor,
+                    BarType.XP     => HealthBarManager.XPFillColor,
+                    _              => Color.Gray
+                };
+
+                HealthBarManager.DrawBarPreview(spriteBatch, _pixel, bxStart, y, bw, height, current, entryMax, fill);
+
+                bxStart += bw;
+            }
         }
 
         private static void DrawLockToggle(SpriteBatch spriteBatch, Rectangle bounds, bool isLocked, bool hovered, bool disabled)
@@ -392,8 +695,11 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 Vector2 center = new(bounds.Center.X, bounds.Center.Y);
                 Vector2 origin = new(icon.Width / 2f, icon.Height / 2f);
-                float scale = Math.Min((bounds.Width - 8f) / (float)icon.Width, (bounds.Height - 8f) / (float)icon.Height);
-                scale = Math.Max(0.1f, scale);
+                int innerPad = Math.Max(2, bounds.Width / 5);
+                float scale  = Math.Min(
+                    (bounds.Width  - innerPad * 2f) / icon.Width,
+                    (bounds.Height - innerPad * 2f) / icon.Height);
+                scale = Math.Max(0f, scale);
                 Color tint = disabled ? Color.White * 0.65f : Color.White;
                 spriteBatch.Draw(icon, center, null, tint, 0f, origin, scale, SpriteEffects.None, 0f);
                 return;
@@ -412,6 +718,16 @@ namespace op.io.UI.BlockScripts.Blocks
                 bounds.X + (bounds.Width - glyphSize.X) / 2f,
                 bounds.Y + (bounds.Height - glyphSize.Y) / 2f - 1f);
             glyphFont.DrawString(spriteBatch, glyph, glyphPosition, glyphColor);
+        }
+
+        private static void DrawHiddenToggle(SpriteBatch spriteBatch, Rectangle bounds, bool showHidden, bool hovered, bool disabled)
+        {
+            if (bounds == Rectangle.Empty) return;
+
+            string label = showHidden ? "Hide Hidden Attributes" : "Show Hidden Attributes";
+            UIButtonRenderer.Draw(spriteBatch, bounds, label,
+                showHidden ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey,
+                hovered, disabled);
         }
 
         private static Texture2D GetLockIcon(bool isLocked)
@@ -443,6 +759,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             Properties properties = new(target, locked);
             float height = heading.LineHeight + HeaderSpacing;
+            bool showHidden = GetShowHidden(target.Id);
 
             bool firstSection = true;
             foreach (Properties.Section section in properties.Sections)
@@ -453,9 +770,12 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 height += body.LineHeight + RowSpacing;
                 foreach (Properties.Row row in section.Rows)
-                    height += row.Kind == Properties.RowKind.BarGraph
+                {
+                    if (row.IsHidden && !showHidden) continue;
+                    height += row.Kind == Properties.RowKind.BarGraph || row.Kind == Properties.RowKind.CombinedHealthBar
                         ? BarRowHeight + RowSpacing
                         : row.LineCount * (tech.LineHeight + RowSpacing);
+                }
             }
 
             return height;
@@ -463,6 +783,10 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void DrawDetails(SpriteBatch spriteBatch, Rectangle clipBounds, InspectableObjectInfo target, float contentStartY)
         {
+            // Reset prop-row hover every frame; set below if mouse lands on a text row.
+            _hoveredPropRowKey   = null;
+            _hoveredPropRowLabel = null;
+
             UIStyle.UIFont heading = UIStyle.FontHBody;
             UIStyle.UIFont body = UIStyle.FontBody;
             UIStyle.UIFont tech = UIStyle.FontTech;
@@ -471,6 +795,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             InspectableObjectInfo locked = InspectModeState.GetLockedTarget();
             Properties properties = new(target, locked);
+            bool showHidden = GetShowHidden(target.Id);
 
             float y = contentStartY;
 
@@ -513,9 +838,10 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 foreach (Properties.Row row in section.Rows)
                 {
+                    if (row.IsHidden && !showHidden) continue;
                     if (y > clipBounds.Bottom) { stopped = true; break; }
 
-                    float rowH = row.Kind == Properties.RowKind.BarGraph
+                    float rowH = row.Kind == Properties.RowKind.BarGraph || row.Kind == Properties.RowKind.CombinedHealthBar
                         ? BarRowHeight + RowSpacing
                         : row.LineCount * (tech.LineHeight + RowSpacing);
 
@@ -526,9 +852,26 @@ namespace op.io.UI.BlockScripts.Blocks
                         else if (row.Kind == Properties.RowKind.Color)
                             DrawColorRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Color, row.Value);
                         else if (row.Kind == Properties.RowKind.BarGraph)
-                            DrawBarRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.CurrentValue, row.MaxValue, row.SegmentCount, clipBounds);
+                            DrawBarRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.CurrentValue, row.MaxValue, row.SegmentCount, clipBounds, row.BarFillColor);
+                        else if (row.Kind == Properties.RowKind.CombinedHealthBar)
+                            DrawCombinedHealthBarRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.CurrentValue, row.MaxValue, row.CurrentShieldValue, row.MaxShieldValue, row.SegmentCount, clipBounds);
+                        else if (row.Kind == Properties.RowKind.Boolean)
+                            DrawBoolRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.BoolValue, row.IsHidden);
                         else
-                            DrawRow(spriteBatch, tech, row.Label, row.Value, clipBounds.X + indent, y);
+                        {
+                            DrawRow(spriteBatch, tech, row.Label, row.Value, clipBounds.X + indent, y, row.IsHidden);
+                            {
+                                Point mp = _lastMouseState.Position;
+                                if (mp.X >= clipBounds.X && mp.X <= clipBounds.Right &&
+                                    mp.Y >= (int)y && mp.Y < (int)(y + rowH))
+                                {
+                                    _hoveredPropRowKey   = row.IsHidden
+                                        ? "props_attr:" + row.Label
+                                        : "props_row:"  + row.Label;
+                                    _hoveredPropRowLabel = row.Label;
+                                }
+                            }
+                        }
                     }
 
                     y += rowH;
@@ -537,7 +880,8 @@ namespace op.io.UI.BlockScripts.Blocks
         }
 
         private static void DrawBarRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y,
-            string label, float current, float max, int segmentCount, Rectangle clipBounds)
+            string label, float current, float max, int segmentCount, Rectangle clipBounds,
+            Color? barFillColorOverride = null)
         {
             font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
 
@@ -555,23 +899,86 @@ namespace op.io.UI.BlockScripts.Blocks
             int n = segmentCount;
             float segW = Math.Max(2f, (totalWidth - BarSegmentGap * (n - 1)) / n);
             float fraction = MathF.Max(0f, MathF.Min(1f, current / max));
-            int filled = (int)MathF.Round(fraction * n);
 
-            Color fillColor  = Color.Lerp(new Color(200, 50, 50), new Color(50, 200, 80), fraction);
-            Color emptyColor = new(35, 35, 35, 210);
+            Color fillColor  = barFillColorOverride.HasValue
+                ? barFillColorOverride.Value
+                : HealthBarManager.GetHealthFillColor(current, max);
+            Color emptyColor = HealthBarManager.PropBarEmpty;
             Color corner     = ColorPalette.BlockBackground;
 
             for (int i = 0; i < n; i++)
             {
-                int sx  = (int)(valueX + i * (segW + BarSegmentGap));
-                int sy  = (int)y;
-                int sw  = (int)segW;
-                int sh  = BarRowHeight;
-                Color c = i < filled ? fillColor : emptyColor;
+                // Partial fill: segment i covers fraction range [i/n, (i+1)/n].
+                float segFrac = MathF.Max(0f, MathF.Min(1f, fraction * n - i));
 
-                DrawRect(spriteBatch, new Rectangle(sx, sy, sw, sh), c);
+                int sx = (int)(valueX + i * (segW + BarSegmentGap));
+                int sy = (int)y;
+                int sw = (int)segW;
+                int sh = BarRowHeight;
+
+                DrawRect(spriteBatch, new Rectangle(sx, sy, sw, sh), emptyColor);
+                if (segFrac > 0f)
+                    DrawRect(spriteBatch, new Rectangle(sx, sy, (int)(sw * segFrac), sh), fillColor);
 
                 // Trim 1-pixel corners to approximate rounded look
+                if (sw >= 4 && sh >= 4)
+                {
+                    DrawRect(spriteBatch, new Rectangle(sx,          sy,          1, 1), corner);
+                    DrawRect(spriteBatch, new Rectangle(sx + sw - 1, sy,          1, 1), corner);
+                    DrawRect(spriteBatch, new Rectangle(sx,          sy + sh - 1, 1, 1), corner);
+                    DrawRect(spriteBatch, new Rectangle(sx + sw - 1, sy + sh - 1, 1, 1), corner);
+                }
+            }
+        }
+
+        private static void DrawCombinedHealthBarRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y,
+            string label, float currentHealth, float maxHealth, float currentShield, float maxShield,
+            int segmentCount, Rectangle clipBounds)
+        {
+            font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
+
+            string valueText = $"{(int)MathF.Round(currentHealth)}/{(int)MathF.Round(maxHealth)}  {(int)MathF.Round(currentShield)}/{(int)MathF.Round(maxShield)}";
+            Vector2 textSize = font.MeasureString(valueText);
+
+            float valueX     = x + Math.Max(font.MeasureString(label).X + Padding + textSize.X + Padding, 120f);
+            float totalWidth = clipBounds.Right - Padding - valueX;
+            if (totalWidth < 20f || segmentCount <= 0) return;
+
+            font.DrawString(spriteBatch, valueText, new Vector2(valueX - textSize.X - Padding, y), UIStyle.MutedTextColor);
+
+            int   n           = segmentCount;
+            float segW        = Math.Max(2f, (totalWidth - BarSegmentGap * (n - 1)) / n);
+            float segmentSize = MathF.Max(1f, HealthBarManager.SegmentSize);
+            float totalMax    = maxHealth + maxShield;
+
+            float healthRatio     = maxHealth > 0f ? MathF.Max(0f, MathF.Min(1f, currentHealth / maxHealth)) : 0f;
+            Color healthFillColor = Color.Lerp(HealthBarManager.PropBarHealthLow, HealthBarManager.PropBarHealthHigh, healthRatio);
+            Color shieldFillColor = HealthBarManager.ShieldFillColor;
+            Color emptyColor      = HealthBarManager.PropBarEmpty;
+            Color corner          = ColorPalette.BlockBackground;
+
+            for (int i = 0; i < n; i++)
+            {
+                float segStart = i * segmentSize;
+                float segWidth = MathF.Min(segmentSize, totalMax - segStart);
+                if (segWidth <= 0f) break;
+
+                // Fraction of this segment covered by health, then by shield (continuing after health).
+                float hFill    = MathF.Max(0f, MathF.Min(1f, (currentHealth - segStart) / segWidth));
+                float sFillEnd = MathF.Max(0f, MathF.Min(1f, (currentHealth + currentShield - segStart) / segWidth));
+                float sFill    = sFillEnd - hFill;
+
+                int sx = (int)(valueX + i * (segW + BarSegmentGap));
+                int sy = (int)y;
+                int sw = (int)segW;
+                int sh = BarRowHeight;
+
+                DrawRect(spriteBatch, new Rectangle(sx, sy, sw, sh), emptyColor);
+                if (hFill > 0f)
+                    DrawRect(spriteBatch, new Rectangle(sx, sy, (int)(sw * hFill), sh), healthFillColor);
+                if (sFill > 0f)
+                    DrawRect(spriteBatch, new Rectangle(sx + (int)(sw * hFill), sy, (int)(sw * sFill), sh), shieldFillColor);
+
                 if (sw >= 4 && sh >= 4)
                 {
                     DrawRect(spriteBatch, new Rectangle(sx,          sy,          1, 1), corner);
@@ -609,13 +1016,30 @@ namespace op.io.UI.BlockScripts.Blocks
             font.DrawString(spriteBatch, title, new Vector2(x, y), UIStyle.AccentColor);
         }
 
-        private static void DrawRow(SpriteBatch spriteBatch, UIStyle.UIFont font, string label, string value, float x, float y)
+        private static void DrawRow(SpriteBatch spriteBatch, UIStyle.UIFont font, string label, string value, float x, float y, bool isHidden = false)
         {
             Vector2 labelSize = font.MeasureString(label);
-            font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
+            Color labelColor = isHidden ? UIStyle.MutedTextColor * 0.55f : UIStyle.MutedTextColor;
+            Color valueColor = isHidden ? UIStyle.TextColor      * 0.45f : UIStyle.TextColor;
+            font.DrawString(spriteBatch, label, new Vector2(x, y), labelColor);
 
             float valueX = x + Math.Max(labelSize.X + Padding, 120f);
-            font.DrawString(spriteBatch, value, new Vector2(valueX, y), UIStyle.TextColor);
+            font.DrawString(spriteBatch, value, new Vector2(valueX, y), valueColor);
+        }
+
+        private static void DrawBoolRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y, string label, bool boolValue, bool isHidden = false)
+        {
+            Vector2 labelSize = font.MeasureString(label);
+            Color labelColor = isHidden ? UIStyle.MutedTextColor * 0.55f : UIStyle.MutedTextColor;
+            font.DrawString(spriteBatch, label, new Vector2(x, y), labelColor);
+
+            float dotX = x + Math.Max(labelSize.X + Padding, 120f);
+            int dotSize = Math.Min(10, (int)font.LineHeight - 4);
+            if (dotSize <= 0) return;
+            int dotY = (int)(y + (font.LineHeight - dotSize) / 2f);
+
+            Color dotColor = boolValue ? new Color(80, 220, 80) : new Color(220, 80, 80);
+            DrawRect(spriteBatch, new Rectangle((int)dotX, dotY, dotSize, dotSize), dotColor);
         }
 
         private static void DrawColorRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y, string label, Color color, string hex)

@@ -78,6 +78,12 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static string GetHoveredRowKey() => _tooltipRowKey;
 
+        public static string GetHoveredRowLabel()
+        {
+            if (string.IsNullOrEmpty(_tooltipRowKey)) return null;
+            return TryGetRow(_tooltipRowKey, out ColorRow row) ? row.Label : _tooltipRowKey;
+        }
+
         private static ColorEditorState _editor;
         private static readonly UIDropdown _schemeDropdown = new();
         private static Rectangle _schemeToolbarBounds;
@@ -117,9 +123,10 @@ namespace op.io.UI.BlockScripts.Blocks
             _lastContentBounds = contentBounds;
             UpdateLayout(contentBounds);
 
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
             Rectangle listContentBounds = GetListContentBounds(contentBounds);
             float contentHeight = Math.Max(0f, _rows.Count * _lineHeight);
-            _scrollPanel.Update(listContentBounds, contentHeight, mouseState, previousMouseState);
+            _scrollPanel.Update(listContentBounds, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -135,7 +142,6 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftDownPrev = previousMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickStarted = leftDown && !leftDownPrev;
             bool leftClickReleased = !leftDown && leftDownPrev;
-            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
 
             if (_schemePrompt.IsOpen)
@@ -289,6 +295,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
+
             EnsureRows();
             EnsurePixel(spriteBatch);
             EnsureLineHeight();
@@ -305,7 +313,6 @@ namespace op.io.UI.BlockScripts.Blocks
             UIStyle.UIFont labelFont = UIStyle.FontBody;
             UIStyle.UIFont valueFont = UIStyle.FontTech;
             UIStyle.UIFont placeholderFont = UIStyle.FontH2;
-            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
 
             if (!labelFont.IsAvailable || !valueFont.IsAvailable)
             {
@@ -325,7 +332,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     pos = new Vector2(listBounds.X + (listBounds.Width - size.X) / 2f, listBounds.Y + (listBounds.Height - size.Y) / 2f);
                 }
                 (placeholderFont.IsAvailable ? placeholderFont : labelFont).DrawString(spriteBatch, placeholder, pos, UIStyle.MutedTextColor);
-                _scrollPanel.Draw(spriteBatch);
+                _scrollPanel.Draw(spriteBatch, blockLocked);
                 _schemeDropdown.DrawOptionsOverlay(spriteBatch);
                 return;
             }
@@ -352,7 +359,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 DrawDraggingRow(spriteBatch, _dragState.DraggingSnapshot, labelFont, valueFont, listBounds, lineHeight);
             }
 
-            _scrollPanel.Draw(spriteBatch);
+            _scrollPanel.Draw(spriteBatch, blockLocked);
             _schemeDropdown.DrawOptionsOverlay(spriteBatch);
         }
 

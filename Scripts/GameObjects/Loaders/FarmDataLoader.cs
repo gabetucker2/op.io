@@ -30,8 +30,20 @@ namespace op.io
             {
                 DebugLogger.PrintDatabase("Loading farm data from database...");
 
-                // Query to load farm count data
-                string query = "SELECT ID, Count, MaxHealth, DeathPointReward FROM FarmData";
+                // FarmData holds spawn/animation config; Destructibles holds health/combat/reward.
+                const string query = @"
+                    SELECT
+                        f.ID, f.Count, f.RotationSpeed,
+                        f.IsManual, f.ManualX, f.ManualY,
+                        f.FloatAmplitude, f.FloatSpeed,
+                        d.MaxHealth, d.HealthRegen, d.HealthRegenDelay, d.HealthArmor,
+                        d.MaxShield, d.ShieldRegen, d.ShieldRegenDelay, d.ShieldArmor,
+                        d.BodyPenetration, d.BodyCollisionDamage,
+                        d.CollisionDamageResistance, d.BulletDamageResistance,
+                        d.DeathPointReward
+                    FROM FarmData f
+                    INNER JOIN Destructibles d ON f.ID = d.ID";
+
                 var results = DatabaseQuery.ExecuteQuery(query);
 
                 if (results.Count == 0)
@@ -46,24 +58,47 @@ namespace op.io
                 {
                     try
                     {
-                        int id = Convert.ToInt32(row["ID"]);
+                        int id    = Convert.ToInt32(row["ID"]);
                         int count = Convert.ToInt32(row["Count"]);
-                        
+
                         if (count <= 0)
                         {
                             DebugLogger.PrintWarning($"Farm with ID {id} has non-positive count ({count}). Skipping.");
                             continue;
                         }
 
-                        float maxHealth = Convert.ToSingle(row["MaxHealth"]);
-                        float deathPointReward = row.TryGetValue("DeathPointReward", out object dprObj) && dprObj != null && dprObj != DBNull.Value
-                            ? Convert.ToSingle(dprObj) : 0f;
+                        float SafeFloat(string key, float fallback = 0f) =>
+                            row.TryGetValue(key, out object v) && v != null && v != DBNull.Value
+                                ? Convert.ToSingle(v) : fallback;
+
+                        bool SafeBool(string key) =>
+                            row.TryGetValue(key, out object bv) && bv != null && bv != DBNull.Value
+                                && Convert.ToInt32(bv) != 0;
+
                         farmDataList.Add(new FarmData
                         {
-                            ID = id,
-                            Count = count,
-                            MaxHealth = maxHealth,
-                            DeathPointReward = deathPointReward
+                            ID                         = id,
+                            Count                      = count,
+                            RotationSpeed              = SafeFloat("RotationSpeed"),
+                            IsManual                   = SafeBool("IsManual"),
+                            ManualX                    = SafeFloat("ManualX"),
+                            ManualY                    = SafeFloat("ManualY"),
+                            FloatAmplitude             = SafeFloat("FloatAmplitude"),
+                            FloatSpeed                 = SafeFloat("FloatSpeed"),
+                            // Destructible attributes (loaded from Destructibles JOIN)
+                            MaxHealth                  = SafeFloat("MaxHealth"),
+                            HealthRegen                = SafeFloat("HealthRegen"),
+                            HealthRegenDelay           = SafeFloat("HealthRegenDelay", 5f),
+                            HealthArmor                = SafeFloat("HealthArmor"),
+                            MaxShield                  = SafeFloat("MaxShield"),
+                            ShieldRegen                = SafeFloat("ShieldRegen"),
+                            ShieldRegenDelay           = SafeFloat("ShieldRegenDelay", 5f),
+                            ShieldArmor                = SafeFloat("ShieldArmor"),
+                            BodyPenetration            = SafeFloat("BodyPenetration"),
+                            BodyCollisionDamage        = SafeFloat("BodyCollisionDamage"),
+                            CollisionDamageResistance  = SafeFloat("CollisionDamageResistance"),
+                            BulletDamageResistance     = SafeFloat("BulletDamageResistance"),
+                            DeathPointReward           = SafeFloat("DeathPointReward"),
                         });
                     }
                     catch (Exception exRow)

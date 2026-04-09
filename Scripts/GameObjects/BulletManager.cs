@@ -18,7 +18,7 @@ namespace op.io
             get
             {
                 if (!_cachedAirResistanceScalar.HasValue)
-                    _cachedAirResistanceScalar = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "AirResistanceScalar");
+                    _cachedAirResistanceScalar = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "AirResistanceScalar");
                 return _cachedAirResistanceScalar.Value;
             }
         }
@@ -29,7 +29,7 @@ namespace op.io
             get
             {
                 if (!_cachedBounceVelocityLoss.HasValue)
-                    _cachedBounceVelocityLoss = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "BounceVelocityLoss");
+                    _cachedBounceVelocityLoss = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "BounceVelocityLoss");
                 return _cachedBounceVelocityLoss.Value;
             }
         }
@@ -40,7 +40,7 @@ namespace op.io
             get
             {
                 if (!_cachedHitVelocityLoss.HasValue)
-                    _cachedHitVelocityLoss = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "HitVelocityLoss");
+                    _cachedHitVelocityLoss = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "HitVelocityLoss");
                 return _cachedHitVelocityLoss.Value;
             }
         }
@@ -51,7 +51,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletSpeed.HasValue)
-                    _cachedDefaultBulletSpeed = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletSpeed");
+                    _cachedDefaultBulletSpeed = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletSpeed");
                 return _cachedDefaultBulletSpeed.Value;
             }
         }
@@ -62,7 +62,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletLifespan.HasValue)
-                    _cachedDefaultBulletLifespan = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletLifespan");
+                    _cachedDefaultBulletLifespan = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletLifespan");
                 return _cachedDefaultBulletLifespan.Value;
             }
         }
@@ -73,7 +73,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletDragFactor.HasValue)
-                    _cachedDefaultBulletDragFactor = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletDragFactor");
+                    _cachedDefaultBulletDragFactor = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletDragFactor");
                 return _cachedDefaultBulletDragFactor.Value;
             }
         }
@@ -84,7 +84,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletMass.HasValue)
-                    _cachedDefaultBulletMass = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletMass");
+                    _cachedDefaultBulletMass = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletMass");
                 return _cachedDefaultBulletMass.Value;
             }
         }
@@ -95,7 +95,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletHealth.HasValue)
-                    _cachedDefaultBulletHealth = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletHealth");
+                    _cachedDefaultBulletHealth = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletHealth");
                 return _cachedDefaultBulletHealth.Value;
             }
         }
@@ -106,7 +106,7 @@ namespace op.io
             get
             {
                 if (!_cachedPenetrationSpringCoeff.HasValue)
-                    _cachedPenetrationSpringCoeff = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "PenetrationSpringCoeff");
+                    _cachedPenetrationSpringCoeff = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "PenetrationSpringCoeff");
                 return _cachedPenetrationSpringCoeff.Value;
             }
         }
@@ -117,7 +117,7 @@ namespace op.io
             get
             {
                 if (!_cachedPenetrationDamping.HasValue)
-                    _cachedPenetrationDamping = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "PenetrationDamping");
+                    _cachedPenetrationDamping = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "PenetrationDamping");
                 return _cachedPenetrationDamping.Value;
             }
         }
@@ -128,7 +128,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletDamage.HasValue)
-                    _cachedDefaultBulletDamage = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletDamage");
+                    _cachedDefaultBulletDamage = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletDamage");
                 return _cachedDefaultBulletDamage.Value;
             }
         }
@@ -139,7 +139,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletPenetration.HasValue)
-                    _cachedDefaultBulletPenetration = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletPenetration");
+                    _cachedDefaultBulletPenetration = DatabaseFetch.GetValue<float>("BulletDefaults", "Value", "SettingKey", "DefaultBulletPenetration");
                 return _cachedDefaultBulletPenetration.Value;
             }
         }
@@ -150,7 +150,7 @@ namespace op.io
             get
             {
                 if (!_cachedBulletRadiusScalar.HasValue)
-                    _cachedBulletRadiusScalar = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "BulletRadiusScalar");
+                    _cachedBulletRadiusScalar = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "BulletRadiusScalar");
                 return _cachedBulletRadiusScalar.Value;
             }
         }
@@ -175,10 +175,10 @@ namespace op.io
             {
                 if (!_cachedDefaultBulletFillColor.HasValue)
                     _cachedDefaultBulletFillColor = new Color(
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletFillR",    255),
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletFillG",    0),
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletFillB",    0),
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletFillA",    255));
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletFillR",    255),
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletFillG",    0),
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletFillB",    0),
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletFillA",    255));
                 return _cachedDefaultBulletFillColor.Value;
             }
         }
@@ -190,10 +190,10 @@ namespace op.io
             {
                 if (!_cachedDefaultBulletOutlineColor.HasValue)
                     _cachedDefaultBulletOutlineColor = new Color(
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletOutlineR", 139),
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletOutlineG", 0),
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletOutlineB", 0),
-                        DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletOutlineA", 255));
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletOutlineR", 139),
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletOutlineG", 0),
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletOutlineB", 0),
+                        DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletOutlineA", 255));
                 return _cachedDefaultBulletOutlineColor.Value;
             }
         }
@@ -204,7 +204,7 @@ namespace op.io
             get
             {
                 if (!_cachedDefaultBulletOutlineWidth.HasValue)
-                    _cachedDefaultBulletOutlineWidth = DatabaseFetch.GetSetting<int>("PhysicsSettings", "Value", "SettingKey", "DefaultBulletOutlineWidth", 2);
+                    _cachedDefaultBulletOutlineWidth = DatabaseFetch.GetSetting<int>("BulletDefaults", "Value", "SettingKey", "DefaultBulletOutlineWidth", 2);
                 return _cachedDefaultBulletOutlineWidth.Value;
             }
         }
@@ -223,11 +223,14 @@ namespace op.io
             Attributes_Barrel attrs = agent.BarrelAttributes;
             float speed = attrs.BulletSpeed >= 0 ? attrs.BulletSpeed : DefaultBulletSpeed;
             float lifespan = attrs.BulletMaxLifespan >= 0 ? attrs.BulletMaxLifespan : DefaultBulletLifespan;
-            float dragFactor = attrs.BulletDragFactor >= 0 ? attrs.BulletDragFactor : DefaultBulletDragFactor;
+            float dragFactor = DefaultBulletDragFactor; // hidden: derived from radius (airR * pi * r^2 / dragFactor)
             float mass = attrs.BulletMass >= 0 ? attrs.BulletMass : DefaultBulletMass;
 
             Vector2 dir = new Vector2(MathF.Cos(agent.Rotation), MathF.Sin(agent.Rotation));
-            Vector2 velocity = dir * speed;
+            Vector2 inheritedVelocity = Core.DELTATIME > 0f
+                ? (agent.Position - agent.PreviousPosition) / Core.DELTATIME
+                : Vector2.Zero;
+            Vector2 velocity = inheritedVelocity + dir * speed;
 
             // Spawn at the barrel tip so the bullet starts flush with the end of the barrel
             float barrelLength = agent.BarrelShape?.Width ?? 0f;
@@ -241,7 +244,7 @@ namespace op.io
             var shape = new Shape("Circle", diameter, diameter, 0, fill, outline, outlineW);
             shape.LoadContent(Core.Instance.GraphicsDevice);
 
-            float bulletHealth      = attrs.BulletHealth      >= 0 ? attrs.BulletHealth      : DefaultBulletHealth;
+            float bulletHealth      = AttributeDerived.BulletHealth(mass); // hidden: derived from BulletMass
             float bulletDamage      = attrs.BulletDamage      >= 0 ? attrs.BulletDamage      : DefaultBulletDamage;
             float bulletPenetration = attrs.BulletPenetration >= 0 ? attrs.BulletPenetration : DefaultBulletPenetration;
             var bullet = new Bullet(_nextId++, spawnPos, velocity, mass, lifespan, dragFactor, shape, bulletHealth, bulletDamage, bulletPenetration, fill, outline, outlineW);
@@ -264,10 +267,8 @@ namespace op.io
             }
 
             foreach (var bullet in _toRemove)
-            {
-                _bullets.Remove(bullet);
                 bullet.Dispose();
-            }
+            _bullets.RemoveAll(b => _toRemove.Contains(b));
             _toRemove.Clear();
         }
     }

@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.BlockUtilities;
+using op.io.UI.FunCol;
+using op.io.UI.FunCol.Features;
 
 namespace op.io.UI.BlockScripts.Blocks
 {
@@ -33,15 +35,42 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static string GetHoveredRowKey() => _tooltipRowKey;
 
+        public static string GetHoveredRowLabel()
+        {
+            if (string.IsNullOrEmpty(_tooltipRowKey)) return null;
+            SpecRow row = FindRow(_tooltipRowKey);
+            return row?.Label ?? _tooltipRowKey;
+        }
+
+        // ── Per-row FunColInterfaces (Label | Value+bool) ──
+        private static readonly Dictionary<string, FunColInterface> _rowFunCols =
+            new(StringComparer.OrdinalIgnoreCase);
+        private static FunColInterface _dragGhostFunCol;
+        private static FunColInterface _headerFunCol;
+        private const int HeaderRowHeight = 16;
+        private static bool _headerVisibleLoaded;
+
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Specs);
+
+            var specsHfc = GetOrEnsureHeaderFunCol();
+            if (!_headerVisibleLoaded)
+            {
+                Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Specs);
+                if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
+                    specsHfc.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                _headerVisibleLoaded = true;
+            }
+
+            int headerH = specsHfc.HeaderVisible ? HeaderRowHeight : 0;
+            var listArea = new Rectangle(contentBounds.X, contentBounds.Y + headerH, contentBounds.Width, Math.Max(0, contentBounds.Height - headerH));
 
             RefreshRows();
 
             if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
-                _scrollPanel.Update(contentBounds, 0f, mouseState, previousMouseState);
+                _scrollPanel.Update(listArea, 0f, mouseState, previousMouseState);
                 return;
             }
 
@@ -51,7 +80,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             float contentHeight = _rows.Count * _lineHeightCache;
-            _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
+            _scrollPanel.Update(listArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -60,6 +89,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             UpdateRowBounds(listBounds);
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -70,9 +101,25 @@ namespace op.io.UI.BlockScripts.Blocks
                 _dragState.Reset();
             }
 
+            // Update per-row FunColInterfaces
+            bool suppressHover = _dragState.IsDragging || blockLocked;
+            foreach (SpecRow row in _rows)
+            {
+                if (row.Bounds != Rectangle.Empty)
+                    GetOrCreateRowFunCol(row.Key).Update(row.Bounds, mouseState, dt, suppressHover);
+            }
+
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             _hoveredRowKey = !blockLocked ? hitRow : null;
             _tooltipRowKey = hitRow;
+
+            // Determine hovered column for the hovered row
+            int hoveredCol = -1;
+            if (!string.IsNullOrEmpty(_hoveredRowKey) &&
+                _rowFunCols.TryGetValue(_hoveredRowKey, out var hovFunCol))
+            {
+                hoveredCol = hovFunCol.HoveredColumn;
+            }
 
             if (_dragState.IsDragging)
             {
@@ -83,16 +130,25 @@ namespace op.io.UI.BlockScripts.Blocks
                     {
                         NormalizeRowOrder();
                         if (orderChanged)
-                        {
                             UpdateCustomOrderFromRows();
-                        }
                     }
                 }
             }
-            else if (!blockLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else if (!blockLocked && pointerInsideList && leftClickStarted &&
+                     !string.IsNullOrEmpty(_hoveredRowKey) && hoveredCol == 0)
             {
+                // Col 0 (Green): label — also drag zone
                 _dragState.TryStartDrag(_rows, _hoveredRowKey, mouseState);
             }
+
+            // Update header hover so DrawHeader can show column tooltips + hide toggle
+            int specsHdrH = specsHfc.HeaderVisible ? HeaderRowHeight : 0;
+            var headerBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, specsHdrH);
+            specsHfc.ShowHeaderToggle = BlockManager.DockingModeEnabled;
+            specsHfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
+            specsHfc.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
+            if (specsHfc.HeaderToggleClicked)
+                BlockDataStore.SetRowData(DockBlockKind.Specs, "FunColHeaderVisible", specsHfc.HeaderVisible ? "true" : "false");
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -101,6 +157,8 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 return;
             }
+
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Specs);
 
             if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
@@ -128,48 +186,73 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_rows.Count == 0)
             {
                 regularFont.DrawString(spriteBatch, PlaceholderText, new Vector2(listBounds.X, listBounds.Y), UIStyle.MutedTextColor);
-                _scrollPanel.Draw(spriteBatch);
+                _scrollPanel.Draw(spriteBatch, blockLocked);
+                var specsHfcDraw = GetOrEnsureHeaderFunCol();
+                int specsHdrHDraw = specsHfcDraw.HeaderVisible ? HeaderRowHeight : 0;
+                specsHfcDraw.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
+                GetOrEnsureHeaderFunCol().DrawHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, specsHdrHDraw), boldFont, _pixelTexture);
                 return;
             }
 
             float lineHeight = _lineHeightCache;
+
+            // Clip row drawing to the scroll viewport so rows don't bleed over the header.
+            var gd = spriteBatch.GraphicsDevice;
+            float uiScale = BlockManager.UIScale;
+            Rectangle scissorRect = uiScale > 0f && uiScale != 1f
+                ? new Rectangle(
+                    (int)(listBounds.X      * uiScale),
+                    (int)(listBounds.Y      * uiScale),
+                    (int)(listBounds.Width  * uiScale),
+                    (int)(listBounds.Height * uiScale))
+                : listBounds;
+            var viewport = gd.Viewport;
+            scissorRect.X      = Math.Clamp(scissorRect.X,      0, viewport.Width);
+            scissorRect.Y      = Math.Clamp(scissorRect.Y,      0, viewport.Height);
+            scissorRect.Width  = Math.Clamp(scissorRect.Width,  0, viewport.Width  - scissorRect.X);
+            scissorRect.Height = Math.Clamp(scissorRect.Height, 0, viewport.Height - scissorRect.Y);
+
+            spriteBatch.End();
+            var scissorState = new RasterizerState { CullMode = CullMode.None, ScissorTestEnable = true };
+            gd.ScissorRectangle = scissorRect;
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, scissorState, null, BlockManager.CurrentUITransform);
+
             foreach (SpecRow row in _rows)
             {
                 Rectangle rowBounds = row.Bounds;
-                if (rowBounds == Rectangle.Empty)
-                {
-                    continue;
-                }
+                if (rowBounds == Rectangle.Empty) continue;
+                if (rowBounds.Y >= listBounds.Bottom) break;
+                if (rowBounds.Bottom <= listBounds.Y) continue;
 
-                if (rowBounds.Y >= listBounds.Bottom)
-                {
-                    break;
-                }
+                bool draggingThisRow = _dragState.IsDragging &&
+                    string.Equals(row.Key, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
+                if (draggingThisRow) continue;
 
-                if (rowBounds.Bottom <= listBounds.Y)
-                {
-                    continue;
-                }
-
-                bool draggingThisRow = _dragState.IsDragging && string.Equals(row.Key, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
-                if (!draggingThisRow)
-                {
-                    DrawRowBackground(spriteBatch, row, rowBounds);
-                    DrawRowContents(spriteBatch, row, rowBounds, lineHeight, boldFont, regularFont, listBounds);
-                }
+                DrawRowBackground(spriteBatch, row, rowBounds);
+                DrawRowWithFunCol(spriteBatch, row, rowBounds, boldFont);
             }
 
             if (_dragState.IsDragging && _dragState.HasSnapshot)
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
-                {
                     FillRect(spriteBatch, _dragState.DropIndicatorBounds, ColorPalette.DropIndicator);
-                }
 
-                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont);
+                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont);
             }
 
-            _scrollPanel.Draw(spriteBatch);
+            spriteBatch.End();
+            scissorState.Dispose();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, RasterizerState.CullNone, null, BlockManager.CurrentUITransform);
+
+            _scrollPanel.Draw(spriteBatch, blockLocked);
+
+            // Draw header strip last so it always renders on top of scrolled content
+            var specsHfcMain = GetOrEnsureHeaderFunCol();
+            int specsHdrHMain = specsHfcMain.HeaderVisible ? HeaderRowHeight : 0;
+            specsHfcMain.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
+            specsHfcMain.DrawHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, specsHdrHMain), boldFont, _pixelTexture);
         }
 
         private static void EnsureOrderCacheHydrated()
@@ -392,39 +475,86 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
+        private static FunColInterface GetOrCreateRowFunCol(string key)
+        {
+            if (_rowFunCols.TryGetValue(key, out var existing)) return existing;
+            var fc = new FunColInterface(
+                new float[] { 0.42f, 0.58f },
+                new TextLabelFeature("Label", FunColTextAlign.Right),
+                new ValueDisplayFeature("Value")
+            );
+            fc.DisableExpansion = true;
+            fc.DisableColors = true;
+            fc.SuppressTooltipWarnings = true;
+            _rowFunCols[key] = fc;
+            return fc;
+        }
+
+        private static FunColInterface GetOrEnsureHeaderFunCol()
+        {
+            if (_headerFunCol != null) return _headerFunCol;
+            _headerFunCol = new FunColInterface(
+                new float[] { 0.42f, 0.58f },
+                new TextLabelFeature("Label", FunColTextAlign.Right)
+                    { HeaderTooltipTexts = ["Metric or system property label"] },
+                new ValueDisplayFeature("Value")
+                    { HeaderTooltipTexts = ["Current measured value"] }
+            );
+            _headerFunCol.DisableExpansion = true;
+            _headerFunCol.DisableColors = true;
+            _headerFunCol.ShowHeaderTooltips = true;
+            return _headerFunCol;
+        }
+
+        private static void DrawRowWithFunCol(SpriteBatch spriteBatch, SpecRow row,
+            Rectangle rowBounds, UIStyle.UIFont boldFont)
+        {
+            var funCol = GetOrCreateRowFunCol(row.Key);
+
+            if (funCol.GetFeature(0) is TextLabelFeature labelF)
+                labelF.Text = row.Label ?? row.Key;
+
+            if (funCol.GetFeature(1) is ValueDisplayFeature valF)
+            {
+                valF.IsBoolean = row.IsBoolean;
+                valF.BoolState = row.BoolValue;
+                valF.Text      = row.Value ?? string.Empty;
+            }
+
+            funCol.Draw(spriteBatch, rowBounds, boldFont, _pixelTexture);
+        }
+
+        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds,
+            float lineHeight, UIStyle.UIFont boldFont)
         {
             Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, lineHeight);
-            if (dragBounds == Rectangle.Empty)
-            {
-                return;
-            }
+            if (dragBounds == Rectangle.Empty) return;
 
             FillRect(spriteBatch, dragBounds, ColorPalette.RowDragging);
 
             SpecRow row = _dragState.DraggingSnapshot;
-            row.Bounds = dragBounds;
-            DrawRowContents(spriteBatch, row, dragBounds, lineHeight, boldFont, regularFont, contentBounds);
-        }
 
-        private static void DrawRowContents(SpriteBatch spriteBatch, SpecRow row, Rectangle rowBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont, Rectangle contentBounds)
-        {
-            Vector2 labelPosition = new(rowBounds.X, rowBounds.Y);
-            string header = row.Label ?? row.Key;
-            Vector2 headerSize = boldFont.MeasureString(header);
-            boldFont.DrawString(spriteBatch, header, labelPosition, UIStyle.TextColor);
-
-            _stringBuilder.Clear();
-            _stringBuilder.Append(":  ");
-            _stringBuilder.Append(row.Value ?? string.Empty);
-            string value = _stringBuilder.ToString();
-            float valueX = labelPosition.X + headerSize.X;
-            regularFont.DrawString(spriteBatch, value, new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
-
-            if (row.IsBoolean)
+            if (_dragGhostFunCol == null)
             {
-                BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, rowBounds.Y, row.BoolValue);
+                _dragGhostFunCol = new FunColInterface(
+                    new float[] { 0.42f, 0.58f },
+                    new TextLabelFeature("Label", FunColTextAlign.Right),
+                    new ValueDisplayFeature("Value")
+                );
+                _dragGhostFunCol.DisableExpansion = true;
+                _dragGhostFunCol.DisableColors = true;
+                _dragGhostFunCol.SuppressTooltipWarnings = true;
             }
+
+            if (_dragGhostFunCol.GetFeature(0) is TextLabelFeature gn) gn.Text = row.Label ?? row.Key;
+            if (_dragGhostFunCol.GetFeature(1) is ValueDisplayFeature gv)
+            {
+                gv.IsBoolean = row.IsBoolean;
+                gv.BoolState = row.BoolValue;
+                gv.Text      = row.Value ?? string.Empty;
+            }
+
+            _dragGhostFunCol.Draw(spriteBatch, dragBounds, boldFont, _pixelTexture);
         }
 
         private static int GetRowIndex(string key)

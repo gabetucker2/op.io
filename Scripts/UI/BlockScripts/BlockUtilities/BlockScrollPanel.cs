@@ -79,7 +79,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             _lastMousePosition = mouseState.Position;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, bool isLocked = false)
         {
             if (!_scrollbarVisible || spriteBatch == null || _trackBounds.Width <= 0 || _trackBounds.Height <= 0)
             {
@@ -87,12 +87,22 @@ namespace op.io.UI.BlockScripts.BlockUtilities
             }
 
             EnsurePixelTexture(spriteBatch.GraphicsDevice);
-            FillRoundedRect(spriteBatch, _trackBounds, ColorPalette.ScrollTrack, TrackCornerRadius);
+
+            Color trackColor = isLocked ? ColorPalette.ScrollTrack * 0.45f : ColorPalette.ScrollTrack;
+            FillRoundedRect(spriteBatch, _trackBounds, trackColor, TrackCornerRadius);
 
             if (_thumbBounds.Width > 0 && _thumbBounds.Height > 0)
             {
-                bool hovered = _thumbBounds.Contains(_lastMousePosition);
-                Color thumbColor = hovered || _draggingThumb ? ColorPalette.ScrollThumbHover : ColorPalette.ScrollThumb;
+                Color thumbColor;
+                if (isLocked)
+                {
+                    thumbColor = ColorPalette.ScrollThumb * 0.45f;
+                }
+                else
+                {
+                    bool hovered = _thumbBounds.Contains(_lastMousePosition);
+                    thumbColor = hovered || _draggingThumb ? ColorPalette.ScrollThumbHover : ColorPalette.ScrollThumb;
+                }
                 FillRoundedRect(spriteBatch, _thumbBounds, thumbColor, ThumbCornerRadius);
             }
         }

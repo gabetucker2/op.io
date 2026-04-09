@@ -216,7 +216,6 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
   "version": 3,
   "menu": [
     { "kind": "Blank", "mode": "Count", "count": 0, "visible": false },
-    { "kind": "Transparent", "mode": "Count", "count": 0, "visible": false },
     { "kind": "Game", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Properties", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "ColorScheme", "mode": "Toggle", "count": 0, "visible": true },
@@ -224,16 +223,18 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
     { "kind": "Notes", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "DockingSetups", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Backend", "mode": "Toggle", "count": 0, "visible": true },
-    { "kind": "Specs", "mode": "Toggle", "count": 0, "visible": true }
+    { "kind": "Specs", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "DebugLogs", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Chat", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Bars", "mode": "Toggle", "count": 0, "visible": true }
   ],
   "panels": [
     { "id": "colors", "active": "colors", "blocks": ["colors", "notes", "dockingsetups"] },
     { "id": "game", "active": "game", "blocks": ["game"] },
     { "id": "controls", "active": "controls", "blocks": ["controls"] },
-    { "id": "backend", "active": "backend", "blocks": ["backend", "specs"] },
+    { "id": "backend", "active": "backend", "blocks": ["backend", "debuglogs", "chat", "specs"] },
     { "id": "blank", "active": "blank", "blocks": ["blank"] },
-    { "id": "transparent", "active": "transparent", "blocks": ["transparent"] },
-    { "id": "properties", "active": "properties", "blocks": ["properties"] }
+    { "id": "properties", "active": "properties", "blocks": ["properties", "bars"] }
   ],
   "layout": {
     "type": "Split",

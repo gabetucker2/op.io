@@ -10,6 +10,10 @@ namespace op.io
         private static Dictionary<string, bool> _prevSwitchStates = [];
         private static readonly Dictionary<string, bool> _switchPersistence = new(StringComparer.OrdinalIgnoreCase);
 
+        // Float type state
+        private static readonly Dictionary<string, float> _floatStates = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, bool> _floatPersistence = new(StringComparer.OrdinalIgnoreCase);
+
         // Enum type state
         private static readonly HashSet<string> _enumTypes = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, int> _enumIndices = new(StringComparer.OrdinalIgnoreCase);
@@ -265,6 +269,69 @@ namespace op.io
         private static void DispatchSwitchChange(string settingKey, bool state)
         {
             SwitchRegistry.NotifyConsumers(settingKey, state);
+        }
+
+        // ── Float state API ───────────────────────────────────────────────────
+
+        public static float GetFloat(string settingKey, float fallback = 1.0f)
+        {
+            return _floatStates.TryGetValue(settingKey, out float val) ? val : fallback;
+        }
+
+        public static bool ContainsFloatState(string settingKey) =>
+            _floatStates.ContainsKey(settingKey);
+
+        public static void SetFloat(string settingKey, float value)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey)) return;
+            _floatStates[settingKey] = value;
+            if (_floatPersistence.TryGetValue(settingKey, out bool persist) && persist)
+                SaveFloatState(settingKey, value);
+        }
+
+        private static void SaveFloatState(string settingKey, float value)
+        {
+            try
+            {
+                var parameters = new Dictionary<string, object>
+                {
+                    ["@value"] = value,
+                    ["@key"] = settingKey
+                };
+                const string sql = "UPDATE ControlKey SET FloatStartState = @value WHERE SettingKey = @key;";
+                DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to save float state for '{settingKey}': {ex.Message}");
+            }
+        }
+
+        public static void LoadFloatStates()
+        {
+            DebugLogger.PrintDatabase("Loading float control states...");
+            try
+            {
+                const string sql = "SELECT SettingKey, FloatStartState FROM ControlKey WHERE InputType = 'Float';";
+                var result = DatabaseQuery.ExecuteQuery(sql);
+                foreach (var row in result)
+                {
+                    if (!row.TryGetValue("SettingKey", out object keyObj) || keyObj == null) continue;
+                    string settingKey = keyObj.ToString();
+                    float val = 1.0f;
+                    if (row.TryGetValue("FloatStartState", out object floatObj) && floatObj != null && floatObj != DBNull.Value)
+                    {
+                        try { val = Convert.ToSingle(floatObj); } catch { }
+                    }
+                    _floatStates[settingKey] = val;
+                    _floatPersistence[settingKey] = true;
+                    DebugLogger.PrintDatabase($"Loaded float state: {settingKey} = {val}");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load float states: {ex.Message}");
+            }
         }
 
         public static void LoadControlSwitchStates()

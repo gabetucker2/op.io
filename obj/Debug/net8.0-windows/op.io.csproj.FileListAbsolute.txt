@@ -194,7 +194,6 @@ C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\C
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Content\Fonts\MonaspaceXenonBold.xnb
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Content\Fonts\MonaspaceXenonItalic.xnb
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Content\Fonts\MontHeavy.xnb
-C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\op.io.db
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\op.io.exe
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\op.io.deps.json
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\op.io.runtimeconfig.json
@@ -265,3 +264,19 @@ C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\D
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.health_bar_default_on_applied
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Barrels.sql
 C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_Structure_Barrels.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.combine_healthshieldbar_default_on_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\op.io.db
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Bars.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Bullets.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Controls.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_FX.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Farms.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_MapObjects.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\InitDB_StartData_Player.sql
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.autoturn_inspectmode_default_on_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.barconfig_defaults_v2_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.barconfig_shield_above_health_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.player_body_collision_damage_62_5_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.blueloot_farm_prototype_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.farm_mass_quadrupled_applied
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\bin\Debug\net8.0-windows\Data\.blueloot_collision_damage_1000_applied

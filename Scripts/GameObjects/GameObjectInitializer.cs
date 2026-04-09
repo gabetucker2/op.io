@@ -14,6 +14,8 @@ namespace op.io
             Core.Instance.GameObjects = new List<GameObject>();
             Core.Instance.StaticObjects = new List<GameObject>();
 
+            GameObjectManager.SeedNextID();
+
             InitializeMapObjects();
             InitializeFarms();
             InitializeBlocks();
@@ -127,7 +129,9 @@ namespace op.io
                 // Debugging each farm being instantiated
                 for (int i = 0; i < matchingData.Count; i++)
                 {
-                    var farm = CloneFarmWithRandomPosition(farmArchetype, random, viewportWidth, viewportHeight);
+                    GameObject farm = matchingData.IsManual
+                        ? CloneFarmAtPosition(farmArchetype, new Vector2(matchingData.ManualX, matchingData.ManualY), 0f, random)
+                        : CloneFarmWithRandomPosition(farmArchetype, random, viewportWidth, viewportHeight);
                     farms.Add(farm);
 
                     // Log every 50th farm instantiation for debugging
@@ -146,23 +150,69 @@ namespace op.io
 
         private static GameObject CloneFarmWithRandomPosition(FarmGameObject archetype, Random random, int viewportWidth, int viewportHeight)
         {
-            // Random position generation for the farm
             SimpleGameObject baseObject = archetype.BaseObject;
-            int maxX = Math.Max(1, viewportWidth - baseObject.Geometry.Width);
+            int maxX = Math.Max(1, viewportWidth  - baseObject.Geometry.Width);
             int maxY = Math.Max(1, viewportHeight - baseObject.Geometry.Height);
 
             Vector2 newPosition = new Vector2(random.Next(0, maxX), random.Next(0, maxY));
-            float newRotation = (float)(random.NextDouble() * MathF.Tau);
+            float newRotation   = (float)(random.NextDouble() * MathF.Tau);
 
             SimpleGameObject instance = archetype.CreateInstance(GameObjectManager.GetNextID(), newPosition, newRotation);
             GameObject farmObject = instance.ToGameObject();
 
-            float maxHealth = archetype.FarmData.MaxHealth;
-            farmObject.MaxHealth         = maxHealth;
-            farmObject.CurrentHealth     = maxHealth;
-            farmObject.DeathPointReward  = archetype.FarmData.DeathPointReward;
+            ApplyFarmStats(farmObject, archetype.FarmData);
+            if (archetype.FarmData.FloatAmplitude > 0f)
+            {
+                farmObject.FarmAttributes = new FarmAttributes
+                {
+                    FloatAmplitude = archetype.FarmData.FloatAmplitude,
+                    FloatSpeed     = archetype.FarmData.FloatSpeed
+                };
+                farmObject.FarmFloatBase  = newRotation;
+                farmObject.FarmFloatPhase = (float)(random.NextDouble() * MathF.Tau);
+            }
 
             return farmObject;
+        }
+
+        private static GameObject CloneFarmAtPosition(FarmGameObject archetype, Vector2 position, float rotation, Random random)
+        {
+            SimpleGameObject instance = archetype.CreateInstance(GameObjectManager.GetNextID(), position, rotation);
+            GameObject farmObject = instance.ToGameObject();
+
+            ApplyFarmStats(farmObject, archetype.FarmData);
+            if (archetype.FarmData.FloatAmplitude > 0f)
+            {
+                farmObject.FarmAttributes = new FarmAttributes
+                {
+                    FloatAmplitude = archetype.FarmData.FloatAmplitude,
+                    FloatSpeed     = archetype.FarmData.FloatSpeed
+                };
+                farmObject.FarmFloatBase  = rotation;
+                farmObject.FarmFloatPhase = (float)(random.NextDouble() * MathF.Tau);
+            }
+
+            return farmObject;
+        }
+
+        private static void ApplyFarmStats(GameObject farmObject, FarmData data)
+        {
+            farmObject.MaxHealth                  = data.MaxHealth;
+            farmObject.CurrentHealth              = data.MaxHealth;
+            farmObject.HealthRegen                = data.HealthRegen;
+            farmObject.HealthRegenDelay           = data.HealthRegenDelay;
+            farmObject.HealthArmor                = data.HealthArmor;
+            farmObject.MaxShield                  = data.MaxShield;
+            farmObject.CurrentShield              = data.MaxShield;
+            farmObject.ShieldRegen                = data.ShieldRegen;
+            farmObject.ShieldRegenDelay           = data.ShieldRegenDelay;
+            farmObject.ShieldArmor                = data.ShieldArmor;
+            farmObject.BodyPenetration            = data.BodyPenetration;
+            farmObject.BodyCollisionDamage        = data.BodyCollisionDamage;
+            farmObject.CollisionDamageResistance  = data.CollisionDamageResistance;
+            farmObject.BulletDamageResistance     = data.BulletDamageResistance;
+            farmObject.DeathPointReward           = data.DeathPointReward;
+            farmObject.RotationSpeed              = data.RotationSpeed;
         }
 
         private static void InitializeBlocks()

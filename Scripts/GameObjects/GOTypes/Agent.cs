@@ -112,7 +112,10 @@ namespace op.io
             }
         }
 
-        public float Speed => BaseSpeed * InputManager.SpeedMultiplier();
+        public new float Speed => BaseSpeed * InputManager.SpeedMultiplier();
+
+        // Current input-driven movement velocity (pixels/sec), built up by the acceleration system.
+        public Vector2 MovementVelocity { get; set; }
 
         // ── Constructor ──────────────────────────────────────────────────────────
         public Agent(
@@ -142,11 +145,16 @@ namespace op.io
             IsSprinting = false;
             IsPlayer = isPlayer;
             BaseSpeed = baseSpeed;
-            BodyAttributes = bodyAttributes;
-            CurrentHealth = bodyAttributes.MaxHealth;
-            MaxHealth     = bodyAttributes.MaxHealth;
-            CurrentShield = bodyAttributes.MaxShield;
-            MaxShield     = bodyAttributes.MaxShield;
+            BodyAttributes    = bodyAttributes;
+            float maxHp       = AttributeDerived.MaxHealth(bodyAttributes.Mass);
+            CurrentHealth     = maxHp;
+            MaxHealth         = maxHp;
+            CurrentShield     = bodyAttributes.MaxShield;
+            MaxShield         = bodyAttributes.MaxShield;
+            HealthRegen       = bodyAttributes.HealthRegen;
+            HealthRegenDelay  = bodyAttributes.HealthRegenDelay;
+            ShieldRegen       = bodyAttributes.ShieldRegen;
+            ShieldRegenDelay  = bodyAttributes.ShieldRegenDelay;
 
             // Seed the first barrel using the passed-in attributes (default = use
             // physics-settings fallbacks at fire time).  Callers may add further
@@ -279,8 +287,7 @@ namespace op.io
         // ── Update ───────────────────────────────────────────────────────────────
         public override void Update()
         {
-            if (HitFlash > 0f)
-                HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
+            base.Update(); // applies PhysicsVelocity, HitFlash decay, rotation
 
             if (TriggerCooldown > 0)
                 TriggerCooldown -= Core.DELTATIME;

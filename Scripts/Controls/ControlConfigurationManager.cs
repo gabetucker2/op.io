@@ -30,6 +30,7 @@ namespace op.io
             public string InputKey { get; set; }
             public string InputType { get; set; }
             public int? SwitchStartState { get; set; }
+            public float? FloatStartState { get; set; }
             public bool MetaControl { get; set; }
             public int RenderOrder { get; set; }
             public bool LockMode { get; set; }
@@ -628,7 +629,13 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                 new ControlBindingSnapshot { SettingKey = "TransparentTabBlocking", InputKey = "Shift + V", InputType = "SaveSwitch", SwitchStartState = 1, MetaControl = false, RenderOrder = 15, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.HoldInputsKey, InputKey = "M", InputType = "NoSaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 16, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.PreviousConfigurationKey, InputKey = "Shift + [", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 17, LockMode = false },
-                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.NextConfigurationKey, InputKey = "Shift + ]", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 18, LockMode = false }
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.NextConfigurationKey, InputKey = "Shift + ]", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 18, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollInKey, InputKey = "ScrollUp", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 28, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollOutKey, InputKey = "ScrollDown", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 29, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollMinDistanceKey, InputKey = "", InputType = "Float", FloatStartState = 200f, MetaControl = true, RenderOrder = 30, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollMaxDistanceKey, InputKey = "", InputType = "Float", FloatStartState = 2000f, MetaControl = true, RenderOrder = 31, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollIncrementKey, InputKey = "", InputType = "Float", FloatStartState = 120f, MetaControl = true, RenderOrder = 32, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.CtrlBufferKey, InputKey = "", InputType = "Float", FloatStartState = 0.2f, MetaControl = true, RenderOrder = 33, LockMode = false }
             };
 
             var map = new Dictionary<string, ControlBindingSnapshot>(StringComparer.OrdinalIgnoreCase);

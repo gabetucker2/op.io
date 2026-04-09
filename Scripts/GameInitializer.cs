@@ -24,12 +24,12 @@ namespace op.io
             // Ensure the database is initialized before loading settings
             SafeLog("GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase");
             DatabaseInitializer.InitializeDatabase();
-            SafeLog("GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied");
-            ControlKeyMigrations.EnsureApplied();
             SafeLog("GameInitializer.Initialize: GameObjectMigrations.EnsureApplied");
             GameObjectMigrations.EnsureApplied();
             SafeLog("GameInitializer.Initialize: ControlConfigurationManager.ApplyStartupConfiguration");
             ControlConfigurationManager.ApplyStartupConfiguration();
+            SafeLog("GameInitializer.Initialize: ControlKeyMigrations.EnsureApplied");
+            ControlKeyMigrations.EnsureApplied();
             try
             {
                 SafeLog("GameInitializer.Initialize: ColorScheme.Initialize");
@@ -48,6 +48,11 @@ namespace op.io
 
             // Load control switch states from the database
             ControlStateManager.LoadControlSwitchStates();
+            ControlStateManager.LoadFloatStates();
+
+            // Force CameraLockMode to Locked (index 0) after loading switch states.
+            // UpsertBindings may have overwritten the DB with a stale saved config value.
+            ControlKeyMigrations.ForceCameraLockModeDefault();
 
             // Hydrate the input switch cache so runtime toggles honor persisted values
             InputTypeManager.InitializeControlStates();
@@ -171,6 +176,7 @@ namespace op.io
                     configuredLogFiles = LogFileHandler.DefaultMaxLogFiles;
                 }
                 LogFileHandler.ConfigureMaxLogFiles(configuredLogFiles);
+                BlockManager.LoadCameraSnapRange();
 
                 Core.Instance.Graphics.PreferredBackBufferWidth = Core.Instance.ViewportWidth;
                 Core.Instance.Graphics.PreferredBackBufferHeight = Core.Instance.ViewportHeight;

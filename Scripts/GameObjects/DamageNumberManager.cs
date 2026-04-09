@@ -99,7 +99,7 @@ namespace op.io
         {
             get
             {
-                _cachedDriftSpeed ??= DatabaseFetch.GetSetting<float>("PhysicsSettings", "Value", "SettingKey", "DamageNumDriftSpeed", 28f);
+                _cachedDriftSpeed ??= DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "DamageNumDriftSpeed", 28f);
                 return _cachedDriftSpeed.Value;
             }
         }
@@ -109,7 +109,7 @@ namespace op.io
         {
             get
             {
-                _cachedScaleStart ??= DatabaseFetch.GetSetting<float>("PhysicsSettings", "Value", "SettingKey", "DamageNumScaleStart", 0.5f);
+                _cachedScaleStart ??= DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "DamageNumScaleStart", 0.5f);
                 return _cachedScaleStart.Value;
             }
         }
@@ -119,7 +119,7 @@ namespace op.io
         {
             get
             {
-                _cachedScalePeak ??= DatabaseFetch.GetSetting<float>("PhysicsSettings", "Value", "SettingKey", "DamageNumScalePeak", 1.4f);
+                _cachedScalePeak ??= DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "DamageNumScalePeak", 1.4f);
                 return _cachedScalePeak.Value;
             }
         }

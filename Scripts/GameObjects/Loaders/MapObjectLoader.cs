@@ -12,7 +12,28 @@ public static class MapObjectLoader
         {
             DebugLogger.PrintGO("Loading map objects from database...");
 
-            var results = DatabaseQuery.ExecuteQuery("SELECT g.ID, g.Name, g.Type, g.PositionX, g.PositionY, g.Rotation, g.Width, g.Height, g.Sides, g.FillR, g.FillG, g.FillB, g.FillA, g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth, g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics, g.Shape, s.MaxHealth, s.DeathPointReward FROM MapData s INNER JOIN GameObjects g ON s.ID = g.ID");
+            // Map objects are GameObjects with a Destructibles entry that are
+            // not Agents and not FarmData prototypes.
+            const string query = @"
+                SELECT
+                    g.ID, g.Name, g.Type,
+                    g.PositionX, g.PositionY, g.Rotation,
+                    g.Width, g.Height, g.Sides,
+                    g.FillR, g.FillG, g.FillB, g.FillA,
+                    g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, g.OutlineWidth,
+                    g.IsCollidable, g.IsDestructible, g.Mass, g.StaticPhysics,
+                    g.Shape, g.RotationSpeed,
+                    d.MaxHealth, d.HealthRegen, d.HealthRegenDelay, d.HealthArmor,
+                    d.MaxShield, d.ShieldRegen, d.ShieldRegenDelay, d.ShieldArmor,
+                    d.BodyPenetration, d.BodyCollisionDamage,
+                    d.CollisionDamageResistance, d.BulletDamageResistance,
+                    d.DeathPointReward
+                FROM Destructibles d
+                INNER JOIN GameObjects g ON g.ID = d.ID
+                WHERE g.ID NOT IN (SELECT ID FROM Agents)
+                AND   g.ID NOT IN (SELECT ID FROM FarmData)";
+
+            var results = DatabaseQuery.ExecuteQuery(query);
 
             if (results.Count == 0)
             {
@@ -22,6 +43,10 @@ public static class MapObjectLoader
 
             DebugLogger.PrintGO($"Loaded {results.Count} map objects.");
 
+            float SafeFloat(Dictionary<string, object> row, string key, float fallback = 0f) =>
+                row.TryGetValue(key, out object v) && v != null && v != DBNull.Value
+                    ? Convert.ToSingle(v) : fallback;
+
             foreach (var row in results)
             {
                 try
@@ -30,11 +55,28 @@ public static class MapObjectLoader
 
                     if (mapObject != null)
                     {
-                        float maxHealth = Convert.ToSingle(row["MaxHealth"]);
-                        mapObject.MaxHealth     = maxHealth;
-                        mapObject.CurrentHealth = maxHealth;
-                        mapObject.DeathPointReward = row.TryGetValue("DeathPointReward", out object dprObj) && dprObj != null && dprObj != DBNull.Value
-                            ? Convert.ToSingle(dprObj) : 0f;
+                        float maxHealth = SafeFloat(row, "MaxHealth");
+                        mapObject.MaxHealth         = maxHealth;
+                        mapObject.CurrentHealth     = maxHealth;
+                        mapObject.DeathPointReward  = SafeFloat(row, "DeathPointReward");
+                        mapObject.RotationSpeed     = SafeFloat(row, "RotationSpeed");
+
+                        mapObject.HealthRegen       = SafeFloat(row, "HealthRegen");
+                        mapObject.HealthRegenDelay  = SafeFloat(row, "HealthRegenDelay", 5f);
+                        mapObject.HealthArmor       = SafeFloat(row, "HealthArmor");
+
+                        float maxShield             = SafeFloat(row, "MaxShield");
+                        mapObject.MaxShield         = maxShield;
+                        mapObject.CurrentShield     = maxShield;
+                        mapObject.ShieldRegen       = SafeFloat(row, "ShieldRegen");
+                        mapObject.ShieldRegenDelay  = SafeFloat(row, "ShieldRegenDelay", 5f);
+                        mapObject.ShieldArmor       = SafeFloat(row, "ShieldArmor");
+
+                        mapObject.BodyPenetration           = SafeFloat(row, "BodyPenetration");
+                        mapObject.BodyCollisionDamage       = SafeFloat(row, "BodyCollisionDamage");
+                        mapObject.CollisionDamageResistance = SafeFloat(row, "CollisionDamageResistance");
+                        mapObject.BulletDamageResistance    = SafeFloat(row, "BulletDamageResistance");
+
                         mapObjects.Add(mapObject);
                         DebugLogger.PrintDebug($"Loaded map object ID={mapObject.ID}.");
                     }
@@ -54,7 +96,6 @@ public static class MapObjectLoader
             DebugLogger.PrintError($"Failed to load map objects: {ex.Message}");
         }
 
-        return mapObjects; // Ensure a list is returned
+        return mapObjects;
     }
-
 }

@@ -32,12 +32,15 @@ namespace op.io
         public int Width { get; private set; }
         public int Height { get; private set; }
         public int Sides { get; private set; }
-        public float CurrentXP        { get; private set; }
-        public float DeathPointReward { get; private set; }
-        public float CurrentHealth    { get; private set; }
-        public float MaxHealth        { get; private set; }
-        public float CurrentShield    { get; private set; }
-        public float MaxShield        { get; private set; }
+        public float CurrentXP           { get; private set; }
+        public float MaxXP               { get; private set; }
+        public float DeathPointReward    { get; private set; }
+        public float CurrentHealth       { get; private set; }
+        public float MaxHealth           { get; private set; }
+        public float CurrentShield       { get; private set; }
+        public float MaxShield           { get; private set; }
+        public float LastHealthDamageTime { get; private set; }
+        public float LastShieldDamageTime { get; private set; }
         public bool IsValid { get; private set; }
 
         public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"ID {Id}" : Name;
@@ -78,12 +81,15 @@ namespace op.io
                 IsPlayer = false;
             }
 
-            CurrentXP        = Source.CurrentXP;
-            DeathPointReward = Source.DeathPointReward;
-            CurrentHealth    = Source.CurrentHealth;
-            MaxHealth        = Source.MaxHealth;
-            CurrentShield    = Source.CurrentShield;
-            MaxShield        = Source.MaxShield;
+            CurrentXP            = Source.CurrentXP;
+            MaxXP                = Source.MaxXP;
+            DeathPointReward     = Source.DeathPointReward;
+            CurrentHealth        = Source.CurrentHealth;
+            MaxHealth            = Source.MaxHealth;
+            CurrentShield        = Source.CurrentShield;
+            MaxShield            = Source.MaxShield;
+            LastHealthDamageTime = Source.LastHealthDamageTime;
+            LastShieldDamageTime = Source.LastShieldDamageTime;
 
             IsValid = true;
         }

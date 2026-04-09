@@ -73,7 +73,7 @@ namespace op.io.UI.BlockScripts.Blocks
             UIStyle.UIFont font = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Regular);
             if (!font.IsAvailable)
             {
-                ScrollPanel.Update(contentBounds, 0f, mouseState, previousMouseState);
+                ScrollPanel.Update(contentBounds, 0f, blockLocked ? previousMouseState : mouseState, previousMouseState);
                 return;
             }
 
@@ -128,7 +128,8 @@ namespace op.io.UI.BlockScripts.Blocks
 
             float bottomPadding = layout.LogViewport.Height / 3f;
             float contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2) + bottomPadding;
-            ScrollPanel.Update(layout.LogViewport, contentHeight, mouseState, previousMouseState);
+            MouseState scrollMouse = blockLocked ? previousMouseState : mouseState;
+            ScrollPanel.Update(layout.LogViewport, contentHeight, scrollMouse, previousMouseState);
 
             Rectangle viewport = ScrollPanel.ContentViewportBounds == Rectangle.Empty
                 ? layout.LogViewport
@@ -139,7 +140,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 RefreshLines(font, adjustedWidth);
                 contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2) + bottomPadding;
-                ScrollPanel.Update(layout.LogViewport, contentHeight, mouseState, previousMouseState);
+                ScrollPanel.Update(layout.LogViewport, contentHeight, scrollMouse, previousMouseState);
             }
 
             if (hasNewEntries)

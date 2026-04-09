@@ -5,6 +5,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.BlockUtilities;
+using op.io.UI.FunCol;
+using op.io.UI.FunCol.Features;
 
 namespace op.io.UI.BlockScripts.Blocks
 {
@@ -33,15 +35,37 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static string GetHoveredRowKey() => _tooltipRowKey;
 
+        public static string GetHoveredRowLabel() => _tooltipRowKey;
+
+        // ── Per-row FunColInterfaces (Name | Value+bool | WrappingMessage) ──
+        private static readonly Dictionary<string, FunColInterface> _rowFunCols =
+            new(StringComparer.OrdinalIgnoreCase);
+        private static FunColInterface _dragGhostFunCol;
+        private static FunColInterface _headerFunCol;
+        private const int HeaderRowHeight = 16;
+        private static bool _headerVisibleLoaded;
+
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Backend);
+
+            var hfc = GetOrEnsureHeaderFunCol();
+            if (!_headerVisibleLoaded)
+            {
+                Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Backend);
+                if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
+                    hfc.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                _headerVisibleLoaded = true;
+            }
+
+            int headerH = hfc.HeaderVisible ? HeaderRowHeight : 0;
+            var listArea = new Rectangle(contentBounds.X, contentBounds.Y + headerH, contentBounds.Width, Math.Max(0, contentBounds.Height - headerH));
 
             RefreshRows();
             if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 _lineHeightCache = 0f;
-                _scrollPanel.Update(contentBounds, 0f, mouseState, previousMouseState);
+                _scrollPanel.Update(listArea, 0f, blockLocked ? previousMouseState : mouseState, previousMouseState);
                 return;
             }
 
@@ -50,8 +74,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
             }
 
-            float contentHeight = Math.Max(0f, _rows.Count * _lineHeightCache);
-            _scrollPanel.Update(contentBounds, contentHeight, mouseState, previousMouseState);
+            float contentHeight = CalculateContentHeight(boldFont, listArea.Width);
+            _scrollPanel.Update(listArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -59,7 +83,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 listBounds = contentBounds;
             }
 
-            UpdateRowBounds(listBounds);
+            UpdateRowBounds(listBounds, boldFont);
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -70,9 +96,25 @@ namespace op.io.UI.BlockScripts.Blocks
                 _dragState.Reset();
             }
 
+            // Update per-row FunColInterfaces
+            bool suppressHover = _dragState.IsDragging || blockLocked;
+            foreach (BackendVariable row in _rows)
+            {
+                if (row.Bounds != Rectangle.Empty)
+                    GetOrCreateRowFunCol(row.Name).Update(row.Bounds, mouseState, dt, suppressHover);
+            }
+
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             _hoveredRowKey = !blockLocked ? hitRow : null;
             _tooltipRowKey = hitRow;
+
+            // Determine hovered column for the hovered row
+            int hoveredCol = -1;
+            if (!string.IsNullOrEmpty(_hoveredRowKey) &&
+                _rowFunCols.TryGetValue(_hoveredRowKey, out var hovFunCol))
+            {
+                hoveredCol = hovFunCol.HoveredColumn;
+            }
 
             if (_dragState.IsDragging)
             {
@@ -83,16 +125,26 @@ namespace op.io.UI.BlockScripts.Blocks
                     {
                         NormalizeRowOrder();
                         if (orderChanged)
-                        {
                             UpdateCustomOrderFromRows();
-                        }
                     }
                 }
             }
-            else if (!blockLocked && pointerInsideList && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+            else if (!blockLocked && pointerInsideList &&
+                     !string.IsNullOrEmpty(_hoveredRowKey) &&
+                     GetOrCreateRowFunCol(_hoveredRowKey).DragHandleClicked)
             {
+                // Col 0 (Green): name — drag handle
                 _dragState.TryStartDrag(_rows, _hoveredRowKey, mouseState);
             }
+
+            // Update header hover so DrawHeader can show column tooltips + hide toggle
+            int headerH2 = hfc.HeaderVisible ? HeaderRowHeight : 0;
+            var headerBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, headerH2);
+            hfc.ShowHeaderToggle = BlockManager.DockingModeEnabled;
+            hfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
+            hfc.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
+            if (hfc.HeaderToggleClicked)
+                BlockDataStore.SetRowData(DockBlockKind.Backend, "FunColHeaderVisible", hfc.HeaderVisible ? "true" : "false");
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -101,6 +153,8 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 return;
             }
+
+            bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Backend);
 
             if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
@@ -126,69 +180,129 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_rows.Count == 0)
             {
                 regularFont.DrawString(spriteBatch, PlaceholderText, new Vector2(listBounds.X, listBounds.Y), UIStyle.MutedTextColor);
-                _scrollPanel.Draw(spriteBatch);
+                _scrollPanel.Draw(spriteBatch, blockLocked);
                 return;
             }
 
             EnsurePixelTexture();
 
-            float lineHeight = _lineHeightCache;
-            float y = listBounds.Y - _scrollPanel.ScrollOffset;
-            int rowHeight = (int)MathF.Ceiling(lineHeight);
+            // ── Scissor clip so rows don't bleed over the header ─────────────
+            var gd = spriteBatch.GraphicsDevice;
+            float uiScale = BlockManager.UIScale;
+            Rectangle scissorRect = uiScale > 0f && uiScale != 1f
+                ? new Rectangle(
+                    (int)(listBounds.X      * uiScale),
+                    (int)(listBounds.Y      * uiScale),
+                    (int)(listBounds.Width  * uiScale),
+                    (int)(listBounds.Height * uiScale))
+                : listBounds;
+            var viewport = gd.Viewport;
+            scissorRect.X      = Math.Clamp(scissorRect.X,      0, viewport.Width);
+            scissorRect.Y      = Math.Clamp(scissorRect.Y,      0, viewport.Height);
+            scissorRect.Width  = Math.Clamp(scissorRect.Width,  0, viewport.Width  - scissorRect.X);
+            scissorRect.Height = Math.Clamp(scissorRect.Height, 0, viewport.Height - scissorRect.Y);
+
+            spriteBatch.End();
+            var scissorState = new RasterizerState { CullMode = CullMode.None, ScissorTestEnable = true };
+            gd.ScissorRectangle = scissorRect;
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, scissorState, null, BlockManager.CurrentUITransform);
 
             foreach (BackendVariable row in _rows)
             {
-                Rectangle rowBounds = new(listBounds.X, (int)MathF.Round(y), listBounds.Width, rowHeight);
-                y += lineHeight;
+                Rectangle rowBounds = row.Bounds;
+                if (rowBounds == Rectangle.Empty) continue;
+                if (rowBounds.Bottom <= listBounds.Y) continue;
+                if (rowBounds.Y >= listBounds.Bottom) break;
 
-                if (rowBounds.Bottom <= listBounds.Y)
-                {
-                    continue;
-                }
+                bool isDraggingRow = _dragState.IsDragging &&
+                    string.Equals(row.Name, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
+                if (isDraggingRow) continue;
 
-                if (rowBounds.Y >= listBounds.Bottom)
-                {
-                    break;
-                }
-
-                bool isDraggingRow = _dragState.IsDragging && string.Equals(row.Name, _dragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
-                if (!isDraggingRow)
-                {
-                    DrawRowBackground(spriteBatch, rowBounds, row.Name);
-                }
-
-                Vector2 labelPosition = new(rowBounds.X, rowBounds.Y);
-                string header = row.Name;
-                Vector2 headerSize = boldFont.MeasureString(header);
-                boldFont.DrawString(spriteBatch, header, labelPosition, UIStyle.TextColor);
-
-                string valueText = FormatValue(row);
-                float valueX = labelPosition.X + headerSize.X;
-
-                _stringBuilder.Clear();
-                _stringBuilder.Append(":  ");
-                _stringBuilder.Append(valueText);
-
-                regularFont.DrawString(spriteBatch, _stringBuilder.ToString(), new Vector2(valueX, rowBounds.Y), UIStyle.TextColor);
-
-                if (row.IsBoolean && row.Value is bool boolValue)
-                {
-                    BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, listBounds, lineHeight, rowBounds.Y, boolValue);
-                }
+                DrawRowBackground(spriteBatch, rowBounds, row.Name);
+                DrawRowWithFunCol(spriteBatch, row, rowBounds, boldFont);
             }
 
             if (_dragState.IsDragging && _dragState.HasSnapshot)
             {
                 if (_dragState.DropIndicatorBounds != Rectangle.Empty)
-                {
                     FillRect(spriteBatch, _dragState.DropIndicatorBounds, ColorPalette.DropIndicator);
-                }
 
-                DrawDraggingRow(spriteBatch, listBounds, lineHeight, boldFont, regularFont);
+                DrawDraggingRow(spriteBatch, listBounds, boldFont);
             }
 
-            _scrollPanel.Draw(spriteBatch);
+            spriteBatch.End();
+            scissorState.Dispose();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, RasterizerState.CullNone, null, BlockManager.CurrentUITransform);
+
+            _scrollPanel.Draw(spriteBatch, blockLocked);
+
+            // Header drawn last — stays on top of scrolled content
+            var backendHfc = GetOrEnsureHeaderFunCol();
+            int backendHdrH = backendHfc.HeaderVisible ? HeaderRowHeight : 0;
+            backendHfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
+            var headerStrip = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, backendHdrH);
+            backendHfc.DrawHeader(spriteBatch, headerStrip, boldFont, _pixelTexture);
         }
+
+        // ── Descriptive change messages ────────────────────────────────────────
+
+        private static string BuildChangeMessage(string variableName, object previousValue, object nextValue)
+        {
+            string prev = previousValue?.ToString() ?? "null";
+            string next = nextValue?.ToString() ?? "null";
+
+            // Boolean — use enable/disable language where we know the variable
+            if (nextValue is bool nextBool)
+            {
+                return variableName switch
+                {
+                    "DockingMode"       => nextBool ? "Docking mode enabled."  : "Docking mode disabled.",
+                    "BlockMenuOpen"     => nextBool ? "Block menu opened."      : "Block menu closed.",
+                    "InputBlocked"      => nextBool ? "All input blocked by modal overlay." : "Input unblocked.",
+                    "DraggingLayout"    => nextBool ? "Block drag started."     : "Block drag ended.",
+                    "CursorOnGameBlock" => nextBool ? "Cursor entered game area." : "Cursor left game area.",
+                    "AnyGUIInteracting" => nextBool ? "Cursor pressed on a UI block — gameplay inputs suppressed." : "GUI interaction ended — gameplay inputs restored.",
+                    "FreezeGameInputs"  => nextBool ? "Gameplay inputs frozen." : "Gameplay inputs resumed.",
+                    _ => nextBool ? $"{variableName} turned ON." : $"{variableName} turned OFF."
+                };
+            }
+
+            // String — show transition in readable form
+            return variableName switch
+            {
+                "HoveredBlock"       => $"Cursor moved to {next}.",
+                "HoveredDragBar"     => next == "None" ? "Left drag bar." : $"Hovering drag bar of {next}.",
+                "FocusedBlock"       => next == "None" ? "Keyboard focus cleared." : $"Keyboard focus moved to {next}.",
+                "GUIInteractingWith" => next == "None" ? "Interaction ended." : $"Interacting with {next}.",
+                _ => $"{prev} → {next}"
+            };
+        }
+
+        // ── Variable row heights ───────────────────────────────────────────────
+
+        private static float CalculateContentHeight(UIStyle.UIFont font, int listWidth)
+        {
+            if (_lineHeightCache <= 0f || _rows.Count == 0) return 0f;
+            float total = 0f;
+            foreach (BackendVariable row in _rows)
+                total += CalculateRowHeight(font, row, listWidth);
+            return total;
+        }
+
+        private static float CalculateRowHeight(UIStyle.UIFont font, BackendVariable row, int listWidth)
+        {
+            if (_lineHeightCache <= 0f) return _lineHeightCache;
+
+            // Message column is weight 0.65 of total width
+            int msgColWidth = (int)(listWidth * 0.65f);
+            int lines = GetOrCreateRowFunColWrapping(row.Name)
+                .CalculateMessageLines(font, msgColWidth, row.LastChangeMessage ?? string.Empty);
+            return Math.Max(1, lines) * _lineHeightCache;
+        }
+
+        // ── Order cache ───────────────────────────────────────────────────────
 
         private static void EnsureOrderCacheHydrated()
         {
@@ -244,9 +358,21 @@ namespace op.io.UI.BlockScripts.Blocks
                     _rows.Add(row);
                 }
 
+                object previousValue = row.Value;
                 row.Value = variable.Value;
                 row.IsBoolean = variable.IsBoolean;
                 row.RenderOrder = _customOrder[storageKey];
+
+                // A non-empty Detail from GameTracker takes precedence as the persistent message.
+                // Otherwise, build a descriptive change message when the value transitions.
+                if (!string.IsNullOrEmpty(variable.Detail))
+                {
+                    row.LastChangeMessage = variable.Detail;
+                }
+                else if (!Equals(previousValue, variable.Value) && previousValue != null)
+                {
+                    row.LastChangeMessage = BuildChangeMessage(variable.Name, previousValue, variable.Value);
+                }
                 row.IsDragging = wasDragging;
                 row.Bounds = previousBounds;
             }
@@ -337,22 +463,24 @@ namespace op.io.UI.BlockScripts.Blocks
             _rows.Sort((a, b) => a.RenderOrder.CompareTo(b.RenderOrder));
         }
 
-        private static void UpdateRowBounds(Rectangle contentBounds)
+        private static void UpdateRowBounds(Rectangle contentBounds, UIStyle.UIFont font)
         {
             if (_lineHeightCache <= 0f)
             {
                 return;
             }
 
-            int rowHeight = (int)MathF.Ceiling(_lineHeightCache);
+            int listWidth = contentBounds.Width;
             float y = contentBounds.Y - _scrollPanel.ScrollOffset;
 
             for (int i = 0; i < _rows.Count; i++)
             {
                 BackendVariable row = _rows[i];
-                row.Bounds = new Rectangle(contentBounds.X, (int)MathF.Round(y), contentBounds.Width, rowHeight);
+                float rowH = CalculateRowHeight(font, row, listWidth);
+                int rowHeight = (int)MathF.Ceiling(rowH);
+                row.Bounds = new Rectangle(contentBounds.X, (int)MathF.Round(y), listWidth, rowHeight);
                 _rows[i] = row;
-                y += _lineHeightCache;
+                y += rowH;
             }
         }
 
@@ -413,55 +541,126 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds, float lineHeight, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
+        // ── FunCol factory ────────────────────────────────────────────────────
+
+        private static FunColInterface GetOrCreateRowFunCol(string name)
         {
-            Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, lineHeight);
-            if (dragBounds == Rectangle.Empty)
+            if (_rowFunCols.TryGetValue(name, out var existing)) return existing;
+            var fc = new FunColInterface(
+                new float[] { 0.27f, 0.08f, 0.65f },
+                new TextLabelFeature("Name", FunColTextAlign.Right),
+                new ValueDisplayFeature("Value"),
+                new WrappingTextFeature("Message", FunColTextAlign.Left)
+            );
+            fc.DisableExpansion = true;
+            fc.DisableColors = true;
+            fc.RowDragEnabled = true;
+            fc.SuppressTooltipWarnings = true;
+            _rowFunCols[name] = fc;
+            return fc;
+        }
+
+        /// <summary>Returns the WrappingTextFeature from a row's FunColInterface, for line-count queries.</summary>
+        private static RowFunColAccessor GetOrCreateRowFunColWrapping(string name)
+        {
+            var fc = GetOrCreateRowFunCol(name);
+            var wrapping = fc.GetFeature(2) as WrappingTextFeature;
+            return new RowFunColAccessor(wrapping);
+        }
+
+        private static FunColInterface GetOrEnsureHeaderFunCol()
+        {
+            if (_headerFunCol != null) return _headerFunCol;
+            _headerFunCol = new FunColInterface(
+                new float[] { 0.27f, 0.08f, 0.65f },
+                new TextLabelFeature("Name", FunColTextAlign.Right)
+                    { HeaderTooltipTexts = ["Variable name"] },
+                new ValueDisplayFeature("Value")
+                    { HeaderTooltipTexts = ["Current value of the variable"] },
+                new WrappingTextFeature("Message", FunColTextAlign.Left)
+                    { HeaderTooltipTexts = ["Last change log message"] }
+            );
+            _headerFunCol.DisableExpansion = true;
+            _headerFunCol.DisableColors = true;
+            _headerFunCol.ShowHeaderTooltips = true;
+            return _headerFunCol;
+        }
+
+        private static void DrawRowWithFunCol(SpriteBatch spriteBatch, BackendVariable row,
+            Rectangle rowBounds, UIStyle.UIFont boldFont)
+        {
+            var funCol = GetOrCreateRowFunCol(row.Name);
+
+            if (funCol.GetFeature(0) is TextLabelFeature nameF)
+                nameF.Text = row.Name;
+
+            if (funCol.GetFeature(1) is ValueDisplayFeature valF)
             {
-                return;
+                valF.IsBoolean = row.IsBoolean;
+                if (row.IsBoolean && row.Value is bool b)
+                    valF.BoolState = b;
+                else
+                    valF.BoolState = false;
+                valF.Text = row.Value?.ToString() ?? "null";
             }
+
+            if (funCol.GetFeature(2) is WrappingTextFeature msgF)
+                msgF.Text = row.LastChangeMessage ?? string.Empty;
+
+            funCol.Draw(spriteBatch, rowBounds, boldFont, _pixelTexture);
+        }
+
+        private static void DrawDraggingRow(SpriteBatch spriteBatch, Rectangle contentBounds,
+            UIStyle.UIFont boldFont)
+        {
+            if (_lineHeightCache <= 0f) return;
+            Rectangle dragBounds = _dragState.GetDragBounds(contentBounds, _lineHeightCache);
+            if (dragBounds == Rectangle.Empty) return;
 
             FillRect(spriteBatch, dragBounds, ColorPalette.RowDragging);
 
             BackendVariable row = _dragState.DraggingSnapshot;
-            row.Bounds = dragBounds;
 
-            Vector2 labelPosition = new(row.Bounds.X, row.Bounds.Y);
-            string header = row.Name;
-            Vector2 headerSize = boldFont.MeasureString(header);
-            boldFont.DrawString(spriteBatch, header, labelPosition, UIStyle.TextColor);
-
-            string valueText = FormatValue(row);
-            float valueX = labelPosition.X + headerSize.X;
-
-            _stringBuilder.Clear();
-            _stringBuilder.Append(":  ");
-            _stringBuilder.Append(valueText);
-
-            regularFont.DrawString(spriteBatch, _stringBuilder.ToString(), new Vector2(valueX, row.Bounds.Y), UIStyle.TextColor);
-
-            if (row.IsBoolean && row.Value is bool boolValue)
+            if (_dragGhostFunCol == null)
             {
-                BlockIndicatorRenderer.TryDrawBooleanIndicator(spriteBatch, contentBounds, lineHeight, row.Bounds.Y, boolValue);
+                _dragGhostFunCol = new FunColInterface(
+                    new float[] { 0.27f, 0.08f, 0.65f },
+                    new TextLabelFeature("Name", FunColTextAlign.Right),
+                    new ValueDisplayFeature("Value"),
+                    new WrappingTextFeature("Message", FunColTextAlign.Left)
+                );
+                _dragGhostFunCol.DisableExpansion = true;
+                _dragGhostFunCol.DisableColors = true;
+                _dragGhostFunCol.SuppressTooltipWarnings = true;
             }
+
+            if (_dragGhostFunCol.GetFeature(0) is TextLabelFeature gn) gn.Text = row.Name;
+            if (_dragGhostFunCol.GetFeature(1) is ValueDisplayFeature gv)
+            {
+                gv.IsBoolean = row.IsBoolean;
+                if (row.IsBoolean && row.Value is bool b)
+                    gv.BoolState = b;
+                else
+                    gv.BoolState = false;
+                gv.Text = row.Value?.ToString() ?? "null";
+            }
+            if (_dragGhostFunCol.GetFeature(2) is WrappingTextFeature gm) gm.Text = row.LastChangeMessage ?? string.Empty;
+
+            _dragGhostFunCol.Draw(spriteBatch, dragBounds, boldFont, _pixelTexture);
         }
 
-        private static int GetRowIndex(string name)
+        private static int GetNextOrderSeed()
         {
-            if (string.IsNullOrWhiteSpace(name))
+            int max = 0;
+            foreach (int value in _customOrder.Values)
             {
-                return -1;
-            }
-
-            for (int i = 0; i < _rows.Count; i++)
-            {
-                if (string.Equals(_rows[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                if (value > max)
                 {
-                    return i;
+                    max = value;
                 }
             }
 
-            return -1;
+            return Math.Max(1, max + 1);
         }
 
         private static BackendVariable FindRow(string name)
@@ -480,20 +679,6 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             return null;
-        }
-
-        private static int GetNextOrderSeed()
-        {
-            int max = 0;
-            foreach (int value in _customOrder.Values)
-            {
-                if (value > max)
-                {
-                    max = value;
-                }
-            }
-
-            return Math.Max(1, max + 1);
         }
 
         private static void EnsurePixelTexture()
@@ -517,20 +702,22 @@ namespace op.io.UI.BlockScripts.Blocks
             spriteBatch.Draw(_pixelTexture, bounds, color);
         }
 
-        private static string FormatValue(BackendVariable variable)
+        // ── Small helper to call CalculateLineCount from the wrapping feature ──
+
+        private readonly struct RowFunColAccessor
         {
-            if (variable.Value == null)
-            {
-                return "null";
-            }
+            private readonly WrappingTextFeature _feature;
+            public RowFunColAccessor(WrappingTextFeature feature) => _feature = feature;
 
-            if (variable.IsBoolean && variable.Value is bool boolValue)
+            public int CalculateMessageLines(UIStyle.UIFont font, int columnWidth, string text)
             {
-                return boolValue ? "1" : "0";
+                if (_feature == null) return 1;
+                _feature.Text = text;
+                return _feature.CalculateLineCount(font, columnWidth);
             }
-
-            return variable.Value.ToString();
         }
+
+        // ── Data ──────────────────────────────────────────────────────────────
 
         private sealed class BackendVariable
         {
@@ -539,11 +726,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 Name = name ?? string.Empty;
                 Value = value;
                 IsBoolean = isBoolean;
+                LastChangeMessage = string.Empty;
             }
 
             public string Name { get; }
             public object Value { get; set; }
             public bool IsBoolean { get; set; }
+            public string LastChangeMessage { get; set; }
             public int RenderOrder { get; set; }
             public Rectangle Bounds { get; set; }
             public bool IsDragging { get; set; }

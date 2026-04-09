@@ -80,7 +80,6 @@ namespace op.io
         }
 
         public DockSplitOrientation Orientation { get; set; }
-        public bool IsUserSized { get; set; }
         public float SplitRatio { get; set; } = 0.5f;
         public DockNode First { get; set; }
         public DockNode Second { get; set; }
@@ -241,57 +240,25 @@ namespace op.io
                 return;
             }
 
-            if (Orientation == DockSplitOrientation.Horizontal)
-            {
-                AdjustPreferredValues(
-                    previousBounds.Height,
-                    previousBounds.Y,
-                    previousBounds.Bottom,
-                    newBounds.Height,
-                    newBounds.Y,
-                    newBounds.Bottom,
-                    minFirstSpan,
-                    minSecondSpan);
-            }
-            else
-            {
-                AdjustPreferredValues(
-                    previousBounds.Width,
-                    previousBounds.X,
-                    previousBounds.Right,
-                    newBounds.Width,
-                    newBounds.X,
-                    newBounds.Right,
-                    minFirstSpan,
-                    minSecondSpan);
-            }
-        }
+            int oldTotal = Orientation == DockSplitOrientation.Horizontal ? previousBounds.Height : previousBounds.Width;
+            int newTotal = Orientation == DockSplitOrientation.Horizontal ? newBounds.Height      : newBounds.Width;
 
-        private void AdjustPreferredValues(
-            int oldTotal,
-            int oldStart,
-            int oldEnd,
-            int newTotal,
-            int newStart,
-            int newEnd,
-            int minFirstSpan,
-            int minSecondSpan)
-        {
             if (oldTotal <= 0 || oldTotal == newTotal)
             {
                 return;
             }
 
-            int minFirst = Math.Clamp(minFirstSpan, 0, newTotal);
+            int minFirst  = Math.Clamp(minFirstSpan,  0, newTotal);
             int minSecond = Math.Clamp(minSecondSpan, 0, newTotal);
-            int maxFirst = Math.Max(minFirst, newTotal - minSecond);
+            int maxFirst  = Math.Max(minFirst, newTotal - minSecond);
 
-            // Maintain proportional split ratio across all resize scenarios so block
-            // layout stays at the same relative proportions when the window is resized.
-            int first = Math.Clamp((int)MathF.Round(SplitRatio * newTotal), minFirst, maxFirst);
+            // Preserve the absolute pixel span of the first child; the second child
+            // absorbs the delta. This gives "push" behaviour: resizing a parent does
+            // not force all descendants to scale proportionally.
+            int first  = Math.Clamp(PreferredFirstSpan.Value, minFirst, maxFirst);
             int second = Math.Max(minSecond, newTotal - first);
 
-            PreferredFirstSpan = first;
+            PreferredFirstSpan  = first;
             PreferredSecondSpan = second;
         }
     }

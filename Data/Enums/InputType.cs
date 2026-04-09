@@ -7,6 +7,7 @@
         SaveSwitch,
         NoSaveSwitch,
         SaveEnum,
-        NoSaveEnum
+        NoSaveEnum,
+        Float
     }
 }

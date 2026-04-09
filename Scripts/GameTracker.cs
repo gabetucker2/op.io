@@ -6,13 +6,26 @@ namespace op.io
 {
     public static class GameTracker
     {
-        private const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
-        private static readonly Dictionary<string, Func<bool>> _variableDependencies = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["FreezeGameInputs"] = IsAllowGameInputFreezeEnabled
-        };
-
         public static bool FreezeGameInputs { get; internal set; }
+
+        /// <summary>
+        /// Explains why FreezeGameInputs is currently true. Set by InputManager
+        /// whenever it decides to suppress non-meta controls. Shown as a detail
+        /// message in the Backend block so the cause is always visible.
+        /// </summary>
+        public static string FreezeGameInputsReason { get; internal set; } = string.Empty;
+
+        // UI state — read live from BlockManager
+        public static bool DockingMode          => BlockManager.DockingModeEnabled;
+        public static bool BlockMenuOpen        => BlockManager.IsBlockMenuOpen();
+        public static bool InputBlocked         => BlockManager.IsInputBlocked();
+        public static bool DraggingLayout       => BlockManager.IsDraggingLayout;
+        public static bool CursorOnGameBlock    => BlockManager.IsCursorWithinGameBlock();
+        public static string HoveredBlock       => BlockManager.GetHoveredBlockKind();
+        public static string HoveredDragBar     => BlockManager.GetHoveredDragBarKind();
+        public static string FocusedBlock       => BlockManager.GetFocusedBlockKind()?.ToString() ?? "None";
+        public static bool   AnyGUIInteracting  => BlockManager.IsAnyGuiInteracting;
+        public static string GUIInteractingWith => BlockManager.GetInteractingBlockKind();
 
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {
@@ -21,36 +34,25 @@ namespace op.io
 
             foreach (PropertyInfo property in trackerType.GetProperties(BindingFlags.Public | BindingFlags.Static))
             {
-                if (!property.CanRead)
-                {
-                    continue;
-                }
+                if (!property.CanRead) continue;
 
-                if (!ShouldIncludeVariable(property.Name))
-                {
+                // Skip FreezeGameInputsReason — it's surfaced as the Detail of FreezeGameInputs instead.
+                if (string.Equals(property.Name, nameof(FreezeGameInputsReason), StringComparison.OrdinalIgnoreCase))
                     continue;
-                }
 
                 object value;
-                try
-                {
-                    value = property.GetValue(null);
-                }
-                catch
-                {
-                    continue;
-                }
+                try { value = property.GetValue(null); }
+                catch { continue; }
 
-                variables.Add(new GameTrackerVariable(property.Name, value));
+                string detail = string.Equals(property.Name, nameof(FreezeGameInputs), StringComparison.OrdinalIgnoreCase)
+                    ? FreezeGameInputsReason
+                    : string.Empty;
+
+                variables.Add(new GameTrackerVariable(property.Name, value, detail));
             }
 
             foreach (FieldInfo field in trackerType.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
-                if (!ShouldIncludeVariable(field.Name))
-                {
-                    continue;
-                }
-
                 object value = field.GetValue(null);
                 variables.Add(new GameTrackerVariable(field.Name, value));
             }
@@ -59,41 +61,20 @@ namespace op.io
             return variables;
         }
 
-        private static bool ShouldIncludeVariable(string variableName)
-        {
-            if (string.IsNullOrWhiteSpace(variableName))
-            {
-                return true;
-            }
-
-            if (_variableDependencies.TryGetValue(variableName, out Func<bool> dependency))
-            {
-                return dependency();
-            }
-
-            return true;
-        }
-
-        private static bool IsAllowGameInputFreezeEnabled()
-        {
-            if (ControlStateManager.ContainsEnumState(AllowGameInputFreezeKey))
-                return !string.Equals(ControlStateManager.GetEnumValue(AllowGameInputFreezeKey), "None", StringComparison.OrdinalIgnoreCase);
-            if (ControlStateManager.ContainsSwitchState(AllowGameInputFreezeKey))
-                return ControlStateManager.GetSwitchState(AllowGameInputFreezeKey);
-            return true;
-        }
-
         public readonly struct GameTrackerVariable
         {
-            public GameTrackerVariable(string name, object value)
+            public GameTrackerVariable(string name, object value, string detail = null)
             {
-                Name = name;
-                Value = value;
+                Name   = name;
+                Value  = value;
+                Detail = detail ?? string.Empty;
             }
 
-            public string Name { get; }
-            public object Value { get; }
-            public bool IsBoolean => Value is bool;
+            public string Name      { get; }
+            public object Value     { get; }
+            /// <summary>Optional detail/reason message shown in the Backend message column.</summary>
+            public string Detail    { get; }
+            public bool   IsBoolean => Value is bool;
         }
     }
 }

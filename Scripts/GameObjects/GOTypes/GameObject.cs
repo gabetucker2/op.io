@@ -45,8 +45,16 @@ namespace op.io
         public float Opacity   { get; set; } = 1f;
         public float HitFlash  { get; set; } = 0f;
 
+        // Death fade animation state
+        public bool    IsDying        { get; set; } = false;
+        public float   DeathFadeTimer { get; set; } = 0f;
+        // Velocity of the object that dealt the killing blow — overrides the object's
+        // own velocity at the start of the death fade so it drifts in the attacker's direction.
+        public Vector2 DeathImpulse   { get; set; } = Vector2.Zero;
+
         // ── Base identity ────────────────────────────────────────────────────
         public float CurrentXP { get; set; } = 0f;
+        public float MaxXP     { get; set; } = 0f;
 
         // ── Destructible (only meaningful when IsDestructible = true) ────────
         public float CurrentHealth    { get; set; }
@@ -57,6 +65,69 @@ namespace op.io
 
         // ID of the agent whose bullet last dealt damage to this object (for XP award on death).
         public int LastDamagedByAgentID { get; set; } = -1;
+
+        // Game-time timestamps for regen delay tracking. float.NegativeInfinity means "never damaged".
+        public float LastHealthDamageTime { get; set; } = float.NegativeInfinity;
+        public float LastShieldDamageTime { get; set; } = float.NegativeInfinity;
+
+        /// <summary>Health regenerated per second for non-Agent destructibles. 0 = no regen.</summary>
+        public float HealthRegen      { get; set; }
+        public float HealthRegenDelay { get; set; }
+        public float ShieldRegen      { get; set; }
+        public float ShieldRegenDelay { get; set; }
+
+        public float HealthArmor               { get; set; }
+        public float ShieldArmor               { get; set; }
+        public float BodyPenetration           { get; set; }
+        public float BodyCollisionDamage       { get; set; }
+        public float CollisionDamageResistance { get; set; }
+        public float BulletDamageResistance    { get; set; }
+        public float Speed                     { get; set; }
+        public float RotationSpeed             { get; set; }
+        public float AngularVelocity           { get; set; } = 0f;
+
+        // Physics velocity from collision impulses (knockback, bounces, etc.).
+        // Applied each frame and decays toward zero. Separate from input-driven movement.
+        public Vector2 PhysicsVelocity  { get; set; } = Vector2.Zero;
+        // Snapshotted at the start of each frame (before movement) for collision velocity computation.
+        public Vector2 PreviousPosition { get; set; }
+
+        // Farm float animation — null means no float animation
+        public FarmAttributes? FarmAttributes  { get; set; }
+        /// <summary>Base rotation used as the centre of the sine oscillation.</summary>
+        public float FarmFloatBase             { get; set; } = 0f;
+        /// <summary>Per-instance phase offset so each farm object oscillates out-of-sync.</summary>
+        public float FarmFloatPhase            { get; set; } = 0f;
+
+        private static readonly Random _random = new();
+
+        /// <summary>
+        /// Applies damage to this object, absorbing through shields first, then health.
+        /// Updates regen delay timestamps. Returns total damage actually dealt.
+        /// </summary>
+        public float ApplyDamage(float dmg, int sourceAgentId)
+        {
+            if (dmg <= 0f) return 0f;
+
+            LastDamagedByAgentID = sourceAgentId;
+
+            float shieldDmg = MathF.Min(CurrentShield, dmg);
+            if (shieldDmg > 0f)
+            {
+                CurrentShield -= shieldDmg;
+                LastShieldDamageTime = Core.GAMETIME;
+                dmg -= shieldDmg;
+            }
+
+            float healthDmg = MathF.Min(CurrentHealth, dmg);
+            if (healthDmg > 0f)
+            {
+                CurrentHealth -= healthDmg;
+                LastHealthDamageTime = Core.GAMETIME;
+            }
+
+            return shieldDmg + healthDmg;
+        }
 
         /// <summary>
         /// Triggers a hit-flash with smooth interruption: if the object is already
@@ -82,6 +153,7 @@ namespace op.io
             Type             = Type,
             Flags            = ComputeFlags(),
             CurrentXP        = CurrentXP,
+            MaxXP            = MaxXP,
             DeathPointReward = DeathPointReward,
             CurrentHealth    = CurrentHealth,
             CurrentShield    = CurrentShield,
@@ -157,6 +229,7 @@ namespace op.io
             Name = name;
             Type = type;
             Position = position;
+            PreviousPosition = position;
             Rotation = rotation;
             Mass = mass;
             IsDestructible = isDestructible;
@@ -189,8 +262,41 @@ namespace op.io
                 return;
             }
 
+            if (FarmAttributes.HasValue)
+            {
+                // Acceleration-based spin: AngularVelocity ramps toward a target direction that
+                // periodically reverses. FloatSpeed controls reversal frequency; FarmFloatPhase
+                // staggers each instance so they spin out-of-sync.
+                FarmAttributes fa = FarmAttributes.Value;
+                float freq        = MathF.Max(0.001f, fa.FloatSpeed);
+                float targetDir   = MathF.Sin((Core.GAMETIME + FarmFloatPhase) * freq * MathF.Tau) >= 0f ? 1f : -1f;
+                float targetVel   = targetDir * RotationSpeed;
+                float accel       = RotationSpeed * 4f * Core.DELTATIME;
+                AngularVelocity  += MathHelper.Clamp(targetVel - AngularVelocity, -accel, accel);
+                Rotation         += AngularVelocity * Core.DELTATIME;
+            }
+            else if (RotationSpeed != 0f)
+            {
+                // Non-farm objects: per-object direction changes using golden-ratio phase.
+                const float SpinPeriod = 8f;
+                float phase     = ID * 1.618f;
+                float targetDir = MathF.Sin((Core.GAMETIME + phase) * MathF.Tau / SpinPeriod) >= 0f ? 1f : -1f;
+                float targetVel = targetDir * RotationSpeed;
+                float accel     = RotationSpeed * 4f * Core.DELTATIME;
+                AngularVelocity += MathHelper.Clamp(targetVel - AngularVelocity, -accel, accel);
+                Rotation        += AngularVelocity * Core.DELTATIME;
+            }
+
             if (HitFlash > 0f)
                 HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
+
+            if (PhysicsVelocity != Vector2.Zero && !StaticPhysics)
+            {
+                Position += PhysicsVelocity * Core.DELTATIME;
+                PhysicsVelocity *= MathHelper.Clamp(1f - 6f * Core.DELTATIME, 0f, 1f);
+                if (PhysicsVelocity.LengthSquared() < 1f)
+                    PhysicsVelocity = Vector2.Zero;
+            }
         }
 
         // Explicitly manage resource cleanup

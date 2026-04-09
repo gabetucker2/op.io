@@ -91,7 +91,8 @@ namespace op.io
             bool usingDockedLayout = BlockManager.BeginDockedFrame(Core.Instance.GraphicsDevice);
 
             Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
-            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            Matrix camMatrix = BlockManager.GetCameraTransform();
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
 
             // Draw all shapes once; ShapeManager already iterates registered objects.
             ShapeManager.Instance.DrawShapes(Core.Instance.SpriteBatch);
@@ -108,17 +109,17 @@ namespace op.io
             Core.Instance.SpriteBatch.End();
 
             // Additive pass for hit-flash: adds brightness without washing to pure white
-            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, null, null, null, null, camMatrix);
             ShapeManager.Instance.DrawFlashes(Core.Instance.SpriteBatch);
             Core.Instance.SpriteBatch.End();
 
             // Health bar pass — drawn on top of game world, below damage numbers and UI
-            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
             HealthBarManager.Draw(Core.Instance.SpriteBatch);
             Core.Instance.SpriteBatch.End();
 
             // Damage number pass — drawn on top of game world, below UI
-            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
             DamageNumberManager.Draw(Core.Instance.SpriteBatch);
             Core.Instance.SpriteBatch.End();
 

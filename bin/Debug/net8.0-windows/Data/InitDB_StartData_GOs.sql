@@ -1,4 +1,9 @@
--- InitDatabaseStartData.sql
+-- InitDB_StartData_GOs.sql
+-- LEGACY reference file. Active data is split into:
+--   InitDB_StartData_Player.sql
+--   InitDB_StartData_MapObjects.sql
+--   InitDB_StartData_Farms.sql
+-- This file is NOT loaded by DatabaseInitializer.
 
 -- ================================
 -- Insert Player
@@ -19,17 +24,17 @@ INSERT INTO GameObjects (
 
 INSERT INTO Agents (
     ID, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed,
-    MaxHealth, HealthRegen, HealthArmor,
-    MaxShield, ShieldRegen, ShieldArmor,
+    MaxHealth, HealthRegen, HealthRegenDelay, HealthArmor,
+    MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
     BodyPenetration, BodyCollisionDamage, BodyKnockback,
     CollisionDamageResistance, BulletDamageResistance,
     Speed, RotationSpeed
 ) VALUES (
     (SELECT last_insert_rowid()),
     1, 0.0, 0.0, 300.0,
-    100, 0, 0,
-    0, 0, 0,
-    0, 10, 0,
+    100, 5, 5.0, 0,
+    10, 3, 3.0, 0,
+    0, 10, 200,
     0, 0,
     0, 0
 );
@@ -37,6 +42,7 @@ INSERT INTO Agents (
 -- ================================
 -- Insert Map Objects
 -- ================================
+
 -- RedWall
 INSERT INTO GameObjects (
     Type, Shape, Name,
@@ -51,7 +57,13 @@ INSERT INTO GameObjects (
     128, 0, 0, 255, 2,
     1, 0, 0.0, 1
 );
-INSERT INTO MapData (ID) VALUES ((SELECT last_insert_rowid()));
+INSERT INTO MapData (
+    ID,
+    MaxHealth, DeathPointReward
+) VALUES (
+    (SELECT last_insert_rowid()),
+    0, 0
+);
 
 -- GreenBackground
 INSERT INTO GameObjects (
@@ -67,92 +79,16 @@ INSERT INTO GameObjects (
     0, 128, 0, 255, 0,
     0, 0, 0.0, 1
 );
-INSERT INTO MapData (ID) VALUES ((SELECT last_insert_rowid()));
-
--- BlueLoot
-INSERT INTO GameObjects (
-    Type, Shape, Name,
-    PositionX, PositionY, Width, Height, Sides, Rotation,
-    FillR, FillG, FillB, FillA,
-    OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, Mass, StaticPhysics
+INSERT INTO MapData (
+    ID,
+    MaxHealth, DeathPointReward
 ) VALUES (
-    'Normal', 'Rectangle', 'BlueLoot',
-    500, 500, 150, 150, 0, 0,
-    50, 50, 200, 255,
-    0, 0, 128, 255, 4,
-    1, 1, 5.0, 0
+    (SELECT last_insert_rowid()),
+    0, 0
 );
-INSERT INTO MapData (ID, MaxHealth, DeathPointReward) VALUES ((SELECT last_insert_rowid()), 100, 30);
 
--- ================================
--- Insert Farm (Polygons) as Prototypes
--- ================================
+-- NOTE: BlueLoot is defined in InitDB_StartData_Farms.sql as a farm
+-- prototype with manual placement. See that file for its definition.
 
--- Triangle Farm Prototype
-INSERT INTO GameObjects (
-    Type, Shape, Name,
-    PositionX, PositionY, Width, Height, Sides, Rotation,
-    FillR, FillG, FillB, FillA,
-    OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, Mass, StaticPhysics
-) VALUES
-(
-    'Prototype', 'Polygon', 'Triangle',
-    300, 300, 60, 60, 3, 0,
-    255, 150, 150, 255,
-    128, 75, 75, 255, 2,
-    1, 1, 1.0, 0
-);
-INSERT INTO FarmData (ID, Count, MaxHealth, DeathPointReward) VALUES ((SELECT last_insert_rowid()), 15, 25, 10);
-
--- Square Farm Prototype
-INSERT INTO GameObjects (
-    Type, Shape, Name,
-    PositionX, PositionY, Width, Height, Sides, Rotation,
-    FillR, FillG, FillB, FillA,
-    OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, Mass, StaticPhysics
-) VALUES
-(
-    'Prototype', 'Polygon', 'Square',
-    350, 350, 70, 70, 4, 0,
-    255, 255, 100, 255,
-    128, 128, 50, 255, 3,
-    1, 1, 3.0, 0
-);
-INSERT INTO FarmData (ID, Count, MaxHealth, DeathPointReward) VALUES ((SELECT last_insert_rowid()), 10, 50, 20);
-
--- Pentagon Farm Prototype
-INSERT INTO GameObjects (
-    Type, Shape, Name,
-    PositionX, PositionY, Width, Height, Sides, Rotation,
-    FillR, FillG, FillB, FillA,
-    OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, Mass, StaticPhysics
-) VALUES
-(
-    'Prototype', 'Polygon', 'Pentagon',
-    400, 400, 80, 80, 5, 0,
-    100, 100, 255, 255,
-    50, 50, 128, 255, 4,
-    1, 1, 5.0, 0
-);
-INSERT INTO FarmData (ID, Count, MaxHealth, DeathPointReward) VALUES ((SELECT last_insert_rowid()), 4, 100, 50);
-
--- Octagon Farm Prototype
-INSERT INTO GameObjects (
-    Type, Shape, Name,
-    PositionX, PositionY, Width, Height, Sides, Rotation,
-    FillR, FillG, FillB, FillA,
-    OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
-    IsCollidable, IsDestructible, Mass, StaticPhysics
-) VALUES
-(
-    'Prototype', 'Polygon', 'Octagon',
-    450, 450, 90, 90, 8, 0,
-    255, 150, 255, 255,
-    128, 75, 128, 255, 5,
-    1, 1, 15.0, 0
-);
-INSERT INTO FarmData (ID, Count, MaxHealth, DeathPointReward) VALUES ((SELECT last_insert_rowid()), 2, 200, 100);
+-- NOTE: Farm prototypes (Triangle, Square, Pentagon, Octagon, BlueLoot)
+-- are defined in InitDB_StartData_Farms.sql.

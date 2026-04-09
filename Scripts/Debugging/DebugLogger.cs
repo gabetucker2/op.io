@@ -77,6 +77,8 @@ namespace op.io
 
             IsLoggingInternally = true;
 
+            try
+            {
             StackTrace stackTrace = new(stackTraceNBack, true); // +1 to skip this Log() method itself
             StackFrame frame = stackTrace.GetFrame(0);
 
@@ -115,19 +117,27 @@ namespace op.io
                 : $"{formattedMessage}";
 
             bool consoleInitialized = ConsoleManager.ConsoleInitialized;
+            bool isRedFlag = level == "ERROR" || level == "WARNING";
 
             AppendUiLogEntries(completeMessage, color, suppressionBehavior, wasDeferred: !consoleInitialized);
 
             if (!consoleInitialized)
             {
                 LogFileHandler.AppendLog(completeMessage);
+                if (isRedFlag)
+                    LogFileHandler.AppendRedFlagLog(completeMessage);
                 QueueLog(completeMessage, color, suppressionBehavior, wasPersistedToFile: true);
-                IsLoggingInternally = false;
                 return;
             }
 
             PrintToConsole(completeMessage, color, suppressionBehavior);
-            IsLoggingInternally = false;
+            if (isRedFlag)
+                LogFileHandler.AppendRedFlagLog(completeMessage);
+            }
+            finally
+            {
+                IsLoggingInternally = false;
+            }
         }
 
         public static void PrintToConsole(string formattedMessage, ConsoleColor color, int suppressionBehavior, bool writeToFile = true)

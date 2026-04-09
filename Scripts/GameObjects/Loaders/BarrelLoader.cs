@@ -18,8 +18,9 @@ namespace op.io
             try
             {
                 string query =
-                    "SELECT bp.BulletDamage, bp.BulletPenetration, bp.BulletSpeed, bp.BulletDragFactor, " +
-                    "       bp.ReloadSpeed, bp.BulletHealth, bp.BulletMaxLifespan, bp.BulletMass, " +
+                    "SELECT bp.BarrelMass, " +
+                    "       bp.BulletDamage, bp.BulletPenetration, bp.BulletSpeed, " +
+                    "       bp.ReloadSpeed, bp.BulletMaxLifespan, bp.BulletMass, " +
                     "       bp.BulletFillR, bp.BulletFillG, bp.BulletFillB, bp.BulletFillA, " +
                     "       bp.BulletOutlineR, bp.BulletOutlineG, bp.BulletOutlineB, bp.BulletOutlineA, " +
                     "       bp.BulletOutlineWidth " +
@@ -35,12 +36,11 @@ namespace op.io
                 {
                     barrels.Add(new Attributes_Barrel
                     {
+                        BarrelMass        = Convert.ToSingle(row["BarrelMass"]),
                         BulletDamage      = Convert.ToSingle(row["BulletDamage"]),
                         BulletPenetration = Convert.ToSingle(row["BulletPenetration"]),
                         BulletSpeed       = Convert.ToSingle(row["BulletSpeed"]),
-                        BulletDragFactor  = Convert.ToSingle(row["BulletDragFactor"]),
                         ReloadSpeed       = Convert.ToSingle(row["ReloadSpeed"]),
-                        BulletHealth      = Convert.ToSingle(row["BulletHealth"]),
                         BulletMaxLifespan = Convert.ToSingle(row["BulletMaxLifespan"]),
                         BulletMass        = Convert.ToSingle(row["BulletMass"]),
                         BulletFillAlphaRaw    = Convert.ToInt32(row["BulletFillA"]),

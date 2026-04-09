@@ -35,6 +35,11 @@ namespace op.io
         private static HashSet<long> _prevContacts = new();
         private static HashSet<long> _currContacts = new();
 
+        // Cached lists — reused every frame to avoid per-frame heap allocations.
+        private static readonly List<Agent>   _agents        = new();
+        private static readonly List<Contact> _allContacts   = new();
+        private static readonly List<Contact> _bulletContacts = new();
+
         private static long ContactKey(int bulletId, int agentId) => ((long)bulletId << 32) | (uint)agentId;
 
         private struct Contact
@@ -59,15 +64,14 @@ namespace op.io
             }
 
             var gameObjects = Core.Instance.GameObjects;
-            var agents = new List<Agent>(gameObjects.Count);
+            _agents.Clear();
             foreach (var go in gameObjects)
-                if (go is Agent a) agents.Add(a);
+                if (go is Agent a) _agents.Add(a);
 
-            var allContacts    = new List<Contact>();
-            var bulletContacts = new List<Contact>();
+            _allContacts.Clear();
 
             // ── Steps 3 & 4: Swept detection + damage ───────────────────────────
-            if (agents.Count > 0)
+            if (_agents.Count > 0)
             {
                 foreach (var bullet in bullets)
                 {
@@ -78,9 +82,9 @@ namespace op.io
                     Vector2 sweepDelta = bullet.Position - bullet.PreviousPosition;
                     float   a          = Vector2.Dot(sweepDelta, sweepDelta);
 
-                    bulletContacts.Clear();
+                    _bulletContacts.Clear();
 
-                    foreach (var enemy in agents)
+                    foreach (var enemy in _agents)
                     {
                         if (enemy == null) continue;
 
@@ -124,15 +128,15 @@ namespace op.io
                             TExit        = tExit,
                             IsNewContact = isNewContact
                         };
-                        bulletContacts.Add(contact);
-                        allContacts.Add(contact);
+                        _bulletContacts.Add(contact);
+                        _allContacts.Add(contact);
                     }
 
-                    if (bulletContacts.Count == 0) continue;
+                    if (_bulletContacts.Count == 0) continue;
 
-                    bulletContacts.Sort(static (x, y) => x.TEnter.CompareTo(y.TEnter));
+                    _bulletContacts.Sort(static (x, y) => x.TEnter.CompareTo(y.TEnter));
 
-                    foreach (var contact in bulletContacts)
+                    foreach (var contact in _bulletContacts)
                     {
                         if (bullet.CurrentPenetrationHP <= 0f) break;
 
@@ -147,11 +151,11 @@ namespace op.io
                         {
                             float resistance = MathF.Max(body.BulletDamageResistance - bullet.BulletPenetration, 0f);
                             float dmg = bullet.BulletDamage * (1f - resistance);
-                            contact.Enemy.CurrentHealth -= dmg;
+                            float totalDealt = contact.Enemy.ApplyDamage(dmg, bullet.OwnerID);
                             contact.Enemy.TriggerHitFlash();
                             bullet.TriggerHitFlash();
-                            contact.Enemy.LastDamagedByAgentID = bullet.OwnerID;
-                            DamageNumberManager.Notify(contact.Enemy.ID, contact.Enemy.Position, dmg, sourceId: bullet.SourceID, isNewHit: true);
+                            DamageNumberManager.Notify(contact.Enemy.ID, contact.Enemy.Position, totalDealt, sourceId: bullet.SourceID, isNewHit: true);
+                            contact.Enemy.DeathImpulse = bullet.Velocity;
                         }
 
                         // Penetration HP drains regardless so embedded bullets still expire.
@@ -178,7 +182,7 @@ namespace op.io
             //   (b) Enemies running into bullets push the bullet away.
             // The inelastic impulse (e = 0) drains the bullet's approach velocity so
             // subsequent frames see a smaller overlap and smaller corrections.
-            foreach (var contact in allContacts)
+            foreach (var contact in _allContacts)
             {
                 Bullet bullet = contact.Bullet;
                 Agent  enemy  = contact.Enemy;
@@ -194,7 +198,7 @@ namespace op.io
 
                 Vector2 normal = dist > 1e-6f ? diff / dist : Vector2.UnitX;
 
-                float mBullet   = MathF.Max(BulletMass,  0.0001f);
+                float mBullet   = MathF.Max(bullet.Mass,  0.0001f);
                 float mEnemy    = MathF.Max(enemy.Mass,   0.0001f);
                 float totalMass = mBullet + mEnemy;
 

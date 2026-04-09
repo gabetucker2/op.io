@@ -14,6 +14,7 @@ namespace op.io
             public string InputKey { get; init; }
             public string InputType { get; init; }
             public int? SwitchStartState { get; init; }
+            public float? FloatStartState { get; init; }
             public bool MetaControl { get; init; }
             public int RenderOrder { get; init; }
             public bool LockMode { get; init; }
@@ -32,7 +33,7 @@ namespace op.io
             };
 
             const string sql = @"
-SELECT SettingKey, InputKey, InputType, SwitchStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode
+SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode
 FROM ControlKey
 WHERE SettingKey = @settingKey
 LIMIT 1;";
@@ -44,12 +45,18 @@ LIMIT 1;";
             }
 
             var row = rows[0];
+            float? floatStart = null;
+            if (row.TryGetValue("FloatStartState", out object floatObj) && floatObj != null && floatObj != DBNull.Value)
+            {
+                try { floatStart = Convert.ToSingle(floatObj); } catch { }
+            }
             return new ControlKeyRecord
             {
                 SettingKey = row["SettingKey"]?.ToString(),
                 InputKey = row["InputKey"]?.ToString(),
                 InputType = row["InputType"]?.ToString(),
                 SwitchStartState = row["SwitchStartState"] == DBNull.Value ? null : Convert.ToInt32(row["SwitchStartState"]),
+                FloatStartState = floatStart,
                 MetaControl = row.TryGetValue("MetaControl", out object metaValue) && Convert.ToInt32(metaValue) != 0,
                 RenderOrder = row.TryGetValue("ControlOrder", out object orderValue) ? Convert.ToInt32(orderValue) : 0,
                 LockMode = row.TryGetValue("LockMode", out object lockValue) && Convert.ToInt32(lockValue) != 0
@@ -192,6 +199,22 @@ UPDATE ControlKey
 SET InputKey = @inputKey
 WHERE SettingKey = @settingKey
   AND (InputKey IS NULL OR TRIM(InputKey) = '');";
+
+            DatabaseQuery.ExecuteNonQuery(sql, parameters);
+        }
+
+        public static void EnsureFloatStartState(string settingKey, float defaultValue)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                ["@settingKey"] = settingKey,
+                ["@defaultValue"] = defaultValue
+            };
+
+            const string sql = @"
+UPDATE ControlKey
+SET FloatStartState = COALESCE(FloatStartState, @defaultValue)
+WHERE SettingKey = @settingKey;";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }

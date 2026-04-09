@@ -121,11 +121,20 @@ namespace op.io
             if (obj.IsDestructible && isNewContact)
             {
                 float dmg = bullet.BulletDamage;
-                obj.CurrentHealth -= dmg;
+                float dealtToObj = obj.ApplyDamage(dmg, bullet.OwnerID);
                 obj.TriggerHitFlash();
                 bullet.TriggerHitFlash();
-                obj.LastDamagedByAgentID = bullet.OwnerID;
-                DamageNumberManager.Notify(obj.ID, obj.Position, dmg, sourceId: bullet.SourceID, isNewHit: true);
+                DamageNumberManager.Notify(obj.ID, obj.Position, dealtToObj, sourceId: bullet.SourceID, isNewHit: true);
+                obj.DeathImpulse = bullet.Velocity;
+            }
+
+            // Transfer approach momentum from bullet to object so dying objects preserve
+            // the last velocity they had when the killing bullet hit them.
+            float vInward = -vDotN; // positive when bullet is moving toward the object
+            if (vInward > 0f)
+            {
+                float transferSpeed = vInward * mBullet / totalMass;
+                obj.PhysicsVelocity += -separationNormal * transferSpeed;
             }
         }
     }

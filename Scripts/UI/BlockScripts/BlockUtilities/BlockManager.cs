@@ -15,7 +15,6 @@ namespace op.io
     {
         private const string GameBlockKey = "game";
         private const string BlankBlockKey = "blank";
-        private const string TransparentBlockKey = "transparent";
         private const string PropertiesBlockKey = "properties";
         private const string ColorSchemeBlockKey = "colors";
         private const string ControlsBlockKey = "controls";
@@ -25,6 +24,10 @@ namespace op.io
         private const string BackendBlockKey = "backend";
         private const string SpecsBlockKey = "specs";
         private const string DebugLogsBlockKey = "debuglogs";
+        private const string BarsBlockKey = "bars";
+        private const string ChatBlockKey = "chat";
+        private const string PerformanceBlockKey = "performance";
+        private const string MathBlockKey = "math";
         private const string BlockMenuControlKey = "BlockMenu";
 private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const string OverlayInputFocusOwner = "BlockManager.OverlayNumeric";
@@ -48,6 +51,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const double BlankBlockFadeOutDurationSeconds = 0.22d;
         private const double BlankBlockInterruptedFadeOutScale = 0.6d;
         private const double BlankBlockMinimumFadeDurationSeconds = 0.015d;
+        private const int OpacitySliderMaxTrackWidth = 500;
+        private const int OpacitySliderLabelSpacing = 8;
+        private const float SuperimposeZoneFraction = 0.4f;
+        private const int OpacityRowHeight = 22;
+        private const int SuperimposeZoneMaxSide = 500;
 
         private static readonly Color GroupBarBackground = new(28, 28, 30);
         private static readonly Color TabInactiveBackground = new(40, 40, 42);
@@ -66,9 +74,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static readonly Dictionary<string, BlockNode> _panelNodes = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, string> _blockToPanel = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, BlankBlockHoverState> _blankBlockHoverStates = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<string, string> _blockTooltips = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, (string Text, string DataType)[]> _blockTooltips = new(StringComparer.OrdinalIgnoreCase);
         private static bool _tooltipsLoaded;
         private static string _tooltipHoveredRowKey;
+        private static string _tooltipHoveredRowLabel;
         private static double _tooltipHoverElapsed;
         private const double TooltipDelaySeconds = 0.6d;
         private const int TooltipMaxWidth = 230;
@@ -91,7 +100,21 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static MouseState _previousMouseState;
         private static MouseState _previousVirtualMouseState;
         private static Point _mousePosition;
+
+        // ── Camera pan (middle-mouse drag) ────────────────────────────────────────
+        public static Vector2 CameraOffset { get; set; } = Vector2.Zero;
+        private static Vector2? _cameraPanAnchorRaw;
+        private static Vector2 _cameraPanAnchorOffset;
+        // Persistent offset from the player-center baseline used in Locked mode.
+        private static Vector2 _lockedCameraOffset = Vector2.Zero;
+        // When releasing middle-mouse drag, if the camera is within this distance of
+        // the player-centered position it snaps back automatically (loaded from DB).
+        private static float _cameraSnapRange = 150f;
+        // True once the drag has moved outside snap range; snap preview only activates after this.
+        private static bool _cameraDragArmed = false;
         private static float _uiScale = 1f;
+        public static float UIScale => _uiScale;
+        public static Matrix CurrentUITransform => _uiScale > 0f ? Matrix.CreateScale(_uiScale, _uiScale, 1f) : Matrix.Identity;
         private static Rectangle _actualGameContentBounds;
         private const float ReferenceUIHeight = 1080f;
         private static DockBlock _draggingBlock;
@@ -99,6 +122,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static Rectangle _draggingStartBounds;
         private static Point _dragOffset;
         private static DockDropPreview? _dropPreview;
+        private static bool _superimposeLocked;
+        private static DockBlock _superimposeLockedTarget;
         private static bool _overlayMenuVisible;
         private static bool _blockMenuSwitchState;
         private static bool _allowTransparentBlockClickThrough;
@@ -118,11 +143,19 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static CornerHandle? _activeCornerHandle;
         private static CornerHandle? _activeCornerLinkedHandle;
         private static CornerHandle? _activeCornerSnapTarget;
-        private static bool _isPropagatingResize;
         private static Point? _activeCornerSnapPosition;
         private static Point? _activeCornerSnapAnchor;
         private static bool _activeCornerSnapLockX;
         private static bool _activeCornerSnapLockY;
+        private static readonly List<OverlayResizeEdge> _overlayResizeEdges = [];
+        private static OverlayResizeEdge? _hoveredOverlayResizeEdge;
+        private static OverlayResizeEdge? _activeOverlayResizeEdge;
+        private static readonly List<OverlayCornerHandle> _overlayCornerHandles = [];
+        private static OverlayCornerHandle? _hoveredOverlayCornerHandle;
+        private static OverlayCornerHandle? _activeOverlayCornerHandle;
+        private static Rectangle? _overlayDragPreviewBounds;
+        private static DockBlock _overlayDropTargetBlock;
+        private static readonly HashSet<string> _parentSuppressedOverlays = new(StringComparer.OrdinalIgnoreCase);
         private static bool _blockMenuDirty;
         private static string _focusedBlockId;
         private static string _hoveredDragBarId;
@@ -134,10 +167,20 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static Dictionary<string, Rectangle> _resizeStartBlockBounds;
         private static readonly Dictionary<string, PanelGroupBarLayout> _groupBarLayoutCache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly HashSet<string> _loggedLayoutIssues = new(StringComparer.OrdinalIgnoreCase);
+
+        // Per-block GUI interaction states — keyed by block ID, same pattern as _blockLockStates.
+        private static readonly Dictionary<string, GUIInteractionState> _blockInteractionStates = new(StringComparer.OrdinalIgnoreCase);
+        // Priority-queue left-click ownership: true while the UI has claimed the current press.
+        private static bool _uiOwnsLeftClick;
         private static string _pressedTabBlockId;
         private static string _pressedTabPanelId;
         private static Point _tabPressPosition;
         private static bool _draggingFromTab;
+        private static bool _opacitySliderDragging;
+        private static string _opacitySliderDraggingId;
+        private static Rectangle _opacitySliderTrackBounds;
+        private static string _opacityExpandedId;
+
         private static readonly JsonSerializerOptions DockingSerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -149,6 +192,94 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             DockBlock block = _orderedBlocks.FirstOrDefault(p => p.Kind == blockKind && p.IsVisible) ??
                 _orderedBlocks.FirstOrDefault(p => p.Kind == blockKind);
             return IsBlockLocked(block);
+        }
+
+        /// <summary>
+        /// Returns true while the BlockManager is actively consuming mouse input (dragging a slider,
+        /// resize edge, corner handle, block, etc.). Use this in GameUpdater to suppress player
+        /// movement and rotation while interacting with UI controls.
+        /// </summary>
+        public static bool IsConsumingMouseInput() =>
+            _opacitySliderDragging ||
+            _activeResizeEdge.HasValue ||
+            _activeCornerHandle.HasValue ||
+            _activeOverlayResizeEdge.HasValue ||
+            _activeOverlayCornerHandle.HasValue ||
+            _draggingBlock != null;
+
+        /// <summary>
+        /// Must be called each frame BEFORE player movement is computed (i.e., before
+        /// InputManager.GetMoveVector). Evaluates the left-click priority queue using the
+        /// current mouse state so that <see cref="IsAnyGuiInteracting"/> is always current-frame
+        /// accurate rather than one frame behind.
+        ///
+        /// Priority rules for LeftClick:
+        ///   1. If the UI already owned the press (sticky while button held) → UI keeps it.
+        ///   2. If a new press lands on an enabled interactive UI element → UI claims it.
+        ///   3. Otherwise (disabled element, empty area, no block) → game input may use it.
+        /// </summary>
+        public static void PreUpdateInteractionStates()
+        {
+            MouseState current = Mouse.GetState();
+            bool leftHeld = current.LeftButton == ButtonState.Pressed;
+
+            if (!leftHeld)
+            {
+                _uiOwnsLeftClick = false;
+                return;
+            }
+
+            // Sticky: once the UI claimed this press, keep ownership until button released.
+            if (_uiOwnsLeftClick)
+            {
+                return;
+            }
+
+            // New press — determine whether an enabled UI element is at the cursor.
+            bool leftJustPressed = _previousMouseState.LeftButton == ButtonState.Released;
+            if (!leftJustPressed)
+            {
+                return;
+            }
+
+            Point pos = current.Position;
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !block.IsVisible || block.Kind == DockBlockKind.Game)
+                {
+                    continue;
+                }
+
+                if (!block.Bounds.Contains(pos))
+                {
+                    continue;
+                }
+
+                // Cursor is over this block. Claim ownership only if there is an enabled element here.
+                _uiOwnsLeftClick = IsBlockInteractableAt(block, pos);
+                return;
+            }
+
+            _uiOwnsLeftClick = false;
+        }
+
+        /// <summary>
+        /// Returns whether the block has an enabled interactive element at <paramref name="pos"/>.
+        /// Locked blocks (when not in BlockMode) are never interactable — clicks pass through to game input.
+        /// Blocks with disabled buttons return false at those button positions so the left-click
+        /// can fall through to game input.
+        /// </summary>
+        private static bool IsBlockInteractableAt(DockBlock block, Point pos)
+        {
+            if (IsBlockLocked(block) || IsPanelLocked(block))
+                return false;
+
+            return block.Kind switch
+            {
+                DockBlockKind.ControlSetups => ControlSetupsBlock.IsInteractableAt(pos),
+                DockBlockKind.DockingSetups => DockingSetupsBlock.IsInteractableAt(pos),
+                _ => true
+            };
         }
 
         public static bool DockingModeEnabled
@@ -246,6 +377,94 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             bool leftClickStarted = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
+
+            // ── Camera pan (middle-mouse drag) ────────────────────────────────────
+            bool middleJustPressed = mouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released;
+            bool middleHeld = mouseState.MiddleButton == ButtonState.Pressed;
+            if (middleJustPressed && IsCursorWithinGameBlock())
+            {
+                _cameraPanAnchorRaw    = ToGameSpaceRaw(mouseState.Position);
+                _cameraPanAnchorOffset = CameraOffset;
+                _cameraDragArmed       = false;
+            }
+            else if (middleHeld && _cameraPanAnchorRaw.HasValue)
+            {
+                Vector2 rawDelta = ToGameSpaceRaw(mouseState.Position) - _cameraPanAnchorRaw.Value;
+                Vector2 draggedOffset = _cameraPanAnchorOffset - rawDelta;
+
+                // Snap preview: only after the drag has left the snap zone at least once.
+                if (_cameraSnapRange > 0f && Core.Instance?.Player != null && _worldRenderTarget != null)
+                {
+                    var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
+                    Vector2 playerCentered = Core.Instance.Player.Position - renderCenter;
+                    float distFromPlayer;
+                    string camMode = GetCameraMode();
+
+                    if (string.Equals(camMode, "Locked", StringComparison.OrdinalIgnoreCase))
+                        distFromPlayer = (draggedOffset - playerCentered).Length();
+                    else if (string.Equals(camMode, "Free", StringComparison.OrdinalIgnoreCase))
+                        distFromPlayer = (draggedOffset - playerCentered).Length();
+                    else
+                        distFromPlayer = float.MaxValue; // Scout always snaps on release; no preview needed.
+
+                    // Arm once the drag moves outside the snap zone.
+                    if (!_cameraDragArmed && distFromPlayer > _cameraSnapRange)
+                        _cameraDragArmed = true;
+
+                    // Preview snap only when armed and back inside the zone.
+                    if (_cameraDragArmed && distFromPlayer <= _cameraSnapRange)
+                        draggedOffset = playerCentered;
+                }
+
+                CameraOffset = draggedOffset;
+            }
+            else if (!middleHeld)
+            {
+                if (_cameraPanAnchorRaw.HasValue)
+                {
+                    string camMode = GetCameraMode();
+                    bool holdInputs = ControlStateManager.GetSwitchState(ControlKeyMigrations.HoldInputsKey);
+
+                    if (string.Equals(camMode, "Scout", StringComparison.OrdinalIgnoreCase) || holdInputs)
+                    {
+                        // Scout (or HoldInputs): snap back to player center by clearing the locked offset.
+                        _lockedCameraOffset = Vector2.Zero;
+                    }
+                    else if (string.Equals(camMode, "Locked", StringComparison.OrdinalIgnoreCase)
+                             && Core.Instance?.Player != null && _worldRenderTarget != null)
+                    {
+                        // Locked: keep current viewport position relative to player.
+                        var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
+                        _lockedCameraOffset = CameraOffset - (Core.Instance.Player.Position - renderCenter);
+                        // Snap back to player if armed and within configurable range.
+                        if (_cameraDragArmed && _lockedCameraOffset.Length() <= _cameraSnapRange)
+                            _lockedCameraOffset = Vector2.Zero;
+                    }
+                    else if (string.Equals(camMode, "Free", StringComparison.OrdinalIgnoreCase)
+                             && Core.Instance?.Player != null && _worldRenderTarget != null)
+                    {
+                        // Free: snap to player if armed and close enough.
+                        var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
+                        Vector2 playerCentered = Core.Instance.Player.Position - renderCenter;
+                        if (_cameraDragArmed && (CameraOffset - playerCentered).Length() <= _cameraSnapRange)
+                            CameraOffset = playerCentered;
+                    }
+                }
+                _cameraPanAnchorRaw = null;
+            }
+
+            // ── Camera follow (Scout / Locked modes) ─────────────────────────────
+            if (!_cameraPanAnchorRaw.HasValue && _worldRenderTarget != null && Core.Instance?.Player != null)
+            {
+                string camMode = GetCameraMode();
+                if (string.Equals(camMode, "Scout", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(camMode, "Locked", StringComparison.OrdinalIgnoreCase))
+                {
+                    var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
+                    CameraOffset = Core.Instance.Player.Position - renderCenter + _lockedCameraOffset;
+                }
+            }
+
             bool allowReorder = dockingEnabled;
             RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
 
@@ -265,8 +484,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (dockingEnabled)
                 {
                     // Evaluate corners first so clicks on intersections start a dual-axis drag instead of being swallowed by a single edge.
+                    // Overlay resize runs after panel resize so panel handles take priority when they overlap.
                     bool resizingBlocks = !tabInteracted && allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
-                        UpdateResizeEdgeState(leftClickStarted, leftClickHeld, leftClickReleased));
+                        UpdateResizeEdgeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
+                        UpdateOverlayResizeState(leftClickStarted, leftClickHeld, leftClickReleased));
                     if (!resizingBlocks && !tabInteracted)
                     {
                         UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
@@ -357,12 +578,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             foreach (DockBlock block in _orderedBlocks)
             {
-                if (block == null || !block.IsVisible || block.Kind != DockBlockKind.Transparent)
+                if (block == null || !block.IsVisible)
                 {
                     continue;
                 }
 
-                if (block.Bounds.Contains(_mousePosition))
+                bool isFullyTransparent =
+                    BlockHasOpacitySlider(block) && block.BackgroundOpacity <= 0f && !block.IsOverlay;
+
+                if (isFullyTransparent && block.Bounds.Contains(_mousePosition))
                 {
                     return true;
                 }
@@ -421,9 +645,20 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 var loaded = DatabaseFetch.LoadBlockTooltips();
                 foreach (var pair in loaded)
-                {
-                    _blockTooltips[pair.Key] = pair.Value;
-                }
+                    _blockTooltips[pair.Key] = [pair.Value];
+                foreach (var (key, text) in MathBlock.GetTooltipEntries())
+                    _blockTooltips[key] = [(text, string.Empty)];
+
+                // Button tooltips for PropertiesBlock
+                _blockTooltips["props_btn:lock:lock"]     = [("Click to lock the current inspect target", string.Empty)];
+                _blockTooltips["props_btn:lock:unlock"]   = [("Click to unlock the inspect target", string.Empty)];
+                _blockTooltips["props_btn:hidden:show"]   = [("Reveal hidden attributes in the details panel", string.Empty)];
+                _blockTooltips["props_btn:hidden:hide"]   = [("Collapse hidden attributes in the details panel", string.Empty)];
+
+                // All property row tooltips: non-hidden rows get 1 entry, hidden rows get 2
+                foreach (var (key, entries) in PropertiesBlock.GetAllPropRowTooltipEntries())
+                    _blockTooltips[key] = entries;
+
                 _tooltipsLoaded = true;
             }
 
@@ -452,6 +687,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             GroupCountedBlocks();
             GroupDefaultPanels();
             _rootNode = BuildDefaultLayout();
+
+            // Specs is a normal tab inside the Backend panel group (no longer a game overlay).
 
             _blockDefinitionsReady = true;
             _blockMenuDirty = false;
@@ -574,6 +811,39 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             setup.Layout = BuildLayoutDefinition(_rootNode);
             CaptureDockingSetupLocks(setup);
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !block.IsOverlay || string.IsNullOrEmpty(block.OverlayParentId))
+                {
+                    continue;
+                }
+
+                setup.Overlays.Add(new DockingSetupOverlay
+                {
+                    BlockId = block.Id,
+                    ParentId = block.OverlayParentId,
+                    X = block.OverlayRelX,
+                    Y = block.OverlayRelY,
+                    W = block.OverlayRelWidth,
+                    H = block.OverlayRelHeight
+                });
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !BlockHasOpacitySlider(block))
+                {
+                    continue;
+                }
+
+                float opacity = MathHelper.Clamp(block.BackgroundOpacity, 0f, 1f);
+                if (Math.Abs(opacity - 1.0f) > 0.001f)
+                {
+                    setup.BlockOpacities[block.Id] = opacity;
+                }
+            }
+
             return setup;
         }
 
@@ -907,10 +1177,100 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             HidePanelsNotInLayout(visiblePanels);
             ApplyToggleVisibilityOverrides();
             PruneInactiveBlockNodes();
+            ApplyDockingSetupOverlays(setup.Overlays);
+
+            // Specs is now a regular tab in the Backend panel; no overlay migration needed.
+
+            ApplyDockingSetupOpacities(setup.BlockOpacities);
 
             _blockDefinitionsReady = true;
             MarkLayoutDirty();
             return true;
+        }
+
+        private static void ApplyDockingSetupOverlays(IEnumerable<DockingSetupOverlay> overlays)
+        {
+            if (overlays == null)
+            {
+                return;
+            }
+
+            foreach (DockingSetupOverlay overlay in overlays)
+            {
+                if (overlay == null || string.IsNullOrEmpty(overlay.BlockId) || string.IsNullOrEmpty(overlay.ParentId))
+                {
+                    continue;
+                }
+
+                if (!_blocks.TryGetValue(overlay.BlockId, out DockBlock block))
+                {
+                    continue;
+                }
+
+                if (_blockNodes.TryGetValue(block.Id, out BlockNode blockNode))
+                {
+                    _rootNode = DockLayout.Detach(_rootNode, blockNode);
+                    _blockNodes.Remove(block.Id);
+                }
+
+                PanelGroup group = GetPanelGroupForBlock(block);
+                if (group != null)
+                {
+                    group.RemoveBlock(block.Id, out _);
+                    _blockToPanel.Remove(block.Id);
+                    if (group.Blocks.Count == 0)
+                    {
+                        RemovePanelGroup(group);
+                    }
+                    else if (string.Equals(group.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        DockBlock next = group.Blocks.FirstOrDefault();
+                        if (next != null)
+                        {
+                            SetPanelActiveBlock(group, next);
+                        }
+                    }
+                }
+
+                block.IsOverlay = true;
+                block.OverlayParentId = overlay.ParentId;
+                block.OverlayRelX = overlay.X;
+                block.OverlayRelY = overlay.Y;
+                block.OverlayRelWidth = Math.Max(0.05f, overlay.W);
+                block.OverlayRelHeight = Math.Max(0.05f, overlay.H);
+                block.IsVisible = true;
+
+                // Overlay blocks are detached from the layout tree and stripped from any
+                // panel group by the code above.  Without their own panel group the
+                // RedrawBlockHeader path finds group == null, skips the tab bar entirely,
+                // and the per-block lock button is never drawn or hit-testable.
+                // Re-attach the block to a fresh single-block panel group keyed on its own
+                // ID so the tab bar (and lock toggle) appear at the overlay's position.
+                if (!_panelGroups.ContainsKey(block.Id))
+                {
+                    PanelGroup overlayGroup = new(block.Id, block);
+                    _panelGroups[block.Id] = overlayGroup;
+                    _blockToPanel[block.Id] = block.Id;
+                    if (!_orderedPanelIds.Contains(block.Id, StringComparer.OrdinalIgnoreCase))
+                        _orderedPanelIds.Add(block.Id);
+                }
+            }
+        }
+
+        private static void ApplyDockingSetupOpacities(IDictionary<string, float> opacities)
+        {
+            if (opacities == null)
+            {
+                return;
+            }
+
+            foreach ((string blockId, float opacity) in opacities)
+            {
+                if (_blocks.TryGetValue(blockId, out DockBlock block))
+                {
+                    block.BackgroundOpacity = MathHelper.Clamp(opacity, 0f, 1f);
+                }
+            }
         }
 
         private static void ApplyDockingSetupMenuState(IEnumerable<DockingSetupMenuEntry> menuEntries)
@@ -1413,7 +1773,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             _blockMenuEntries.Add(new BlockMenuEntry(BlankBlockKey, BlankBlock.BlockTitle, DockBlockKind.Blank, BlockMenuControlMode.Count, 0, 10, 0));
-            _blockMenuEntries.Add(new BlockMenuEntry(TransparentBlockKey, TransparentBlock.BlockTitle, DockBlockKind.Transparent, BlockMenuControlMode.Count, 0, 10, 0));
             _blockMenuEntries.Add(new BlockMenuEntry(GameBlockKey, GameBlock.BlockTitle, DockBlockKind.Game, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(PropertiesBlockKey, PropertiesBlock.BlockTitle, DockBlockKind.Properties, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: true));
@@ -1424,6 +1783,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(DebugLogsBlockKey, DebugLogsBlock.BlockTitle, DockBlockKind.DebugLogs, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(SpecsBlockKey, SpecsBlock.BlockTitle, DockBlockKind.Specs, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(BarsBlockKey, BarsBlock.BlockTitle, DockBlockKind.Bars, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(ChatBlockKey, ChatBlock.BlockTitle, DockBlockKind.Chat, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(PerformanceBlockKey, PerformanceBlock.BlockTitle, DockBlockKind.Performance, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(MathBlockKey, MathBlock.BlockTitle, DockBlockKind.Math, BlockMenuControlMode.Toggle, initialVisible: true));
         }
 
         private static int ClampCount(BlockMenuEntry entry, int value)
@@ -1549,7 +1912,17 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 MergeBlockIntoGroup(colorGroup, DockingSetupsBlockKey);
             }
 
-            MergeBackendAndSpecs();
+            // Merge Chat and Math into the Backend panel group so they appear as tabs, not separate columns.
+            if (_blocks.TryGetValue(BackendBlockKey, out DockBlock backendBlock) && backendBlock != null)
+            {
+                PanelGroup backendGroup = GetPanelGroupForBlock(backendBlock);
+                if (backendGroup != null)
+                {
+                    MergeBlockIntoGroup(backendGroup, ChatBlockKey);
+                    MergeBlockIntoGroup(backendGroup, MathBlockKey);
+                    MergeBlockIntoGroup(backendGroup, SpecsBlockKey);
+                }
+            }
         }
 
         private static void MergeControlSetupsIntoControlsGroup()
@@ -1658,13 +2031,45 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 MergeBlockIntoGroup(backendGroup, debugLogsBlock.Id);
             }
 
+            if (_blocks.TryGetValue(ChatBlockKey, out DockBlock chatBlock) && chatBlock != null)
+            {
+                PanelGroup chatGroup = GetPanelGroupForBlock(chatBlock);
+                if (chatGroup != null && !ReferenceEquals(backendGroup, chatGroup))
+                {
+                    backendLocked |= chatGroup.IsLocked;
+                }
+
+                MergeBlockIntoGroup(backendGroup, chatBlock.Id);
+            }
+
+            if (_blocks.TryGetValue(PerformanceBlockKey, out DockBlock performanceBlock) && performanceBlock != null)
+            {
+                PanelGroup performanceGroup = GetPanelGroupForBlock(performanceBlock);
+                if (performanceGroup != null && !ReferenceEquals(backendGroup, performanceGroup))
+                {
+                    backendLocked |= performanceGroup.IsLocked;
+                }
+
+                MergeBlockIntoGroup(backendGroup, performanceBlock.Id);
+            }
+
+            if (_blocks.TryGetValue(MathBlockKey, out DockBlock mathBlock) && mathBlock != null)
+            {
+                PanelGroup mathGroup = GetPanelGroupForBlock(mathBlock);
+                if (mathGroup != null && !ReferenceEquals(backendGroup, mathGroup))
+                {
+                    backendLocked |= mathGroup.IsLocked;
+                }
+
+                MergeBlockIntoGroup(backendGroup, mathBlock.Id);
+            }
+
             backendGroup.IsLocked = backendLocked;
         }
 
         private static DockNode BuildDefaultLayout()
         {
             List<BlockNode> blankNodes = GetBlockNodesByKind(DockBlockKind.Blank);
-            List<BlockNode> transparentNodes = GetBlockNodesByKind(DockBlockKind.Transparent);
             BlockNode gameNode = GetBlockNodesByKind(DockBlockKind.Game).FirstOrDefault();
             BlockNode propertiesNode = GetBlockNodesByKind(DockBlockKind.Properties).FirstOrDefault();
             BlockNode colorNode = GetBlockNodesByKind(DockBlockKind.ColorScheme).FirstOrDefault();
@@ -1672,19 +2077,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             BlockNode controlSetupsNode = GetBlockNodesByKind(DockBlockKind.ControlSetups).FirstOrDefault();
             BlockNode notesNode = GetBlockNodesByKind(DockBlockKind.Notes).FirstOrDefault();
             BlockNode backendNode = GetBlockNodesByKind(DockBlockKind.Backend).FirstOrDefault();
-            BlockNode specsNode = GetBlockNodesByKind(DockBlockKind.Specs).FirstOrDefault();
+            // specsNode, chatNode, and mathNode are merged into the backend panel group as tabs
 
-            DockNode transparentStack = BuildStack(transparentNodes, DockSplitOrientation.Horizontal);
             DockNode blankStack = BuildStack(blankNodes, DockSplitOrientation.Horizontal);
 
-            float sideRatio = CalculateSplitRatio(transparentNodes.Count, blankNodes.Count, 0.5f);
-            DockNode blankAndTransparent = CombineNodes(transparentStack, blankStack, DockSplitOrientation.Vertical, sideRatio);
-
-            DockNode leftColumn = CombineNodes(blankAndTransparent, gameNode, DockSplitOrientation.Horizontal, 0.36f);
+            DockNode leftColumn = CombineNodes(blankStack, gameNode, DockSplitOrientation.Horizontal, 0.36f);
             DockNode controlsAndConfigs = CombineNodes(controlsNode, controlSetupsNode, DockSplitOrientation.Horizontal, 0.52f);
             DockNode controlsAndNotes = CombineNodes(controlsAndConfigs, notesNode, DockSplitOrientation.Horizontal, 0.64f);
-            DockNode backendAndSpecs = CombineNodes(backendNode, specsNode, DockSplitOrientation.Horizontal, 0.58f);
-            DockNode paletteBackend = CombineNodes(colorNode, backendAndSpecs, DockSplitOrientation.Horizontal, 0.42f);
+            // Specs, Chat, and Math are merged into Backend's panel group as tabs
+            DockNode paletteBackend = CombineNodes(colorNode, backendNode, DockSplitOrientation.Horizontal, 0.42f);
             DockNode propertiesAndControls = CombineNodes(propertiesNode, controlsAndNotes, DockSplitOrientation.Horizontal, 0.26f);
             DockNode rightColumn = CombineNodes(propertiesAndControls, paletteBackend, DockSplitOrientation.Horizontal, 0.7f);
 
@@ -1989,6 +2390,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         {
             PanelGroup group = GetPanelGroupForBlock(block);
             int groupBarHeight = GetGroupBarHeight(group);
+            // When drag bar is hovered, panel is unlocked, and block has an opacity slider, the opacity row
+            // expands below the header, pushing content down.
+            if (BlockHasOpacitySlider(block) &&
+                (string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal) ||
+                 string.Equals(_opacityExpandedId, block.Id, StringComparison.Ordinal))
+                && (group == null || !IsPanelLocked(group)))
+            {
+                groupBarHeight += OpacityRowHeight;
+            }
             return block.GetContentBounds(dragBarHeight, UIStyle.BlockPadding, groupBarHeight);
         }
 
@@ -2348,6 +2758,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             (int minWidth, int minHeight) = GetBlockMinimumSize(kind);
             block.MinWidth = Math.Max(0, minWidth);
             block.MinHeight = Math.Max(0, minHeight);
+            if (kind == DockBlockKind.Specs)
+                block.BackgroundOpacity = 0f;
             _blocks[id] = block;
             _orderedBlocks.Add(block);
             BlockNode node = new(block);
@@ -2367,7 +2779,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             (int width, int height) = kind switch
             {
                 DockBlockKind.Game => (GameBlock.MinWidth, GameBlock.MinHeight),
-                DockBlockKind.Transparent => (TransparentBlock.MinWidth, TransparentBlock.MinHeight),
                 DockBlockKind.Blank => (BlankBlock.MinWidth, BlankBlock.MinHeight),
                 DockBlockKind.Properties => (PropertiesBlock.MinWidth, PropertiesBlock.MinHeight),
                 DockBlockKind.ColorScheme => (ColorSchemeBlock.MinWidth, ColorSchemeBlock.MinHeight),
@@ -2378,6 +2789,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 DockBlockKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
                 DockBlockKind.Specs => (SpecsBlock.MinWidth, SpecsBlock.MinHeight),
                 DockBlockKind.DebugLogs => (DebugLogsBlock.MinWidth, DebugLogsBlock.MinHeight),
+                DockBlockKind.Bars => (BarsBlock.MinWidth, BarsBlock.MinHeight),
+                DockBlockKind.Chat => (ChatBlock.MinWidth, ChatBlock.MinHeight),
+                DockBlockKind.Performance => (PerformanceBlock.MinWidth, PerformanceBlock.MinHeight),
+                DockBlockKind.Math => (MathBlock.MinWidth, MathBlock.MinHeight),
                 _ => (defaultMin, defaultMin)
             };
 
@@ -2546,6 +2961,16 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return false;
             }
 
+            // Overlay drag bars sit visually on top of panel group bars — give them input priority.
+            // Exception: if the cursor is on an overlay's own group bar (tab strip), let tab
+            // interactions proceed so the overlay's own tabs/lock/close buttons still respond.
+            int activeDbh = GetActiveDragBarHeight();
+            if (leftClickStarted && IsMouseOnAnyOverlayDragBar(activeDbh)
+                && !IsMouseCoveredByOverlayGroupBar(activeDbh))
+            {
+                return false;
+            }
+
             bool allowLockToggle = DockingModeEnabled;
             foreach (PanelGroupBarLayout layout in _groupBarLayoutCache.Values)
             {
@@ -2561,6 +2986,13 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 DockBlock active = group.ActiveBlock;
                 if (active == null || !active.IsVisible || GetGroupBarHeight(group) <= 0)
+                {
+                    continue;
+                }
+
+                // Overlay blocks sit on top visually — don't let an underlying non-overlay
+                // panel's tab region steal input when the cursor is inside an overlay block.
+                if (!active.IsOverlay && IsMouseInsideAnyOverlayBlock())
                 {
                     continue;
                 }
@@ -2697,7 +3129,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                     if (releasedOnPressedTab && pressedGroup != null)
                     {
-                        ActivatePanelTab(pressedGroup, _pressedTabBlockId);
+                        bool tabSwitchRequiresBlockMode = ControlStateManager.GetSwitchState(ControlKeyMigrations.TabSwitchRequiresBlockModeKey);
+                        if (!tabSwitchRequiresBlockMode || DockingModeEnabled)
+                        {
+                            ActivatePanelTab(pressedGroup, _pressedTabBlockId);
+                        }
                     }
 
                     ClearPressedTabState();
@@ -2880,6 +3316,35 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
+            // Handle opacity slider drag (takes priority over everything)
+            if (_opacitySliderDragging)
+            {
+                UpdateOpacitySliderDrag();
+                // Keep the expansion visible while dragging
+                _opacityExpandedId = _opacitySliderDraggingId;
+                if (leftClickReleased)
+                {
+                    _opacitySliderDragging = false;
+                    _opacitySliderDraggingId = null;
+                    _opacitySliderTrackBounds = Rectangle.Empty;
+                }
+
+                return;
+            }
+
+            if (leftClickStarted)
+            {
+                DockBlock sliderBlock = HitTestOpacitySlider(_mousePosition, out Rectangle sliderTrack);
+                if (sliderBlock != null)
+                {
+                    _opacitySliderDragging = true;
+                    _opacitySliderDraggingId = sliderBlock.Id;
+                    _opacitySliderTrackBounds = sliderTrack;
+                    UpdateOpacitySliderDrag();
+                    return;
+                }
+            }
+
             if (leftClickStarted && TryTogglePanelLock(_mousePosition))
             {
                 return;
@@ -2904,6 +3369,48 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 ? null
                 : HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
             _hoveredDragBarId = dragBarHover?.Id;
+
+            // Extended opacity row zone: keep slider visible while cursor is in drag bar OR the opacity row below it.
+            // Only expand when the panel is unlocked.
+            if (_hoveredDragBarId != null &&
+                _blocks.TryGetValue(_hoveredDragBarId, out DockBlock hoverBlockForOpacity) &&
+                BlockHasOpacitySlider(hoverBlockForOpacity) &&
+                !IsPanelLocked(GetPanelGroupForBlock(hoverBlockForOpacity)))
+            {
+                _opacityExpandedId = _hoveredDragBarId;
+            }
+            else if (_hoveredDragBarId == null && _opacityExpandedId != null)
+            {
+                if (_blocks.TryGetValue(_opacityExpandedId, out DockBlock expandedBlock) &&
+                    expandedBlock.IsVisible && BlockHasOpacitySlider(expandedBlock))
+                {
+                    int expDbh = GetActiveDragBarHeight();
+                    PanelGroup expGroup = GetPanelGroupForBlock(expandedBlock);
+                    Rectangle expDragBar = expandedBlock.GetDragBarBounds(expDbh);
+                    int expGroupBarH = GetGroupBarHeight(expGroup);
+                    int expHeaderH = Math.Max(expDbh, expGroupBarH);
+                    int expRowY = expandedBlock.Bounds.Y + expHeaderH;
+                    bool expRowFits = expRowY + OpacityRowHeight <= expandedBlock.Bounds.Bottom;
+                    Rectangle expOpRow = expRowFits
+                        ? new Rectangle(expandedBlock.Bounds.X, expRowY, expandedBlock.Bounds.Width, OpacityRowHeight)
+                        : Rectangle.Empty;
+                    Rectangle extZone = expOpRow != Rectangle.Empty && expDragBar != Rectangle.Empty
+                        ? Rectangle.Union(expDragBar, expOpRow)
+                        : (expOpRow != Rectangle.Empty ? expOpRow : expDragBar);
+                    if (extZone != Rectangle.Empty && extZone.Contains(_mousePosition))
+                        _hoveredDragBarId = _opacityExpandedId;
+                    else
+                        _opacityExpandedId = null;
+                }
+                else
+                {
+                    _opacityExpandedId = null;
+                }
+            }
+            else if (_hoveredDragBarId != null)
+            {
+                _opacityExpandedId = null;
+            }
 
             DockBlock dragBarHit = null;
             if (leftClickStarted)
@@ -2937,21 +3444,123 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
             else if (_draggingBlock != null)
             {
-                _dropPreview = BuildDropPreview(_mousePosition);
-
-                if (leftClickReleased)
+                if (_draggingBlock.IsOverlay)
                 {
-                    if (_dropPreview.HasValue)
-                    {
-                        ApplyDrop(_dropPreview.Value);
-                    }
-
-                    _draggingBlock = null;
-                    _draggingPanel = null;
-                    _draggingFromTab = false;
+                    UpdateOverlayBlockDrag();
                     _dropPreview = null;
+
+                    if (leftClickReleased)
+                    {
+                        if (_overlayDragPreviewBounds.HasValue)
+                        {
+                            _draggingBlock.Bounds = _overlayDragPreviewBounds.Value;
+                            if (_overlayDropTargetBlock != null)
+                            {
+                                Rectangle newParentBounds = _overlayDropTargetBlock.Bounds;
+                                _draggingBlock.OverlayParentId = _overlayDropTargetBlock.Id;
+                                if (newParentBounds.Width > 0 && newParentBounds.Height > 0)
+                                {
+                                    _draggingBlock.OverlayRelX = (_overlayDragPreviewBounds.Value.X - newParentBounds.X) / (float)newParentBounds.Width;
+                                    _draggingBlock.OverlayRelY = (_overlayDragPreviewBounds.Value.Y - newParentBounds.Y) / (float)newParentBounds.Height;
+                                }
+                            }
+                        }
+                        _overlayDragPreviewBounds = null;
+                        _overlayDropTargetBlock = null;
+                        MarkLayoutDirty(); // refreshes overlay resize edge positions
+                        _draggingBlock = null;
+                        _draggingPanel = null;
+                        _dropPreview = null;
+                        _superimposeLocked = false;
+                        _superimposeLockedTarget = null;
+                    }
+                }
+                else
+                {
+                    _dropPreview = BuildDropPreview(_mousePosition);
+
+                    if (leftClickReleased)
+                    {
+                        // If locked into superimpose mode but cursor left the parent panel (_dropPreview is null),
+                        // cancel the drag without applying any drop.
+                        if (!_superimposeLocked || _dropPreview.HasValue)
+                        {
+                            if (_dropPreview.HasValue)
+                            {
+                                ApplyDrop(_dropPreview.Value);
+                            }
+                        }
+
+                        _draggingBlock = null;
+                        _draggingPanel = null;
+                        _draggingFromTab = false;
+                        _dropPreview = null;
+                        _superimposeLocked = false;
+                        _superimposeLockedTarget = null;
+                    }
                 }
             }
+        }
+
+        private static void UpdateOverlayBlockDrag()
+        {
+            if (_draggingBlock == null || !_draggingBlock.IsOverlay)
+                return;
+
+            if (!_blocks.TryGetValue(_draggingBlock.OverlayParentId ?? string.Empty, out DockBlock currentParent) || !currentParent.IsVisible)
+            {
+                _draggingBlock.IsOverlay = false;
+                _draggingBlock.OverlayParentId = null;
+                _overlayDropTargetBlock = null;
+                return;
+            }
+
+            int blockW = _draggingBlock.Bounds.Width;
+            int blockH = _draggingBlock.Bounds.Height;
+            const int OverlayEdgeSnapDistance = 10;
+
+            int newX = _mousePosition.X - _dragOffset.X;
+            int newY = _mousePosition.Y - _dragOffset.Y;
+
+            // Check if the cursor is hovering a different visible non-overlay block as a potential new parent.
+            DockBlock dropTarget = null;
+            foreach (DockBlock candidate in _orderedBlocks)
+            {
+                if (candidate == _draggingBlock || candidate.IsOverlay || !candidate.IsVisible) continue;
+                if (string.Equals(candidate.Id, currentParent.Id, StringComparison.OrdinalIgnoreCase)) continue;
+                if (candidate.Bounds.Contains(_mousePosition))
+                {
+                    dropTarget = candidate;
+                    break;
+                }
+            }
+            _overlayDropTargetBlock = dropTarget;
+
+            // Compute snap position within the relevant parent (drop target or current parent).
+            Rectangle snapBounds = dropTarget != null ? dropTarget.Bounds : currentParent.Bounds;
+
+            int clampedX = Math.Clamp(newX, snapBounds.X, Math.Max(snapBounds.X, snapBounds.Right  - blockW));
+            int clampedY = Math.Clamp(newY, snapBounds.Y, Math.Max(snapBounds.Y, snapBounds.Bottom - blockH));
+
+            if (clampedX - snapBounds.X < OverlayEdgeSnapDistance)
+                clampedX = snapBounds.X;
+            else if (snapBounds.Right - (clampedX + blockW) < OverlayEdgeSnapDistance)
+                clampedX = snapBounds.Right - blockW;
+
+            if (clampedY - snapBounds.Y < OverlayEdgeSnapDistance)
+                clampedY = snapBounds.Y;
+            else if (snapBounds.Bottom - (clampedY + blockH) < OverlayEdgeSnapDistance)
+                clampedY = snapBounds.Bottom - blockH;
+
+            // Only update relative coords for the current parent while dragging;
+            // the new parent assignment happens on drop.
+            if (dropTarget == null && currentParent.Bounds.Width > 0 && currentParent.Bounds.Height > 0)
+            {
+                _draggingBlock.OverlayRelX = (clampedX - currentParent.Bounds.X) / (float)currentParent.Bounds.Width;
+                _draggingBlock.OverlayRelY = (clampedY - currentParent.Bounds.Y) / (float)currentParent.Bounds.Height;
+            }
+
+            _overlayDragPreviewBounds = new Rectangle(clampedX, clampedY, blockW, blockH);
         }
 
         private static bool TryTogglePanelLock(Point position)
@@ -2963,7 +3572,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             PanelGroup group = GetPanelGroupForBlock(lockHit);
-            TogglePanelLock(group);
+            if (group != null)
+                TogglePanelLock(group);
+            else
+                ToggleBlockLock(lockHit);
             ClearDockingInteractions();
             return true;
         }
@@ -3100,7 +3712,26 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return false;
             }
 
-            return IsBlockLockEnabled(block);
+            // Per-block (tab) locks always apply — they govern block content interaction
+            // regardless of whether docking mode is active.
+            if (IsBlockLockEnabled(block))
+            {
+                return true;
+            }
+
+            // Panel group locks only restrict block content outside docking mode.
+            // In docking mode, panel locks govern layout management (drag bars, group bars),
+            // not block content.
+            if (!DockingModeEnabled)
+            {
+                PanelGroup group = GetPanelGroupForBlock(block);
+                if (group != null && group.IsLocked)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool IsBlockLockEnabled(DockBlock block)
@@ -3121,6 +3752,12 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             if (_panelInteractionLockActive)
             {
                 return true;
+            }
+
+            // BlockMode temporarily makes all locked panels accessible as if unlocked.
+            if (DockingModeEnabled)
+            {
+                return false;
             }
 
             return group != null && group.IsLocked;
@@ -3187,35 +3824,40 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return null;
             }
 
-            foreach (DockBlock block in _orderedBlocks)
+            // Two passes: overlay blocks first so they intercept hits in regions they cover.
+            for (int pass = 0; pass < 2; pass++)
             {
-                if (!block.IsVisible)
+                bool overlayPass = pass == 0;
+                foreach (DockBlock block in _orderedBlocks)
                 {
-                    continue;
-                }
-
-                Rectangle dragBarRect = block.GetDragBarBounds(dragBarHeight);
-                if (!dragBarRect.Contains(position))
-                {
-                    continue;
-                }
-
-                if (excludeDragBarButtons && IsPointOnDragBarButton(block, dragBarHeight, position))
-                {
-                    continue;
-                }
-
-                if (requireGrabRegion)
-                {
-                    PanelGroup group = GetPanelGroupForBlock(block);
-                    Rectangle grabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
-                    if (grabBounds == Rectangle.Empty || !grabBounds.Contains(position))
+                    if (!block.IsVisible || block.IsOverlay != overlayPass)
                     {
                         continue;
                     }
-                }
 
-                return block;
+                    Rectangle dragBarRect = block.GetDragBarBounds(dragBarHeight);
+                    if (!dragBarRect.Contains(position))
+                    {
+                        continue;
+                    }
+
+                    if (excludeDragBarButtons && IsPointOnDragBarButton(block, dragBarHeight, position))
+                    {
+                        continue;
+                    }
+
+                    if (requireGrabRegion)
+                    {
+                        PanelGroup group = GetPanelGroupForBlock(block);
+                        Rectangle grabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
+                        if (grabBounds == Rectangle.Empty || !grabBounds.Contains(position))
+                        {
+                            continue;
+                        }
+                    }
+
+                    return block;
+                }
             }
 
             return null;
@@ -3229,17 +3871,21 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return null;
             }
 
-            foreach (DockBlock block in _orderedBlocks)
+            for (int pass = 0; pass < 2; pass++)
             {
-                if (!block.IsVisible)
+                bool overlayPass = pass == 0;
+                foreach (DockBlock block in _orderedBlocks)
                 {
-                    continue;
-                }
+                    if (!block.IsVisible || block.IsOverlay != overlayPass)
+                    {
+                        continue;
+                    }
 
-                Rectangle closeBounds = GetCloseButtonBounds(block, dragBarHeight);
-                if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
-                {
-                    return block;
+                    Rectangle closeBounds = GetCloseButtonBounds(block, dragBarHeight);
+                    if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
+                    {
+                        return block;
+                    }
                 }
             }
 
@@ -3254,21 +3900,197 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return null;
             }
 
-            foreach (DockBlock block in _orderedBlocks)
+            for (int pass = 0; pass < 2; pass++)
             {
-                if (!block.IsVisible)
+                bool overlayPass = pass == 0;
+                foreach (DockBlock block in _orderedBlocks)
                 {
-                    continue;
-                }
+                    if (!block.IsVisible || block.IsOverlay != overlayPass)
+                    {
+                        continue;
+                    }
 
-                Rectangle panelLockBounds = GetPanelLockButtonBounds(block, dragBarHeight);
-                if (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position))
-                {
-                    return block;
+                    Rectangle panelLockBounds = GetPanelLockButtonBounds(block, dragBarHeight);
+                    if (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position))
+                    {
+                        return block;
+                    }
                 }
             }
 
             return null;
+        }
+
+        private static bool BlockHasOpacitySlider(DockBlock block) =>
+            block != null && (block.Kind == DockBlockKind.Blank || block.Kind == DockBlockKind.Specs || block.IsOverlay);
+
+        // Returns the bounds of the opacity row that appears below the header bar when hovered.
+        private static Rectangle GetOpacityRowBounds(DockBlock block, PanelGroup group, int dragBarHeight)
+        {
+            if (!BlockHasOpacitySlider(block) ||
+                (!string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal) &&
+                 !string.Equals(_opacityExpandedId, block.Id, StringComparison.Ordinal)))
+            {
+                return Rectangle.Empty;
+            }
+
+            // Only expand when the panel is unlocked
+            if (group != null && IsPanelLocked(group))
+            {
+                return Rectangle.Empty;
+            }
+
+            int groupBarH = GetGroupBarHeight(group);
+            int headerHeight = Math.Max(dragBarHeight, groupBarH);
+            int rowY = block.Bounds.Y + headerHeight;
+            if (rowY + OpacityRowHeight > block.Bounds.Bottom)
+            {
+                return Rectangle.Empty;
+            }
+
+            return new Rectangle(block.Bounds.X, rowY, block.Bounds.Width, OpacityRowHeight);
+        }
+
+        private static void GetOpacitySliderBounds(DockBlock block, int dragBarHeight, out Rectangle trackBounds, out Rectangle labelBounds)
+        {
+            trackBounds = Rectangle.Empty;
+            labelBounds = Rectangle.Empty;
+
+            if (!BlockHasOpacitySlider(block) || dragBarHeight <= 0)
+            {
+                return;
+            }
+
+            PanelGroup group = GetPanelGroupForBlock(block);
+            Rectangle row = GetOpacityRowBounds(block, group, dragBarHeight);
+            if (row == Rectangle.Empty)
+            {
+                return;
+            }
+
+            UIStyle.UIFont font = UIStyle.FontBody;
+            int labelH = font.IsAvailable ? (int)font.LineHeight : 14;
+            // Size the label column on the widest possible string so the track doesn't shift while dragging.
+            // "Global Transparency: 100%" is the longest possible label.
+            int labelW = font.IsAvailable ? (int)MathF.Ceiling(font.MeasureString("Global Transparency: 100%").X) : 120;
+
+            int available = row.Width - DragBarButtonPadding * 2;
+            int trackW = Math.Min(OpacitySliderMaxTrackWidth, Math.Max(0, available - labelW - OpacitySliderLabelSpacing));
+            if (trackW < 20)
+            {
+                return;
+            }
+
+            int totalW = labelW + OpacitySliderLabelSpacing + trackW;
+            // Center the assembly when the row is wider than the total content
+            int startX = row.X + DragBarButtonPadding + Math.Max(0, (available - totalW) / 2);
+
+            int labelY = row.Y + (row.Height - labelH) / 2;
+            labelBounds = new Rectangle(startX, labelY, labelW, labelH);
+
+            const int trackH = 3;
+            int trackY = row.Y + (row.Height - trackH) / 2;
+            trackBounds = new Rectangle(startX + labelW + OpacitySliderLabelSpacing, trackY, trackW, trackH);
+        }
+
+        private static void DrawOpacitySlider(SpriteBatch spriteBatch, DockBlock block, int dragBarHeight)
+        {
+            GetOpacitySliderBounds(block, dragBarHeight, out Rectangle track, out Rectangle label);
+            if (track == Rectangle.Empty)
+            {
+                return;
+            }
+
+            float opacity = MathHelper.Clamp(block.BackgroundOpacity, 0f, 1f);
+            // The slider is expressed as transparency (0% = fully opaque, 100% = fully transparent)
+            float transparency = 1f - opacity;
+
+            // Label — grey "Global/Local Transparency: X%" to the left of the track
+            UIStyle.UIFont font = UIStyle.FontBody;
+            if (font.IsAvailable && label != Rectangle.Empty)
+            {
+                string transparencyKind = block.IsOverlay ? "Local" : "Global";
+                string labelText = $"{transparencyKind} Transparency: {(int)Math.Round(transparency * 100f)}%";
+                font.DrawString(spriteBatch, labelText, new Vector2(label.X, label.Y), UIStyle.MutedTextColor);
+            }
+
+            // Track background — thin dark rail
+            DrawRect(spriteBatch, track, new Color(52, 52, 56));
+
+            // Track fill grows left→right as transparency increases (right = 100% transparent)
+            int fillW = (int)(track.Width * transparency);
+            if (fillW > 0)
+            {
+                DrawRect(spriteBatch, new Rectangle(track.X, track.Y, fillW, track.Height), new Color(230, 230, 235));
+            }
+
+            // Thumb handle — slightly taller white rectangle at fill end
+            const int thumbW = 3;
+            const int thumbH = 10;
+            int thumbX = track.X + fillW - thumbW / 2;
+            thumbX = Math.Clamp(thumbX, track.X, track.Right - thumbW);
+            int thumbY = track.Y - (thumbH - track.Height) / 2;
+            DrawRect(spriteBatch, new Rectangle(thumbX, thumbY, thumbW, thumbH), Color.White);
+        }
+
+        private static DockBlock HitTestOpacitySlider(Point position, out Rectangle trackBounds)
+        {
+            trackBounds = Rectangle.Empty;
+            int dragBarHeight = GetActiveDragBarHeight();
+            if (dragBarHeight <= 0 || _opacityExpandedId == null)
+            {
+                return null;
+            }
+
+            // Only allow slider interaction when the opacity row is actually visible (the drag bar was
+            // hovered in a prior frame and _opacityExpandedId was set). This prevents clicking the
+            // invisible slider through the collapsed panel.
+            if (!_blocks.TryGetValue(_opacityExpandedId, out DockBlock expandedBlock) || !expandedBlock.IsVisible ||
+                !BlockHasOpacitySlider(expandedBlock))
+            {
+                return null;
+            }
+
+            string savedHoveredId = _hoveredDragBarId;
+            _hoveredDragBarId = _opacityExpandedId;
+
+            GetOpacitySliderBounds(expandedBlock, dragBarHeight, out Rectangle track, out _);
+
+            if (track != Rectangle.Empty)
+            {
+                PanelGroup group = GetPanelGroupForBlock(expandedBlock);
+                Rectangle row = GetOpacityRowBounds(expandedBlock, group, dragBarHeight);
+                Rectangle hitArea = row != Rectangle.Empty ? row : track;
+
+                if (hitArea.Contains(position))
+                {
+                    _hoveredDragBarId = savedHoveredId;
+                    trackBounds = track;
+                    return expandedBlock;
+                }
+            }
+
+            _hoveredDragBarId = savedHoveredId;
+            return null;
+        }
+
+        private static void UpdateOpacitySliderDrag()
+        {
+            if (!_opacitySliderDragging || _opacitySliderTrackBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            if (!_blocks.TryGetValue(_opacitySliderDraggingId ?? string.Empty, out DockBlock block))
+            {
+                return;
+            }
+
+            float relX = (_mousePosition.X - _opacitySliderTrackBounds.X) / (float)Math.Max(1, _opacitySliderTrackBounds.Width);
+            // relX represents transparency (0=left=opaque, 1=right=fully transparent).
+            // Snap to multiples of 5% (steps of 0.05) then convert to opacity.
+            float snappedTransparency = MathF.Round(MathHelper.Clamp(relX, 0f, 1f) * 20f) / 20f;
+            block.BackgroundOpacity = 1f - snappedTransparency;
         }
 
         private static bool IsPointOnDragBarButton(DockBlock block, int dragBarHeight, Point position)
@@ -3434,11 +4256,85 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             };
         }
 
+        private static Rectangle ComputeSuperimposeZone(Rectangle bounds)
+        {
+            int shortSide = Math.Min(bounds.Width, bounds.Height);
+            int zoneSide = Math.Min((int)(shortSide * SuperimposeZoneFraction), SuperimposeZoneMaxSide);
+            int zoneX = bounds.X + (bounds.Width - zoneSide) / 2;
+            int zoneY = bounds.Y + (bounds.Height - zoneSide) / 2;
+            return new Rectangle(zoneX, zoneY, zoneSide, zoneSide);
+        }
+
+        private static DockDropPreview? BuildSuperimposePreview(DockBlock block, Rectangle bounds, Rectangle superimposeZone, Point position)
+        {
+            int minW = _draggingBlock?.MinWidth ?? 60;
+            int minH = _draggingBlock?.MinHeight ?? 40;
+            // Cap preview size at 40% of parent so it doesn't look like it takes over the whole panel
+            int maxW = Math.Max(minW, (int)(bounds.Width * 0.4f));
+            int maxH = Math.Max(minH, (int)(bounds.Height * 0.4f));
+            int projW = Math.Clamp(_draggingStartBounds.Width > 0 ? _draggingStartBounds.Width : minW, minW, maxW);
+            int projH = Math.Clamp(_draggingStartBounds.Height > 0 ? _draggingStartBounds.Height : minH, minH, maxH);
+            // Position preview centered on the mouse cursor, clamped to parent bounds
+            int maxDropX = Math.Max(bounds.X, bounds.Right - projW);
+            int maxDropY = Math.Max(bounds.Y, bounds.Bottom - projH);
+            int projX = Math.Clamp(position.X - projW / 2, bounds.X, maxDropX);
+            int projY = Math.Clamp(position.Y - projH / 2, bounds.Y, maxDropY);
+            return new DockDropPreview
+            {
+                TargetBlock = block,
+                IsOverlayDrop = true,
+                OverlayDropPosition = position,
+                HighlightBounds = new Rectangle(projX, projY, projW, projH)
+            };
+        }
+
         private static DockDropPreview? BuildDropPreview(Point position)
         {
+            // Once the user enters a superimpose zone, lock preview to that parent panel until drag ends.
+            if (_superimposeLocked && _superimposeLockedTarget != null && _superimposeLockedTarget.IsVisible)
+            {
+                Rectangle parentBounds = _superimposeLockedTarget.Bounds;
+                if (parentBounds.Contains(position))
+                {
+                    Rectangle zone = ComputeSuperimposeZone(parentBounds);
+                    return BuildSuperimposePreview(_superimposeLockedTarget, parentBounds, zone, position);
+                }
+                // Cursor left the parent panel; return null so releasing outside cancels the drag.
+                return null;
+            }
+
             if (_draggingFromTab)
             {
-                return BuildTabDropPreview(position);
+                DockDropPreview? tabPreview = BuildTabDropPreview(position);
+                if (tabPreview.HasValue)
+                {
+                    return tabPreview;
+                }
+
+                // Allow superimpose when dragging a tab over a block body
+                foreach (DockBlock block in _orderedBlocks)
+                {
+                    if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
+                    {
+                        continue;
+                    }
+
+                    Rectangle bounds = block.Bounds;
+                    if (!bounds.Contains(position))
+                    {
+                        continue;
+                    }
+
+                    Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
+                    if (superimposeZone.Contains(position))
+                    {
+                        _superimposeLocked = true;
+                        _superimposeLockedTarget = block;
+                        return BuildSuperimposePreview(block, bounds, superimposeZone, position);
+                    }
+                }
+
+                return null;
             }
 
             DockDropPreview? preview = BuildViewportSnapPreview(position);
@@ -3450,7 +4346,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             preview = null;
             foreach (DockBlock block in _orderedBlocks)
             {
-                if (!block.IsVisible || block == _draggingBlock)
+                if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
                 {
                     continue;
                 }
@@ -3459,6 +4355,17 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (!bounds.Contains(position))
                 {
                     continue;
+                }
+
+                // Check center superimpose zone first
+                Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
+
+                if (superimposeZone.Contains(position))
+                {
+                    _superimposeLocked = true;
+                    _superimposeLockedTarget = block;
+                    preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
+                    break;
                 }
 
                 float relativeX = (position.X - bounds.X) / (float)Math.Max(1, bounds.Width);
@@ -3694,19 +4601,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
-            // Avoid propagating loops when we nudge neighboring handles.
-            if (_isPropagatingResize)
-            {
-                position = GetResizeEdgePosition(handle, position);
-                ApplyResizeEdgeDragInternal(handle, position, allowPropagation: false);
-                return;
-            }
-
             position = GetResizeEdgePosition(handle, position);
-            ApplyResizeEdgeDragInternal(handle, position, allowPropagation: true);
+            ApplyResizeEdgeDragInternal(handle, position);
         }
 
-        private static void ApplyResizeEdgeDragInternal(ResizeEdge handle, Point position, bool allowPropagation)
+        private static void ApplyResizeEdgeDragInternal(ResizeEdge handle, Point position)
         {
             Rectangle bounds = handle.Node.Bounds;
             if (bounds.Width <= 0 || bounds.Height <= 0)
@@ -3717,17 +4616,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             float previousRatio = handle.Node.SplitRatio;
             float newRatio;
 
-            int span = handle.Orientation == DockSplitOrientation.Vertical ? bounds.Width : bounds.Height;
             int axisPositionRaw = handle.Orientation == DockSplitOrientation.Vertical ? position.X - bounds.X : position.Y - bounds.Y;
-            int minFirst = handle.Node.Orientation == DockSplitOrientation.Vertical
-                ? handle.Node.First?.GetMinWidth() ?? 0
-                : handle.Node.First?.GetMinHeight() ?? 0;
-            int minSecond = handle.Node.Orientation == DockSplitOrientation.Vertical
-                ? handle.Node.Second?.GetMinWidth() ?? 0
-                : handle.Node.Second?.GetMinHeight() ?? 0;
-            ResizeEdge? snapPartner = _activeResizeEdgeSnapTarget.HasValue && _activeResizeEdgeSnapTarget.Value.Orientation == handle.Orientation
-                ? _activeResizeEdgeSnapTarget
-                : null;
 
             if (handle.Orientation == DockSplitOrientation.Vertical)
             {
@@ -3756,99 +4645,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 int newSecondSpan = Math.Max(0, totalSpan - newFirstSpan);
                 handle.Node.PreferredFirstSpan = newFirstSpan;
                 handle.Node.PreferredSecondSpan = newSecondSpan;
-                handle.Node.IsUserSized = true;
 
                 MarkLayoutDirty();
-            }
-
-            if (allowPropagation)
-            {
-                int minClamp = Math.Min(span, Math.Max(0, minFirst));
-                int maxClamp = Math.Max(minClamp, span - Math.Max(0, minSecond));
-
-                if (axisPositionRaw < minClamp)
-                {
-                    int overflow = minClamp - axisPositionRaw;
-                    NudgeNearestResizeEdge(handle, overflow, negativeDirection: true, snapPartner);
-                }
-                else if (axisPositionRaw > maxClamp)
-                {
-                    int overflow = axisPositionRaw - maxClamp;
-                    NudgeNearestResizeEdge(handle, overflow, negativeDirection: false, snapPartner);
-                }
-            }
-        }
-
-        private static void NudgeNearestResizeEdge(ResizeEdge source, int amount, bool negativeDirection, ResizeEdge? preferred = null)
-        {
-            if (amount <= 0)
-            {
-                return;
-            }
-
-            ResizeEdge? best = preferred;
-            int bestDistance = int.MaxValue;
-
-            foreach (ResizeEdge other in _resizeEdges)
-            {
-                if (ResizeEdgesEqual(other, source) || other.Orientation != source.Orientation)
-                {
-                    continue;
-                }
-
-                Rectangle a = source.Bounds;
-                Rectangle b = other.Bounds;
-
-                bool overlaps = source.Orientation == DockSplitOrientation.Vertical
-                    ? a.Y < b.Bottom && a.Bottom > b.Y
-                    : a.X < b.Right && a.Right > b.X;
-
-                if (!overlaps)
-                {
-                    continue;
-                }
-
-                int delta = source.Orientation == DockSplitOrientation.Vertical
-                    ? b.Center.X - a.Center.X
-                    : b.Center.Y - a.Center.Y;
-
-                if (negativeDirection && delta >= 0)
-                {
-                    continue;
-                }
-
-                if (!negativeDirection && delta <= 0)
-                {
-                    continue;
-                }
-
-                int distance = Math.Abs(delta);
-                if (!best.HasValue || distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    best = other;
-                }
-            }
-
-            if (!best.HasValue)
-            {
-                return;
-            }
-
-            ResizeEdge target = best.Value;
-            int signedAmount = negativeDirection ? -amount : amount;
-            Point targetPosition = target.Orientation == DockSplitOrientation.Vertical
-                ? new Point(target.Bounds.Center.X + signedAmount, target.Bounds.Center.Y)
-                : new Point(target.Bounds.Center.X, target.Bounds.Center.Y + signedAmount);
-
-            _isPropagatingResize = true;
-            try
-            {
-                ApplyResizeEdgeDragInternal(target, targetPosition, allowPropagation: false);
-            }
-            finally
-            {
-                _isPropagatingResize = false;
             }
         }
 
@@ -4196,6 +4994,12 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
+            if (preview.IsOverlayDrop)
+            {
+                ApplyOverlayDrop(preview);
+                return;
+            }
+
             if (preview.TargetBlock == null)
             {
                 return;
@@ -4217,6 +5021,72 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _rootNode = DockLayout.Detach(_rootNode, movingNode);
             _rootNode ??= targetNode;
             _rootNode = DockLayout.InsertRelative(_rootNode, movingNode, targetNode, preview.Edge);
+            MarkLayoutDirty();
+        }
+
+        private static void ApplyOverlayDrop(DockDropPreview preview)
+        {
+            if (_draggingBlock == null || preview.TargetBlock == null)
+            {
+                return;
+            }
+
+            DockBlock block = _draggingBlock;
+            DockBlock parent = preview.TargetBlock;
+            if (block == parent)
+            {
+                return;
+            }
+
+            DetachDraggingTabFromGroup();
+
+            // Remove from layout tree
+            if (_blockNodes.TryGetValue(block.Id, out BlockNode blockNode))
+            {
+                _rootNode = DockLayout.Detach(_rootNode, blockNode);
+                _blockNodes.Remove(block.Id);
+            }
+
+            // Remove from panel group
+            PanelGroup group = GetPanelGroupForBlock(block);
+            if (group != null)
+            {
+                group.RemoveBlock(block.Id, out _);
+                _blockToPanel.Remove(block.Id);
+                if (group.Blocks.Count == 0)
+                {
+                    RemovePanelGroup(group);
+                }
+                else if (string.Equals(group.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    DockBlock next = group.Blocks.FirstOrDefault();
+                    if (next != null)
+                    {
+                        SetPanelActiveBlock(group, next);
+                    }
+                }
+            }
+
+            Rectangle parentBounds = parent.Bounds;
+            if (parentBounds.Width <= 0 || parentBounds.Height <= 0)
+            {
+                return;
+            }
+
+            int projW = Math.Clamp(block.Bounds.Width > 0 ? block.Bounds.Width : 60, block.MinWidth, Math.Max(block.MinWidth, (int)(parentBounds.Width * 0.4f)));
+            int projH = Math.Clamp(block.Bounds.Height > 0 ? block.Bounds.Height : 40, block.MinHeight, Math.Max(block.MinHeight, (int)(parentBounds.Height * 0.4f)));
+
+            float centerX = (preview.OverlayDropPosition.X - parentBounds.X) - projW / 2f;
+            float centerY = (preview.OverlayDropPosition.Y - parentBounds.Y) - projH / 2f;
+
+            block.OverlayRelX = MathHelper.Clamp(centerX / parentBounds.Width, 0f, Math.Max(0f, 1f - (float)projW / parentBounds.Width));
+            block.OverlayRelY = MathHelper.Clamp(centerY / parentBounds.Height, 0f, Math.Max(0f, 1f - (float)projH / parentBounds.Height));
+            block.OverlayRelWidth = MathHelper.Clamp((float)projW / parentBounds.Width, 0.05f, 1f);
+            block.OverlayRelHeight = MathHelper.Clamp((float)projH / parentBounds.Height, 0.05f, 1f);
+            block.IsOverlay = true;
+            block.OverlayParentId = parent.Id;
+            block.IsVisible = true;
+
             MarkLayoutDirty();
         }
 
@@ -4260,6 +5130,24 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
                 targetGroup.AddBlock(_draggingBlock, makeActive: true, insertIndex: insertIndex);
                 MapBlockToPanel(_draggingBlock, targetGroup);
+
+                // If the target is an overlay panel, inherit overlay properties on the newly-added block.
+                DockBlock existingOverlayMember = targetGroup.Blocks.FirstOrDefault(
+                    b => b.IsOverlay && !ReferenceEquals(b, _draggingBlock));
+                if (existingOverlayMember != null && !_draggingBlock.IsOverlay)
+                {
+                    if (_blockNodes.TryGetValue(_draggingBlock.Id, out BlockNode mergeNode))
+                    {
+                        _rootNode = DockLayout.Detach(_rootNode, mergeNode);
+                        _blockNodes.Remove(_draggingBlock.Id);
+                    }
+                    _draggingBlock.IsOverlay = true;
+                    _draggingBlock.OverlayParentId = existingOverlayMember.OverlayParentId;
+                    _draggingBlock.OverlayRelX = existingOverlayMember.OverlayRelX;
+                    _draggingBlock.OverlayRelY = existingOverlayMember.OverlayRelY;
+                    _draggingBlock.OverlayRelWidth = existingOverlayMember.OverlayRelWidth;
+                    _draggingBlock.OverlayRelHeight = existingOverlayMember.OverlayRelHeight;
+                }
             }
             else
             {
@@ -4345,7 +5233,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             foreach (DockBlock block in _orderedBlocks)
             {
-                if (!block.IsVisible)
+                if (!block.IsVisible || block.IsOverlay)
                 {
                     continue;
                 }
@@ -4354,31 +5242,162 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 DrawBlockContent(spriteBatch, block, dragBarHeight);
             }
 
+            bool mouseBlockedByOverlay = IsMouseCoveredByOverlayGroupBar(dragBarHeight);
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || block.IsOverlay)
+                {
+                    continue;
+                }
+
+                RedrawBlockHeader(spriteBatch, block, dragBarHeight, mouseBlockedByOverlay);
+            }
+
             if (showDockingChrome)
             {
                 DrawResizeEdges(spriteBatch);
                 DrawCornerHandles(spriteBatch);
+
+                if (_draggingBlock != null)
+                {
+                    if (_draggingBlock.IsOverlay)
+                    {
+                        // Subtle parent context — shows the constrained movement region.
+                        if (!string.IsNullOrEmpty(_draggingBlock.OverlayParentId) &&
+                            _blocks.TryGetValue(_draggingBlock.OverlayParentId, out DockBlock overlayParent) &&
+                            overlayParent.IsVisible)
+                        {
+                            DrawRect(spriteBatch, overlayParent.Bounds, UIStyle.AccentMuted * 0.08f);
+                            DrawRectOutline(spriteBatch, overlayParent.Bounds, UIStyle.AccentColor * 0.35f, 1);
+                        }
+
+                        // Drop-target highlight: brighter accent outline on the block the overlay would re-parent to.
+                        if (_overlayDropTargetBlock != null && _overlayDropTargetBlock.IsVisible)
+                        {
+                            DrawRect(spriteBatch, _overlayDropTargetBlock.Bounds, UIStyle.AccentColor * 0.12f);
+                            DrawRectOutline(spriteBatch, _overlayDropTargetBlock.Bounds, UIStyle.AccentColor * 0.85f, 2);
+                        }
+
+                        // Ghost preview: precise outline showing where the panel will land on release.
+                        if (_overlayDragPreviewBounds.HasValue)
+                        {
+                            Rectangle ghost = _overlayDragPreviewBounds.Value;
+                            DrawRect(spriteBatch, ghost, UIStyle.BlockBackground * 0.75f);
+                            if (dragBarHeight > 0)
+                            {
+                                int previewBarH = Math.Min(dragBarHeight, ghost.Height);
+                                DrawRect(spriteBatch, new Rectangle(ghost.X, ghost.Y, ghost.Width, previewBarH), UIStyle.DragBarBackground * 0.95f);
+                            }
+                            // Draw resize edges translated to the ghost position.
+                            Point edgeOffset = new(ghost.X - _draggingStartBounds.X, ghost.Y - _draggingStartBounds.Y);
+                            foreach (OverlayResizeEdge edge in _overlayResizeEdges)
+                            {
+                                if (!ReferenceEquals(edge.Overlay, _draggingBlock)) continue;
+                                DrawRect(spriteBatch, new Rectangle(edge.Bounds.X + edgeOffset.X, edge.Bounds.Y + edgeOffset.Y, edge.Bounds.Width, edge.Bounds.Height), UIStyle.ResizeEdgeActiveColor);
+                            }
+                            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
+                            {
+                                if (!ReferenceEquals(corner.VerticalEdge.Overlay, _draggingBlock)) continue;
+                                DrawRect(spriteBatch, new Rectangle(corner.Bounds.X + edgeOffset.X, corner.Bounds.Y + edgeOffset.Y, corner.Bounds.Width, corner.Bounds.Height), UIStyle.ResizeEdgeActiveColor);
+                            }
+                            DrawRectOutline(spriteBatch, ghost, UIStyle.AccentColor * 0.8f, UIStyle.DragOutlineThickness);
+                        }
+                    }
+                    else
+                    {
+                        foreach (DockBlock block in _orderedBlocks)
+                        {
+                            if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
+                            {
+                                continue;
+                            }
+
+                            DrawSuperimposeZone(spriteBatch, block);
+                        }
+                    }
+                }
             }
 
-            if (_draggingBlock != null)
+            // Suppress standard floating preview for overlay drags — the overlay ghost preview above
+            // already shows the destination, so an unconstrained mouse-position ghost would be confusing.
+            if (_draggingBlock != null && !_draggingBlock.IsOverlay &&
+                !(_dropPreview.HasValue && _dropPreview.Value.IsOverlayDrop))
             {
                 DrawFloatingBlockPreview(spriteBatch, dragBarHeight);
             }
 
             if (_dropPreview.HasValue)
             {
-                DrawRect(spriteBatch, _dropPreview.Value.HighlightBounds, UIStyle.AccentMuted);
-                DrawRectOutline(spriteBatch, _dropPreview.Value.HighlightBounds, UIStyle.AccentColor, UIStyle.DragOutlineThickness);
+                if (_dropPreview.Value.IsOverlayDrop)
+                {
+                    DrawRect(spriteBatch, _dropPreview.Value.HighlightBounds, UIStyle.BlockBackground * 0.75f);
+                    DrawRectOutline(spriteBatch, _dropPreview.Value.HighlightBounds, UIStyle.AccentColor, UIStyle.DragOutlineThickness);
+                }
+                else
+                {
+                    DrawRect(spriteBatch, _dropPreview.Value.HighlightBounds, UIStyle.AccentMuted);
+                    DrawRectOutline(spriteBatch, _dropPreview.Value.HighlightBounds, UIStyle.AccentColor, UIStyle.DragOutlineThickness);
+                }
+            }
+
+            DrawOverlayBlocks(spriteBatch, dragBarHeight);
+        }
+
+        private static void DrawSuperimposeZone(SpriteBatch spriteBatch, DockBlock block)
+        {
+            Rectangle zone = ComputeSuperimposeZone(block.Bounds);
+            if (zone.Width < 20 || zone.Height < 20)
+            {
+                return;
+            }
+
+            bool isHit = _dropPreview.HasValue && _dropPreview.Value.IsOverlayDrop &&
+                         _dropPreview.Value.TargetBlock == block;
+
+            Color fill = isHit ? UIStyle.AccentMuted * 0.5f : UIStyle.AccentMuted * 0.2f;
+            Color border = isHit ? UIStyle.AccentColor : UIStyle.AccentColor * 0.5f;
+            DrawRect(spriteBatch, zone, fill);
+            DrawRectOutline(spriteBatch, zone, border, 1);
+
+            UIStyle.UIFont font = UIStyle.FontBody;
+            if (font.IsAvailable)
+            {
+                const string label = "Superimpose";
+                Vector2 size = font.MeasureString(label);
+                if (size.X <= zone.Width - 4 && size.Y <= zone.Height - 4)
+                {
+                    Vector2 pos = new(zone.X + (zone.Width - size.X) / 2f, zone.Y + (zone.Height - size.Y) / 2f);
+                    font.DrawString(spriteBatch, label, pos, border);
+                }
+            }
+        }
+
+        private static void DrawOverlayBlocks(SpriteBatch spriteBatch, int dragBarHeight)
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay)
+                {
+                    continue;
+                }
+
+                DrawBlockBackground(spriteBatch, block, dragBarHeight);
+                DrawBlockContent(spriteBatch, block, dragBarHeight);
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay)
+                {
+                    continue;
+                }
+
+                RedrawBlockHeader(spriteBatch, block, dragBarHeight);
             }
         }
 
         private static void DrawResizeEdges(SpriteBatch spriteBatch)
         {
-            if (_resizeEdges.Count == 0)
-            {
-                return;
-            }
-
             foreach (ResizeEdge handle in _resizeEdges)
             {
                 Color color = UIStyle.ResizeEdgeColor;
@@ -4386,34 +5405,123 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 bool isHovered = _hoveredResizeEdge.HasValue && ReferenceEquals(handle.Node, _hoveredResizeEdge.Value.Node);
 
                 if (!isActive && _activeCornerHandle.HasValue && CornerContainsResizeEdge(_activeCornerHandle.Value, handle))
-                {
                     isActive = true;
-                }
-
                 if (!isHovered && _hoveredCornerHandle.HasValue && CornerContainsResizeEdge(_hoveredCornerHandle.Value, handle))
-                {
                     isHovered = true;
-                }
 
                 if (isActive)
-                {
                     color = UIStyle.ResizeEdgeActiveColor;
-                }
                 else if (isHovered)
-                {
                     color = UIStyle.ResizeEdgeHoverColor;
-                }
 
                 DrawRect(spriteBatch, handle.Bounds, color);
+            }
+
+            // Overlay resize edges (same visual style as panel edges)
+            foreach (OverlayResizeEdge edge in _overlayResizeEdges)
+            {
+                Color color = UIStyle.ResizeEdgeColor;
+
+                bool isActive = (_activeOverlayResizeEdge.HasValue && ReferenceEquals(_activeOverlayResizeEdge.Value.Overlay, edge.Overlay) && _activeOverlayResizeEdge.Value.Side == edge.Side)
+                    || (_activeOverlayCornerHandle.HasValue &&
+                        (ReferenceEquals(_activeOverlayCornerHandle.Value.VerticalEdge.Overlay, edge.Overlay) &&
+                         (_activeOverlayCornerHandle.Value.VerticalEdge.Side == edge.Side || _activeOverlayCornerHandle.Value.HorizontalEdge.Side == edge.Side)));
+
+                bool isHovered = !isActive &&
+                    ((_hoveredOverlayResizeEdge.HasValue && ReferenceEquals(_hoveredOverlayResizeEdge.Value.Overlay, edge.Overlay) && _hoveredOverlayResizeEdge.Value.Side == edge.Side)
+                    || (_hoveredOverlayCornerHandle.HasValue &&
+                        (ReferenceEquals(_hoveredOverlayCornerHandle.Value.VerticalEdge.Overlay, edge.Overlay) &&
+                         (_hoveredOverlayCornerHandle.Value.VerticalEdge.Side == edge.Side || _hoveredOverlayCornerHandle.Value.HorizontalEdge.Side == edge.Side))));
+
+                if (isActive)
+                    color = UIStyle.ResizeEdgeActiveColor;
+                else if (isHovered)
+                    color = UIStyle.ResizeEdgeHoverColor;
+
+                DrawRect(spriteBatch, edge.Bounds, color);
             }
         }
 
         private static void DrawBlockBackground(SpriteBatch spriteBatch, DockBlock block, int dragBarHeight)
         {
             PanelGroup group = GetPanelGroupForBlock(block);
-            bool isTransparentBlock = block.Kind == DockBlockKind.Transparent;
-            DrawRect(spriteBatch, block.Bounds, isTransparentBlock ? Core.TransparentWindowColor : UIStyle.BlockBackground);
+
+            // Determine background color based on opacity
+            Color bgColor;
+            if (block.IsOverlay)
+            {
+                // Overlay blocks blend into the parent; never punch a chroma-key hole through the window.
+                if (BlockHasOpacitySlider(block) && block.BackgroundOpacity <= 0f)
+                    return; // fully transparent — skip drawing background so parent content shows through
+                bgColor = BlockHasOpacitySlider(block) && block.BackgroundOpacity < 1f
+                    ? UIStyle.BlockBackground * block.BackgroundOpacity
+                    : UIStyle.BlockBackground;
+            }
+            else if (BlockHasOpacitySlider(block) && block.BackgroundOpacity <= 0f)
+            {
+                // Fully transparent blank block: punch through to OS window background
+                DrawRect(spriteBatch, block.Bounds, Core.TransparentWindowColor);
+                DrawRectOutline(spriteBatch, block.Bounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+                return;
+            }
+            else if (BlockHasOpacitySlider(block) && block.BackgroundOpacity < 1f)
+            {
+                // Partial global transparency: the window uses a color-key and does NOT support
+                // per-pixel alpha, so we simulate partial transparency with horizontal stripe dithering.
+                // Each 1-px row is either the key color (transparent to OS) or the opaque background,
+                // distributed evenly via a Bresenham error-term so the density matches the opacity.
+                DrawGlobalTransparentDithered(spriteBatch, block.Bounds, block.BackgroundOpacity);
+                DrawRectOutline(spriteBatch, block.Bounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+                return;
+            }
+            else
+            {
+                bgColor = UIStyle.BlockBackground;
+            }
+
+            DrawRect(spriteBatch, block.Bounds, bgColor);
             DrawRectOutline(spriteBatch, block.Bounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+        }
+
+        // Simulates partial global (window) transparency using 1-px horizontal stripe dithering.
+        // The window uses LWA_COLORKEY so only exact key-color pixels are transparent.
+        // Rows are distributed with a Bresenham error term so the opaque fraction equals `opacity`.
+        private static void DrawGlobalTransparentDithered(SpriteBatch spriteBatch, Rectangle bounds, float opacity)
+        {
+            if (bounds.Width <= 0 || bounds.Height <= 0) return;
+
+            // Transparency fraction (0 = fully opaque, 1 = fully transparent)
+            float transparency = 1f - MathHelper.Clamp(opacity, 0f, 1f);
+
+            int totalRows = bounds.Height;
+            // Number of transparent rows = round(transparency * totalRows)
+            int transparentRows = (int)MathF.Round(transparency * totalRows);
+            int opaqueRows = totalRows - transparentRows;
+
+            // Bresenham-distribute transparent rows among all rows
+            // We emit a transparent row each time the error threshold is crossed.
+            int err = totalRows / 2;
+            for (int i = 0; i < totalRows; i++)
+            {
+                int y = bounds.Y + i;
+                err -= transparentRows;
+                Color rowColor;
+                if (err < 0)
+                {
+                    err += totalRows;
+                    rowColor = Core.TransparentWindowColor;
+                }
+                else
+                {
+                    rowColor = UIStyle.BlockBackground;
+                }
+                DrawRect(spriteBatch, new Rectangle(bounds.X, y, bounds.Width, 1), rowColor);
+            }
+        }
+
+        private static void RedrawBlockHeader(SpriteBatch spriteBatch, DockBlock block, int dragBarHeight, bool mouseBlockedByOverlay = false)
+        {
+            PanelGroup group = GetPanelGroupForBlock(block);
 
             Rectangle groupBar = GetGroupBarBounds(block, group, dragBarHeight);
             bool showTabs = groupBar != Rectangle.Empty && (group?.Blocks.Count ?? 0) > 0;
@@ -4436,7 +5544,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                     if (panelLockButtonBounds != Rectangle.Empty)
                     {
-                        bool panelLocked = IsPanelLocked(group);
+                        // Use the stored lock state for display so the icon always reflects what is
+                        // actually locked, even when BlockMode temporarily bypasses lock restrictions.
+                        bool panelLocked = group != null ? (group.IsLocked && !_panelInteractionLockActive) : IsBlockLockEnabled(block);
                         bool hovered = panelLockButtonBounds.Contains(_mousePosition);
                         DrawPanelLockToggleButton(spriteBatch, panelLockButtonBounds, panelLocked, hovered);
                     }
@@ -4452,7 +5562,27 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             if (showTabs)
             {
                 PanelGroupBarLayout layout = GetGroupBarLayoutForGroup(group, block, dragBarHeight);
-                DrawGroupBar(spriteBatch, layout, group, block);
+                bool tabSwitchRequiresBlockMode = ControlStateManager.GetSwitchState(ControlKeyMigrations.TabSwitchRequiresBlockModeKey);
+                bool canInteractWithTabs = !tabSwitchRequiresBlockMode || DockingModeEnabled;
+                bool allowHover = canInteractWithTabs && (block.IsOverlay || !mouseBlockedByOverlay);
+                DrawGroupBar(spriteBatch, layout, group, block, allowHover);
+            }
+
+            // Draw opacity slider row below the header bar, only when drag bar is hovered.
+            // Uses the same background + hover tint as the drag bar so the two areas read as one unit.
+            if (BlockHasOpacitySlider(block))
+            {
+                Rectangle row = GetOpacityRowBounds(block, group, dragBarHeight);
+                if (row != Rectangle.Empty)
+                {
+                    DrawRect(spriteBatch, row, UIStyle.DragBarBackground);
+                    bool dragBarHovered = string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal);
+                    if (dragBarHovered)
+                    {
+                        DrawRect(spriteBatch, row, UIStyle.DragBarHoverTint);
+                    }
+                    DrawOpacitySlider(spriteBatch, block, dragBarHeight);
+                }
             }
         }
 
@@ -4526,7 +5656,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             Texture2D icon = isLocked ? _lockedIcon : _unlockedIcon;
             if (icon != null && !icon.IsDisposed)
             {
-                DrawCenteredIcon(spriteBatch, icon, bounds, Color.White);
+                int inset = Math.Max(3, bounds.Width / 5);
+                Rectangle iconBounds = new(bounds.X + inset, bounds.Y + inset,
+                    Math.Max(2, bounds.Width - inset * 2), Math.Max(2, bounds.Height - inset * 2));
+                DrawCenteredIcon(spriteBatch, icon, iconBounds, Color.White);
                 return;
             }
 
@@ -4575,7 +5708,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             Texture2D icon = isLocked ? _lockedIcon : _unlockedIcon;
             if (icon != null && !icon.IsDisposed)
             {
-                DrawCenteredIcon(spriteBatch, icon, bounds, Color.White);
+                int inset = Math.Max(3, bounds.Width / 5);
+                Rectangle iconBounds = new(bounds.X + inset, bounds.Y + inset,
+                    Math.Max(2, bounds.Width - inset * 2), Math.Max(2, bounds.Height - inset * 2));
+                DrawCenteredIcon(spriteBatch, icon, iconBounds, Color.White);
                 return;
             }
 
@@ -4640,7 +5776,55 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             spriteBatch.Draw(icon, position, null, color, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
-        private static void DrawGroupBar(SpriteBatch spriteBatch, PanelGroupBarLayout layout, PanelGroup group, DockBlock activeBlock)
+        private static bool IsMouseOnAnyOverlayDragBar(int dragBarHeight)
+        {
+            if (dragBarHeight <= 0) return false;
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay) continue;
+                Rectangle dragBar = block.GetDragBarBounds(dragBarHeight);
+                if (dragBar != Rectangle.Empty && dragBar.Contains(_mousePosition))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool IsMouseInsideAnyOverlayBlock()
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay) continue;
+                if (block.Bounds.Contains(_mousePosition)) return true;
+            }
+            return false;
+        }
+
+        private static bool IsMouseCoveredByOverlayGroupBar(int dragBarHeight)
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay)
+                {
+                    continue;
+                }
+
+                PanelGroup group = GetPanelGroupForBlock(block);
+                if (group == null)
+                {
+                    continue;
+                }
+
+                Rectangle groupBar = GetGroupBarBounds(block, group, dragBarHeight);
+                if (groupBar != Rectangle.Empty && groupBar.Contains(_mousePosition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void DrawGroupBar(SpriteBatch spriteBatch, PanelGroupBarLayout layout, PanelGroup group, DockBlock activeBlock, bool allowHover = true)
         {
             if (layout == null || group == null || activeBlock == null || layout.Tabs.Count == 0)
             {
@@ -4655,7 +5839,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             UIStyle.UIFont tabFont = UIStyle.FontTech;
-            bool locked = IsBlockLocked(activeBlock);
+            // Use stored lock state for display so icons/dimming reflect actual lock state
+            // even when BlockMode is bypassing the lock for interaction purposes.
+            bool locked = IsBlockLockEnabled(activeBlock);
             bool panelLocked = IsPanelLocked(group);
 
             foreach (TabHitRegion tab in layout.Tabs)
@@ -4666,11 +5852,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
 
                 bool isActive = string.Equals(group.ActiveBlockId, tab.BlockId, StringComparison.OrdinalIgnoreCase);
-                bool isHovered = tab.Bounds.Contains(_mousePosition);
-                bool closeHovered = tab.CloseBounds.Contains(_mousePosition);
-                bool ungroupHovered = !panelLocked && tab.UngroupBounds.Contains(_mousePosition);
-                bool lockHovered = !panelLocked && tab.LockBounds.Contains(_mousePosition);
-                bool tabLocked = IsBlockLocked(tabBlock);
+                bool isHovered = allowHover && tab.Bounds.Contains(_mousePosition);
+                bool closeHovered = allowHover && tab.CloseBounds.Contains(_mousePosition);
+                bool ungroupHovered = allowHover && !panelLocked && tab.UngroupBounds.Contains(_mousePosition);
+                bool lockHovered = allowHover && !panelLocked && tab.LockBounds.Contains(_mousePosition);
+                bool tabLocked = IsBlockLockEnabled(tabBlock);
 
                 Color background = TabInactiveBackground;
                 if (isActive)
@@ -4684,7 +5870,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 Color textColor = isActive ? UIStyle.TextColor : UIStyle.MutedTextColor;
 
-                if (locked)
+                if (tabLocked)
                 {
                     background *= 0.65f;
                     textColor = UIStyle.MutedTextColor;
@@ -4693,7 +5879,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 DrawRect(spriteBatch, tab.Bounds, background);
                 DrawRectOutline(spriteBatch, tab.Bounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
 
-                if (isHovered && !locked)
+                if (isHovered)
                 {
                     int hintWidth = Math.Max(0, tab.Bounds.Width - 12);
                     if (hintWidth > 0)
@@ -4807,11 +5993,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static void DrawCornerHandles(SpriteBatch spriteBatch)
         {
-            if (_cornerHandles.Count == 0)
-            {
-                return;
-            }
-
             foreach (CornerHandle corner in _cornerHandles)
             {
                 Color color = UIStyle.ResizeEdgeColor;
@@ -4821,11 +6002,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (isActiveCorner)
                 {
                     color = UIStyle.ResizeEdgeActiveColor;
-
                     if (_activeCornerSnapPosition.HasValue)
-                    {
                         bounds = CenterRectangle(bounds, _activeCornerSnapPosition.Value);
-                    }
                 }
                 else if (_hoveredCornerHandle.HasValue && CornerEquals(corner, _hoveredCornerHandle.Value))
                 {
@@ -4833,6 +6011,27 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
 
                 DrawRect(spriteBatch, bounds, color);
+            }
+
+            // Overlay corner handles (same visual style)
+            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
+            {
+                Color color = UIStyle.ResizeEdgeColor;
+
+                bool isActive = _activeOverlayCornerHandle.HasValue &&
+                    ReferenceEquals(_activeOverlayCornerHandle.Value.VerticalEdge.Overlay, corner.VerticalEdge.Overlay) &&
+                    _activeOverlayCornerHandle.Value.VerticalEdge.Side == corner.VerticalEdge.Side;
+
+                bool isHovered = !isActive && _hoveredOverlayCornerHandle.HasValue &&
+                    ReferenceEquals(_hoveredOverlayCornerHandle.Value.VerticalEdge.Overlay, corner.VerticalEdge.Overlay) &&
+                    _hoveredOverlayCornerHandle.Value.VerticalEdge.Side == corner.VerticalEdge.Side;
+
+                if (isActive)
+                    color = UIStyle.ResizeEdgeActiveColor;
+                else if (isHovered)
+                    color = UIStyle.ResizeEdgeHoverColor;
+
+                DrawRect(spriteBatch, corner.Bounds, color);
             }
         }
 
@@ -4866,9 +6065,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 case DockBlockKind.Game:
                     GameBlock.Draw(spriteBatch, contentBounds, _worldRenderTarget);
                     break;
-                case DockBlockKind.Transparent:
-                    TransparentBlock.Draw(spriteBatch, contentBounds);
-                    break;
                 case DockBlockKind.Blank:
                     BlankBlock.Draw(spriteBatch, contentBounds, GetBlankBlockLabelOpacity(block));
                     break;
@@ -4899,6 +6095,18 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 case DockBlockKind.Specs:
                     SpecsBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.Bars:
+                    BarsBlock.Draw(spriteBatch, contentBounds);
+                    break;
+                case DockBlockKind.Chat:
+                    ChatBlock.Draw(spriteBatch, contentBounds);
+                    break;
+                case DockBlockKind.Performance:
+                    PerformanceBlock.Draw(spriteBatch, contentBounds);
+                    break;
+                case DockBlockKind.Math:
+                    MathBlock.Draw(spriteBatch, contentBounds);
+                    break;
             }
         }
 
@@ -4908,18 +6116,33 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 _activeResizeEdge != null || _activeCornerHandle != null)
             {
                 _tooltipHoveredRowKey = null;
+                _tooltipHoveredRowLabel = null;
                 _tooltipHoverElapsed = 0d;
                 return;
             }
 
-            string rowKey = ControlsBlock.GetHoveredRowKey()
-                ?? BackendBlock.GetHoveredRowKey()
-                ?? SpecsBlock.GetHoveredRowKey()
-                ?? ColorSchemeBlock.GetHoveredRowKey();
+            string rowKey =
+                (!IsBlockLocked(DockBlockKind.Controls)     ? ControlsBlock.GetHoveredRowKey()    : null)
+                ?? (!IsBlockLocked(DockBlockKind.Backend)   ? BackendBlock.GetHoveredRowKey()      : null)
+                ?? (!IsBlockLocked(DockBlockKind.Specs)     ? SpecsBlock.GetHoveredRowKey()        : null)
+                ?? (!IsBlockLocked(DockBlockKind.ColorScheme) ? ColorSchemeBlock.GetHoveredRowKey() : null)
+                ?? (!IsBlockLocked(DockBlockKind.Math)      ? MathBlock.GetHoveredRowKey()         : null)
+                ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredButtonKey() : null)
+                ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredPropRowKey() : null);
+
+            string rowLabel = rowKey != null
+                ? (ControlsBlock.GetHoveredRowLabel()
+                    ?? BackendBlock.GetHoveredRowLabel()
+                    ?? SpecsBlock.GetHoveredRowLabel()
+                    ?? ColorSchemeBlock.GetHoveredRowLabel()
+                    ?? MathBlock.GetHoveredRowLabel()
+                    ?? PropertiesBlock.GetHoveredPropRowLabel())
+                : null;
 
             if (!string.Equals(rowKey, _tooltipHoveredRowKey, StringComparison.OrdinalIgnoreCase))
             {
                 _tooltipHoveredRowKey = rowKey;
+                _tooltipHoveredRowLabel = rowLabel;
                 _tooltipHoverElapsed = 0d;
             }
             else if (rowKey != null)
@@ -4928,69 +6151,129 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
         }
 
+        private const string BulletPrefix = "\u2022 "; // "• "
+
         private static void DrawTooltip(SpriteBatch spriteBatch)
         {
             if (_tooltipHoverElapsed < TooltipDelaySeconds || string.IsNullOrEmpty(_tooltipHoveredRowKey))
-            {
                 return;
-            }
 
-            if (!_blockTooltips.TryGetValue(_tooltipHoveredRowKey, out string tooltipText) || string.IsNullOrEmpty(tooltipText))
-            {
+            if (!_blockTooltips.TryGetValue(_tooltipHoveredRowKey, out var tooltipEntries)
+                || tooltipEntries == null || tooltipEntries.Length == 0)
                 return;
-            }
 
-            UIStyle.UIFont font = UIStyle.FontTech;
-            if (!font.IsAvailable)
-            {
-                return;
-            }
+            UIStyle.UIFont font       = UIStyle.FontTech;
+            if (!font.IsAvailable) return;
+            UIStyle.UIFont boldFont   = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Bold);
+            UIStyle.UIFont italicFont = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Italic);
 
-            List<string> lines = WrapTooltipText(font, tooltipText, TooltipMaxWidth - TooltipPadding * 2);
-            if (lines.Count == 0)
-            {
-                return;
-            }
-
-            float maxLineWidth = 0f;
-            foreach (string line in lines)
-            {
-                float w = font.MeasureString(line).X;
-                if (w > maxLineWidth) maxLineWidth = w;
-            }
+            // Label and DataType only apply to the first tooltip box.
+            bool hasLabel    = boldFont.IsAvailable && !string.IsNullOrEmpty(_tooltipHoveredRowLabel);
+            bool hasDataType = italicFont.IsAvailable && !string.IsNullOrEmpty(tooltipEntries[0].DataType);
 
             float lineHeight = font.LineHeight;
-            int boxWidth = (int)maxLineWidth + TooltipPadding * 2;
-            int boxHeight = (int)(lines.Count * lineHeight) + TooltipPadding * 2;
+            float boldH      = boldFont.IsAvailable ? boldFont.LineHeight : lineHeight;
+            int   innerWidth = TooltipMaxWidth - TooltipPadding * 2;
 
+            const float LabelBodyGap = 4f;
+            const float DataTypeGap  = 8f;
+            const int   BoxGap       = 4;
+
+            // ── Pre-compute each tooltip box ───────────────────────────────────────
+            var boxes = new (List<string> Lines, int BoxW, int BoxH)[tooltipEntries.Length];
+            for (int bi = 0; bi < tooltipEntries.Length; bi++)
+            {
+                bool isFirst = bi == 0;
+                bool showLbl = isFirst && hasLabel;
+                bool showDt  = isFirst && hasDataType;
+                List<string> lines = WrapTooltipLines(font, tooltipEntries[bi].Text, innerWidth);
+
+                float maxW = 0f;
+                if (showLbl)
+                {
+                    float lw = boldFont.MeasureString(_tooltipHoveredRowLabel).X;
+                    if (showDt) lw += DataTypeGap + italicFont.MeasureString(tooltipEntries[0].DataType).X;
+                    if (lw > maxW) maxW = lw;
+                }
+                foreach (string ln in lines) { float w = font.MeasureString(ln).X; if (w > maxW) maxW = w; }
+
+                float hdrH = showLbl ? boldH + LabelBodyGap : 0f;
+                int   bW   = Math.Min((int)maxW, innerWidth) + TooltipPadding * 2;
+                int   bH   = (int)(hdrH + lines.Count * lineHeight) + TooltipPadding * 2;
+                boxes[bi]  = (lines, bW, bH);
+            }
+
+            // ── Check there is something to show ──────────────────────────────────
+            bool anyContent = hasLabel;
+            if (!anyContent)
+                foreach (var box in boxes)
+                    if (box.Lines.Count > 0) { anyContent = true; break; }
+            if (!anyContent) return;
+
+            // ── Total dimensions ───────────────────────────────────────────────────
+            int totalH = 0, maxW2 = 0;
+            for (int i = 0; i < boxes.Length; i++)
+            {
+                if (boxes[i].Lines.Count == 0 && !(i == 0 && hasLabel)) continue;
+                totalH += boxes[i].BoxH + BoxGap;
+                if (boxes[i].BoxW > maxW2) maxW2 = boxes[i].BoxW;
+            }
+            if (totalH == 0) return;
+            totalH -= BoxGap; // remove trailing gap
+
+            // ── Position ───────────────────────────────────────────────────────────
             int tipX = _mousePosition.X + 14;
             int tipY = _mousePosition.Y + 18;
-
-            if (tipX + boxWidth > _layoutBounds.Right)
-            {
-                tipX = _mousePosition.X - boxWidth - 4;
-            }
-
-            if (tipY + boxHeight > _layoutBounds.Bottom)
-            {
-                tipY = _mousePosition.Y - boxHeight - 4;
-            }
-
+            if (tipX + maxW2  > _layoutBounds.Right)  tipX = _mousePosition.X - maxW2  - 4;
+            if (tipY + totalH > _layoutBounds.Bottom) tipY = _mousePosition.Y - totalH - 4;
             tipX = Math.Max(_layoutBounds.X, tipX);
             tipY = Math.Max(_layoutBounds.Y, tipY);
 
-            Rectangle bgRect = new(tipX, tipY, boxWidth, boxHeight);
-            DrawRect(spriteBatch, bgRect, Color.White);
-            DrawRectOutline(spriteBatch, bgRect, new Color(180, 180, 180), UIStyle.BlockBorderThickness);
-
-            for (int i = 0; i < lines.Count; i++)
+            // ── Draw each tooltip box ──────────────────────────────────────────────
+            var bulletColor = new Color(60, 60, 60);
+            int curY = tipY;
+            for (int bi = 0; bi < boxes.Length; bi++)
             {
-                Vector2 textPos = new(tipX + TooltipPadding, tipY + TooltipPadding + i * lineHeight);
-                font.DrawString(spriteBatch, lines[i], textPos, Color.Black);
+                bool isFirst = bi == 0;
+                bool showLbl = isFirst && hasLabel;
+                bool showDt  = isFirst && hasDataType;
+                (List<string> lines, int bW, int bH) = boxes[bi];
+                if (lines.Count == 0 && !showLbl) continue;
+
+                Rectangle bg = new(tipX, curY, bW, bH);
+                DrawRect(spriteBatch, bg, Color.White);
+                DrawRectOutline(spriteBatch, bg, new Color(180, 180, 180), UIStyle.BlockBorderThickness);
+
+                float ty = curY + TooltipPadding;
+                if (showLbl)
+                {
+                    boldFont.DrawString(spriteBatch, _tooltipHoveredRowLabel, new Vector2(tipX + TooltipPadding, ty), Color.Black);
+                    if (showDt)
+                    {
+                        float lw  = boldFont.MeasureString(_tooltipHoveredRowLabel).X;
+                        float dtx = tipX + TooltipPadding + lw + DataTypeGap;
+                        float dty = ty + (boldH - italicFont.LineHeight) * 0.5f;
+                        italicFont.DrawString(spriteBatch, tooltipEntries[0].DataType, new Vector2(dtx, dty), new Color(130, 130, 130));
+                    }
+                    ty += boldH + LabelBodyGap;
+                }
+
+                for (int li = 0; li < lines.Count; li++)
+                {
+                    string line = lines[li];
+                    Color lc = line.StartsWith(BulletPrefix, StringComparison.Ordinal) ? bulletColor : Color.Black;
+                    font.DrawString(spriteBatch, line, new Vector2(tipX + TooltipPadding, ty + li * lineHeight), lc);
+                }
+                curY += bH + BoxGap;
             }
         }
 
-        private static List<string> WrapTooltipText(UIStyle.UIFont font, string text, int maxWidth)
+        /// <summary>
+        /// Splits <paramref name="text"/> on '\n' to respect explicit line breaks, then word-wraps
+        /// each segment to fit <paramref name="maxWidth"/>. Lines that start with a bullet prefix
+        /// are kept intact so the bullet character aligns correctly.
+        /// </summary>
+        private static List<string> WrapTooltipLines(UIStyle.UIFont font, string text, int maxWidth)
         {
             var lines = new List<string>();
             if (string.IsNullOrEmpty(text) || !font.IsAvailable || maxWidth <= 0)
@@ -4998,7 +6281,23 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return lines;
             }
 
-            string[] words = text.Split(' ');
+            string[] segments = text.Split('\n');
+            foreach (string segment in segments)
+            {
+                if (string.IsNullOrEmpty(segment))
+                {
+                    continue;
+                }
+
+                WrapSingleSegment(font, segment, maxWidth, lines);
+            }
+
+            return lines;
+        }
+
+        private static void WrapSingleSegment(UIStyle.UIFont font, string segment, int maxWidth, List<string> lines)
+        {
+            string[] words = segment.Split(' ');
             var current = new System.Text.StringBuilder();
 
             foreach (string word in words)
@@ -5014,6 +6313,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     {
                         lines.Add(current.ToString());
                         current.Clear();
+                        // Continuation lines from a bullet segment do NOT get the bullet prefix re-added;
+                        // they just continue with indented spacing from the natural word-wrap break.
                         current.Append(word);
                     }
                     else
@@ -5028,9 +6329,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 lines.Add(current.ToString());
             }
-
-            return lines;
         }
+
+        // Keep old name as a thin wrapper so any other internal callers still compile.
+        private static List<string> WrapTooltipText(UIStyle.UIFont font, string text, int maxWidth)
+            => WrapTooltipLines(font, text, maxWidth);
 
         private static void UpdateBlankBlockHoverState(DockBlock block, double elapsedSeconds)
         {
@@ -5130,41 +6433,110 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 if (block == null || !block.IsVisible)
                 {
+                    // Clear any stale Interacting state so an invisible block can't permanently
+                    // hold IsAnyGuiInteracting true (e.g. after navigating away from Bars block).
+                    if (block != null)
+                        _blockInteractionStates[block.Id] = GUIInteractionState.NotHovering;
                     continue;
                 }
 
                 Rectangle contentBounds = GetPanelContentBounds(block, dragBarHeight);
+
+                // Suppress mouse input for blocks whose content area is covered by an overlay block.
+                MouseState effectiveMouse = mouseState;
+                MouseState effectivePrevMouse = previousMouseState;
+                bool suppressedByOverlay = false;
+                if (!block.IsOverlay)
+                {
+                    foreach (DockBlock overlay in _orderedBlocks)
+                    {
+                        if (!overlay.IsVisible || !overlay.IsOverlay || ReferenceEquals(overlay, block))
+                            continue;
+                        if (overlay.Bounds.Intersects(block.Bounds) && overlay.Bounds.Contains(mouseState.Position))
+                        {
+                            effectiveMouse = new MouseState(-9999, -9999, previousMouseState.ScrollWheelValue,
+                                ButtonState.Released, ButtonState.Released, ButtonState.Released,
+                                ButtonState.Released, ButtonState.Released);
+                            effectivePrevMouse = new MouseState(-9999, -9999, previousMouseState.ScrollWheelValue,
+                                ButtonState.Released, ButtonState.Released, ButtonState.Released,
+                                ButtonState.Released, ButtonState.Released);
+                            suppressedByOverlay = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Update per-block GUIInteractionState.
+                GUIInteractionState guiState;
+                if (suppressedByOverlay)
+                {
+                    guiState = GUIInteractionState.NotHovering;
+                }
+                else if (block.Kind == DockBlockKind.Game)
+                {
+                    // The game viewport is never a "GUI interaction" — clicking there is gameplay,
+                    // not a UI click. Marking it Interacting would erroneously freeze game inputs.
+                    // Use effectiveMouse so an overlay block sitting on top of the game block
+                    // prevents the game from receiving hover/input in that region.
+                    bool cursorIn = block.Bounds.Contains(effectiveMouse.Position);
+                    guiState = cursorIn ? GUIInteractionState.Hovering : GUIInteractionState.NotHovering;
+                }
+                else
+                {
+                    bool cursorIn = block.Bounds.Contains(mouseState.Position);
+                    bool effectivelyLocked = IsBlockLocked(block) || IsPanelLocked(block);
+                    if (cursorIn && mouseState.LeftButton == ButtonState.Pressed && !effectivelyLocked)
+                        guiState = GUIInteractionState.Interacting;
+                    else if (cursorIn)
+                        guiState = GUIInteractionState.Hovering;
+                    else
+                        guiState = GUIInteractionState.NotHovering;
+                }
+                _blockInteractionStates[block.Id] = guiState;
+
                 switch (block.Kind)
                 {
                     case DockBlockKind.Blank:
                         UpdateBlankBlockHoverState(block, elapsedSeconds);
                         break;
                     case DockBlockKind.Properties:
-                        PropertiesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        PropertiesBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                     case DockBlockKind.Notes:
-                        NotesBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        NotesBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                     case DockBlockKind.ColorScheme:
-                        ColorSchemeBlock.Update(gameTime, contentBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                        ColorSchemeBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse, keyboardState, previousKeyboardState);
                         break;
                 case DockBlockKind.Controls:
-                    ControlsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                    ControlsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                     break;
                 case DockBlockKind.ControlSetups:
-                    ControlSetupsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                    ControlSetupsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                     break;
                 case DockBlockKind.Backend:
-                    BackendBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                    BackendBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                     break;
                     case DockBlockKind.DebugLogs:
-                        DebugLogsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        DebugLogsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                     case DockBlockKind.Specs:
-                        SpecsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        SpecsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                     case DockBlockKind.DockingSetups:
-                        DockingSetupsBlock.Update(gameTime, contentBounds, mouseState, previousMouseState);
+                        DockingSetupsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
+                    case DockBlockKind.Bars:
+                        BarsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
+                    case DockBlockKind.Chat:
+                        ChatBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
+                    case DockBlockKind.Performance:
+                        PerformanceBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
+                    case DockBlockKind.Math:
+                        MathBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                 }
             }
@@ -5253,10 +6625,14 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static void ClearDockingDragState()
         {
+            _overlayDragPreviewBounds = null;
+            _overlayDropTargetBlock = null;
             _draggingBlock = null;
             _draggingPanel = null;
             _draggingFromTab = false;
             _dropPreview = null;
+            _superimposeLocked = false;
+            _superimposeLockedTarget = null;
             _hoveredDragBarId = null;
             _hoveredResizeEdge = null;
             _activeResizeEdge = null;
@@ -5265,6 +6641,14 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _activeCornerHandle = null;
             _activeCornerLinkedHandle = null;
             ClearCornerSnap();
+            _opacitySliderDragging = false;
+            _opacitySliderDraggingId = null;
+            _opacitySliderTrackBounds = Rectangle.Empty;
+            _opacityExpandedId = null;
+            _hoveredOverlayResizeEdge = null;
+            _activeOverlayResizeEdge = null;
+            _hoveredOverlayCornerHandle = null;
+            _activeOverlayCornerHandle = null;
         }
 
         private static void ResetOverlayLayout()
@@ -5494,7 +6878,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         {
             foreach (DockBlock block in _orderedBlocks)
             {
-                if (block != null && block.IsVisible)
+                if (block != null && block.IsVisible && !block.IsOverlay)
                 {
                     EnsureBlockAttachedToLayout(block);
                 }
@@ -5927,6 +7311,60 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static bool ShouldLockPanelInteractions() => false;
 
+        public static string GetHoveredBlockKind()
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay) continue;
+                if (block.Bounds.Contains(_mousePosition)) return block.Kind.ToString();
+            }
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || block.IsOverlay) continue;
+                if (block.Bounds.Contains(_mousePosition)) return block.Kind.ToString();
+            }
+            return "None";
+        }
+
+        public static string GetHoveredDragBarKind()
+        {
+            if (string.IsNullOrEmpty(_hoveredDragBarId)) return "None";
+            return _blocks.TryGetValue(_hoveredDragBarId, out DockBlock b) ? b.Kind.ToString() : "None";
+        }
+
+        public static bool IsAnyGuiInteracting
+        {
+            get
+            {
+                // Primary: current-frame accurate ownership set by PreUpdateInteractionStates().
+                if (_uiOwnsLeftClick) return true;
+                // Fallback: legacy drag/resize states tracked by the main Update loop.
+                foreach (GUIInteractionState s in _blockInteractionStates.Values)
+                    if (s == GUIInteractionState.Interacting) return true;
+                return false;
+            }
+        }
+
+        public static GUIInteractionState GetBlockInteractionState(DockBlockKind kind)
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block.Kind == kind && _blockInteractionStates.TryGetValue(block.Id, out GUIInteractionState s))
+                    return s;
+            }
+            return GUIInteractionState.NotHovering;
+        }
+
+        public static string GetInteractingBlockKind()
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (_blockInteractionStates.TryGetValue(block.Id, out GUIInteractionState s) && s == GUIInteractionState.Interacting)
+                    return block.Kind.ToString();
+            }
+            return "None";
+        }
+
         public static bool IsCursorWithinGameBlock()
         {
             if (Core.Instance == null)
@@ -5952,7 +7390,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             Point cursor = Mouse.GetState().Position;
-            return bounds.Contains(cursor);
+            if (!bounds.Contains(cursor)) return false;
+
+            // Cursor is within game block bounds — but if an overlay covers it, the game is not the active target.
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay) continue;
+                if (block.Bounds.Contains(cursor)) return false;
+            }
+            return true;
         }
 
         private static string GetBlockHotkeyLabel()
@@ -6000,6 +7446,47 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
         }
 
+        private static void UpdateOverlayBlockBounds()
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !block.IsOverlay || string.IsNullOrEmpty(block.OverlayParentId))
+                {
+                    continue;
+                }
+
+                if (!_blocks.TryGetValue(block.OverlayParentId, out DockBlock parent) || !parent.IsVisible)
+                {
+                    // Remember that we suppressed this overlay due to an inactive parent
+                    // so we can restore it when the parent becomes visible again.
+                    if (block.IsVisible)
+                        _parentSuppressedOverlays.Add(block.Id);
+                    block.IsVisible = false;
+                    continue;
+                }
+
+                // Parent is visible — restore overlay if we were the ones who hid it.
+                if (_parentSuppressedOverlays.Remove(block.Id))
+                    block.IsVisible = true;
+
+                Rectangle pb = parent.Bounds;
+                if (pb.Width <= 0 || pb.Height <= 0)
+                {
+                    continue;
+                }
+
+                int w = Math.Max(block.MinWidth, (int)(pb.Width * block.OverlayRelWidth));
+                int h = Math.Max(block.MinHeight, (int)(pb.Height * block.OverlayRelHeight));
+                int x = pb.X + (int)(pb.Width * block.OverlayRelX);
+                int y = pb.Y + (int)(pb.Height * block.OverlayRelY);
+
+                x = Math.Clamp(x, pb.X, Math.Max(pb.X, pb.Right - w));
+                y = Math.Clamp(y, pb.Y, Math.Max(pb.Y, pb.Bottom - h));
+
+                block.Bounds = new Rectangle(x, y, w, h);
+            }
+        }
+
         private static void UpdateLayoutCache()
         {
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
@@ -6024,6 +7511,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             EnsureVisibleBlocksAttachedToLayout();
+            UpdateOverlayBlockBounds();
 
             if (!_layoutDirty)
             {
@@ -6111,7 +7599,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             foreach (DockBlock block in _orderedBlocks)
             {
-                if (block == null)
+                if (block == null || block.IsOverlay)
                 {
                     continue;
                 }
@@ -6157,7 +7645,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             HashSet<string> layoutVisibleIds = visibleInLayout != null
                 ? new HashSet<string>(visibleInLayout, StringComparer.OrdinalIgnoreCase)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            HashSet<string> intendedVisibleIds = new(_orderedBlocks.Where(block => block != null && block.IsVisible).Select(block => block.Id), StringComparer.OrdinalIgnoreCase);
+            // Overlay blocks are visible but intentionally absent from the layout tree
+            HashSet<string> intendedVisibleIds = new(_orderedBlocks.Where(block => block != null && block.IsVisible && !block.IsOverlay).Select(block => block.Id), StringComparer.OrdinalIgnoreCase);
 
             List<string> missingFromLayout = intendedVisibleIds.Where(id => !layoutVisibleIds.Contains(id)).ToList();
             List<string> unexpectedlyVisible = layoutVisibleIds.Where(id => !intendedVisibleIds.Contains(id)).ToList();
@@ -6302,6 +7791,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _resizeEdges.Clear();
             CollectResizeEdges(_rootNode, 0);
             RebuildCornerHandles();
+            CollectOverlayResizeHandles();
 
             if (_hoveredResizeEdge.HasValue)
             {
@@ -6489,6 +7979,212 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
         }
 
+        // ----- Overlay resize edge collection & logic -----
+
+        private const float OverlayEdgeSnapTolerance = 0.001f;
+
+        private static void CollectOverlayResizeHandles()
+        {
+            _overlayResizeEdges.Clear();
+            _overlayCornerHandles.Clear();
+
+            int t = Math.Max(2, UIStyle.ResizeEdgeThickness);
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay || string.IsNullOrEmpty(block.OverlayParentId))
+                    continue;
+
+                if (!_blocks.TryGetValue(block.OverlayParentId, out DockBlock parent) || !parent.IsVisible)
+                    continue;
+
+                PanelGroup group = GetPanelGroupForBlock(block);
+                if (group != null && IsPanelLocked(group))
+                    continue;
+
+                Rectangle b = block.Bounds;
+                bool snappedLeft   = block.OverlayRelX <= OverlayEdgeSnapTolerance;
+                bool snappedTop    = block.OverlayRelY <= OverlayEdgeSnapTolerance;
+                bool snappedRight  = (block.OverlayRelX + block.OverlayRelWidth)  >= 1f - OverlayEdgeSnapTolerance;
+                bool snappedBottom = (block.OverlayRelY + block.OverlayRelHeight) >= 1f - OverlayEdgeSnapTolerance;
+
+                if (!snappedLeft)
+                    _overlayResizeEdges.Add(new OverlayResizeEdge(block, parent, DockSplitOrientation.Vertical,   new Rectangle(b.X, b.Y, t, b.Height), OverlayEdgeSide.Left));
+                if (!snappedRight)
+                    _overlayResizeEdges.Add(new OverlayResizeEdge(block, parent, DockSplitOrientation.Vertical,   new Rectangle(b.Right - t, b.Y, t, b.Height), OverlayEdgeSide.Right));
+                if (!snappedTop)
+                    _overlayResizeEdges.Add(new OverlayResizeEdge(block, parent, DockSplitOrientation.Horizontal, new Rectangle(b.X, b.Y, b.Width, t), OverlayEdgeSide.Top));
+                if (!snappedBottom)
+                    _overlayResizeEdges.Add(new OverlayResizeEdge(block, parent, DockSplitOrientation.Horizontal, new Rectangle(b.X, b.Bottom - t, b.Width, t), OverlayEdgeSide.Bottom));
+            }
+
+            // Build corner handles where vertical and horizontal edges of the SAME overlay block intersect
+            foreach (OverlayResizeEdge ve in _overlayResizeEdges)
+            {
+                if (ve.Orientation != DockSplitOrientation.Vertical) continue;
+                foreach (OverlayResizeEdge he in _overlayResizeEdges)
+                {
+                    if (he.Orientation != DockSplitOrientation.Horizontal) continue;
+                    if (!ReferenceEquals(ve.Overlay, he.Overlay)) continue;
+
+                    Rectangle overlap = Rectangle.Intersect(ve.Bounds, he.Bounds);
+                    if (overlap.Width > 0 && overlap.Height > 0)
+                    {
+                        _overlayCornerHandles.Add(new OverlayCornerHandle(ve, he, overlap));
+                    }
+                }
+            }
+        }
+
+        private static OverlayResizeEdge? HitTestOverlayResizeEdge(Point position)
+        {
+            // Prioritise corners: if the cursor is inside a corner, don't fire a lone edge
+            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
+            {
+                if (corner.Bounds.Contains(position))
+                    return null;
+            }
+
+            OverlayResizeEdge? best = null;
+            int bestDist = int.MaxValue;
+
+            foreach (OverlayResizeEdge edge in _overlayResizeEdges)
+            {
+                if (!edge.Bounds.Contains(position)) continue;
+                int axisDist = edge.Orientation == DockSplitOrientation.Vertical
+                    ? Math.Abs(position.X - (edge.Bounds.X + edge.Bounds.Width / 2))
+                    : Math.Abs(position.Y - (edge.Bounds.Y + edge.Bounds.Height / 2));
+                if (axisDist < bestDist)
+                {
+                    bestDist = axisDist;
+                    best = edge;
+                }
+            }
+            return best;
+        }
+
+        private static OverlayCornerHandle? HitTestOverlayCornerHandle(Point position)
+        {
+            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
+            {
+                if (corner.Bounds.Contains(position))
+                    return corner;
+            }
+            return null;
+        }
+
+        private static void ApplyOverlayEdgeDrag(OverlayResizeEdge edge, Point mousePos)
+        {
+            DockBlock block = edge.Overlay;
+            DockBlock parent = edge.Parent;
+            Rectangle pb = parent.Bounds;
+            if (pb.Width <= 0 || pb.Height <= 0) return;
+
+            int minW = block.MinWidth;
+            int minH = block.MinHeight;
+
+            switch (edge.Side)
+            {
+                case OverlayEdgeSide.Left:
+                {
+                    int maxX = pb.X + (int)(pb.Width * (block.OverlayRelX + block.OverlayRelWidth)) - minW;
+                    int newX = Math.Clamp(mousePos.X, pb.X, maxX);
+                    float newRelX = (float)(newX - pb.X) / pb.Width;
+                    float newRelW = block.OverlayRelX + block.OverlayRelWidth - newRelX;
+                    block.OverlayRelX = MathHelper.Clamp(newRelX, 0f, 1f);
+                    block.OverlayRelWidth = MathHelper.Clamp(newRelW, (float)minW / pb.Width, 1f - block.OverlayRelX);
+                    break;
+                }
+                case OverlayEdgeSide.Right:
+                {
+                    int minX = pb.X + (int)(pb.Width * block.OverlayRelX) + minW;
+                    int newRight = Math.Clamp(mousePos.X, minX, pb.Right);
+                    float newRelW = (float)(newRight - (pb.X + (int)(pb.Width * block.OverlayRelX))) / pb.Width;
+                    block.OverlayRelWidth = MathHelper.Clamp(newRelW, (float)minW / pb.Width, 1f - block.OverlayRelX);
+                    break;
+                }
+                case OverlayEdgeSide.Top:
+                {
+                    int maxY = pb.Y + (int)(pb.Height * (block.OverlayRelY + block.OverlayRelHeight)) - minH;
+                    int newY = Math.Clamp(mousePos.Y, pb.Y, maxY);
+                    float newRelY = (float)(newY - pb.Y) / pb.Height;
+                    float newRelH = block.OverlayRelY + block.OverlayRelHeight - newRelY;
+                    block.OverlayRelY = MathHelper.Clamp(newRelY, 0f, 1f);
+                    block.OverlayRelHeight = MathHelper.Clamp(newRelH, (float)minH / pb.Height, 1f - block.OverlayRelY);
+                    break;
+                }
+                case OverlayEdgeSide.Bottom:
+                {
+                    int minY = pb.Y + (int)(pb.Height * block.OverlayRelY) + minH;
+                    int newBottom = Math.Clamp(mousePos.Y, minY, pb.Bottom);
+                    float newRelH = (float)(newBottom - (pb.Y + (int)(pb.Height * block.OverlayRelY))) / pb.Height;
+                    block.OverlayRelHeight = MathHelper.Clamp(newRelH, (float)minH / pb.Height, 1f - block.OverlayRelY);
+                    break;
+                }
+            }
+        }
+
+        private static bool UpdateOverlayResizeState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
+        {
+            if (_activeOverlayCornerHandle.HasValue)
+            {
+                if (leftClickReleased)
+                {
+                    _activeOverlayCornerHandle = null;
+                    CollectOverlayResizeHandles();
+                    return false;
+                }
+                if (leftClickHeld)
+                {
+                    ApplyOverlayEdgeDrag(_activeOverlayCornerHandle.Value.VerticalEdge, _mousePosition);
+                    ApplyOverlayEdgeDrag(_activeOverlayCornerHandle.Value.HorizontalEdge, _mousePosition);
+                    return true;
+                }
+            }
+
+            if (_activeOverlayResizeEdge.HasValue)
+            {
+                if (leftClickReleased)
+                {
+                    _activeOverlayResizeEdge = null;
+                    CollectOverlayResizeHandles();
+                    return false;
+                }
+                if (leftClickHeld)
+                {
+                    ApplyOverlayEdgeDrag(_activeOverlayResizeEdge.Value, _mousePosition);
+                    return true;
+                }
+            }
+
+            OverlayCornerHandle? hoveredCorner = HitTestOverlayCornerHandle(_mousePosition);
+            _hoveredOverlayCornerHandle = hoveredCorner;
+
+            OverlayResizeEdge? hoveredEdge = hoveredCorner.HasValue ? null : HitTestOverlayResizeEdge(_mousePosition);
+            _hoveredOverlayResizeEdge = hoveredEdge;
+
+            if (leftClickStarted)
+            {
+                if (hoveredCorner.HasValue)
+                {
+                    _activeOverlayCornerHandle = hoveredCorner;
+                    ApplyOverlayEdgeDrag(hoveredCorner.Value.VerticalEdge, _mousePosition);
+                    ApplyOverlayEdgeDrag(hoveredCorner.Value.HorizontalEdge, _mousePosition);
+                    return true;
+                }
+                if (hoveredEdge.HasValue)
+                {
+                    _activeOverlayResizeEdge = hoveredEdge;
+                    ApplyOverlayEdgeDrag(hoveredEdge.Value, _mousePosition);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // ----- End overlay resize edge logic -----
+
         private static ResizeEdge? FindResizeEdgeForNode(SplitNode node)
         {
             if (node == null)
@@ -6647,6 +8343,12 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _activeCornerHandle = null;
             _activeCornerLinkedHandle = null;
             ClearCornerSnap();
+            _overlayResizeEdges.Clear();
+            _hoveredOverlayResizeEdge = null;
+            _activeOverlayResizeEdge = null;
+            _overlayCornerHandles.Clear();
+            _hoveredOverlayCornerHandle = null;
+            _activeOverlayCornerHandle = null;
             _hoveredDragBarId = null;
             _resizeStartBlockBounds = null;
         }
@@ -6743,20 +8445,60 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             return block != null;
         }
 
-        public static Vector2 ToGameSpace(Point windowPosition)
+        /// <summary>Maps a raw window position to game-world space, accounting for camera offset.</summary>
+        public static Vector2 ToGameSpace(Point windowPosition) => ToGameSpaceRaw(windowPosition) + CameraOffset;
+
+        /// <summary>Maps a raw window position to game-world space WITHOUT camera offset (used for pan anchor).</summary>
+        private static Vector2 ToGameSpaceRaw(Point windowPosition)
         {
             float x = windowPosition.X;
             float y = windowPosition.Y;
 
             if (_worldRenderTarget == null || _actualGameContentBounds.Width <= 0 || _actualGameContentBounds.Height <= 0)
-            {
                 return new Vector2(x, y);
-            }
 
             float relativeX = (x - _actualGameContentBounds.X) / _actualGameContentBounds.Width;
             float relativeY = (y - _actualGameContentBounds.Y) / _actualGameContentBounds.Height;
-
             return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
+        }
+
+        /// <summary>Returns the camera translation matrix for the current pan offset.</summary>
+        public static Matrix GetCameraTransform() =>
+            CameraOffset != Vector2.Zero
+                ? Matrix.CreateTranslation(-CameraOffset.X, -CameraOffset.Y, 0f)
+                : Matrix.Identity;
+
+        // ── Camera mode helpers ───────────────────────────────────────────────
+
+        private static string GetCameraMode() =>
+            ControlStateManager.ContainsEnumState(ControlKeyMigrations.CameraLockModeKey)
+                ? ControlStateManager.GetEnumValue(ControlKeyMigrations.CameraLockModeKey)
+                : "Locked";
+
+        /// <summary>
+        /// Snaps the camera to center on the player (used by Shift+Space in Free mode).
+        /// Does nothing if the player or render target is unavailable.
+        /// </summary>
+        public static void SnapCameraToPlayer()
+        {
+            if (Core.Instance?.Player == null || _worldRenderTarget == null) return;
+            var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
+            CameraOffset = Core.Instance.Player.Position - renderCenter;
+        }
+
+        /// <summary>
+        /// Resets the Locked-mode camera offset so the next follow-update centers on the player.
+        /// Used by Shift+Space in Locked mode.
+        /// </summary>
+        public static void ResetLockedCameraOffset()
+        {
+            _lockedCameraOffset = Vector2.Zero;
+        }
+
+        public static void LoadCameraSnapRange()
+        {
+            float val = DatabaseFetch.GetValue<float>("GeneralSettings", "Value", "SettingKey", "CameraSnapRange");
+            if (val > 0f) _cameraSnapRange = val;
         }
 
         private static Rectangle GetCurrentGameContentBounds()
@@ -6783,8 +8525,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return false;
             }
 
-            float normalizedX = gamePosition.X / _worldRenderTarget.Width;
-            float normalizedY = gamePosition.Y / _worldRenderTarget.Height;
+            // Subtract camera offset: a game object at gamePosition is rendered at (gamePosition - CameraOffset).
+            float renderX = gamePosition.X - CameraOffset.X;
+            float renderY = gamePosition.Y - CameraOffset.Y;
+            float normalizedX = renderX / _worldRenderTarget.Width;
+            float normalizedY = renderY / _worldRenderTarget.Height;
 
             normalizedX = MathHelper.Clamp(normalizedX, 0f, 1f);
             normalizedY = MathHelper.Clamp(normalizedY, 0f, 1f);
@@ -6950,6 +8695,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             public Rectangle HighlightBounds;
             public bool IsViewportSnap;
             public bool IsTabDrop;
+            public bool IsOverlayDrop;
+            public Point OverlayDropPosition;
             public int TabInsertIndex;
             public string TargetPanelId;
         }
@@ -6968,6 +8715,40 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             public Point SnapPoint { get; }
             public bool LockX { get; }
             public bool LockY { get; }
+        }
+
+        private enum OverlayEdgeSide { Left, Right, Top, Bottom }
+
+        private readonly struct OverlayResizeEdge
+        {
+            public OverlayResizeEdge(DockBlock overlay, DockBlock parent, DockSplitOrientation orientation, Rectangle bounds, OverlayEdgeSide side)
+            {
+                Overlay = overlay;
+                Parent = parent;
+                Orientation = orientation;
+                Bounds = bounds;
+                Side = side;
+            }
+
+            public DockBlock Overlay { get; }
+            public DockBlock Parent { get; }
+            public DockSplitOrientation Orientation { get; }
+            public Rectangle Bounds { get; }
+            public OverlayEdgeSide Side { get; }
+        }
+
+        private readonly struct OverlayCornerHandle
+        {
+            public OverlayCornerHandle(OverlayResizeEdge verticalEdge, OverlayResizeEdge horizontalEdge, Rectangle bounds)
+            {
+                VerticalEdge = verticalEdge;
+                HorizontalEdge = horizontalEdge;
+                Bounds = bounds;
+            }
+
+            public OverlayResizeEdge VerticalEdge { get; }
+            public OverlayResizeEdge HorizontalEdge { get; }
+            public Rectangle Bounds { get; }
         }
     }
 }

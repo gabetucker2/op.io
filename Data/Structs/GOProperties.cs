@@ -11,6 +11,7 @@ namespace op.io
         public string  Type             { get; set; }
         public GOFlags Flags            { get; set; }
         public float   CurrentXP        { get; set; }
+        public float   MaxXP            { get; set; }
         public float   DeathPointReward { get; set; }
         public float   CurrentHealth    { get; set; }
         public float   CurrentShield    { get; set; }
@@ -23,12 +24,15 @@ namespace op.io
             Text,
             Color,
             BulletList,
-            BarGraph
+            BarGraph,
+            CombinedHealthBar,
+            Boolean
         }
 
         public readonly struct Row
         {
-            public Row(string label, string value)
+            // ── Text / basic ──────────────────────────────────────────────────────
+            public Row(string label, string value, bool isHidden = false, string[] affectsList = null)
             {
                 Kind = RowKind.Text;
                 Label = label ?? string.Empty;
@@ -37,10 +41,17 @@ namespace op.io
                 Items = Array.Empty<string>();
                 CurrentValue = 0f;
                 MaxValue = 0f;
+                CurrentShieldValue = 0f;
+                MaxShieldValue = 0f;
                 SegmentCount = 0;
+                BarFillColor = null;
+                BoolValue = false;
+                IsHidden = isHidden;
+                AffectsList = affectsList ?? Array.Empty<string>();
             }
 
-            public Row(string label, Color color, string value)
+            // ── Color swatch ──────────────────────────────────────────────────────
+            public Row(string label, Color color, string value, bool isHidden = false)
             {
                 Kind = RowKind.Color;
                 Label = label ?? string.Empty;
@@ -49,9 +60,16 @@ namespace op.io
                 Items = Array.Empty<string>();
                 CurrentValue = 0f;
                 MaxValue = 0f;
+                CurrentShieldValue = 0f;
+                MaxShieldValue = 0f;
                 SegmentCount = 0;
+                BarFillColor = null;
+                BoolValue = false;
+                IsHidden = isHidden;
+                AffectsList = Array.Empty<string>();
             }
 
+            // ── Bullet list ───────────────────────────────────────────────────────
             public Row(string label, string[] items)
             {
                 Kind = RowKind.BulletList;
@@ -61,10 +79,17 @@ namespace op.io
                 Items = items ?? Array.Empty<string>();
                 CurrentValue = 0f;
                 MaxValue = 0f;
+                CurrentShieldValue = 0f;
+                MaxShieldValue = 0f;
                 SegmentCount = 0;
+                BarFillColor = null;
+                BoolValue = false;
+                IsHidden = false;
+                AffectsList = Array.Empty<string>();
             }
 
-            public Row(string label, float currentValue, float maxValue, int segmentCount = 10)
+            // ── Bar graph ─────────────────────────────────────────────────────────
+            public Row(string label, float currentValue, float maxValue, int segmentCount = 10, Color? barFillColor = null)
             {
                 Kind = RowKind.BarGraph;
                 Label = label ?? string.Empty;
@@ -73,17 +98,71 @@ namespace op.io
                 Items = [];
                 CurrentValue = currentValue;
                 MaxValue = maxValue;
+                CurrentShieldValue = 0f;
+                MaxShieldValue = 0f;
                 SegmentCount = segmentCount;
+                BarFillColor = barFillColor;
+                BoolValue = false;
+                IsHidden = false;
+                AffectsList = Array.Empty<string>();
+            }
+
+            // ── Combined health+shield bar ────────────────────────────────────────
+            public Row(string label, float currentHealth, float maxHealth, float currentShield, float maxShield, int segmentCount)
+            {
+                Kind = RowKind.CombinedHealthBar;
+                Label = label ?? string.Empty;
+                Value = string.Empty;
+                Color = default;
+                Items = [];
+                CurrentValue = currentHealth;
+                MaxValue = maxHealth;
+                CurrentShieldValue = currentShield;
+                MaxShieldValue = maxShield;
+                SegmentCount = segmentCount;
+                BarFillColor = null;
+                BoolValue = false;
+                IsHidden = false;
+                AffectsList = Array.Empty<string>();
+            }
+
+            // ── Boolean indicator ─────────────────────────────────────────────────
+            public Row(string label, bool boolValue, bool isHidden = false)
+            {
+                Kind = RowKind.Boolean;
+                Label = label ?? string.Empty;
+                Value = string.Empty;
+                Color = default;
+                Items = Array.Empty<string>();
+                CurrentValue = 0f;
+                MaxValue = 0f;
+                CurrentShieldValue = 0f;
+                MaxShieldValue = 0f;
+                SegmentCount = 0;
+                BarFillColor = null;
+                BoolValue = boolValue;
+                IsHidden = isHidden;
+                AffectsList = Array.Empty<string>();
             }
 
             public RowKind Kind { get; }
-            public string Label { get; }
-            public string Value { get; }
-            public Color Color { get; }
+            public string  Label { get; }
+            public string  Value { get; }
+            public Color   Color { get; }
             public string[] Items { get; }
-            public float CurrentValue { get; }
-            public float MaxValue { get; }
-            public int SegmentCount { get; }
+            public float   CurrentValue { get; }
+            public float   MaxValue { get; }
+            public float   CurrentShieldValue { get; }
+            public float   MaxShieldValue { get; }
+            public int     SegmentCount { get; }
+            public Color?  BarFillColor { get; }
+            public bool    BoolValue { get; }
+
+            /// <summary>True if this is a hidden (derived) attribute.</summary>
+            public bool    IsHidden { get; }
+            /// <summary>List of other attributes this hidden attribute affects (shown in 3rd column).</summary>
+            public string[] AffectsList { get; }
+
             public int LineCount => Kind == RowKind.BulletList ? Math.Max(1, Items?.Length ?? 1) : 1;
         }
 
@@ -132,6 +211,8 @@ namespace op.io
 
         public string LockedTag => IsLocked ? "LOCKED" : string.Empty;
 
+        private const string UnitSectionTitle = "Unit";
+
         public IEnumerable<Section> Sections
         {
             get
@@ -139,109 +220,250 @@ namespace op.io
                 if (!HasTarget)
                     yield break;
 
-                // GameObject (depth 0) — base identity, physics flags, geometry, appearance
-                yield return new Section("GameObject", ObjectRows(), 0);
+                Agent agent = _target.Source as Agent;
 
-                // Body (depth 1) — groups body transform + body attributes
-                yield return new Section("Body", [], 1);
-                yield return new Section("Body Transform", BodyTransformRows(), 2);
-
-                if (_target.Source is Agent agent)
+                // ── Unit + sub-sections (Agent only, shown first) ─────────────────
+                if (agent != null)
                 {
-                    yield return new Section("Body Attributes", ReflectAttributeStruct(agent.BodyAttributes), 2);
+                    yield return new Section(UnitSectionTitle, UnitRows(agent), 0);
+                    if (agent.IsPlayer)
+                        yield return new Section($"Player: {UnitSectionTitle}", PlayerRows(agent), 2);
+                }
 
-                    // Unit (depth 1) — character-level attributes + player + barrel sub-structs
-                    yield return new Section("Unit", UnitRows(agent), 1);
-                    yield return new Section("Player", PlayerRows(agent), 2);
+                // ── GameObject ────────────────────────────────────────────────────
+                yield return new Section("GameObject", GameObjectRows(), agent != null ? 1 : 0);
 
-                    // Barrel (depth 2) — groups barrel attributes + barrel transform
-                    yield return new Section("Barrel", [], 2);
-                    yield return new Section("Barrel Attributes", ReflectAttributeStruct(agent.BarrelAttributes), 3);
+                // ── Destructible Attributes — only for destructible objects ───────
+                if (_target.IsDestructible)
+                {
+                    yield return new Section("Destructible Attributes", DestructibleRows(), 1);
+
+                    // Farm — sub-section under Destructible Attributes, farm objects only
+                    if (_target.Source.FarmAttributes.HasValue)
+                        yield return new Section("Farm", ReflectAttributeStruct(_target.Source.FarmAttributes.Value), 2);
+                }
+
+                // ── Body ──────────────────────────────────────────────────────────
+                if (agent != null)
+                {
+                    yield return new Section("Body", System.Array.Empty<Row>(), 1);
+                    yield return new Section("Body Transform", BodyTransformRows(), 2);
+                    yield return new Section("Body Attributes", BodyAttributeRows(agent), 2);
+
+                    yield return new Section("Barrel", System.Array.Empty<Row>(), 2);
+                    yield return new Section("Barrel Attributes", BarrelAttributeRows(agent), 3);
                     yield return new Section("Barrel Transform", BarrelTransformRows(agent), 3);
                 }
-            }
-        }
-
-        // Object-level rows: identity, physics flags, and parent/child relationships
-        private IEnumerable<Row> ObjectRows()
-        {
-            yield return new Row("ID", _target.Id.ToString());
-            yield return new Row("Name", string.IsNullOrWhiteSpace(_target.Name) ? "-" : _target.Name);
-            yield return new Row("Type", _target.Type);
-            yield return BuildFlagsRow();
-            yield return new Row("Current XP", $"{_target.CurrentXP:0.##}");
-            yield return new Row("Death Reward", $"{_target.DeathPointReward:0.##}");
-            yield return _target.MaxHealth > 0
-                ? new Row("CurrentHealth", _target.CurrentHealth, _target.MaxHealth)
-                : new Row("CurrentHealth", $"{_target.CurrentHealth:0.##}");
-            yield return _target.MaxShield > 0
-                ? new Row("CurrentShield", _target.CurrentShield, _target.MaxShield)
-                : new Row("CurrentShield", $"{_target.CurrentShield:0.##}");
-
-            if (_target.Source?.Parent != null)
-            {
-                GameObject p = _target.Source.Parent;
-                yield return new Row("Parent", string.IsNullOrEmpty(p.Name) ? $"{p.Type} (ID {p.ID})" : $"{p.Name} (ID {p.ID})");
-            }
-
-            if (_target.Source?.Children != null && _target.Source.Children.Count > 0)
-            {
-                string[] childNames = new string[_target.Source.Children.Count];
-                for (int i = 0; i < _target.Source.Children.Count; i++)
+                else
                 {
-                    GameObject c = _target.Source.Children[i];
-                    childNames[i] = string.IsNullOrEmpty(c.Name) ? (c.Type ?? "Child") : c.Name;
+                    yield return new Section("Body Transform", BodyTransformRows(), 1);
+                    if (_target.IsDestructible)
+                        yield return new Section("Body Attributes", NonAgentBodyAttributeRows(), 2);
                 }
-                yield return new Row("Children", childNames);
             }
         }
 
-        // Body Transform rows: position, rotation, size, shape, mass, colors
+        // ── Body attribute rows with hidden attributes interspersed ──────────────
+
+        private IEnumerable<Row> BodyAttributeRows(Agent agent)
+        {
+            Attributes_Body a = agent.BodyAttributes;
+            float baseSpeed   = agent.BaseSpeed;
+            float control     = a.Control > 0f ? a.Control : 1f;
+
+            // ── Mass ──────────────────────────────────────────────────────────────
+            yield return new Row("Mass",               $"{a.Mass:0.##}");
+            yield return new Row("Max Health",         $"{AttributeDerived.MaxHealth(a.Mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsMaxHealth);
+
+            // ── Health group ──────────────────────────────────────────────────────
+            yield return new Row("Health Regen",       $"{a.HealthRegen:0.##}");
+            yield return new Row("Health Armor",       $"{a.HealthArmor:0.##}");
+            yield return new Row("Dmg Regen Delay",    $"{a.HealthRegenDelay:0.##}");
+
+            // ── Shield group ──────────────────────────────────────────────────────
+            yield return new Row("Max Shield",         $"{a.MaxShield:0.##}");
+            yield return new Row("Shield Regen",       $"{a.ShieldRegen:0.##}");
+            yield return new Row("Shield Armor",       $"{a.ShieldArmor:0.##}");
+            yield return new Row("Dmg Shield Delay",   $"{a.ShieldRegenDelay:0.##}");
+
+            // ── Combat group ──────────────────────────────────────────────────────
+            yield return new Row("Body Coll. Damage",  $"{a.BodyCollisionDamage:0.##}");
+            yield return new Row("Body Penetration",   $"{a.BodyPenetration:0.##}");
+
+            float kScale = CollisionResolver.KnockbackMassScale;
+            yield return new Row("Body Knockback",     $"{AttributeDerived.BodyKnockback(a.Mass, kScale):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBodyKnockback);
+
+            // ── Resistance group ──────────────────────────────────────────────────
+            yield return new Row("Coll. Dmg Resist",   $"{a.CollisionDamageResistance:0.##}");
+            yield return new Row("Bullet Dmg Resist",  $"{a.BulletDamageResistance:0.##}");
+
+            // ── Movement group ────────────────────────────────────────────────────
+            yield return new Row("Speed",              $"{a.Speed:0.##}");
+            yield return new Row("Control",            $"{a.Control:0.##}");
+            yield return new Row("Rotation Speed",     $"{(float)(180.0 / AttributeDerived.RotationDelay(control)):0.##} deg/s",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsRotationSpeed);
+            yield return new Row("Accel. Speed",       $"{(1f / AttributeDerived.AccelerationDelay(control)):0.##} /s",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsAccelerationSpeed);
+
+            // ── Action buff ───────────────────────────────────────────────────────
+            yield return new Row("Action Buff",        $"{a.BodyActionBuff:0.##}");
+        }
+
+        // ── Barrel attribute rows with hidden attributes interspersed ─────────────
+
+        private static IEnumerable<Row> BarrelAttributeRows(Agent agent)
+        {
+            Attributes_Barrel a = agent.BarrelAttributes;
+
+            float mass   = a.BulletMass > 0f ? a.BulletMass : BulletManager.DefaultBulletMass;
+            float radius = AttributeDerived.BulletRadius(mass, BulletManager.BulletRadiusScalar);
+            float drag   = AttributeDerived.BulletDrag(radius, BulletManager.AirResistanceScalar, BulletManager.DefaultBulletDragFactor);
+
+            yield return new Row("Bullet Damage",      $"{a.BulletDamage:0.##}");
+            yield return new Row("Bullet Penetration", $"{a.BulletPenetration:0.##}");
+            yield return new Row("Reload Speed",       $"{a.ReloadSpeed:0.##}");
+
+            yield return new Row("Bullet Health",      $"{AttributeDerived.BulletHealth(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletHealth);
+            yield return new Row("Bullet Radius",      $"{radius:0.##} px",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletRadius);
+
+            yield return new Row("Bullet Mass",        $"{a.BulletMass:0.##}");
+            yield return new Row("Bullet Speed",       $"{a.BulletSpeed:0.##}");
+            yield return new Row("Bullet Lifespan",    $"{a.BulletMaxLifespan:0.##}");
+
+            yield return new Row("Bullet Drag",        $"{drag:0.####}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletDrag);
+        }
+
+        // ── Object-level rows: identity, flags ───────────────────────────────────
+
+        private IEnumerable<Row> GameObjectRows()
+        {
+            yield return new Row("Name", string.IsNullOrWhiteSpace(_target.Name) ? "-" : _target.Name);
+            yield return new Row("ID", _target.Id.ToString());
+            yield return new Row("Type", _target.Type ?? "-");
+            yield return BuildFlagsRow();
+        }
+
+        // ── Destructible section rows ─────────────────────────────────────────────
+
+        private IEnumerable<Row> DestructibleRows()
+        {
+            yield return new Row("Death XP Reward", $"{_target.DeathPointReward:0.##}");
+            yield return new Row("Current Health",  $"{_target.CurrentHealth:0.##} / {_target.MaxHealth:0.##}");
+
+            if (_target.MaxShield > 0f)
+                yield return new Row("Current Shield", $"{_target.CurrentShield:0.##} / {_target.MaxShield:0.##}");
+
+            float healthLastDmg = _target.Source?.LastHealthDamageTime ?? float.NegativeInfinity;
+            float shieldLastDmg = _target.Source?.LastShieldDamageTime ?? float.NegativeInfinity;
+            float healthRegenProgress = ComputeRegenProgress(healthLastDmg, GetHealthRegenDelay());
+            float shieldRegenProgress = ComputeRegenProgress(shieldLastDmg, GetShieldRegenDelay());
+
+            yield return new Row("Health Regen", FormatRegenProgress(healthRegenProgress));
+            if (_target.MaxShield > 0f)
+                yield return new Row("Shield Regen", FormatRegenProgress(shieldRegenProgress));
+        }
+
+        private float ComputeRegenProgress(float lastDamageTime, float regenDelay)
+        {
+            if (regenDelay <= 0f) return 1f;
+            float elapsed = Core.GAMETIME - lastDamageTime;
+            return MathHelper.Clamp(elapsed / regenDelay, 0f, 1f);
+        }
+
+        private static string FormatRegenProgress(float progress)
+        {
+            if (progress >= 1f) return "Done";
+            return $"{progress * 100f:0}%";
+        }
+
+        private float GetHealthRegenDelay()
+        {
+            if (_target.Source is Agent a) return a.BodyAttributes.HealthRegenDelay;
+            return _target.Source?.HealthRegenDelay ?? 5f;
+        }
+
+        private float GetShieldRegenDelay()
+        {
+            if (_target.Source is Agent a) return a.BodyAttributes.ShieldRegenDelay;
+            return _target.Source?.ShieldRegenDelay ?? 5f;
+        }
+
+        // ── Body attribute rows for non-Agent destructible objects ────────────────
+
+        private IEnumerable<Row> NonAgentBodyAttributeRows()
+        {
+            GameObject src = _target.Source;
+
+            yield return new Row("Max Health",         $"{_target.MaxHealth:0.##}");
+            yield return new Row("Health Regen",       $"{(src?.HealthRegen ?? 0f):0.##}");
+            yield return new Row("Health Regen Delay", $"{(src?.HealthRegenDelay ?? 5f):0.##}");
+            yield return new Row("Health Armor",       $"{(src?.HealthArmor ?? 0f):0.##}");
+
+            yield return new Row("Max Shield",         $"{_target.MaxShield:0.##}");
+            yield return new Row("Shield Regen",       $"{(src?.ShieldRegen ?? 0f):0.##}");
+            yield return new Row("Shield Regen Delay", $"{(src?.ShieldRegenDelay ?? 5f):0.##}");
+            yield return new Row("Shield Armor",       $"{(src?.ShieldArmor ?? 0f):0.##}");
+
+            yield return new Row("Body Penetration",        $"{(src?.BodyPenetration ?? 0f):0.##}");
+            yield return new Row("Body Collision Damage",   $"{(src?.BodyCollisionDamage ?? 0f):0.##}");
+            yield return new Row("Coll. Dmg Resistance",    $"{(src?.CollisionDamageResistance ?? 0f):0.##}");
+            yield return new Row("Bullet Dmg Resistance",   $"{(src?.BulletDamageResistance ?? 0f):0.##}");
+        }
+
+        // ── Body Transform rows: position, rotation, size, shape, mass, colors ───
+
         private readonly IEnumerable<Row> BodyTransformRows()
         {
             yield return new Row("Position", $"{_target.Position.X:0.0}, {_target.Position.Y:0.0}");
             float rotationDeg = MathHelper.ToDegrees(_target.Rotation);
             yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
-            yield return new Row("Size", $"{_target.Width} x {_target.Height}");
-            yield return new Row("Shape", BuildShapeText());
-            yield return new Row("Mass", $"{_target.Mass:0.##}");
-            yield return new Row("Fill", _target.FillColor, ToHex(_target.FillColor));
-            yield return new Row("Outline", _target.OutlineColor, ToHex(_target.OutlineColor));
+            yield return new Row("Size",     $"{_target.Width} x {_target.Height}");
+            yield return new Row("Shape",    BuildShapeText());
+            yield return new Row("Mass",     $"{_target.Mass:0.##}");
+            yield return new Row("Fill",     _target.FillColor, ToHex(_target.FillColor));
+            yield return new Row("Outline",  _target.OutlineColor, ToHex(_target.OutlineColor));
         }
 
-        // Unit-level character rows
+        // ── Unit-level character rows ─────────────────────────────────────────────
+
         private static IEnumerable<Row> UnitRows(Agent agent)
         {
-            yield return new Row("Base Speed", $"{agent.BaseSpeed:0.##}");
-            yield return new Row("Death Reward", $"{agent.UnitAttributes.DeathPointReward:0.##}");
-            yield return new Row("Body Switch Speed", $"{agent.UnitAttributes.BodySwitchSpeed:0.##}");
+            yield return new Row("Body Switch Speed",   $"{agent.UnitAttributes.BodySwitchSpeed:0.##}");
             yield return new Row("Barrel Switch Speed", $"{agent.UnitAttributes.BarrelSwitchSpeed:0.##}");
+            yield return new Row("ID",                  agent.ID.ToString());
         }
 
-        // Player-specific rows
+        // ── Player-specific rows ──────────────────────────────────────────────────
+
         private static IEnumerable<Row> PlayerRows(Agent agent)
         {
             yield return new Row("Player ID", agent.PlayerID.ToString());
         }
 
-        // Barrel Transform rows — sourced from the agent's BarrelObject child
+        // ── Barrel Transform rows ─────────────────────────────────────────────────
+
         private static IEnumerable<Row> BarrelTransformRows(Agent agent)
         {
             GameObject barrel = agent.BarrelObject;
             if (barrel == null)
             {
-                yield return new Row("Offset", "0.0, 0.0");
+                yield return new Row("Offset",   "0.0, 0.0");
                 yield return new Row("Rotation", "0.0 deg");
                 yield break;
             }
 
             Vector2 offset = barrel.Position;
-            yield return new Row("Offset", $"{offset.X:0.0}, {offset.Y:0.0}");
+            yield return new Row("Offset",   $"{offset.X:0.0}, {offset.Y:0.0}");
             float rotDeg = MathHelper.ToDegrees(agent.Rotation);
             yield return new Row("Rotation", $"{rotDeg:0.0} deg");
-            yield return new Row("Size", $"{barrel.Shape.Width} x {barrel.Shape.Height}");
-            yield return new Row("Fill", barrel.FillColor, ToHex(barrel.FillColor));
-            yield return new Row("Outline", barrel.OutlineColor, ToHex(barrel.OutlineColor));
+            yield return new Row("Size",     $"{barrel.Shape.Width} x {barrel.Shape.Height}");
+            yield return new Row("Fill",     barrel.FillColor, ToHex(barrel.FillColor));
+            yield return new Row("Outline",  barrel.OutlineColor, ToHex(barrel.OutlineColor));
         }
 
         private readonly Row BuildFlagsRow()
@@ -254,6 +476,8 @@ namespace op.io
             parts.Add(_target.IsDestructible ? "Destructible" : "Indestructible");
             return new Row("Flags", parts.ToArray());
         }
+
+        // ── Reflection helper — still used for FarmAttributes ────────────────────
 
         private static IEnumerable<Row> ReflectAttributeStruct(object attrStruct)
         {
@@ -275,7 +499,7 @@ namespace op.io
                 float f => new Row(label, $"{f:0.##}"),
                 double d => new Row(label, $"{d:0.##}"),
                 int i => new Row(label, i.ToString()),
-                bool b => new Row(label, b ? "Yes" : "No"),
+                bool b => new Row(label, b),
                 _ => new Row(label, value?.ToString() ?? "-")
             };
         }

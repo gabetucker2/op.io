@@ -35,9 +35,7 @@ namespace op.io
         [JsonPropertyName("bulletDamage")]      public float BulletDamage      { get; set; }
         [JsonPropertyName("bulletPenetration")] public float BulletPenetration { get; set; }
         [JsonPropertyName("bulletSpeed")]       public float BulletSpeed       { get; set; }
-        [JsonPropertyName("bulletDragFactor")]   public float BulletDragFactor  { get; set; }
         [JsonPropertyName("reloadSpeed")]       public float ReloadSpeed       { get; set; }
-        [JsonPropertyName("bulletHealth")]      public float BulletHealth      { get; set; }
         [JsonPropertyName("bulletMaxLifespan")] public float BulletMaxLifespan { get; set; }
         [JsonPropertyName("bulletMass")]        public float BulletMass        { get; set; }
         [JsonPropertyName("bulletFillR")]       public byte  BulletFillR       { get; set; }
@@ -55,9 +53,7 @@ namespace op.io
             BulletDamage      = BulletDamage,
             BulletPenetration = BulletPenetration,
             BulletSpeed       = BulletSpeed,
-            BulletDragFactor  = BulletDragFactor,
             ReloadSpeed       = ReloadSpeed,
-            BulletHealth      = BulletHealth,
             BulletMaxLifespan = BulletMaxLifespan,
             BulletMass        = BulletMass,
             BulletFillColor    = new Color(BulletFillR, BulletFillG, BulletFillB, BulletFillA),
@@ -70,9 +66,7 @@ namespace op.io
             BulletDamage      = a.BulletDamage,
             BulletPenetration = a.BulletPenetration,
             BulletSpeed       = a.BulletSpeed,
-            BulletDragFactor  = a.BulletDragFactor,
             ReloadSpeed       = a.ReloadSpeed,
-            BulletHealth      = a.BulletHealth,
             BulletMaxLifespan = a.BulletMaxLifespan,
             BulletMass        = a.BulletMass,
             BulletFillR       = a.BulletFillColor.R,
@@ -90,52 +84,58 @@ namespace op.io
     /// <summary>JSON-serializable mirror of <see cref="Attributes_Body"/>.</summary>
     public sealed class BodyBuildData
     {
-        [JsonPropertyName("maxHealth")]                public float MaxHealth                { get; set; }
+        [JsonPropertyName("mass")]                     public float Mass                     { get; set; }
         [JsonPropertyName("healthRegen")]              public float HealthRegen              { get; set; }
+        [JsonPropertyName("healthRegenDelay")]         public float HealthRegenDelay         { get; set; }
         [JsonPropertyName("healthArmor")]              public float HealthArmor              { get; set; }
         [JsonPropertyName("maxShield")]                public float MaxShield                { get; set; }
         [JsonPropertyName("shieldRegen")]              public float ShieldRegen              { get; set; }
+        [JsonPropertyName("shieldRegenDelay")]         public float ShieldRegenDelay         { get; set; }
         [JsonPropertyName("shieldArmor")]              public float ShieldArmor              { get; set; }
-        [JsonPropertyName("bodyPenetration")]          public float BodyPenetration          { get; set; }
         [JsonPropertyName("bodyCollisionDamage")]      public float BodyCollisionDamage      { get; set; }
-        [JsonPropertyName("bodyKnockback")]            public float BodyKnockback            { get; set; }
+        [JsonPropertyName("bodyPenetration")]          public float BodyPenetration          { get; set; }
         [JsonPropertyName("collisionDamageResistance")]public float CollisionDamageResistance{ get; set; }
         [JsonPropertyName("bulletDamageResistance")]   public float BulletDamageResistance   { get; set; }
         [JsonPropertyName("speed")]                    public float Speed                    { get; set; }
-        [JsonPropertyName("rotationSpeed")]            public float RotationSpeed            { get; set; }
+        [JsonPropertyName("control")]                  public float Control                  { get; set; }
+        [JsonPropertyName("bodyActionBuff")]           public float BodyActionBuff           { get; set; }
 
         public Attributes_Body ToAttributes() => new()
         {
-            MaxHealth                 = MaxHealth,
+            Mass                      = Mass,
             HealthRegen               = HealthRegen,
+            HealthRegenDelay          = HealthRegenDelay,
             HealthArmor               = HealthArmor,
             MaxShield                 = MaxShield,
             ShieldRegen               = ShieldRegen,
+            ShieldRegenDelay          = ShieldRegenDelay,
             ShieldArmor               = ShieldArmor,
-            BodyPenetration           = BodyPenetration,
             BodyCollisionDamage       = BodyCollisionDamage,
-            BodyKnockback             = BodyKnockback,
+            BodyPenetration           = BodyPenetration,
             CollisionDamageResistance = CollisionDamageResistance,
             BulletDamageResistance    = BulletDamageResistance,
             Speed                     = Speed,
-            RotationSpeed             = RotationSpeed,
+            Control                   = Control,
+            BodyActionBuff            = BodyActionBuff,
         };
 
         public static BodyBuildData FromAttributes(Attributes_Body a) => new()
         {
-            MaxHealth                 = a.MaxHealth,
+            Mass                      = a.Mass,
             HealthRegen               = a.HealthRegen,
+            HealthRegenDelay          = a.HealthRegenDelay,
             HealthArmor               = a.HealthArmor,
             MaxShield                 = a.MaxShield,
             ShieldRegen               = a.ShieldRegen,
+            ShieldRegenDelay          = a.ShieldRegenDelay,
             ShieldArmor               = a.ShieldArmor,
-            BodyPenetration           = a.BodyPenetration,
             BodyCollisionDamage       = a.BodyCollisionDamage,
-            BodyKnockback             = a.BodyKnockback,
+            BodyPenetration           = a.BodyPenetration,
             CollisionDamageResistance = a.CollisionDamageResistance,
             BulletDamageResistance    = a.BulletDamageResistance,
             Speed                     = a.Speed,
-            RotationSpeed             = a.RotationSpeed,
+            Control                   = a.Control,
+            BodyActionBuff            = a.BodyActionBuff,
         };
     }
 

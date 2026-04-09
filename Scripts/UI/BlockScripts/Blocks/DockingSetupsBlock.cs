@@ -187,10 +187,9 @@ namespace op.io.UI.BlockScripts.Blocks
             UIStyle.UIFont headerFont = UIStyle.FontH2;
             UIStyle.UIFont labelFont = UIStyle.FontTech;
             UIStyle.UIFont bodyFont = UIStyle.FontBody;
-            UIStyle.UIFont placeholderFont = UIStyle.FontH1;
             UIStyle.UIFont feedbackFont = UIStyle.FontBody;
 
-            if (!labelFont.IsAvailable || !bodyFont.IsAvailable || !headerFont.IsAvailable || !placeholderFont.IsAvailable)
+            if (!labelFont.IsAvailable || !bodyFont.IsAvailable || !headerFont.IsAvailable)
             {
                 return;
             }
@@ -217,7 +216,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 DrawOverlayList(spriteBatch, headerFont, labelFont, blockLocked);
             }
 
-            DrawPlaceholder(spriteBatch, placeholderFont);
+            DrawPlaceholder(spriteBatch);
             SetupDropdown.DrawOptionsOverlay(spriteBatch);
             DrawPrompt(spriteBatch, contentBounds);
         }
@@ -546,24 +545,8 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawPlaceholder(SpriteBatch spriteBatch, UIStyle.UIFont font)
+        private static void DrawPlaceholder(SpriteBatch spriteBatch)
         {
-            if (ContentBounds == Rectangle.Empty)
-            {
-                return;
-            }
-
-            FillRect(spriteBatch, ContentBounds, UIStyle.BlockBackground * 0.9f);
-            DrawRect(spriteBatch, ContentBounds, UIStyle.BlockBorder);
-
-            string placeholder = SetupEntries.Count == 0
-                ? "Save a docking setup"
-                : "Select a docking setup";
-            Vector2 size = TextSpacingHelper.MeasureWithWideSpaces(font, placeholder);
-            Vector2 position = new(
-                ContentBounds.X + (ContentBounds.Width - size.X) / 2f,
-                ContentBounds.Y + (ContentBounds.Height - size.Y) / 2f);
-            TextSpacingHelper.DrawWithWideSpaces(font, spriteBatch, placeholder, position, UIStyle.MutedTextColor);
         }
         private static void DrawPrompt(SpriteBatch spriteBatch, Rectangle contentBounds)
         {
@@ -1123,6 +1106,29 @@ namespace op.io.UI.BlockScripts.Blocks
                 DockingCommand.Delete => SetupEntries.Count == 0,
                 _ => false
             };
+        }
+
+        /// <summary>
+        /// Returns true when <paramref name="pos"/> is over an enabled interactive element.
+        /// A disabled command button returns false so that a click on it does not block
+        /// player movement — the game input acts as a fallback.
+        /// </summary>
+        public static bool IsInteractableAt(Point pos)
+        {
+            if (NamePrompt.IsOpen)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < CommandOrder.Length; i++)
+            {
+                if (CommandBounds[i].Contains(pos) && IsButtonDisabled(CommandOrder[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void UpdateFeedbackTimer(GameTime gameTime)
