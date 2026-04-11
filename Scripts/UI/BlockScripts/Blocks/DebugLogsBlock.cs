@@ -13,8 +13,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class DebugLogsBlock
     {
         public const string BlockTitle = "Debug Logs";
-        public const int MinWidth = 260;
-        public const int MinHeight = 160;
 
         private const int ToolbarHeight = 38;
         private const int ButtonHeight = BlockButtonRowLayout.DefaultButtonHeight;
@@ -73,7 +71,7 @@ namespace op.io.UI.BlockScripts.Blocks
             UIStyle.UIFont font = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Regular);
             if (!font.IsAvailable)
             {
-                ScrollPanel.Update(contentBounds, 0f, blockLocked ? previousMouseState : mouseState, previousMouseState);
+                ScrollPanel.Update(contentBounds, 0f, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
                 return;
             }
 
@@ -128,7 +126,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             float bottomPadding = layout.LogViewport.Height / 3f;
             float contentHeight = (Lines.Count * font.LineHeight) + (TextPadding * 2) + bottomPadding;
-            MouseState scrollMouse = blockLocked ? previousMouseState : mouseState;
+            MouseState scrollMouse = BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState);
             ScrollPanel.Update(layout.LogViewport, contentHeight, scrollMouse, previousMouseState);
 
             Rectangle viewport = ScrollPanel.ContentViewportBounds == Rectangle.Empty

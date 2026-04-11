@@ -124,10 +124,12 @@ namespace op.io
             }
         }
 
-        // Returns true when the CombatText toggle is on (or not yet registered, defaulting to on).
-        private static bool CombatTextEnabled =>
-            !ControlStateManager.ContainsSwitchState("CombatText") ||
-             ControlStateManager.GetSwitchState("CombatText");
+        // Returns the current CombatText mode: "None", "Limited", or "All".
+        // Falls back to "Limited" if the enum is not yet registered.
+        private static string CombatTextMode =>
+            ControlStateManager.ContainsEnumState("CombatText")
+                ? ControlStateManager.GetEnumValue("CombatText")
+                : "Limited";
 
         // ── Lane layout ───────────────────────────────────────────────────────
         // Lane 0 = 0, Lane 1 = -LaneWidth, Lane 2 = +LaneWidth, Lane 3 = -2*LaneWidth, …
@@ -142,9 +144,12 @@ namespace op.io
         // Called from any damage site; accumulates per (object, source) per frame.
         // sourceId identifies the agent or system dealing the damage (e.g. bullet.OwnerID).
 
-        public static void Notify(int objectId, Vector2 position, float damage, int sourceId = 0, Color color = default, bool isNewHit = false)
+        public static void Notify(int objectId, Vector2 position, float damage, int sourceId = 0, Color color = default, bool isNewHit = false, bool isBulletDamage = false)
         {
             if (damage <= 0f) return;
+            string mode = CombatTextMode;
+            if (mode == "None") return;
+            if (mode == "Limited" && isBulletDamage) return;
             var key = (objectId, sourceId);
             if (_pending.TryGetValue(key, out var existing))
                 _pending[key] = new PendingEntry { SourceId = sourceId, Position = position, Damage = existing.Damage + damage, Color = existing.Color.A > 0 ? existing.Color : color, IsNewHit = existing.IsNewHit || isNewHit };
@@ -268,7 +273,7 @@ namespace op.io
 
         public static void Draw(SpriteBatch spriteBatch)
         {
-            if (!CombatTextEnabled) return;
+            if (CombatTextMode == "None") return;
             if (_active.Count == 0) return;
 
             SpriteFont font = UIStyle.FontH2.Font;

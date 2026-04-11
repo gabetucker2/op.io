@@ -12,8 +12,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class MathBlock
     {
         public const string BlockTitle = "Math";
-        public const int MinWidth  = 300;
-        public const int MinHeight = 100;
 
         // ── Constants section ──────────────────────────────────────────────────
         private static readonly List<ConstEntry> _consts  = BuildConstants();
@@ -94,7 +92,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 _lineHeightCache = FontManager.CalculateRowLineHeight(boldFont, regularFont);
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            MouseState effectiveMouse = blockLocked ? previousMouseState : mouseState;
+            MouseState effectiveMouse = BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState);
 
             // ── Sticky const header; everything below scrolls ──
             var constHfc = GetOrEnsureConstHeaderFunCol();

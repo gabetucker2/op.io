@@ -176,12 +176,10 @@ namespace op.io
             }
 
             // ── Step 6: Bullet-enemy depenetration ────────────────────────────────
-            // Both bullet and enemy positions are corrected proportionally to inverse mass.
-            // Correcting the bullet side is required so that:
-            //   (a) Bullets stop at enemy surfaces rather than drifting through.
-            //   (b) Enemies running into bullets push the bullet away.
-            // The inelastic impulse (e = 0) drains the bullet's approach velocity so
-            // subsequent frames see a smaller overlap and smaller corrections.
+            // Position correction uses BulletKnockback as the bullet's effective push
+            // mass so bullets are very light in collisions by default; only high-
+            // penetration bullets meaningfully shove enemies.  The bullet itself is
+            // still corrected using its full mass (so enemies push bullets away).
             foreach (var contact in _allContacts)
             {
                 Bullet bullet = contact.Bullet;
@@ -198,16 +196,22 @@ namespace op.io
 
                 Vector2 normal = dist > 1e-6f ? diff / dist : Vector2.UnitX;
 
-                float mBullet   = MathF.Max(bullet.Mass,  0.0001f);
-                float mEnemy    = MathF.Max(enemy.Mass,   0.0001f);
-                float totalMass = mBullet + mEnemy;
+                // BulletKnockback determines how much the bullet pushes the enemy;
+                // the bullet's real mass still governs how much the enemy pushes the bullet.
+                float mPush     = MathF.Max(bullet.BulletKnockback, 0.0001f);
+                float mBullet   = MathF.Max(bullet.Mass, 0.0001f);
+                float mEnemy    = MathF.Max(enemy.Mass,  0.0001f);
 
-                bullet.Position += normal * (overlap * mEnemy  / totalMass);
-                enemy.Position  -= normal * (overlap * mBullet / totalMass);
+                // Position correction: bullet pushed by enemy using real mass ratio,
+                // enemy pushed by bullet using knockback as effective mass.
+                float pushTotal = mPush + mEnemy;
+                bullet.Position += normal * (overlap * mEnemy / (mBullet + mEnemy));
+                enemy.Position  -= normal * (overlap * mPush  / pushTotal);
 
+                // Inelastic velocity drain on bullet (still uses real mass)
                 float vDotN = Vector2.Dot(bullet.Velocity, normal);
                 if (vDotN < 0f)
-                    bullet.Velocity -= (vDotN * mEnemy / totalMass) * normal;
+                    bullet.Velocity -= (vDotN * mEnemy / (mBullet + mEnemy)) * normal;
             }
 
             // ── Step 7: Bullet-bullet elastic collision ───────────────────────────
@@ -250,6 +254,24 @@ namespace op.io
                     float impulse = -2f * vRelN / (1f / mA + 1f / mB);
                     ba.Velocity += (impulse / mA) * normal;
                     bb.Velocity -= (impulse / mB) * normal;
+
+                    // Bullet-vs-bullet damage: each bullet deals its BulletDamage to the other's health.
+                    float dmgToB = ba.BulletDamage;
+                    float dmgToA = bb.BulletDamage;
+                    if (dmgToB > 0f)
+                    {
+                        float dealt = MathF.Min(dmgToB, bb.CurrentPenetrationHP);
+                        bb.CurrentPenetrationHP -= dealt;
+                        bb.TriggerHitFlash();
+                        DamageNumberManager.Notify(bb.ID, bb.Position, dealt, sourceId: ba.SourceID, isNewHit: true, isBulletDamage: true);
+                    }
+                    if (dmgToA > 0f)
+                    {
+                        float dealt = MathF.Min(dmgToA, ba.CurrentPenetrationHP);
+                        ba.CurrentPenetrationHP -= dealt;
+                        ba.TriggerHitFlash();
+                        DamageNumberManager.Notify(ba.ID, ba.Position, dealt, sourceId: bb.SourceID, isNewHit: true, isBulletDamage: true);
+                    }
                 }
             }
         }

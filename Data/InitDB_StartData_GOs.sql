@@ -9,13 +9,13 @@
 -- Insert Player
 -- ================================
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Normal', 'Circle', 'Player1',
+    'Circle', 'Player1',
     100, 100, 50, 50, 0, 0,
     0, 255, 255, 255,
     0, 150, 150, 255, 4,
@@ -45,13 +45,13 @@ INSERT INTO Agents (
 
 -- RedWall
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Normal', 'Rectangle', 'RedWall',
+    'Rectangle', 'RedWall',
     300, 300, 300, 30, 0, 0,
     200, 50, 50, 255,
     128, 0, 0, 255, 2,
@@ -67,13 +67,13 @@ INSERT INTO MapData (
 
 -- GreenBackground
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Normal', 'Rectangle', 'GreenBackground',
+    'Rectangle', 'GreenBackground',
     800, 300, 300, 30, 0, 0,
     50, 200, 50, 255,
     0, 128, 0, 255, 0,

@@ -15,7 +15,7 @@ namespace op.io
         public GameObject Source { get; }
         public int Id { get; private set; }
         public string Name { get; private set; }
-        public string Type { get; private set; }
+        public bool IsPrototype { get; private set; }
         public Vector2 Position { get; private set; }
         public Vector2 ParentPosition { get; private set; }
         public Vector2 ObjectPosition { get; private set; }
@@ -23,8 +23,11 @@ namespace op.io
         public float Mass { get; private set; }
         public bool IsCollidable { get; private set; }
         public bool IsDestructible { get; private set; }
-        public bool StaticPhysics { get; private set; }
+        public bool DynamicPhysics { get; private set; }
         public bool IsPlayer { get; private set; }
+        public bool IsInteract { get; private set; }
+        public bool IsZoneBlock { get; private set; }
+        public int DrawLayer { get; private set; }
         public Shape Shape { get; private set; }
         public Color FillColor { get; private set; }
         public Color OutlineColor { get; private set; }
@@ -55,7 +58,7 @@ namespace op.io
 
             Id = Source.ID;
             Name = Source.Name;
-            Type = Source.Type;
+            IsPrototype = Source.IsPrototype;
             Position = Source.Position;
             ParentPosition = Source.ParentPosition;
             ObjectPosition = Source.ObjectPosition;
@@ -63,7 +66,10 @@ namespace op.io
             Mass = Source.Mass;
             IsCollidable = Source.IsCollidable;
             IsDestructible = Source.IsDestructible;
-            StaticPhysics = Source.StaticPhysics;
+            DynamicPhysics = Source.DynamicPhysics;
+            IsInteract = Source.IsInteract;
+            IsZoneBlock = Source.IsZoneBlock;
+            DrawLayer = Source.DrawLayer;
             Shape = Source.Shape;
             FillColor = Source.FillColor;
             OutlineColor = Source.OutlineColor;

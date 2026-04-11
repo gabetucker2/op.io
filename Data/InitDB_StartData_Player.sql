@@ -2,13 +2,13 @@
 -- Player game object and agent stats.
 
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Normal', 'Circle', 'Player1',
+    'Circle', 'Player1',
     100, 100, 50, 50, 0, 0,
     0, 255, 255, 255,
     0, 150, 150, 255, 4,

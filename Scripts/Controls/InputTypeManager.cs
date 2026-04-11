@@ -573,6 +573,14 @@ namespace op.io
             int delta = current.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
             if (delta > 0) _scrollUpAccumulator += delta;
             else if (delta < 0) _scrollDownAccumulator += (-delta);
+
+            // Drain accumulators when the cursor is over an unlocked block or docking mode
+            // is active so scroll doesn't trigger game actions (camera zoom, etc.).
+            if (BlockManager.ShouldSuppressScrollWheel())
+            {
+                _scrollUpAccumulator = 0;
+                _scrollDownAccumulator = 0;
+            }
         }
 
         private static void NotifySwitchStateFromInput(string inputKey, bool state)

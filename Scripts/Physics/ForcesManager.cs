@@ -27,7 +27,7 @@ namespace op.io
                 return;
             }
 
-            if (gameObject.StaticPhysics)
+            if (!gameObject.DynamicPhysics)
             {
                 DebugLogger.PrintDebug("ApplyForce skipped: GameObject is static.");
                 return;

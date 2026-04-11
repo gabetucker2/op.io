@@ -46,7 +46,6 @@ namespace op.io
                 EnsureDropBodyKnockback();
                 EnsureKnockbackMassScaleSetting();
                 EnsureAgentsMass();
-                EnsureBarrelMassColumn();
                 EnsureRecoilMassScaleSetting();
                 // Attribute hidden/normal framework migrations
                 EnsureAgentsAgility();
@@ -58,6 +57,12 @@ namespace op.io
                 EnsureBlueLootFarmPrototype();
                 EnsureFarmMassQuadrupled();
                 EnsureBlueLootCollisionDamage();
+                EnsureDropGameObjectsTypeColumn();
+                EnsureBarrelHeightScalarSetting();
+                EnsureBulletKnockbackScalarSetting();
+                EnsureBulletFarmKnockbackScalarSetting();
+                EnsureBulletEffectorColumns();
+                EnsureBarrelBulletHealthColumn();
                 _applied = true;
             }
             catch (Exception ex)
@@ -718,7 +723,7 @@ namespace op.io
             {
                 // Check if the prototype already exists.
                 var existing = DatabaseQuery.ExecuteQuery(
-                    "SELECT ID FROM GameObjects WHERE Name = 'BlueLoot' AND Type = 'Prototype' LIMIT 1;");
+                    "SELECT g.ID FROM GameObjects g INNER JOIN FarmData f ON g.ID = f.ID WHERE g.Name = 'BlueLoot' LIMIT 1;");
                 if (existing.Count == 0)
                 {
                     DatabaseQuery.ExecuteNonQuery(@"
@@ -736,7 +741,7 @@ INSERT INTO GameObjects (
     1, 1, 50, 0
 );");
                     var newRow = DatabaseQuery.ExecuteQuery(
-                        "SELECT ID FROM GameObjects WHERE Name = 'BlueLoot' AND Type = 'Prototype' LIMIT 1;");
+                        "SELECT g.ID FROM GameObjects g INNER JOIN FarmData f ON g.ID = f.ID WHERE g.Name = 'BlueLoot' LIMIT 1;");
                     if (newRow.Count > 0)
                     {
                         int newId = Convert.ToInt32(newRow[0]["ID"]);
@@ -761,7 +766,7 @@ VALUES (@id, 400, 20.0, 6.0, 150, 200);",
 
         private static void EnsureFarmMassQuadrupled()
         {
-            // Multiply the Mass of all farm prototypes (GameObjects.Type = 'Prototype') by 4.
+            // Multiply the Mass of all farm prototypes (FarmData entries) by 4.
             // One-time migration gated by a marker file.
             string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".farm_mass_quadrupled_applied");
             if (System.IO.File.Exists(marker)) return;
@@ -770,8 +775,7 @@ VALUES (@id, 400, 20.0, 6.0, 150, 200);",
                 DatabaseQuery.ExecuteNonQuery(@"
 UPDATE GameObjects
 SET Mass = Mass * 4
-WHERE Type = 'Prototype'
-  AND ID IN (SELECT ID FROM FarmData);");
+WHERE ID IN (SELECT ID FROM FarmData);");
                 System.IO.File.WriteAllText(marker, System.DateTime.UtcNow.ToString("O"));
                 DebugLogger.PrintDatabase("EnsureFarmMassQuadrupled: multiplied farm prototype Mass × 4.");
             }
@@ -792,7 +796,7 @@ WHERE Type = 'Prototype'
                 DatabaseQuery.ExecuteNonQuery(@"
 UPDATE Destructibles
 SET BodyCollisionDamage = 1000
-WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'BlueLoot' AND Type = 'Prototype' LIMIT 1)
+WHERE ID = (SELECT g.ID FROM GameObjects g INNER JOIN FarmData f ON g.ID = f.ID WHERE g.Name = 'BlueLoot' LIMIT 1)
   AND BodyCollisionDamage = 150;");
                 System.IO.File.WriteAllText(marker, System.DateTime.UtcNow.ToString("O"));
                 DebugLogger.PrintDatabase("EnsureBlueLootCollisionDamage: set BlueLoot BodyCollisionDamage to 1000.");
@@ -823,6 +827,74 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
             {
                 DebugLogger.PrintError($"EnsurePlayerBodyCollisionDamage failed: {ex.Message}");
             }
+        }
+
+        private static void EnsureDropGameObjectsTypeColumn()
+        {
+            if (!ColumnExists("GameObjects", "Type")) return;
+            try
+            {
+                DatabaseQuery.ExecuteNonQuery("ALTER TABLE GameObjects DROP COLUMN Type;");
+                DebugLogger.PrintDatabase("EnsureDropGameObjectsTypeColumn: dropped Type column from GameObjects.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureDropGameObjectsTypeColumn failed: {ex.Message}");
+            }
+        }
+
+        private static void EnsureBarrelHeightScalarSetting()
+        {
+            if (!SettingKeyExists("BarrelHeightScalar", "BulletPhysics"))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BarrelHeightScalar', '0.075');");
+                DebugLogger.PrintDatabase("EnsureBarrelHeightScalarSetting: inserted BarrelHeightScalar = 0.075.");
+            }
+        }
+
+        private static void EnsureBulletKnockbackScalarSetting()
+        {
+            if (!SettingKeyExists("BulletKnockbackScalar", "BulletPhysics"))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletKnockbackScalar', '0.5');");
+                DebugLogger.PrintDatabase("EnsureBulletKnockbackScalarSetting: inserted BulletKnockbackScalar = 0.5.");
+            }
+        }
+
+        private static void EnsureBulletFarmKnockbackScalarSetting()
+        {
+            if (!SettingKeyExists("BulletFarmKnockbackScalar", "BulletPhysics"))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletFarmKnockbackScalar', '0.15');");
+                DebugLogger.PrintDatabase("EnsureBulletFarmKnockbackScalarSetting: inserted BulletFarmKnockbackScalar = 0.15.");
+            }
+        }
+
+        private static void EnsureBulletEffectorColumns()
+        {
+            string[] columns =
+            {
+                "BulletControl"
+            };
+            foreach (string col in columns)
+            {
+                if (!ColumnExists("BarrelPrototypes", col))
+                {
+                    DatabaseQuery.ExecuteNonQuery($"ALTER TABLE BarrelPrototypes ADD COLUMN {col} REAL DEFAULT 0;");
+                    DebugLogger.PrintDatabase($"EnsureBulletEffectorColumns: added {col} to BarrelPrototypes.");
+                }
+            }
+        }
+
+        private static void EnsureBarrelBulletHealthColumn()
+        {
+            if (!TableExists("BarrelPrototypes")) return;
+            if (ColumnExists("BarrelPrototypes", "BulletHealth")) return;
+            DatabaseQuery.ExecuteNonQuery("ALTER TABLE BarrelPrototypes ADD COLUMN BulletHealth REAL DEFAULT -1;");
+            DebugLogger.Print("Migration: added BulletHealth column to BarrelPrototypes.");
         }
 
         private static bool TableExists(string tableName)

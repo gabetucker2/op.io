@@ -12,15 +12,21 @@ CREATE TABLE IF NOT EXISTS BarrelPrototypes (
     ID                INTEGER PRIMARY KEY AUTOINCREMENT,
     Name              TEXT    NOT NULL UNIQUE,
     -- Normal (stored) attributes
-    BarrelMass        REAL    DEFAULT -1,   -- -1 → 1.0; scales recoil impulse on fire
     BulletDamage      REAL    DEFAULT -1,   -- -1 → DefaultBulletDamage
     BulletPenetration REAL    DEFAULT -1,
     BulletSpeed       REAL    DEFAULT -1,   -- -1 → DefaultBulletSpeed
     ReloadSpeed       REAL    DEFAULT -1,
     BulletMaxLifespan REAL    DEFAULT -1,   -- -1 → DefaultBulletLifespan
     BulletMass        REAL    DEFAULT -1,   -- -1 → DefaultBulletMass
-    -- Hidden (not stored): BulletHealth (from BulletMass), BulletRadius (from BulletMass),
-    --                       BulletDrag (from BulletRadius) — computed via AttributeDerived
+    BulletHealth      REAL    DEFAULT -1,   -- -1 → derived from BulletMass via AttributeDerived
+    -- Hidden (not stored): BulletRadius (from BulletMass),
+    --                       BulletDrag (from BulletRadius), BulletHealthRegen (from BulletMass),
+    --                       BulletHealthRegenDelay (from BulletMass), BulletHealthArmor (from BulletMass),
+    --                       BulletCollisionDamageResistance (from BulletMass),
+    --                       BulletDamageResistance (from BulletMass) — computed via AttributeDerived
+    -- Bullet effectors — stored
+    BulletControl          REAL DEFAULT 0,
+    -- Visual
     BulletFillR       INTEGER DEFAULT -1,   -- RGBA 0,0,0,0 → DefaultBulletFill* settings
     BulletFillG       INTEGER DEFAULT -1,
     BulletFillB       INTEGER DEFAULT -1,

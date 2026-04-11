@@ -42,10 +42,10 @@ namespace op.io
                 return false;
             }
 
-            Attributes.Identity identity = new(source.ID, source.Name, source.Type);
+            Attributes.Identity identity = new(source.ID, source.Name);
             Attributes.Transform bodyTransform = new(source.Position, source.Rotation);
             Attributes.Physics physics = new(
-                source.StaticPhysics ? Attributes.PhysicsMotion.Static : Attributes.PhysicsMotion.Dynamic,
+                source.DynamicPhysics ? Attributes.PhysicsMotion.Dynamic : Attributes.PhysicsMotion.Static,
                 source.IsCollidable ? Attributes.CollisionMode.Collidable : Attributes.CollisionMode.NonCollidable,
                 source.IsDestructible ? Attributes.DestructionMode.Destructible : Attributes.DestructionMode.Indestructible,
                 source.Mass);
@@ -94,13 +94,12 @@ namespace op.io
             return new GameObject(
                 Identity.Id,
                 Identity.Name,
-                Identity.Type,
                 Body.BodyTransform.Position,
                 Body.BodyTransform.Rotation,
                 Physics.Mass,
                 Physics.IsDestructible,
                 Physics.IsCollidable,
-                Physics.StaticPhysics,
+                Physics.DynamicPhysics,
                 shape,
                 Appearance.FillColor,
                 Appearance.OutlineColor,
@@ -110,7 +109,7 @@ namespace op.io
 
         public SimpleGameObject WithTransform(int id, Vector2 position, float rotation)
         {
-            Attributes.Identity identity = new(id, Identity.Name, Identity.Type);
+            Attributes.Identity identity = new(id, Identity.Name);
             Attributes.Transform bodyTransform = new(position, rotation);
             Body body = new(Body.BodyAttributes, bodyTransform);
             return new SimpleGameObject(

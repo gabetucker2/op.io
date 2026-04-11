@@ -32,12 +32,14 @@ namespace op.io
     /// <summary>JSON-serializable mirror of <see cref="Attributes_Barrel"/>.</summary>
     public sealed class BarrelBuildData
     {
+        [JsonPropertyName("name")]             public string Name             { get; set; }
         [JsonPropertyName("bulletDamage")]      public float BulletDamage      { get; set; }
         [JsonPropertyName("bulletPenetration")] public float BulletPenetration { get; set; }
         [JsonPropertyName("bulletSpeed")]       public float BulletSpeed       { get; set; }
         [JsonPropertyName("reloadSpeed")]       public float ReloadSpeed       { get; set; }
         [JsonPropertyName("bulletMaxLifespan")] public float BulletMaxLifespan { get; set; }
         [JsonPropertyName("bulletMass")]        public float BulletMass        { get; set; }
+        [JsonPropertyName("bulletHealth")]      public float BulletHealth      { get; set; }
         [JsonPropertyName("bulletFillR")]       public byte  BulletFillR       { get; set; }
         [JsonPropertyName("bulletFillG")]       public byte  BulletFillG       { get; set; }
         [JsonPropertyName("bulletFillB")]       public byte  BulletFillB       { get; set; }
@@ -47,6 +49,8 @@ namespace op.io
         [JsonPropertyName("bulletOutlineB")]    public byte  BulletOutlineB    { get; set; }
         [JsonPropertyName("bulletOutlineA")]    public byte  BulletOutlineA    { get; set; }
         [JsonPropertyName("bulletOutlineWidth")]public int   BulletOutlineWidth { get; set; }
+        // Bullet effectors (only non-hidden ones serialized)
+        [JsonPropertyName("bulletControl")]                  public float BulletControl                  { get; set; }
 
         public Attributes_Barrel ToAttributes() => new()
         {
@@ -56,19 +60,24 @@ namespace op.io
             ReloadSpeed       = ReloadSpeed,
             BulletMaxLifespan = BulletMaxLifespan,
             BulletMass        = BulletMass,
+            BulletHealth      = BulletHealth,
+            BulletControl                  = BulletControl,
             BulletFillColor    = new Color(BulletFillR, BulletFillG, BulletFillB, BulletFillA),
             BulletOutlineColor = new Color(BulletOutlineR, BulletOutlineG, BulletOutlineB, BulletOutlineA),
             BulletOutlineWidth = BulletOutlineWidth,
         };
 
-        public static BarrelBuildData FromAttributes(Attributes_Barrel a) => new()
+        public static BarrelBuildData FromAttributes(Attributes_Barrel a, string name = null) => new()
         {
+            Name              = name,
             BulletDamage      = a.BulletDamage,
             BulletPenetration = a.BulletPenetration,
             BulletSpeed       = a.BulletSpeed,
             ReloadSpeed       = a.ReloadSpeed,
             BulletMaxLifespan = a.BulletMaxLifespan,
             BulletMass        = a.BulletMass,
+            BulletHealth      = a.BulletHealth,
+            BulletControl                  = a.BulletControl,
             BulletFillR       = a.BulletFillColor.R,
             BulletFillG       = a.BulletFillColor.G,
             BulletFillB       = a.BulletFillColor.B,
@@ -202,7 +211,7 @@ namespace op.io
                 Unit = UnitBuildData.FromAttributes(unitAttrs),
             };
             foreach (var slot in agent.Barrels)
-                build.Barrels.Add(BarrelBuildData.FromAttributes(slot.Attrs));
+                build.Barrels.Add(BarrelBuildData.FromAttributes(slot.Attrs, slot.Name));
             return build;
         }
 
@@ -214,8 +223,13 @@ namespace op.io
         public static void Apply(Agent agent, UnitBuild build)
         {
             agent.ClearBarrels();
-            foreach (var barrelData in build.Barrels)
+            for (int i = 0; i < build.Barrels.Count; i++)
+            {
+                var barrelData = build.Barrels[i];
                 agent.AddBarrel(barrelData.ToAttributes());
+                if (!string.IsNullOrEmpty(barrelData.Name))
+                    agent.Barrels[i].Name = barrelData.Name;
+            }
 
             agent.BodyAttributes   = build.Body.ToAttributes();
             agent.UnitAttributes   = build.Unit.ToAttributes(); // setter syncs Name → GameObject.Name

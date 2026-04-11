@@ -10,13 +10,28 @@ namespace op.io
         // Properties for the GameObject's data
         public int ID { get; set; }
         public string Name { get; set; }
-        public string Type { get; set; }
+        public bool IsPrototype { get; set; }
         public Vector2 Position { get; set; }
         public float Rotation { get; set; }
         public float Mass { get; set; }
         public bool IsDestructible { get; set; }
         public bool IsCollidable { get; set; }
-        public bool StaticPhysics { get; set; }
+        public bool DynamicPhysics { get; set; }
+        public bool IsInteract { get; set; }
+        public bool IsZoneBlock { get; set; }
+
+        /// <summary>
+        /// The key identifying which Dynamic block content this ZoneBlock triggers
+        /// in the Interact block when the player enters its zone.
+        /// </summary>
+        public string ZoneBlockDynamicKey { get; set; }
+
+        /// <summary>
+        /// Draw layer controlling render order. Higher values draw on top.
+        /// Default = 0 (map objects, farms, zone blocks), Bullets = 100, Units = 200.
+        /// </summary>
+        public int DrawLayer { get; set; }
+
         public Shape Shape { get; set; }
         public Color FillColor { get; set; }
         public Color OutlineColor { get; set; }
@@ -150,7 +165,6 @@ namespace op.io
         public GOProperties GOProperties => new GOProperties
         {
             Id               = ID,
-            Type             = Type,
             Flags            = ComputeFlags(),
             CurrentXP        = CurrentXP,
             MaxXP            = MaxXP,
@@ -161,10 +175,22 @@ namespace op.io
 
         protected virtual GOFlags ComputeFlags()
         {
-            GOFlags f = GOFlags.None;
-            if (StaticPhysics)  f |= GOFlags.Static;
-            if (IsCollidable)   f |= GOFlags.Collidable;
-            if (IsDestructible) f |= GOFlags.Destructible;
+            GOFlags f = 0;
+            if (DynamicPhysics)  f |= GOFlags.Dynamic;
+            if (IsCollidable)    f |= GOFlags.Collidable;
+            if (IsDestructible)  f |= GOFlags.Destructible;
+            if (IsInteract)      f |= GOFlags.Interact;
+            if (IsZoneBlock)     f |= GOFlags.ZoneBlock;
+            if (IsPrototype)     f |= GOFlags.Prototype;
+
+            // ZoneBlock implies Interact and forces non-collidable + non-dynamic (static)
+            if (f.HasFlag(GOFlags.ZoneBlock))
+            {
+                f |= GOFlags.Interact;
+                f &= ~GOFlags.Collidable;
+                f &= ~GOFlags.Dynamic;
+            }
+
             return f;
         }
 
@@ -203,18 +229,17 @@ namespace op.io
         public GameObject(
             int id,
             string name,
-            string type,
             Vector2 position,
             float rotation,
             float mass,
             bool isDestructible,
             bool isCollidable,
-            bool staticPhysics,
+            bool dynamicPhysics,
             Shape shape,
             Color fillColor,
             Color outlineColor,
             int outlineWidth,
-            bool isPrototype = false // Flag to determine if this object is a prototype and shouldn't be registered
+            bool isPrototype = false
         )
         {
             // Validate that the shape is not null
@@ -227,14 +252,14 @@ namespace op.io
             // Initialize properties
             ID = id;
             Name = name;
-            Type = type;
+            IsPrototype = isPrototype;
             Position = position;
             PreviousPosition = position;
             Rotation = rotation;
             Mass = mass;
             IsDestructible = isDestructible;
             IsCollidable = isCollidable;
-            StaticPhysics = staticPhysics;
+            DynamicPhysics = dynamicPhysics;
             FillColor = fillColor;
             OutlineColor = outlineColor;
             OutlineWidth = outlineWidth;
@@ -290,7 +315,7 @@ namespace op.io
             if (HitFlash > 0f)
                 HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
 
-            if (PhysicsVelocity != Vector2.Zero && !StaticPhysics)
+            if (PhysicsVelocity != Vector2.Zero && DynamicPhysics)
             {
                 Position += PhysicsVelocity * Core.DELTATIME;
                 PhysicsVelocity *= MathHelper.Clamp(1f - 6f * Core.DELTATIME, 0f, 1f);

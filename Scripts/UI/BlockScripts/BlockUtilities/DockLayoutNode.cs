@@ -252,11 +252,35 @@ namespace op.io
             int minSecond = Math.Clamp(minSecondSpan, 0, newTotal);
             int maxFirst  = Math.Max(minFirst, newTotal - minSecond);
 
-            // Preserve the absolute pixel span of the first child; the second child
-            // absorbs the delta. This gives "push" behaviour: resizing a parent does
-            // not force all descendants to scale proportionally.
-            int first  = Math.Clamp(PreferredFirstSpan.Value, minFirst, maxFirst);
-            int second = Math.Max(minSecond, newTotal - first);
+            // Determine which edge of the parent moved so we preserve the child
+            // farthest from the drag.  If the start edge (top/left) moved, the
+            // first child is adjacent to the drag → preserve the second child.
+            // If the end edge (bottom/right) moved, preserve the first child.
+            // When both edges moved (e.g. whole parent shifted), fall back to
+            // preserving whichever child can still fit.
+            int oldStart = Orientation == DockSplitOrientation.Horizontal ? previousBounds.Y : previousBounds.X;
+            int newStart = Orientation == DockSplitOrientation.Horizontal ? newBounds.Y      : newBounds.X;
+            int oldEnd   = Orientation == DockSplitOrientation.Horizontal ? previousBounds.Bottom : previousBounds.Right;
+            int newEnd   = Orientation == DockSplitOrientation.Horizontal ? newBounds.Bottom      : newBounds.Right;
+
+            bool startMoved = oldStart != newStart;
+            bool endMoved   = oldEnd   != newEnd;
+
+            int first, second;
+            if (startMoved && !endMoved)
+            {
+                // Start edge moved (e.g. resize edge above) — preserve second child,
+                // first child absorbs the delta.
+                int maxSecond = Math.Max(minSecond, newTotal - minFirst);
+                second = Math.Clamp(PreferredSecondSpan.Value, minSecond, maxSecond);
+                first  = Math.Max(minFirst, newTotal - second);
+            }
+            else
+            {
+                // End edge moved or both moved — preserve first child (original behavior).
+                first  = Math.Clamp(PreferredFirstSpan.Value, minFirst, maxFirst);
+                second = Math.Max(minSecond, newTotal - first);
+            }
 
             PreferredFirstSpan  = first;
             PreferredSecondSpan = second;

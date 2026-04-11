@@ -99,7 +99,6 @@ public static class GameObjectManager
         string baseColumns = @"
             g.ID,
             g.Name,
-            g.Type,
             g.PositionX,
             g.PositionY,
             g.Rotation,        -- Ensure this is included for rotation

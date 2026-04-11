@@ -19,7 +19,21 @@ namespace op.io
         Bars,
         Chat,
         Performance,
-        Math
+        Math,
+        Interact
+    }
+
+    /// <summary>
+    /// Categorises how a block is hosted and displayed.
+    /// Standard blocks live in normal panels, Overlay blocks superimpose on
+    /// other blocks, and Dynamic blocks appear inside the Interact block
+    /// when triggered by a game-world stimulus (e.g. ZoneBlock proximity).
+    /// </summary>
+    public enum DockBlockCategory
+    {
+        Standard,
+        Overlay,
+        Dynamic
     }
 
     public sealed class DockBlock
@@ -35,6 +49,7 @@ namespace op.io
         public string Id { get; }
         public string Title { get; }
         public DockBlockKind Kind { get; }
+        public DockBlockCategory Category { get; set; } = DockBlockCategory.Standard;
         public bool IsVisible { get; set; } = true;
         public Rectangle Bounds { get; set; }
         public int MinWidth { get; set; } = 10;

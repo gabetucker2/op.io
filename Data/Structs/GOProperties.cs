@@ -8,7 +8,6 @@ namespace op.io
     public struct GOProperties
     {
         public int     Id               { get; set; }
-        public string  Type             { get; set; }
         public GOFlags Flags            { get; set; }
         public float   CurrentXP        { get; set; }
         public float   MaxXP            { get; set; }
@@ -315,7 +314,9 @@ namespace op.io
 
         private static IEnumerable<Row> BarrelAttributeRows(Agent agent)
         {
-            Attributes_Barrel a = agent.BarrelAttributes;
+            Attributes_Barrel a = agent.BarrelCount > 0
+                ? agent.Barrels[agent.ActiveBarrelIndex].Attrs
+                : default;
 
             float mass   = a.BulletMass > 0f ? a.BulletMass : BulletManager.DefaultBulletMass;
             float radius = AttributeDerived.BulletRadius(mass, BulletManager.BulletRadiusScalar);
@@ -323,8 +324,12 @@ namespace op.io
 
             yield return new Row("Bullet Damage",      $"{a.BulletDamage:0.##}");
             yield return new Row("Bullet Penetration", $"{a.BulletPenetration:0.##}");
+            yield return new Row("Bullet Knockback",   $"{AttributeDerived.BulletKnockback(a.BulletPenetration, BulletManager.BulletKnockbackScalar):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletKnockback);
             yield return new Row("Reload Speed",       $"{a.ReloadSpeed:0.##}");
 
+            yield return new Row("Recoil Mass",        $"{AttributeDerived.RecoilMass(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsRecoilMass);
             yield return new Row("Bullet Health",      $"{AttributeDerived.BulletHealth(mass):0.##}",
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletHealth);
             yield return new Row("Bullet Radius",      $"{radius:0.##} px",
@@ -336,6 +341,21 @@ namespace op.io
 
             yield return new Row("Bullet Drag",        $"{drag:0.####}",
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletDrag);
+
+            // Bullet effectors — hidden (derived from BulletMass)
+            yield return new Row("Bullet Health Regen",      $"{AttributeDerived.BulletHealthRegen(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletHealthRegen);
+            yield return new Row("Bullet Dmg Regen Delay",   $"{AttributeDerived.BulletHealthRegenDelay(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletHealthRegenDelay);
+            yield return new Row("Bullet Health Armor",      $"{AttributeDerived.BulletHealthArmor(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletHealthArmor);
+            yield return new Row("Bullet Coll. Dmg Resist",  $"{AttributeDerived.BulletCollisionDamageResistance(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletCollisionDamageResistance);
+            yield return new Row("Bullet Dmg Resist",        $"{AttributeDerived.BulletBarrelDamageResistance(mass):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletDamageResistance);
+
+            // Bullet effectors — normal
+            yield return new Row("Bullet Control",           $"{a.BulletControl:0.##}");
         }
 
         // ── Object-level rows: identity, flags ───────────────────────────────────
@@ -344,7 +364,6 @@ namespace op.io
         {
             yield return new Row("Name", string.IsNullOrWhiteSpace(_target.Name) ? "-" : _target.Name);
             yield return new Row("ID", _target.Id.ToString());
-            yield return new Row("Type", _target.Type ?? "-");
             yield return BuildFlagsRow();
         }
 
@@ -424,9 +443,10 @@ namespace op.io
             yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
             yield return new Row("Size",     $"{_target.Width} x {_target.Height}");
             yield return new Row("Shape",    BuildShapeText());
-            yield return new Row("Mass",     $"{_target.Mass:0.##}");
-            yield return new Row("Fill",     _target.FillColor, ToHex(_target.FillColor));
-            yield return new Row("Outline",  _target.OutlineColor, ToHex(_target.OutlineColor));
+            yield return new Row("Mass",       $"{_target.Mass:0.##}");
+            yield return new Row("Draw Layer", $"{_target.DrawLayer}");
+            yield return new Row("Fill",       _target.FillColor, ToHex(_target.FillColor));
+            yield return new Row("Outline",    _target.OutlineColor, ToHex(_target.OutlineColor));
         }
 
         // ── Unit-level character rows ─────────────────────────────────────────────
@@ -449,21 +469,32 @@ namespace op.io
 
         private static IEnumerable<Row> BarrelTransformRows(Agent agent)
         {
-            GameObject barrel = agent.BarrelObject;
-            if (barrel == null)
+            if (agent.BarrelCount <= 0)
             {
                 yield return new Row("Offset",   "0.0, 0.0");
                 yield return new Row("Rotation", "0.0 deg");
                 yield break;
             }
 
-            Vector2 offset = barrel.Position;
-            yield return new Row("Offset",   $"{offset.X:0.0}, {offset.Y:0.0}");
+            var slot = agent.Barrels[agent.ActiveBarrelIndex];
+            Attributes_Barrel a = slot.Attrs;
+            float mass        = a.BulletMass > 0f ? a.BulletMass : BulletManager.DefaultBulletMass;
+            float bulletSpeed = a.BulletSpeed > 0f ? a.BulletSpeed : BulletManager.DefaultBulletSpeed;
+            float barrelWidth  = AttributeDerived.BarrelWidth(mass, BulletManager.BulletRadiusScalar);
+            float barrelHeight = AttributeDerived.BarrelHeight(bulletSpeed, BulletManager.BarrelHeightScalar);
+
+            yield return new Row("Offset",   $"{agent.Position.X:0.0}, {agent.Position.Y:0.0}");
             float rotDeg = MathHelper.ToDegrees(agent.Rotation);
             yield return new Row("Rotation", $"{rotDeg:0.0} deg");
-            yield return new Row("Size",     $"{barrel.Shape.Width} x {barrel.Shape.Height}");
-            yield return new Row("Fill",     barrel.FillColor, ToHex(barrel.FillColor));
-            yield return new Row("Outline",  barrel.OutlineColor, ToHex(barrel.OutlineColor));
+            yield return new Row("Barrel Width",  $"{barrelWidth:0.##} px",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBarrelWidth);
+            yield return new Row("Barrel Height", $"{barrelHeight:0.##} px",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBarrelHeight);
+            if (slot.FullShape != null)
+            {
+                yield return new Row("Fill",     slot.FullShape.FillColor, ToHex(slot.FullShape.FillColor));
+                yield return new Row("Outline",  slot.FullShape.OutlineColor, ToHex(slot.FullShape.OutlineColor));
+            }
         }
 
         private readonly Row BuildFlagsRow()
@@ -471,9 +502,15 @@ namespace op.io
             List<string> parts = new();
             if (_target.IsPlayer)
                 parts.Add("Player");
-            parts.Add(_target.StaticPhysics ? "Static" : "Dynamic");
+            if (_target.IsPrototype)
+                parts.Add("Prototype");
+            parts.Add(_target.DynamicPhysics ? "Dynamic" : "Static");
             parts.Add(_target.IsCollidable ? "Collidable" : "Non-collidable");
             parts.Add(_target.IsDestructible ? "Destructible" : "Indestructible");
+            if (_target.IsInteract)
+                parts.Add("Interact");
+            if (_target.IsZoneBlock)
+                parts.Add("ZoneBlock");
             return new Row("Flags", parts.ToArray());
         }
 

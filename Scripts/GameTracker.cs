@@ -27,6 +27,13 @@ namespace op.io
         public static bool   AnyGUIInteracting  => BlockManager.IsAnyGuiInteracting;
         public static string GUIInteractingWith => BlockManager.GetInteractingBlockKind();
 
+        /// <summary>
+        /// Shows the DockBlockCategory (Standard / Overlay / Dynamic) of the
+        /// currently hovered or focused block so developers can inspect block types
+        /// at runtime.
+        /// </summary>
+        public static string BlockType => BlockManager.GetFocusedBlockCategory();
+
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {
             List<GameTrackerVariable> variables = new();

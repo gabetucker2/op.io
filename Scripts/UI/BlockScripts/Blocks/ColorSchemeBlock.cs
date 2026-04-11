@@ -12,8 +12,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class ColorSchemeBlock
     {
         public const string BlockTitle = "Color Scheme";
-        public const int MinWidth = 40;
-        public const int MinHeight = 0;
 
         private const int SwatchSize = 18;
         private const int SwatchPadding = 8;
@@ -126,7 +124,7 @@ namespace op.io.UI.BlockScripts.Blocks
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.ColorScheme);
             Rectangle listContentBounds = GetListContentBounds(contentBounds);
             float contentHeight = Math.Max(0f, _rows.Count * _lineHeight);
-            _scrollPanel.Update(listContentBounds, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            _scrollPanel.Update(listContentBounds, contentHeight, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)

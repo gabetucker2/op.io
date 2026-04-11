@@ -680,7 +680,7 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
 
         private static bool IsLockedByDefault(DockBlockKind blockKind)
         {
-            if (blockKind == DockBlockKind.Properties || blockKind == DockBlockKind.Bars)
+            if (blockKind == DockBlockKind.Properties || blockKind == DockBlockKind.Bars || blockKind == DockBlockKind.Interact)
             {
                 return false;
             }

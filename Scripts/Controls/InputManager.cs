@@ -848,8 +848,14 @@ namespace op.io
 
                 // Suppress solo bindings when a chord binding sharing the same primary key
                 // has all its modifier tokens held (e.g. Space fires but Shift+Space should win).
+                // For switch types, preserve the current toggled state instead of forcing OFF,
+                // so holding a modifier (e.g. Shift for Shift+V) doesn't disable a live switch (e.g. DockingMode on V).
                 if (!hasModifiers && IsChordSupersetActive(primary))
+                {
+                    if (IsSwitchType(InputType) && ControlStateManager.ContainsSwitchState(SettingKey))
+                        return ControlStateManager.GetSwitchState(SettingKey);
                     return false;
+                }
 
                 return InputType switch
                 {

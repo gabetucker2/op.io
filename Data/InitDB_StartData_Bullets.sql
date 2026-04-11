@@ -10,6 +10,9 @@ INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('HitVelocityLoss',       '
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('PenetrationSpringCoeff','500');  -- spring stiffness: higher = shallower embed; needs >= mv²/R² to stop bullet in-object
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('PenetrationDamping',    '10');   -- damping: 0 = elastic bounce; ~89 = critical (no overshoot); higher = inelastic/sticky
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRadiusScalar',    '6');    -- bullet radius scalar: radius = sqrt(mass) * BulletRadiusScalar
+INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BarrelHeightScalar',   '0.075'); -- barrel height scalar: height = bulletSpeed * BarrelHeightScalar
+INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletKnockbackScalar','0.5');  -- multiplier applied to bullet recoil knockback (< 1 attenuates)
+INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletFarmKnockbackScalar','0.15'); -- scalar for bullet momentum transfer to farm objects (0 = no push; 1 = full physics transfer)
 
 ---------------------------------------------------------------------------------------------------------------------------
 -- BulletDefaults — fallback bullet attributes used when a barrel does not explicitly set them.

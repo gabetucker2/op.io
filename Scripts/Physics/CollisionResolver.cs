@@ -53,7 +53,7 @@ namespace op.io
 
                     // Two static objects can never move, so they can't begin overlapping after init.
                     // Skip the expensive collision test entirely for static-static pairs.
-                    if (objA.StaticPhysics && objB.StaticPhysics)
+                    if (!objA.DynamicPhysics && !objB.DynamicPhysics)
                         continue;
 
                     // Check if there is a collision between objA and objB
@@ -62,8 +62,8 @@ namespace op.io
                         long key          = ContactKey(objA.ID, objB.ID);
                         bool isNewContact = _currContacts.Add(key) && !_prevContacts.Contains(key);
 
-                        // If neither object is static, apply physics resolution
-                        if (!(objA.StaticPhysics && objB.StaticPhysics))
+                        // If at least one object is dynamic, apply physics resolution
+                        if (objA.DynamicPhysics || objB.DynamicPhysics)
                             HandlePhysicsCollision(objA, objB, mtv, isNewContact);
 
                         // Apply agent body collision damage to destructible non-agent objects.
@@ -166,8 +166,8 @@ namespace op.io
             if (minimumTranslationVector == Vector2.Zero)
                 return;
 
-            bool aStatic = objA.StaticPhysics;
-            bool bStatic = objB.StaticPhysics;
+            bool aStatic = !objA.DynamicPhysics;
+            bool bStatic = !objB.DynamicPhysics;
 
             float mA = aStatic ? float.PositiveInfinity : Math.Max(objA.Mass, 0.0001f);
             float mB = bStatic ? float.PositiveInfinity : Math.Max(objB.Mass, 0.0001f);

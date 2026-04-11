@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Collections.Generic;
 
 namespace op.io
 {
@@ -9,6 +10,9 @@ namespace op.io
         private static ShapeManager _instance;
 
         public static ShapeManager Instance => _instance ??= new ShapeManager();
+
+        // Reusable sorted list to avoid per-frame allocations.
+        private readonly List<GameObject> _sortedObjects = new();
 
         private ShapeManager()
         {
@@ -30,10 +34,14 @@ namespace op.io
             }
         }
 
-        // Draws all registered GameObjects by fetching them from GameObjectRegister
+        // Draws all registered GameObjects sorted by DrawLayer (lower layers behind, higher on top).
         public void DrawShapes(SpriteBatch spriteBatch)
         {
-            foreach (GameObject gameObject in GameObjectRegister.GetRegisteredGameObjects())
+            _sortedObjects.Clear();
+            _sortedObjects.AddRange(GameObjectRegister.GetRegisteredGameObjects());
+            _sortedObjects.Sort(static (a, b) => a.DrawLayer.CompareTo(b.DrawLayer));
+
+            foreach (GameObject gameObject in _sortedObjects)
             {
                 if (gameObject.Shape == null)
                 {
@@ -55,6 +63,8 @@ namespace op.io
                 {
                     int N = agent.BarrelCount;
                     float angleStep = N > 1 ? MathF.Tau / N : 0f;
+                    float bodyRadius = agent.Shape != null
+                        ? Math.Max(agent.Shape.Width, agent.Shape.Height) / 2f : 0f;
 
                     // Pass 1: standby barrels
                     for (int i = 0; i < N; i++)
@@ -63,11 +73,11 @@ namespace op.io
                         var slot = agent.Barrels[i];
                         if (slot.FullShape == null) continue;
                         float barrelAngle = agent.Rotation + i * angleStep - agent.CarouselAngle;
-                        // Always use the full half-length for positioning so the draw center
-                        // stays at the body edge regardless of scale.  The scale only shrinks
-                        // the visual length from that anchor point.
-                        float halfLength = slot.FullShape.Width / 2f;
-                        Vector2 offset = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle)) * halfLength;
+                        // Position the barrel so its near edge always touches the body edge.
+                        // As the height scale animates, the barrel extends/retracts outward.
+                        float scaledHalfLen = slot.FullShape.Width * slot.CurrentHeightScale / 2f;
+                        Vector2 dir = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle));
+                        Vector2 offset = dir * (bodyRadius + scaledHalfLen);
                         slot.FullShape.DrawAt(spriteBatch, agent.Position + offset, barrelAngle,
                             new Vector2(slot.CurrentHeightScale, 1f), agent.Opacity);
                     }
@@ -78,8 +88,9 @@ namespace op.io
                         if (active.FullShape != null)
                         {
                             float barrelAngle = agent.Rotation + agent.ActiveBarrelIndex * angleStep - agent.CarouselAngle;
-                            float halfLength = active.FullShape.Width / 2f;
-                            Vector2 offset = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle)) * halfLength;
+                            float scaledHalfLen = active.FullShape.Width * active.CurrentHeightScale / 2f;
+                            Vector2 dir = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle));
+                            Vector2 offset = dir * (bodyRadius + scaledHalfLen);
                             active.FullShape.DrawAt(spriteBatch, agent.Position + offset, barrelAngle,
                                 new Vector2(active.CurrentHeightScale, 1f), agent.Opacity);
                         }

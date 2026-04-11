@@ -18,9 +18,9 @@ namespace op.io
             try
             {
                 string query =
-                    "SELECT bp.BarrelMass, " +
-                    "       bp.BulletDamage, bp.BulletPenetration, bp.BulletSpeed, " +
-                    "       bp.ReloadSpeed, bp.BulletMaxLifespan, bp.BulletMass, " +
+                    "SELECT bp.BulletDamage, bp.BulletPenetration, bp.BulletSpeed, " +
+                    "       bp.ReloadSpeed, bp.BulletMaxLifespan, bp.BulletMass, bp.BulletHealth, " +
+                    "       bp.BulletControl, " +
                     "       bp.BulletFillR, bp.BulletFillG, bp.BulletFillB, bp.BulletFillA, " +
                     "       bp.BulletOutlineR, bp.BulletOutlineG, bp.BulletOutlineB, bp.BulletOutlineA, " +
                     "       bp.BulletOutlineWidth " +
@@ -36,13 +36,14 @@ namespace op.io
                 {
                     barrels.Add(new Attributes_Barrel
                     {
-                        BarrelMass        = Convert.ToSingle(row["BarrelMass"]),
                         BulletDamage      = Convert.ToSingle(row["BulletDamage"]),
                         BulletPenetration = Convert.ToSingle(row["BulletPenetration"]),
                         BulletSpeed       = Convert.ToSingle(row["BulletSpeed"]),
                         ReloadSpeed       = Convert.ToSingle(row["ReloadSpeed"]),
                         BulletMaxLifespan = Convert.ToSingle(row["BulletMaxLifespan"]),
                         BulletMass        = Convert.ToSingle(row["BulletMass"]),
+                        BulletHealth      = Convert.ToSingle(row["BulletHealth"]),
+                        BulletControl                  = Convert.ToSingle(row["BulletControl"]),
                         BulletFillAlphaRaw    = Convert.ToInt32(row["BulletFillA"]),
                         BulletOutlineAlphaRaw = Convert.ToInt32(row["BulletOutlineA"]),
                         BulletFillColor   = new Color(

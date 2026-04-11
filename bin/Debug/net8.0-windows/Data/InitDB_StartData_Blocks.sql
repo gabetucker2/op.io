@@ -226,12 +226,13 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
     { "kind": "Specs", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "DebugLogs", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Chat", "mode": "Toggle", "count": 0, "visible": true },
-    { "kind": "Bars", "mode": "Toggle", "count": 0, "visible": true }
+    { "kind": "Bars", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Interact", "mode": "Toggle", "count": 0, "visible": true }
   ],
   "panels": [
     { "id": "colors", "active": "colors", "blocks": ["colors", "notes", "dockingsetups"] },
     { "id": "game", "active": "game", "blocks": ["game"] },
-    { "id": "controls", "active": "controls", "blocks": ["controls"] },
+    { "id": "controls", "active": "interact", "blocks": ["interact", "controls"] },
     { "id": "backend", "active": "backend", "blocks": ["backend", "debuglogs", "chat", "specs"] },
     { "id": "blank", "active": "blank", "blocks": ["blank"] },
     { "id": "properties", "active": "properties", "blocks": ["properties", "bars"] }

@@ -155,6 +155,39 @@ namespace op.io
             }
         }
 
+        private static float? _cachedBarrelHeightScalar = null;
+        public static float BarrelHeightScalar
+        {
+            get
+            {
+                if (!_cachedBarrelHeightScalar.HasValue)
+                    _cachedBarrelHeightScalar = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "BarrelHeightScalar");
+                return _cachedBarrelHeightScalar.Value;
+            }
+        }
+
+        private static float? _cachedBulletKnockbackScalar = null;
+        public static float BulletKnockbackScalar
+        {
+            get
+            {
+                if (!_cachedBulletKnockbackScalar.HasValue)
+                    _cachedBulletKnockbackScalar = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "BulletKnockbackScalar");
+                return _cachedBulletKnockbackScalar.Value;
+            }
+        }
+
+        private static float? _cachedBulletFarmKnockbackScalar = null;
+        public static float BulletFarmKnockbackScalar
+        {
+            get
+            {
+                if (!_cachedBulletFarmKnockbackScalar.HasValue)
+                    _cachedBulletFarmKnockbackScalar = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "BulletFarmKnockbackScalar");
+                return _cachedBulletFarmKnockbackScalar.Value;
+            }
+        }
+
         private static (float FadeIn, float Hold, float FadeOut)? _cachedHitFlashAnim;
         private static (float FadeIn, float Hold, float FadeOut) HitFlashAnim =>
             _cachedHitFlashAnim ??= DatabaseFetch.GetAnimSetting("HitFlashAnim", 0.05f, 0f, 0.2f);
@@ -232,9 +265,12 @@ namespace op.io
                 : Vector2.Zero;
             Vector2 velocity = inheritedVelocity + dir * speed;
 
-            // Spawn at the barrel tip so the bullet starts flush with the end of the barrel
+            // Spawn at the barrel tip so the bullet starts flush with the end of the barrel.
+            // The barrel extends from the body edge outward, so the tip is at bodyRadius + barrelLength.
+            float bodyRadius = agent.Shape != null
+                ? Math.Max(agent.Shape.Width, agent.Shape.Height) / 2f : 0f;
             float barrelLength = agent.BarrelShape?.Width ?? 0f;
-            Vector2 spawnPos = agent.Position + dir * barrelLength;
+            Vector2 spawnPos = agent.Position + dir * (bodyRadius + barrelLength);
 
             float radius = ComputeBulletRadius(mass);
             int diameter = Math.Max(1, (int)MathF.Round(radius * 2));
@@ -244,10 +280,11 @@ namespace op.io
             var shape = new Shape("Circle", diameter, diameter, 0, fill, outline, outlineW);
             shape.LoadContent(Core.Instance.GraphicsDevice);
 
-            float bulletHealth      = AttributeDerived.BulletHealth(mass); // hidden: derived from BulletMass
+            float bulletHealth      = attrs.BulletHealth >= 0 ? attrs.BulletHealth : AttributeDerived.BulletHealth(mass);
             float bulletDamage      = attrs.BulletDamage      >= 0 ? attrs.BulletDamage      : DefaultBulletDamage;
             float bulletPenetration = attrs.BulletPenetration >= 0 ? attrs.BulletPenetration : DefaultBulletPenetration;
-            var bullet = new Bullet(_nextId++, spawnPos, velocity, mass, lifespan, dragFactor, shape, bulletHealth, bulletDamage, bulletPenetration, fill, outline, outlineW);
+            float bulletKnockback   = AttributeDerived.BulletKnockback(bulletPenetration, BulletKnockbackScalar); // hidden: derived from BulletPenetration
+            var bullet = new Bullet(_nextId++, spawnPos, velocity, mass, lifespan, dragFactor, shape, bulletHealth, bulletDamage, bulletPenetration, bulletKnockback, fill, outline, outlineW);
             bullet.OwnerID  = agent.ID;
             bullet.SourceID = HashCode.Combine(agent.ID, agent.ActiveBarrelIndex);
             _bullets.Add(bullet);

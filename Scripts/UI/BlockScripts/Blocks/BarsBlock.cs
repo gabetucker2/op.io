@@ -27,8 +27,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class BarsBlock
     {
         public const string BlockTitle = "Bars";
-        public const int    MinWidth   = 300;
-        public const int    MinHeight  = 200;
 
         // ── Layout constants ─────────────────────────────────────────────────
         private const int Padding         = 8;
@@ -174,7 +172,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             float listContentH = CalculateTotalHeight(shown, hidden);
-            _scroll.Update(listViewport, listContentH, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            _scroll.Update(listViewport, listContentH, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
 
             _prevMouse = mouseState;
             _lastMousePosition = mouseState.Position;
@@ -473,11 +471,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 var previewPos = new Vector2(cx, cy);
                 float rot = _previewAimAngle;
 
-                // Barrels first (behind body)
+                // Barrels first (behind body) — matches ShapeManager positioning
                 if (player.BarrelCount > 0)
                 {
                     int N = player.BarrelCount;
                     float step = N > 1 ? MathF.Tau / N : 0f;
+                    float bodyRadius = Math.Max(player.Shape.Width, player.Shape.Height) / 2f;
+
                     // standby barrels
                     for (int i = 0; i < N; i++)
                     {
@@ -485,18 +485,20 @@ namespace op.io.UI.BlockScripts.Blocks
                         var slot = player.Barrels[i];
                         if (slot.FullShape == null) continue;
                         float angle  = rot + i * step - player.CarouselAngle;
-                        float halfL  = slot.FullShape.Width / 2f;
-                        Vector2 off  = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * halfL;
+                        float scaledHalfL = slot.FullShape.Width * slot.CurrentHeightScale / 2f;
+                        Vector2 dir  = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                        Vector2 off  = dir * (bodyRadius + scaledHalfL);
                         slot.FullShape.DrawAt(sb, previewPos + off, angle,
                             new Vector2(slot.CurrentHeightScale, 1f));
                     }
-                    // active barrel
+                    // active barrel (drawn last so it appears on top)
                     var active = player.Barrels[player.ActiveBarrelIndex];
                     if (active.FullShape != null)
                     {
                         float angle = rot + player.ActiveBarrelIndex * step - player.CarouselAngle;
-                        float halfL = active.FullShape.Width / 2f;
-                        Vector2 off = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * halfL;
+                        float scaledHalfL = active.FullShape.Width * active.CurrentHeightScale / 2f;
+                        Vector2 dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                        Vector2 off = dir * (bodyRadius + scaledHalfL);
                         active.FullShape.DrawAt(sb, previewPos + off, angle,
                             new Vector2(active.CurrentHeightScale, 1f));
                     }

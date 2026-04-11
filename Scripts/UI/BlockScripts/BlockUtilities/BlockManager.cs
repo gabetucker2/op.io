@@ -28,6 +28,7 @@ namespace op.io
         private const string ChatBlockKey = "chat";
         private const string PerformanceBlockKey = "performance";
         private const string MathBlockKey = "math";
+        private const string InteractBlockKey = "interact";
         private const string BlockMenuControlKey = "BlockMenu";
 private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const string OverlayInputFocusOwner = "BlockManager.OverlayNumeric";
@@ -107,6 +108,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static Vector2 _cameraPanAnchorOffset;
         // Persistent offset from the player-center baseline used in Locked mode.
         private static Vector2 _lockedCameraOffset = Vector2.Zero;
+        // Camera zoom (1.0 = default, >1 = zoomed in / closer, <1 = zoomed out / farther)
+        private static float _cameraZoom = 1f;
+        public static float CameraZoom => _cameraZoom;
         // When releasing middle-mouse drag, if the camera is within this distance of
         // the player-centered position it snaps back automatically (loaded from DB).
         private static float _cameraSnapRange = 150f;
@@ -1787,6 +1791,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _blockMenuEntries.Add(new BlockMenuEntry(ChatBlockKey, ChatBlock.BlockTitle, DockBlockKind.Chat, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(PerformanceBlockKey, PerformanceBlock.BlockTitle, DockBlockKind.Performance, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(MathBlockKey, MathBlock.BlockTitle, DockBlockKind.Math, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(InteractBlockKey, InteractBlock.BlockTitle, DockBlockKind.Interact, BlockMenuControlMode.Toggle, initialVisible: true));
         }
 
         private static int ClampCount(BlockMenuEntry entry, int value)
@@ -1923,6 +1928,35 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     MergeBlockIntoGroup(backendGroup, SpecsBlockKey);
                 }
             }
+
+            // Merge Bars into the bottom-right panel (Backend group).
+            if (_blocks.TryGetValue(BackendBlockKey, out DockBlock backendBlockForBars) && backendBlockForBars != null)
+            {
+                PanelGroup barsTarget = GetPanelGroupForBlock(backendBlockForBars);
+                if (barsTarget != null)
+                    MergeBlockIntoGroup(barsTarget, BarsBlockKey);
+            }
+
+            // Merge Interact into the Controls panel group so it appears as the default active tab.
+            MergeInteractIntoControlsGroup();
+        }
+
+        private static void MergeInteractIntoControlsGroup()
+        {
+            if (!_blocks.TryGetValue(ControlsBlockKey, out DockBlock controlsBlock) ||
+                controlsBlock == null)
+            {
+                return;
+            }
+
+            PanelGroup controlsGroup = GetPanelGroupForBlock(controlsBlock);
+            if (controlsGroup == null)
+                return;
+
+            MergeBlockIntoGroup(controlsGroup, InteractBlockKey);
+
+            // Make Interact the active tab in this panel group.
+            controlsGroup.SetActiveBlock(InteractBlockKey);
         }
 
         private static void MergeControlSetupsIntoControlsGroup()
@@ -2755,9 +2789,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static DockBlock CreateBlock(string id, string title, DockBlockKind kind)
         {
             DockBlock block = new(id, title, kind);
-            (int minWidth, int minHeight) = GetBlockMinimumSize(kind);
-            block.MinWidth = Math.Max(0, minWidth);
-            block.MinHeight = Math.Max(0, minHeight);
+            (int minWidth, int minHeight) = GetBlockMinimumSize();
+            block.MinWidth = minWidth;
+            block.MinHeight = minHeight;
             if (kind == DockBlockKind.Specs)
                 block.BackgroundOpacity = 0f;
             _blocks[id] = block;
@@ -2773,35 +2807,12 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             return block;
         }
 
-        private static (int MinWidth, int MinHeight) GetBlockMinimumSize(DockBlockKind kind)
+        private static (int MinWidth, int MinHeight) GetBlockMinimumSize()
         {
-            const int defaultMin = 10;
-            (int width, int height) = kind switch
-            {
-                DockBlockKind.Game => (GameBlock.MinWidth, GameBlock.MinHeight),
-                DockBlockKind.Blank => (BlankBlock.MinWidth, BlankBlock.MinHeight),
-                DockBlockKind.Properties => (PropertiesBlock.MinWidth, PropertiesBlock.MinHeight),
-                DockBlockKind.ColorScheme => (ColorSchemeBlock.MinWidth, ColorSchemeBlock.MinHeight),
-                DockBlockKind.Controls => (ControlsBlock.MinWidth, ControlsBlock.MinHeight),
-                DockBlockKind.Notes => (NotesBlock.MinWidth, NotesBlock.MinHeight),
-                DockBlockKind.ControlSetups => (ControlSetupsBlock.MinWidth, ControlSetupsBlock.MinHeight),
-                DockBlockKind.DockingSetups => (DockingSetupsBlock.MinWidth, DockingSetupsBlock.MinHeight),
-                DockBlockKind.Backend => (BackendBlock.MinWidth, BackendBlock.MinHeight),
-                DockBlockKind.Specs => (SpecsBlock.MinWidth, SpecsBlock.MinHeight),
-                DockBlockKind.DebugLogs => (DebugLogsBlock.MinWidth, DebugLogsBlock.MinHeight),
-                DockBlockKind.Bars => (BarsBlock.MinWidth, BarsBlock.MinHeight),
-                DockBlockKind.Chat => (ChatBlock.MinWidth, ChatBlock.MinHeight),
-                DockBlockKind.Performance => (PerformanceBlock.MinWidth, PerformanceBlock.MinHeight),
-                DockBlockKind.Math => (MathBlock.MinWidth, MathBlock.MinHeight),
-                _ => (defaultMin, defaultMin)
-            };
-
-            // Keep at least the drag bar height so we can detect when a drag bar is being pushed;
-            // overflow gets propagated to neighboring resize edges instead of hard-clamping.
-            int clampedWidth = Math.Max(width, UIStyle.MinBlockSize);
+            // All blocks share the same minimum: wide enough for MinBlockSize,
+            // tall enough for the drag bar so we can detect when it is being pushed.
             int headerHeight = Math.Max(UIStyle.DragBarHeight, GroupBarHeight);
-            int clampedHeight = Math.Max(height, headerHeight);
-            return (clampedWidth, clampedHeight);
+            return (UIStyle.MinBlockSize, headerHeight);
         }
 
         private static void EnsureSurfaceResources(GraphicsDevice graphicsDevice)
@@ -3734,6 +3745,27 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             return false;
         }
 
+        /// <summary>
+        /// Returns the mouse state a block should pass to its scroll panel.
+        /// When the block is locked but docking mode is active, the returned state
+        /// preserves scroll-wheel and position data (so the scroll panel can detect
+        /// hover and compute wheel delta) while suppressing all button input.
+        /// </summary>
+        internal static MouseState GetScrollMouseState(bool blockLocked, MouseState mouseState, MouseState previousMouseState)
+        {
+            if (!blockLocked)
+                return mouseState;
+            if (!DockingModeEnabled)
+                return previousMouseState;
+            // Docking mode + locked: allow scroll wheel and left-click (for scrollbar dragging),
+            // suppress all other buttons.
+            return new MouseState(
+                mouseState.X, mouseState.Y,
+                mouseState.ScrollWheelValue,
+                mouseState.LeftButton, ButtonState.Released,
+                ButtonState.Released, ButtonState.Released, ButtonState.Released);
+        }
+
         private static bool IsBlockLockEnabled(DockBlock block)
         {
             if (block == null || !IsLockToggleAvailable(block))
@@ -4256,6 +4288,34 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             };
         }
 
+        /// <summary>
+        /// Returns true when <paramref name="a"/> and <paramref name="b"/> share an edge
+        /// along the given split orientation.  Horizontal orientation means stacked
+        /// vertically (shared top/bottom edge); Vertical means side-by-side (shared
+        /// left/right edge).  A small tolerance is used so that a 1-2 px gap from
+        /// resize-edge rendering does not prevent adjacency detection.
+        /// </summary>
+        private static bool IsEdgeAdjacent(Rectangle a, Rectangle b, DockSplitOrientation orientation)
+        {
+            const int tolerance = 4;
+            if (orientation == DockSplitOrientation.Horizontal)
+            {
+                // Vertically stacked: they share a horizontal edge and overlap on X.
+                bool xOverlap = a.Left < b.Right && b.Left < a.Right;
+                bool yAdjacent = Math.Abs(a.Bottom - b.Top) <= tolerance ||
+                                 Math.Abs(b.Bottom - a.Top) <= tolerance;
+                return xOverlap && yAdjacent;
+            }
+            else
+            {
+                // Side-by-side: they share a vertical edge and overlap on Y.
+                bool yOverlap = a.Top < b.Bottom && b.Top < a.Bottom;
+                bool xAdjacent = Math.Abs(a.Right - b.Left) <= tolerance ||
+                                 Math.Abs(b.Right - a.Left) <= tolerance;
+                return yOverlap && xAdjacent;
+            }
+        }
+
         private static Rectangle ComputeSuperimposeZone(Rectangle bounds)
         {
             int shortSide = Math.Min(bounds.Width, bounds.Height);
@@ -4297,10 +4357,23 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (parentBounds.Contains(position))
                 {
                     Rectangle zone = ComputeSuperimposeZone(parentBounds);
-                    return BuildSuperimposePreview(_superimposeLockedTarget, parentBounds, zone, position);
+                    if (zone.Contains(position))
+                    {
+                        return BuildSuperimposePreview(_superimposeLockedTarget, parentBounds, zone, position);
+                    }
+
+                    // Cursor left the superimpose zone but is still inside the panel —
+                    // unlock so edge-based drops (Top/Bottom/Left/Right) can be detected.
+                    _superimposeLocked = false;
+                    _superimposeLockedTarget = null;
                 }
-                // Cursor left the parent panel; return null so releasing outside cancels the drag.
-                return null;
+                else
+                {
+                    // Cursor left the parent panel; return null so releasing outside cancels the drag.
+                    _superimposeLocked = false;
+                    _superimposeLockedTarget = null;
+                    return null;
+                }
             }
 
             if (_draggingFromTab)
@@ -4337,10 +4410,43 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return null;
             }
 
-            DockDropPreview? preview = BuildViewportSnapPreview(position);
-            if (preview.HasValue)
+            // First pass: check if the cursor is over a block that is adjacent to
+            // the block being dragged.  Adjacent drops take priority over viewport
+            // snap so the user can drag all the way across a neighbour (even near
+            // the window edge) to displace it.
+            DockDropPreview? preview = null;
+            DockBlock adjacentTarget = null;
+            bool adjacentVertical = false;
+            bool adjacentHorizontal = false;
+
+            foreach (DockBlock block in _orderedBlocks)
             {
-                return preview;
+                if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
+                    continue;
+
+                Rectangle bounds = block.Bounds;
+                if (!bounds.Contains(position))
+                    continue;
+
+                bool va = IsEdgeAdjacent(_draggingStartBounds, bounds, DockSplitOrientation.Horizontal);
+                bool ha = IsEdgeAdjacent(_draggingStartBounds, bounds, DockSplitOrientation.Vertical);
+                if (va || ha)
+                {
+                    adjacentTarget = block;
+                    adjacentVertical = va;
+                    adjacentHorizontal = ha;
+                }
+                break;
+            }
+
+            // Viewport snap only applies when the cursor is NOT over an adjacent block.
+            if (adjacentTarget == null)
+            {
+                preview = BuildViewportSnapPreview(position);
+                if (preview.HasValue)
+                {
+                    return preview;
+                }
             }
 
             preview = null;
@@ -4357,36 +4463,66 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     continue;
                 }
 
-                // Check center superimpose zone first
-                Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
+                bool isAdjacent = block == adjacentTarget;
 
-                if (superimposeZone.Contains(position))
+                if (!isAdjacent)
                 {
-                    _superimposeLocked = true;
-                    _superimposeLockedTarget = block;
-                    preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
-                    break;
+                    // Check center superimpose zone first
+                    Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
+
+                    if (superimposeZone.Contains(position))
+                    {
+                        _superimposeLocked = true;
+                        _superimposeLockedTarget = block;
+                        preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
+                        break;
+                    }
                 }
 
                 float relativeX = (position.X - bounds.X) / (float)Math.Max(1, bounds.Width);
                 float relativeY = (position.Y - bounds.Y) / (float)Math.Max(1, bounds.Height);
 
                 DockEdge edge;
-                if (relativeY <= UIStyle.DropEdgeThreshold)
+                if (isAdjacent)
                 {
-                    edge = DockEdge.Top;
-                }
-                else if (relativeY >= 1f - UIStyle.DropEdgeThreshold)
-                {
-                    edge = DockEdge.Bottom;
-                }
-                else if (relativeX <= 0.5f)
-                {
-                    edge = DockEdge.Left;
+                    // Adjacent blocks use a simple 50/50 split along the shared axis so
+                    // crossing the midpoint of the target triggers a displacement swap.
+                    if (adjacentVertical && !adjacentHorizontal)
+                    {
+                        edge = relativeY <= 0.5f ? DockEdge.Top : DockEdge.Bottom;
+                    }
+                    else if (adjacentHorizontal && !adjacentVertical)
+                    {
+                        edge = relativeX <= 0.5f ? DockEdge.Left : DockEdge.Right;
+                    }
+                    else
+                    {
+                        float distX = Math.Abs(relativeX - 0.5f);
+                        float distY = Math.Abs(relativeY - 0.5f);
+                        if (distY >= distX)
+                            edge = relativeY <= 0.5f ? DockEdge.Top : DockEdge.Bottom;
+                        else
+                            edge = relativeX <= 0.5f ? DockEdge.Left : DockEdge.Right;
+                    }
                 }
                 else
                 {
-                    edge = DockEdge.Right;
+                    if (relativeY <= UIStyle.DropEdgeThreshold)
+                    {
+                        edge = DockEdge.Top;
+                    }
+                    else if (relativeY >= 1f - UIStyle.DropEdgeThreshold)
+                    {
+                        edge = DockEdge.Bottom;
+                    }
+                    else if (relativeX <= 0.5f)
+                    {
+                        edge = DockEdge.Left;
+                    }
+                    else
+                    {
+                        edge = DockEdge.Right;
+                    }
                 }
 
                 Rectangle highlight = edge switch
@@ -6107,6 +6243,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 case DockBlockKind.Math:
                     MathBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.Interact:
+                    InteractBlock.Draw(spriteBatch, contentBounds);
+                    break;
             }
         }
 
@@ -6128,7 +6267,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 ?? (!IsBlockLocked(DockBlockKind.ColorScheme) ? ColorSchemeBlock.GetHoveredRowKey() : null)
                 ?? (!IsBlockLocked(DockBlockKind.Math)      ? MathBlock.GetHoveredRowKey()         : null)
                 ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredButtonKey() : null)
-                ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredPropRowKey() : null);
+                ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredPropRowKey() : null)
+                ?? (!IsBlockLocked(DockBlockKind.Interact)  ? InteractBlock.GetHoveredRowKey()      : null);
 
             string rowLabel = rowKey != null
                 ? (ControlsBlock.GetHoveredRowLabel()
@@ -6136,7 +6276,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     ?? SpecsBlock.GetHoveredRowLabel()
                     ?? ColorSchemeBlock.GetHoveredRowLabel()
                     ?? MathBlock.GetHoveredRowLabel()
-                    ?? PropertiesBlock.GetHoveredPropRowLabel())
+                    ?? PropertiesBlock.GetHoveredPropRowLabel()
+                    ?? InteractBlock.GetHoveredRowLabel())
                 : null;
 
             if (!string.Equals(rowKey, _tooltipHoveredRowKey, StringComparison.OrdinalIgnoreCase))
@@ -6537,6 +6678,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         break;
                     case DockBlockKind.Math:
                         MathBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
+                    case DockBlockKind.Interact:
+                        InteractBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse, keyboardState, previousKeyboardState);
                         break;
                 }
             }
@@ -7305,6 +7449,41 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         public static bool IsBlockMenuOpen() => _overlayMenuVisible;
 
         public static bool IsInputBlocked() => _overlayMenuVisible || ControlsBlock.IsRebindOverlayOpen() || ColorSchemeBlock.IsEditorOpen;
+
+        /// <summary>
+        /// Returns true when scrollwheel game inputs (camera zoom, etc.) should be
+        /// suppressed: when the cursor is over a visible, unlocked non-Game block,
+        /// or when docking mode is active and the cursor is not over the Game block.
+        /// </summary>
+        public static bool ShouldSuppressScrollWheel()
+        {
+            Point pos = _mousePosition;
+
+            if (_dockingModeEnabled)
+            {
+                // Allow scroll through to game actions only when cursor is over the Game block
+                foreach (DockBlock block in _orderedBlocks)
+                {
+                    if (block == null || !block.IsVisible) continue;
+                    if (!block.Bounds.Contains(pos)) continue;
+                    return block.Kind != DockBlockKind.Game;
+                }
+                return true; // cursor not over any block
+            }
+
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !block.IsVisible || block.Kind == DockBlockKind.Game)
+                    continue;
+                if (!block.Bounds.Contains(pos))
+                    continue;
+                // Mouse is over this block — suppress scroll if the block is unlocked
+                if (!IsBlockLocked(block))
+                    return true;
+                break;
+            }
+            return false;
+        }
 
         public static bool IsDraggingLayout =>
             _activeResizeEdge.HasValue || _activeCornerHandle.HasValue;
@@ -8415,6 +8594,19 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             return block.Kind;
         }
 
+        /// <summary>
+        /// Returns the DockBlockCategory name of the currently focused block,
+        /// or "None" when nothing is focused.
+        /// </summary>
+        public static string GetFocusedBlockCategory()
+        {
+            if (string.IsNullOrWhiteSpace(_focusedBlockId))
+                return "None";
+            if (!_blocks.TryGetValue(_focusedBlockId, out DockBlock block))
+                return "None";
+            return block.Category.ToString();
+        }
+
         private static void SetFocusedBlock(DockBlock block)
         {
             if (block == null || !block.IsVisible)
@@ -8459,14 +8651,59 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             float relativeX = (x - _actualGameContentBounds.X) / _actualGameContentBounds.Width;
             float relativeY = (y - _actualGameContentBounds.Y) / _actualGameContentBounds.Height;
-            return new Vector2(relativeX * _worldRenderTarget.Width, relativeY * _worldRenderTarget.Height);
+            float rawX = relativeX * _worldRenderTarget.Width;
+            float rawY = relativeY * _worldRenderTarget.Height;
+
+            // Reverse the zoom: screen center is the zoom pivot.
+            float cx = _worldRenderTarget.Width / 2f;
+            float cy = _worldRenderTarget.Height / 2f;
+            rawX = cx + (rawX - cx) / _cameraZoom;
+            rawY = cy + (rawY - cy) / _cameraZoom;
+
+            return new Vector2(rawX, rawY);
         }
 
-        /// <summary>Returns the camera translation matrix for the current pan offset.</summary>
-        public static Matrix GetCameraTransform() =>
-            CameraOffset != Vector2.Zero
-                ? Matrix.CreateTranslation(-CameraOffset.X, -CameraOffset.Y, 0f)
-                : Matrix.Identity;
+        /// <summary>Returns the camera transform matrix (translation + zoom) for the current view.</summary>
+        public static Matrix GetCameraTransform()
+        {
+            // Zoom around the center of the render target so the player stays centered.
+            float cx = _worldRenderTarget != null ? _worldRenderTarget.Width / 2f : 0f;
+            float cy = _worldRenderTarget != null ? _worldRenderTarget.Height / 2f : 0f;
+
+            return Matrix.CreateTranslation(-CameraOffset.X, -CameraOffset.Y, 0f)
+                 * Matrix.CreateTranslation(-cx, -cy, 0f)
+                 * Matrix.CreateScale(_cameraZoom, _cameraZoom, 1f)
+                 * Matrix.CreateTranslation(cx, cy, 0f);
+        }
+
+        /// <summary>
+        /// Adjusts the camera zoom by one step. Positive delta zooms in (closer),
+        /// negative zooms out (farther). Clamped to the ScrollMinDistance / ScrollMaxDistance
+        /// control settings which represent the visible radius in world units.
+        /// </summary>
+        public static void ApplyCameraZoom(int steps)
+        {
+            if (_worldRenderTarget == null) return;
+
+            float minDist = ControlStateManager.GetFloat(ControlKeyMigrations.ScrollMinDistanceKey, 200f);
+            float maxDist = ControlStateManager.GetFloat(ControlKeyMigrations.ScrollMaxDistanceKey, 2000f);
+
+            // Convert distance limits to zoom factors. The "distance" represents how much
+            // of the world is visible — half the render target width at zoom 1.0.
+            float halfWidth = _worldRenderTarget.Width / 2f;
+            float maxZoom = halfWidth / MathHelper.Max(minDist, 1f);
+            float minZoom = halfWidth / MathHelper.Max(maxDist, 1f);
+
+            // Each step multiplies/divides by a fixed factor for smooth feel.
+            const float zoomFactor = 1.1f;
+            float newZoom = _cameraZoom;
+            if (steps > 0)
+                for (int i = 0; i < steps; i++) newZoom *= zoomFactor;
+            else
+                for (int i = 0; i < -steps; i++) newZoom /= zoomFactor;
+
+            _cameraZoom = MathHelper.Clamp(newZoom, minZoom, maxZoom);
+        }
 
         // ── Camera mode helpers ───────────────────────────────────────────────
 
@@ -8525,9 +8762,13 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return false;
             }
 
-            // Subtract camera offset: a game object at gamePosition is rendered at (gamePosition - CameraOffset).
+            // Subtract camera offset, then apply zoom around the render-target center.
             float renderX = gamePosition.X - CameraOffset.X;
             float renderY = gamePosition.Y - CameraOffset.Y;
+            float cx = _worldRenderTarget.Width / 2f;
+            float cy = _worldRenderTarget.Height / 2f;
+            renderX = cx + (renderX - cx) * _cameraZoom;
+            renderY = cy + (renderY - cy) * _cameraZoom;
             float normalizedX = renderX / _worldRenderTarget.Width;
             float normalizedY = renderY / _worldRenderTarget.Height;
 

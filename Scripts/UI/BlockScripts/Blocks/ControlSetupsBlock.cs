@@ -12,8 +12,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class ControlSetupsBlock
     {
         public const string BlockTitle = "Control Setups";
-        public const int MinWidth = 30;
-        public const int MinHeight = 0;
 
         private enum OverlayMode
         {

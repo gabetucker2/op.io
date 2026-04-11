@@ -56,56 +56,6 @@ namespace op.io
             return gameObjects;
         }
 
-        public static List<GameObject> LoadGameObjectsFromJoin(string joinTable, string typeFilter)
-        {
-            var gameObjects = new List<GameObject>();
-
-            try
-            {
-                DebugLogger.PrintDatabase($"Loading GameObjects from join: {joinTable} + GameObjects where Type = {typeFilter}...");
-
-                string query = GameObjectManager.BuildJoinQuery(
-                    secondaryTable: joinTable,
-                    whereClause: "g.Type = @Type"
-                );
-
-                var result = DatabaseQuery.ExecuteQuery(query, new Dictionary<string, object>
-                {
-                    { "@Type", typeFilter }
-                });
-
-                if (result.Count == 0)
-                {
-                    DebugLogger.PrintWarning($"No joined GameObjects found in {joinTable} for Type = {typeFilter}.");
-                    return gameObjects;
-                }
-
-                DebugLogger.PrintDatabase($"Retrieved {result.Count} rows from join.");
-
-                foreach (var row in result)
-                {
-                    DebugLogger.PrintDatabase($"Row keys: {string.Join(", ", row.Keys)}");
-
-                    var gameObject = DeserializeGameObject(row);
-                    if (gameObject != null)
-                    {
-                        gameObjects.Add(gameObject);
-                        DebugLogger.PrintGO($"Loaded GameObject with ID: {gameObject.ID}, Type: {gameObject.GetType().Name}, Pos: {gameObject.Position}");
-                    }
-                    else
-                    {
-                        DebugLogger.PrintWarning("Skipped null GameObject after deserialization.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintError($"Failed to load GameObjects from join {joinTable}: {ex.Message}");
-            }
-
-            return gameObjects;
-        }
-
         public static bool TryDeserializeSimpleGameObject(Dictionary<string, object> row, out SimpleGameObject archetype)
         {
             archetype = default;
@@ -114,7 +64,6 @@ namespace op.io
             {
                 int id = Convert.ToInt32(row["ID"]);
                 string name = row["Name"]?.ToString() ?? "Unknown";
-                string type = row["Type"]?.ToString() ?? "Unknown";
                 Vector2 position = new(Convert.ToSingle(row["PositionX"]), Convert.ToSingle(row["PositionY"]));
                 float rotation = row.ContainsKey("Rotation") ? Convert.ToSingle(row["Rotation"]) : 0f;
                 float mass = Convert.ToSingle(row["Mass"]);
@@ -156,7 +105,7 @@ namespace op.io
                     };
                 }
 
-                Attributes.Identity identity = new(id, name, type);
+                Attributes.Identity identity = new(id, name);
                 Attributes.Transform bodyTransform = new(position, rotation);
                 PhysicsAttributes physics = new(
                     staticPhysics ? PhysicsMotion.Static : PhysicsMotion.Dynamic,

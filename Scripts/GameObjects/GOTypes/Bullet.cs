@@ -13,9 +13,11 @@ namespace op.io
         // from different barrels of the same agent get distinct combat-text routines.
         public int SourceID { get; set; } = 0;
         public float CurrentPenetrationHP { get; set; }
+        public float MaxPenetrationHP { get; }
         public float LifetimeElapsed { get; private set; }
         public float BulletDamage { get; }
         public float BulletPenetration { get; }
+        public float BulletKnockback { get; }
         public float MaxLifespan { get; }
         public float DragFactor { get; }
         public new bool IsDying { get; private set; } = false;
@@ -26,8 +28,9 @@ namespace op.io
         public Bullet(int id, Vector2 position, Vector2 velocity, float mass,
                       float maxLifespan, float dragFactor, Shape shape,
                       float bulletHealth, float bulletDamage, float bulletPenetration,
+                      float bulletKnockback,
                       Color fillColor, Color outlineColor, int outlineWidth)
-            : base(id, "Bullet", "Bullet", position, 0f, mass,
+            : base(id, "Bullet", position, 0f, mass,
                    false, false, false,
                    shape,
                    fillColor, outlineColor, outlineWidth)
@@ -36,9 +39,12 @@ namespace op.io
             PreviousPosition = position;
             MaxLifespan = maxLifespan > 0 ? maxLifespan : BulletManager.DefaultBulletLifespan;
             DragFactor = dragFactor > 0 ? dragFactor : BulletManager.DefaultBulletDragFactor;
-            CurrentPenetrationHP = bulletHealth > 0 ? bulletHealth : 1f;
+            MaxPenetrationHP = bulletHealth > 0 ? bulletHealth : 1f;
+            CurrentPenetrationHP = MaxPenetrationHP;
             BulletDamage = bulletDamage;
             BulletPenetration = bulletPenetration;
+            BulletKnockback = bulletKnockback;
+            DrawLayer = 100;
             _volume = ComputeVolume(shape);
         }
 

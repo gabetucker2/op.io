@@ -11,8 +11,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class ChatBlock
     {
         public const string BlockTitle = "Chat";
-        public const int MinWidth = 200;
-        public const int MinHeight = 120;
 
         private enum ChatChannel { All, Party, Proximity, Whisper }
 
@@ -132,7 +130,7 @@ namespace op.io.UI.BlockScripts.Blocks
             UIStyle.UIFont font = UIStyle.FontBody;
             float lineHeight = font.IsAvailable ? font.LineHeight : 14f;
             float contentHeight = _messages.Count * lineHeight + TextPadding * 2;
-            _scrollPanel.Update(displayArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            _scrollPanel.Update(displayArea, contentHeight, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
             _scrollPanel.ScrollToMax();
 
             // Keyboard input when focused

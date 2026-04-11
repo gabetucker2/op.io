@@ -285,6 +285,10 @@ namespace op.io
             HealthBarManager.Update(Core.DELTATIME);
             FrameProfiler.EndSample("HealthBarManager.Update");
 
+            // Detect player overlap with ZoneBlock GOs and activate/deactivate
+            // the corresponding Dynamic content in the Interact block.
+            ZoneBlockDetector.Update();
+
             FrameProfiler.BeginSample("BlockManager.Update", "BlockManager");
             BlockManager.Update(gameTime);
             FrameProfiler.EndSample("BlockManager.Update");

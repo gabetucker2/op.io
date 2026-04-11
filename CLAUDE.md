@@ -1,5 +1,7 @@
 Always assume the following of my instructions:
-* Cure the disease rather than fixing the symptom.
+* Always cure the disease rather than covering the symptom.
+* Always verify the game builds smoothly without warnings or errors after making changes.
+* Never make changes to .md files unless explicitly asked.
 * Implement changes with scalability for a highly technical video game in mind.
 * Before making additions, use existing functions as much as possible rather than building new functions where it makes sense (e.g., rather than writing new button logic after I ask you to add a button to a section, use old button functions instead; if I request a button feature that doesn’t already exist, add new parameters to the old button functions so we can recycle code as much as possible).
 * If you are unfamiliar with jargon used (e.g., "panel bar", "tab lock", etc), reference JARGON.md. If still unsure, explain where JARGON.md is insufficient to me before making edits. Then, wait for my signal after I make relevant edits to JARGON.md, re-read the file to see if it clears up your confusion, and if so, begin editing. The aforementioned jargon should be the language of the variables and functions as much as is realistic.

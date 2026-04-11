@@ -16,7 +16,7 @@ public static class MapObjectLoader
             // not Agents and not FarmData prototypes.
             const string query = @"
                 SELECT
-                    g.ID, g.Name, g.Type,
+                    g.ID, g.Name,
                     g.PositionX, g.PositionY, g.Rotation,
                     g.Width, g.Height, g.Sides,
                     g.FillR, g.FillG, g.FillB, g.FillA,

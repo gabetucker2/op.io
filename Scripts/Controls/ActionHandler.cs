@@ -102,6 +102,16 @@ namespace op.io
                 // Scout: no-op — camera auto-follows and is already centered.
             }
 
+            // Camera scroll zoom — ScrollIn brings the camera closer, ScrollOut moves it farther
+            if (InputManager.IsInputActive(ControlKeyMigrations.ScrollInKey))
+            {
+                BlockManager.ApplyCameraZoom(1);
+            }
+            if (InputManager.IsInputActive(ControlKeyMigrations.ScrollOutKey))
+            {
+                BlockManager.ApplyCameraZoom(-1);
+            }
+
             if (InputManager.IsInputActive(ControlKeyMigrations.PreviousConfigurationKey))
             {
                 if (!ControlSetupsBlock.TryApplyPreviousSetup(allowWhileLocked: true))
@@ -127,8 +137,9 @@ namespace op.io
 
             BulletManager.SpawnBullet(agent);
 
-            float barrelMass = agent.BarrelAttributes.BarrelMass >= 0 ? agent.BarrelAttributes.BarrelMass : 1.0f;
-            float recoilSpeed = barrelMass * RecoilMassScale;
+            float bulletMass = agent.BarrelAttributes.BulletMass > 0f ? agent.BarrelAttributes.BulletMass : BulletManager.DefaultBulletMass;
+            float recoilMass = AttributeDerived.RecoilMass(bulletMass);
+            float recoilSpeed = recoilMass * RecoilMassScale * BulletManager.BulletKnockbackScalar;
             Vector2 recoilDir = new Vector2(MathF.Cos(agent.Rotation + MathF.PI), MathF.Sin(agent.Rotation + MathF.PI));
             agent.PhysicsVelocity += recoilSpeed * recoilDir;
 

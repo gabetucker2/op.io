@@ -14,6 +14,7 @@ namespace op.io
         private const string TransparentTabBlockingKey = "TransparentTabBlocking";
         private static bool _applied;
         internal const string CombatTextKey = "CombatText";
+        internal static readonly string[] CombatTextOptions = ["None", "Limited", "All"];
         internal const string RespawnKey = "Respawn";
         internal const string AutoTurnInspectModeOffKey = "AutoTurnInspectModeOff";
         internal const string TabSwitchRequiresBlockModeKey = "TabSwitchRequiresBlockMode";
@@ -450,30 +451,35 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
 
         private static void EnsureCombatTextControl()
         {
+            // Register enum options before loading so LoadControlSwitchStates can clamp the index.
+            // 0 = None, 1 = Limited (default), 2 = All
+            ControlStateManager.RegisterEnumOptions(CombatTextKey, CombatTextOptions, defaultIndex: 1, persist: true);
+
+            // Migrate any existing SaveSwitch row to SaveEnum.
+            // Old ON (1) → Limited (1), old OFF (0) → None (0).
+            try
+            {
+                const string migrateSql = "UPDATE ControlKey SET InputType = 'SaveEnum' WHERE SettingKey = @key AND InputType IN ('SaveSwitch', 'Switch', 'NoSaveSwitch');";
+                DatabaseQuery.ExecuteNonQuery(migrateSql, new Dictionary<string, object> { ["@key"] = CombatTextKey });
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to migrate {CombatTextKey} to SaveEnum: {ex.Message}");
+            }
+
             ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
             {
-                SettingKey      = CombatTextKey,
-                InputKey        = "Shift + T",
-                InputType       = "SaveSwitch",
+                SettingKey       = CombatTextKey,
+                InputKey         = "Shift + T",
+                InputType        = "SaveEnum",
                 SwitchStartState = 1,
-                MetaControl     = false,
-                RenderOrder     = 23
+                MetaControl      = false,
+                RenderOrder      = 23
             });
 
-            ControlKeyData.SetInputType(CombatTextKey, "SaveSwitch");
+            ControlKeyData.SetInputType(CombatTextKey, "SaveEnum");
             ControlKeyData.EnsureSwitchStartState(CombatTextKey, 1);
             ControlKeyData.EnsureInputKey(CombatTextKey, "Shift + T");
-
-            // One-time migration: force default ON for existing DBs where SwitchStartState was 0.
-            // EnsureSwitchStartState uses COALESCE (only sets if NULL) and the schema default is 0,
-            // so rows pre-dating this migration would stay 0 without this direct update.
-            string markerOn = Path.Combine(DatabaseConfig.DatabaseDirectory, ".combat_text_default_on_applied");
-            if (!File.Exists(markerOn))
-            {
-                const string sql = "UPDATE ControlKey SET SwitchStartState = 1 WHERE SettingKey = @key;";
-                DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = CombatTextKey });
-                File.WriteAllText(markerOn, DateTime.UtcNow.ToString("O"));
-            }
         }
 
         internal const string AllowGameInputFreezeKey = "AllowGameInputFreeze";
@@ -801,17 +807,14 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
         {
             try
             {
-                const string sql = "UPDATE ControlKey SET SwitchStartState = 0 WHERE SettingKey = @key AND SwitchStartState != 0;";
+                const string sql = "UPDATE ControlKey SET SwitchStartState = 0 WHERE SettingKey = @key;";
                 DatabaseQuery.ExecuteNonQuery(sql, new Dictionary<string, object> { ["@key"] = CameraLockModeKey });
 
-                if (ControlStateManager.ContainsEnumState(CameraLockModeKey))
-                {
-                    int currentIndex = ControlStateManager.GetEnumIndex(CameraLockModeKey);
-                    if (currentIndex != 0)
-                    {
-                        ControlStateManager.SetEnumIndex(CameraLockModeKey, 0, "ForceCameraLockModeDefault");
-                    }
-                }
+                // Ensure enum options are registered so CycleEnum and GetEnumValue work correctly.
+                if (!ControlStateManager.ContainsEnumState(CameraLockModeKey))
+                    ControlStateManager.RegisterEnumOptions(CameraLockModeKey, CameraLockModeOptions, defaultIndex: 0, persist: true);
+
+                ControlStateManager.SetEnumIndex(CameraLockModeKey, 0, "ForceCameraLockModeDefault");
             }
             catch (Exception ex)
             {
@@ -845,7 +848,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 ("Fire",                            "Fire the equipped weapon."),
                 ("BarrelLeft",                      "Rotate barrel selection counter-clockwise."),
                 ("BarrelRight",                     "Rotate barrel selection clockwise."),
-                (CombatTextKey,                     "Toggle floating damage numbers and XP text during combat."),
+                (CombatTextKey,                     "Combat text mode: None (hidden), Limited (damage to units/objects), or All (includes bullet health damage)."),
                 (CameraLockModeKey,                 "Camera follow mode: Free (no follow), Scout (always centered), or Locked (fixed offset)."),
                 (CameraSnapToPlayerKey,             "Snap the camera to center on the player. In Locked mode, resets the offset."),
                 (RespawnKey,                        "Respawn the player after death."),

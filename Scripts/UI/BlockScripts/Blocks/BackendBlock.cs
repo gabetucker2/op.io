@@ -13,8 +13,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class BackendBlock
     {
         public const string BlockTitle = "Backend";
-        public const int MinWidth = 30;
-        public const int MinHeight = 0;
 
         private static readonly string PlaceholderText = TextSpacingHelper.JoinWithWideSpacing("No", "backend", "values", "traced.");
 
@@ -65,7 +63,7 @@ namespace op.io.UI.BlockScripts.Blocks
             if (!FontManager.TryGetBackendFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
                 _lineHeightCache = 0f;
-                _scrollPanel.Update(listArea, 0f, blockLocked ? previousMouseState : mouseState, previousMouseState);
+                _scrollPanel.Update(listArea, 0f, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
                 return;
             }
 
@@ -75,7 +73,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             float contentHeight = CalculateContentHeight(boldFont, listArea.Width);
-            _scrollPanel.Update(listArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            _scrollPanel.Update(listArea, contentHeight, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)

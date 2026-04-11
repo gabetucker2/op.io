@@ -20,6 +20,7 @@ namespace op.io
             InitializeFarms();
             InitializeBlocks();
             InitializeAgents();
+            InitializeZoneBlocks();
 
             DebugLogger.PrintGO($"Initialization complete. Total GameObjects: {Core.Instance.GameObjects.Count}, StaticObjects: {Core.Instance.StaticObjects.Count}");
         }
@@ -68,7 +69,7 @@ namespace op.io
                 // Log details of each farm prototype
                 foreach (var proto in farmProtos)
                 {
-                    DebugLogger.PrintGO($"Farm Prototype: ID={proto.ID}, Name={proto.Name}, Type={proto.Type}");
+                    DebugLogger.PrintGO($"Farm Prototype: ID={proto.ID}, Name={proto.Name}");
                 }
 
                 // Instantiate the farms based on the farm data
@@ -273,6 +274,51 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Exception in InitializeAgents: {ex.Message}");
+            }
+        }
+        private static void InitializeZoneBlocks()
+        {
+            try
+            {
+                DebugLogger.PrintGO("Initializing ZoneBlocks...");
+
+                // Large orange square placed to the left of the farm generation zone.
+                // Farms spawn within [0, viewportWidth), so negative X is "off to the left".
+                int zoneSize = 300;
+                Vector2 position = new(-zoneSize, Core.Instance.ViewportHeight / 2f);
+
+                Color fill = new(255, 165, 0, 100);       // orange, semi-transparent
+                Color outline = new(255, 140, 0, 180);
+                Shape shape = new("Rectangle", zoneSize, zoneSize, 4, fill, outline, 3);
+
+                GameObject zone = new(
+                    id: GameObjectManager.GetNextID(),
+                    name: "PlayerPreviewZone",
+                    position: position,
+                    rotation: 0f,
+                    mass: 0f,
+                    isDestructible: false,
+                    isCollidable: false,
+                    dynamicPhysics: false,
+                    shape: shape,
+                    fillColor: fill,
+                    outlineColor: outline,
+                    outlineWidth: 3
+                );
+                zone.IsInteract = true;
+                zone.IsZoneBlock = true;
+                zone.ZoneBlockDynamicKey = "PlayerPreview";
+
+                zone.Shape.LoadContent(Core.Instance.GraphicsDevice);
+
+                Core.Instance.StaticObjects.Add(zone);
+                Core.Instance.GameObjects.Add(zone);
+
+                DebugLogger.PrintGO($"ZoneBlock created: ID={zone.ID}, Pos={zone.Position}, Size={zoneSize}x{zoneSize}");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in InitializeZoneBlocks: {ex.Message}");
             }
         }
     }

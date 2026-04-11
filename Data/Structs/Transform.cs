@@ -4,16 +4,14 @@ namespace op.io.Transform
 {
     public readonly struct Identity
     {
-        public Identity(int id, string name, string type)
+        public Identity(int id, string name)
         {
             Id = id;
             Name = name ?? string.Empty;
-            Type = type ?? string.Empty;
         }
 
         public int Id { get; }
         public string Name { get; }
-        public string Type { get; }
     }
 
     public readonly struct Transform
@@ -99,7 +97,7 @@ namespace op.io.Transform
             Mass = mass;
         }
 
-        public bool StaticPhysics => Motion == PhysicsMotion.Static;
+        public bool DynamicPhysics => Motion == PhysicsMotion.Dynamic;
         public bool IsCollidable => Collision == CollisionMode.Collidable;
         public bool IsDestructible => Destruction == DestructionMode.Destructible;
 
@@ -110,7 +108,7 @@ namespace op.io.Transform
                 return;
             }
 
-            target.StaticPhysics = StaticPhysics;
+            target.DynamicPhysics = DynamicPhysics;
             target.IsCollidable = IsCollidable;
             target.IsDestructible = IsDestructible;
             target.Mass = Mass;

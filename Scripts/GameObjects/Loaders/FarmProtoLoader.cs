@@ -20,7 +20,6 @@ namespace op.io
                     SELECT
                         g.ID,
                         g.Name,
-                        g.Type,
                         g.PositionX,
                         g.PositionY,
                         g.Rotation,
@@ -37,8 +36,7 @@ namespace op.io
                         g.Shape,
                         f.Count
                     FROM GameObjects g
-                    INNER JOIN FarmData f ON g.ID = f.ID
-                    WHERE g.Type = 'Prototype';";
+                    INNER JOIN FarmData f ON g.ID = f.ID;";
 
                 var results = DatabaseQuery.ExecuteQuery(query);
 
@@ -63,7 +61,7 @@ namespace op.io
                         }
 
                         // Print debugging information about the prototype
-                        DebugLogger.PrintGO($"Farm Prototype: ID={proto.ID}, Name={proto.Name}, Type={proto.Type}");
+                        DebugLogger.PrintGO($"Farm Prototype: ID={proto.ID}, Name={proto.Name}");
                         farmPrototypes.Add(proto);
                     }
                     catch (Exception exRow)

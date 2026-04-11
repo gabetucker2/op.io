@@ -14,6 +14,8 @@ namespace op.io
             public Shape FullShape;
             public float CurrentHeightScale;
             public float TargetHeightScale;
+            /// <summary>Custom display name (null = use default "Barrel N").</summary>
+            public string Name;
 
             public BarrelSlot(Attributes_Barrel attrs, Shape shape, float initialScale)
             {
@@ -121,13 +123,12 @@ namespace op.io
         public Agent(
             int id,
             string name,
-            string type,
             Vector2 position,
             float rotation,
             float mass,
             bool isDestructible,
             bool isCollidable,
-            bool staticPhysics,
+            bool dynamicPhysics,
             Shape shape,
             float baseSpeed,
             bool isPlayer,
@@ -137,13 +138,14 @@ namespace op.io
             Attributes_Barrel barrelAttributes = default,
             Attributes_Body bodyAttributes = default
         )
-            : base(id, name, type, position, rotation, mass, isDestructible, isCollidable, staticPhysics, shape, fillColor, outlineColor, outlineWidth)
+            : base(id, name, position, rotation, mass, isDestructible, isCollidable, dynamicPhysics, shape, fillColor, outlineColor, outlineWidth)
         {
             TriggerCooldown = 0;
             SwitchCooldown = 0;
             IsCrouching = false;
             IsSprinting = false;
             IsPlayer = isPlayer;
+            DrawLayer = 200;
             BaseSpeed = baseSpeed;
             BodyAttributes    = bodyAttributes;
             float maxHp       = AttributeDerived.MaxHealth(bodyAttributes.Mass);
@@ -172,9 +174,11 @@ namespace op.io
         /// </summary>
         public void AddBarrel(Attributes_Barrel attrs)
         {
-            int bodyRadius = Shape.Width / 2;
-            int bw = Math.Max(1, bodyRadius * 4 / 5);
-            int bl = bodyRadius * 2;
+            float bulletMass = attrs.BulletMass > 0f ? attrs.BulletMass : BulletManager.DefaultBulletMass;
+            float bulletSpeed = attrs.BulletSpeed > 0f ? attrs.BulletSpeed : BulletManager.DefaultBulletSpeed;
+
+            int bw = Math.Max(1, (int)MathF.Round(AttributeDerived.BarrelWidth(bulletMass, BulletManager.BulletRadiusScalar)));
+            int bl = Math.Max(4, (int)MathF.Round(AttributeDerived.BarrelHeight(bulletSpeed, BulletManager.BarrelHeightScalar)));
 
             float initialScale = _barrels.Count == 0 ? 1f : StandbyHeightScale;
 

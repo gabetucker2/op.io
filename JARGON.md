@@ -10,6 +10,10 @@
                         - **Tab locks** prevent you from interacting with the block
         - **Groups** are sets of blocks contained within a panel; when there is only one block it is a group of 1
             - **Blocks** perform a specific function within a panel
+                - **Block types** are categories assigned to each block. Each block has one type, and type is distinct from the block name.
+                    - **Standard** blocks are regular blocks
+                    - **Overlay** blocks can be superimposed on other blocks
+                    - **Dynamic** blocks appear on top of the Interact block via a stimulus in the Game block, e.g., walking into range of a section on the map prompting customization.
                 - **Bar groups** are groups of bar rows in some vertical order arrangement
                     - **Bar rows** are a row of elements containing 1-N bars within it, e.g., to display your shield on the right side of your health in one big row, again like League healthebars.
                         - **Bars** are arrays of information about stats that can be rendered inside blocks
@@ -39,3 +43,12 @@
     - **Flat damage** represents the unadjusted damage dealt to health stats
     - **Max health damage** represents damage as a % of maximum health
     - **Current health damage** represents damage as a % of current health
+
+- **GO flags** are used to confer certain qualities to GOs
+    - **Player** is the unit you control
+    - **Dynamic** means it is affected by physics
+    - **Collideable** means the block can collide
+    - **Destructible** means it can be destroyed
+    - **Interact** means it triggers a custom behavior
+        - **ZoneBlock** means it triggers a block upon walking into its zone
+    - **Prototype** means the GO is a template used for spawning copies (e.g., farm prototypes) and is not registered in the game world itself

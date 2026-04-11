@@ -19,8 +19,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class PerformanceBlock
     {
         public const string BlockTitle = "Performance";
-        public const int MinWidth  = 290;
-        public const int MinHeight = 0;
 
         // Column layout: Function | Cur Mem | Avg Mem | Avg ms
         private static readonly float[] ColWeights = { 0.52f, 0.18f, 0.18f, 0.12f };
@@ -100,7 +98,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             float contentHeight = _entries.Length * _lineHeightCache;
             _scrollPanel.Update(listArea, contentHeight,
-                blockLocked ? previousMouseState : mouseState, previousMouseState);
+                BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty) listBounds = listArea;

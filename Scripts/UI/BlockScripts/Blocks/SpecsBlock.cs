@@ -13,8 +13,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class SpecsBlock
     {
         public const string BlockTitle = "Specs";
-        public const int MinWidth = 30;
-        public const int MinHeight = 0;
 
         private static readonly string PlaceholderText = TextSpacingHelper.JoinWithWideSpacing("No", "specs", "available.");
 
@@ -80,7 +78,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             float contentHeight = _rows.Count * _lineHeightCache;
-            _scrollPanel.Update(listArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            _scrollPanel.Update(listArea, contentHeight, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)

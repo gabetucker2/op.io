@@ -14,8 +14,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class ControlsBlock
     {
         public const string BlockTitle = "Controls";
-        public const int MinWidth = 30;
-        public const int MinHeight = 0;
 
         private static readonly List<KeybindDisplayRow> _keybindCache = new();
         private static bool _keybindCacheLoaded;
@@ -134,7 +132,7 @@ namespace op.io.UI.BlockScripts.Blocks
             float contentHeight = _keybindCache.Count * _lineHeightCache;
             int headerH = headerFunColEarly.HeaderVisible ? ControlsHeaderHeight : 0;
             var listArea = new Rectangle(contentBounds.X, contentBounds.Y + headerH, contentBounds.Width, Math.Max(0, contentBounds.Height - headerH));
-            _scrollPanel.Update(listArea, contentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            _scrollPanel.Update(listArea, contentHeight, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
             {
@@ -384,8 +382,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     DrawRowBackground(spriteBatch, row, rowBounds, blockLocked);
                     DrawRowWithFunCol(spriteBatch, row, rowBounds, boldFont);
-                    if (IsFloatType(row.InputType) && !blockLocked)
-                        DrawFloatWidget(spriteBatch, row, rowBounds, boldFont);
+                    if (IsFloatType(row.InputType))
+                        DrawFloatWidget(spriteBatch, row, rowBounds, boldFont, blockLocked);
                 }
             }
 
@@ -954,44 +952,50 @@ namespace op.io.UI.BlockScripts.Blocks
 
         // ── Float widget helpers ──────────────────────────────────────────────
 
-        private static void DrawFloatWidget(SpriteBatch sb, KeybindDisplayRow row, Rectangle rowBounds, UIStyle.UIFont font)
+        private static void DrawFloatWidget(SpriteBatch sb, KeybindDisplayRow row, Rectangle rowBounds, UIStyle.UIFont font, bool blockLocked = false)
         {
             if (_pixelTexture == null) return;
             var funCol = GetOrCreateRowFunCol(row.Action);
             Rectangle col3 = funCol.GetColumnBounds(3, rowBounds);
             if (col3.Width < FloatArrowW * 2 + FloatInputW + 8) return;
 
+            float lockedAlpha = blockLocked ? 0.4f : 1.0f;
+            Color btnBg = new Color(55, 55, 60) * lockedAlpha;
+            Color inputBg = new Color(28, 28, 32) * lockedAlpha;
+            Color border = UIStyle.BlockBorder * lockedAlpha;
+            Color text = UIStyle.TextColor * lockedAlpha;
+
             int arrowY = col3.Y + (col3.Height - FloatWidgetH) / 2;
             int fx = col3.X + 3;
 
             // [-] button
             var downRect = new Rectangle(fx, arrowY, FloatArrowW, FloatWidgetH);
-            FillRect(sb, downRect, new Color(55, 55, 60));
-            DrawRectOutline(sb, downRect, UIStyle.BlockBorder, 1);
+            FillRect(sb, downRect, btnBg);
+            DrawRectOutline(sb, downRect, border, 1);
             if (font.IsAvailable)
-                font.DrawString(sb, "-", new Vector2(downRect.X + FloatArrowW / 2f - 3f, arrowY + 1f), UIStyle.TextColor);
+                font.DrawString(sb, "-", new Vector2(downRect.X + FloatArrowW / 2f - 3f, arrowY + 1f), text);
             fx += FloatArrowW + 2;
 
             // Textbox
-            string displayVal = string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase)
+            string displayVal = (!blockLocked && string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase))
                 ? _floatInputBuffer
                 : ControlStateManager.GetFloat(row.Action, 1.0f).ToString("F2");
             var inputRect = new Rectangle(fx, arrowY, FloatInputW, FloatWidgetH);
-            FillRect(sb, inputRect, new Color(28, 28, 32));
-            Color inputBorder = string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase)
-                ? UIStyle.AccentColor : UIStyle.BlockBorder;
-            DrawRectOutline(sb, inputRect, inputBorder, 1);
+            FillRect(sb, inputRect, inputBg);
+            Color activeBorder = (!blockLocked && string.Equals(_editingFloatKey, row.Action, StringComparison.OrdinalIgnoreCase))
+                ? UIStyle.AccentColor : border;
+            DrawRectOutline(sb, inputRect, activeBorder, 1);
             if (font.IsAvailable)
                 font.DrawString(sb, displayVal,
-                    new Vector2(fx + 3f, arrowY + (FloatWidgetH - font.LineHeight) / 2f), UIStyle.TextColor);
+                    new Vector2(fx + 3f, arrowY + (FloatWidgetH - font.LineHeight) / 2f), text);
             fx += FloatInputW + 2;
 
             // [+] button
             var upRect = new Rectangle(fx, arrowY, FloatArrowW, FloatWidgetH);
-            FillRect(sb, upRect, new Color(55, 55, 60));
-            DrawRectOutline(sb, upRect, UIStyle.BlockBorder, 1);
+            FillRect(sb, upRect, btnBg);
+            DrawRectOutline(sb, upRect, border, 1);
             if (font.IsAvailable)
-                font.DrawString(sb, "+", new Vector2(upRect.X + FloatArrowW / 2f - 3f, arrowY + 1f), UIStyle.TextColor);
+                font.DrawString(sb, "+", new Vector2(upRect.X + FloatArrowW / 2f - 3f, arrowY + 1f), text);
         }
 
         private static void HandleFloatWidgetClick(Point mousePos, KeybindDisplayRow row)

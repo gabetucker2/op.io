@@ -18,21 +18,20 @@
 
 INSERT INTO BarrelPrototypes (
     Name,
-    BarrelMass,
     BulletDamage, BulletPenetration, BulletSpeed,
-    ReloadSpeed,  BulletMaxLifespan, BulletMass,
+    ReloadSpeed,  BulletMaxLifespan, BulletMass, BulletHealth,
     BulletFillR,    BulletFillG,    BulletFillB,    BulletFillA,
     BulletOutlineR, BulletOutlineG, BulletOutlineB, BulletOutlineA,
     BulletOutlineWidth
 ) VALUES (
     'Medium',
-    1.0, -- BarrelMass (recoil multiplier)
     4,   -- BulletDamage
     0,   -- BulletPenetration
     400, -- BulletSpeed
     3,   -- ReloadSpeed (shots/sec)
     3,   -- BulletMaxLifespan
-    3,   -- BulletMass (→ health=10, radius≈10.4px)
+    3,   -- BulletMass (→ radius≈10.4px)
+    -1,  -- BulletHealth (-1 → derived from mass ≈ 10)
     255, 0,   0, 255,   -- Fill    RGBA
     139, 0,   0, 255,   -- Outline RGBA
     1                   -- OutlineWidth
@@ -42,21 +41,20 @@ INSERT INTO BarrelPrototypes (
 
 INSERT INTO BarrelPrototypes (
     Name,
-    BarrelMass,
     BulletDamage, BulletPenetration, BulletSpeed,
-    ReloadSpeed,  BulletMaxLifespan, BulletMass,
+    ReloadSpeed,  BulletMaxLifespan, BulletMass, BulletHealth,
     BulletFillR,    BulletFillG,    BulletFillB,    BulletFillA,
     BulletOutlineR, BulletOutlineG, BulletOutlineB, BulletOutlineA,
     BulletOutlineWidth
 ) VALUES (
     'Heavy',
-    3.0, -- BarrelMass (recoil multiplier; 3× more kickback than Medium)
     15,  -- BulletDamage
     0,   -- BulletPenetration
     600, -- BulletSpeed
     1,   -- ReloadSpeed (shots/sec)
     3,   -- BulletMaxLifespan
-    6,   -- BulletMass (→ health≈20, radius≈14.7px)
+    6,   -- BulletMass (→ radius≈14.7px)
+    -1,  -- BulletHealth (-1 → derived from mass ≈ 20)
     200, 200, 200, 255,   -- Fill    RGBA
     150, 150, 150, 255,   -- Outline RGBA
     2                     -- OutlineWidth

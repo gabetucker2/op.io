@@ -5,19 +5,32 @@ namespace op.io
     public struct Attributes_Barrel
     {
         // Normal attributes — stored in DB, have defaults.
-        public float BarrelMass         { get; set; }
         public float BulletDamage       { get; set; }
         public float BulletPenetration  { get; set; }
         public float ReloadSpeed        { get; set; }
         public float BulletMass         { get; set; }
         public float BulletSpeed        { get; set; }
         public float BulletMaxLifespan  { get; set; }
+        public float BulletHealth       { get; set; }  // -1 → derived from BulletMass via AttributeDerived
         public Color BulletFillColor    { get; set; }
         public Color BulletOutlineColor { get; set; }
         public int   BulletOutlineWidth { get; set; }
         public int   BulletFillAlphaRaw    { get; set; }  // raw DB int; -1 → use default fill color
         public int   BulletOutlineAlphaRaw { get; set; }  // raw DB int; -1 → use default outline color
-        // Hidden: BulletHealth (from BulletMass), BulletRadius (from BulletMass), BulletDrag (from BulletRadius).
+
+        // Bullet effectors — body-equivalent stats applied to bullets.
+        // Hidden (derived from BulletMass): BulletHealthRegen, BulletHealthRegenDelay,
+        //   BulletHealthArmor, BulletCollisionDamageResistance, BulletDamageResistance.
+        // Access via AttributeDerived.*
+        // Movement
+        public float BulletControl             { get; set; }
+
+        // Hidden: RecoilMass (from BulletMass),
+        //         BulletRadius (from BulletMass), BulletDrag (from BulletRadius),
+        //         BulletHealthRegen (from BulletMass), BulletHealthRegenDelay (from BulletMass),
+        //         BulletHealthArmor (from BulletMass), BulletCollisionDamageResistance (from BulletMass),
+        //         BulletDamageResistance (from BulletMass),
+        //         BulletKnockback (from BulletPenetration).
         // Access via AttributeDerived.*
     }
 
@@ -129,6 +142,14 @@ namespace op.io
         // ── Barrel: hidden attributes derived from BulletMass ───────────────────
 
         /// <summary>
+        /// Recoil mass derived from bullet mass.
+        /// Formula: bulletMass × RecoilMassPerBulletMass
+        /// </summary>
+        public const float RecoilMassPerBulletMass = 1f / 3f;
+        public static float RecoilMass(float bulletMass)
+            => bulletMass * RecoilMassPerBulletMass;
+
+        /// <summary>
         /// Bullet penetration HP. Formula: mass × (10/3) so default mass=3 → HP=10.
         /// </summary>
         public const float BulletHealthPerMass = 10f / 3f;
@@ -140,6 +161,16 @@ namespace op.io
         /// </summary>
         public static float BulletRadius(float bulletMass, float bulletRadiusScalar)
             => System.MathF.Sqrt(System.MathF.Max(bulletMass, 0.01f)) * bulletRadiusScalar;
+
+        // ── Barrel: hidden attributes derived from BulletPenetration ─────────────
+
+        /// <summary>
+        /// Bullet knockback impulse magnitude for collision physics.
+        /// Formula: bulletPenetration × BulletKnockbackScalar (from PhysicsSettings).
+        /// Higher penetration → more push on collided targets.
+        /// </summary>
+        public static float BulletKnockback(float bulletPenetration, float bulletKnockbackScalar)
+            => bulletPenetration * bulletKnockbackScalar;
 
         // ── Barrel: hidden attributes derived from BulletRadius ──────────────────
 
@@ -153,6 +184,56 @@ namespace op.io
             return airResistanceScalar * System.MathF.PI * bulletRadius * bulletRadius / defaultDragFactor;
         }
 
+        // ── Barrel: hidden effectors derived from BulletMass ──────────────────
+
+        /// <summary>Bullet health regen per second. Formula: bulletMass × scale.</summary>
+        public const float BulletHealthRegenPerMass = 0f;
+        public static float BulletHealthRegen(float bulletMass)
+            => bulletMass * BulletHealthRegenPerMass;
+
+        /// <summary>Delay before bullet health regen starts. Formula: bulletMass × scale.</summary>
+        public const float BulletHealthRegenDelayPerMass = 0f;
+        public static float BulletHealthRegenDelay(float bulletMass)
+            => bulletMass * BulletHealthRegenDelayPerMass;
+
+        /// <summary>Bullet health armor (flat damage reduction). Formula: bulletMass × scale.</summary>
+        public const float BulletHealthArmorPerMass = 0f;
+        public static float BulletHealthArmor(float bulletMass)
+            => bulletMass * BulletHealthArmorPerMass;
+
+        /// <summary>Bullet collision damage resistance. Formula: bulletMass × scale.</summary>
+        public const float BulletCollisionDamageResistancePerMass = 0f;
+        public static float BulletCollisionDamageResistance(float bulletMass)
+            => bulletMass * BulletCollisionDamageResistancePerMass;
+
+        /// <summary>Bullet damage resistance. Formula: bulletMass × scale.</summary>
+        public const float BulletDamageResistancePerMass = 0f;
+        public static float BulletBarrelDamageResistance(float bulletMass)
+            => bulletMass * BulletDamageResistancePerMass;
+
+        public static readonly string[] AffectsBulletHealthRegen              = ["Bullet HP/s"];
+        public static readonly string[] AffectsBulletHealthRegenDelay         = ["Bullet regen delay"];
+        public static readonly string[] AffectsBulletHealthArmor              = ["Bullet flat DR"];
+        public static readonly string[] AffectsBulletCollisionDamageResistance = ["Bullet coll. resist"];
+        public static readonly string[] AffectsBulletDamageResistance         = ["Bullet dmg resist"];
+        public static readonly string[] AffectsBulletKnockback               = ["Collision push"];
+
+        // ── Barrel: hidden dimensions derived from bullet attributes ─────────
+
+        /// <summary>
+        /// Barrel width (narrow dimension) in pixels, matching bullet diameter.
+        /// Formula: 2 × BulletRadius(bulletMass, bulletRadiusScalar)
+        /// </summary>
+        public static float BarrelWidth(float bulletMass, float bulletRadiusScalar)
+            => 2f * BulletRadius(bulletMass, bulletRadiusScalar);
+
+        /// <summary>
+        /// Barrel height (long dimension) in pixels, scaled from bullet speed.
+        /// Formula: bulletSpeed × barrelHeightScalar
+        /// </summary>
+        public static float BarrelHeight(float bulletSpeed, float barrelHeightScalar)
+            => System.MathF.Max(4f, bulletSpeed * barrelHeightScalar);
+
         // ── Display labels for the Affects column ────────────────────────────────
 
         public static readonly string[] AffectsMaxHealth         = ["Health cap", "Health bar size"];
@@ -160,8 +241,11 @@ namespace op.io
         public static readonly string[] AffectsSpeed              = ["Movement speed"];
         public static readonly string[] AffectsRotationSpeed      = ["Turn rate"];
         public static readonly string[] AffectsAccelerationSpeed  = ["Movement ramp-up"];
+        public static readonly string[] AffectsRecoilMass           = ["Recoil force"];
         public static readonly string[] AffectsBulletHealth       = ["Penetration HP"];
         public static readonly string[] AffectsBulletRadius       = ["Visual size", "Hitbox radius"];
         public static readonly string[] AffectsBulletDrag         = ["Decel rate"];
+        public static readonly string[] AffectsBarrelWidth        = ["Barrel visual width"];
+        public static readonly string[] AffectsBarrelHeight       = ["Barrel visual length"];
     }
 }

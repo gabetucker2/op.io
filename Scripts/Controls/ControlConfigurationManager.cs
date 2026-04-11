@@ -353,6 +353,11 @@ ORDER BY ControlOrder ASC, SettingKey ASC;";
             ApplyRowData(rowData);
             ApplyRowOrders(config.RowOrders, config.Bindings);
             ApplyRuntimeBindings(config.Bindings, rowData);
+
+            // UpsertBindings may have written a stale SwitchStartState for CameraLockMode.
+            // Force it back to Locked so config switches don't reset the camera mode.
+            ControlKeyMigrations.ForceCameraLockModeDefault();
+
             ControlsBlock.InvalidateCache();
             return true;
         }

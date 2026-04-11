@@ -51,7 +51,7 @@ namespace op.io
                     if (!CollisionManager.TryGetCollision(bullet, obj, out Vector2 mtv)) continue;
                     if (mtv == Vector2.Zero) continue;
 
-                    if (obj.StaticPhysics)
+                    if (!obj.DynamicPhysics)
                     {
                         ReflectBullet(bullet, obj, mtv);
                     }
@@ -128,12 +128,14 @@ namespace op.io
                 obj.DeathImpulse = bullet.Velocity;
             }
 
-            // Transfer approach momentum from bullet to object so dying objects preserve
-            // the last velocity they had when the killing bullet hit them.
+            // Transfer approach momentum from bullet to object, scaled by mass ratio and
+            // BulletFarmKnockbackScalar.  As mObject → ∞ or mBullet → 0 the transfer
+            // tends to zero; the scalar provides an additional tuneable attenuator so
+            // light bullets don't disproportionately shove heavy farm objects.
             float vInward = -vDotN; // positive when bullet is moving toward the object
             if (vInward > 0f)
             {
-                float transferSpeed = vInward * mBullet / totalMass;
+                float transferSpeed = vInward * mBullet / totalMass * BulletManager.BulletFarmKnockbackScalar;
                 obj.PhysicsVelocity += -separationNormal * transferSpeed;
             }
         }

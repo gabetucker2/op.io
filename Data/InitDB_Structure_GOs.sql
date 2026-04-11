@@ -6,7 +6,6 @@
 
 CREATE TABLE IF NOT EXISTS GameObjects (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Type TEXT,  -- This should match the GOTypes enum ('Player', 'Farm', 'None')
     Shape TEXT, -- This should match the Shape enum ('Circle', 'Rectangle', 'Polygon')
     Name TEXT,
     PositionX REAL,

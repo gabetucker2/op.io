@@ -12,13 +12,13 @@
 -- Triangle Farm Prototype
 -- ================================
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Prototype', 'Polygon', 'Triangle',
+    'Polygon', 'Triangle',
     300, 300, 60, 60, 3, 0,
     255, 150, 150, 255,
     128, 75, 75, 255, 2,
@@ -49,13 +49,13 @@ INSERT INTO Destructibles (
 -- Square Farm Prototype
 -- ================================
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Prototype', 'Polygon', 'Square',
+    'Polygon', 'Square',
     350, 350, 70, 70, 4, 0,
     255, 255, 100, 255,
     128, 128, 50, 255, 3,
@@ -86,13 +86,13 @@ INSERT INTO Destructibles (
 -- Pentagon Farm Prototype
 -- ================================
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Prototype', 'Polygon', 'Pentagon',
+    'Polygon', 'Pentagon',
     400, 400, 80, 80, 5, 0,
     100, 100, 255, 255,
     50, 50, 128, 255, 4,
@@ -123,13 +123,13 @@ INSERT INTO Destructibles (
 -- Octagon Farm Prototype
 -- ================================
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Prototype', 'Polygon', 'Octagon',
+    'Polygon', 'Octagon',
     450, 450, 90, 90, 8, 0,
     255, 150, 255, 255,
     128, 75, 128, 255, 5,
@@ -161,13 +161,13 @@ INSERT INTO Destructibles (
 -- IsManual=1 spawns exactly 1 instance at (ManualX, ManualY).
 -- ================================
 INSERT INTO GameObjects (
-    Type, Shape, Name,
+    Shape, Name,
     PositionX, PositionY, Width, Height, Sides, Rotation,
     FillR, FillG, FillB, FillA,
     OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
     IsCollidable, IsDestructible, Mass, StaticPhysics
 ) VALUES (
-    'Prototype', 'Rectangle', 'BlueLoot',
+    'Rectangle', 'BlueLoot',
     500, 500, 150, 150, 0, 0,
     50, 50, 200, 255,
     0, 0, 128, 255, 4,

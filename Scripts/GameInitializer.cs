@@ -50,13 +50,14 @@ namespace op.io
             ControlStateManager.LoadControlSwitchStates();
             ControlStateManager.LoadFloatStates();
 
-            // Force CameraLockMode to Locked (index 0) after loading switch states.
-            // UpsertBindings may have overwritten the DB with a stale saved config value.
-            ControlKeyMigrations.ForceCameraLockModeDefault();
-
             // Hydrate the input switch cache so runtime toggles honor persisted values
             InputTypeManager.InitializeControlStates();
             SwitchStateScanner.Initialize();
+
+            // Force CameraLockMode to Locked (index 0) AFTER all control state loading is complete.
+            // Must run after LoadControlSwitchStates AND InitializeControlStates to override any
+            // stale DB values written by UpsertBindings during ApplyStartupConfiguration.
+            ControlKeyMigrations.ForceCameraLockModeDefault();
 
             // Initialize the console after loading in switch states (which, importantly, contain DebugMode)
             ConsoleManager.InitializeConsoleIfEnabled();

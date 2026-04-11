@@ -10,8 +10,6 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class PropertiesBlock
     {
         public const string BlockTitle = "Properties";
-        public const int MinWidth = 280;
-        public const int MinHeight = 240;
 
         private const int PreviewMaxSize = 220;
         private const int Padding = 10;
@@ -31,19 +29,30 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly Dictionary<Shape, Texture2D> PreviewCache = new();
         private static readonly BlockScrollPanel ScrollPanel = new();
 
-        // ── Per-GO hidden attribute toggle ────────────────────────────────────────
-        private static readonly Dictionary<int, bool> _showHiddenPerGO = new();
+        // ── Per-block hidden attribute toggle (persisted in SQL) ──────────────────
+        private static bool _showHidden;
+        private static bool _showHiddenLoaded;
+        private const string ShowHiddenRowKey = "ShowHidden";
 
         private static bool GetShowHidden(int goId)
         {
-            if (_showHiddenPerGO.TryGetValue(goId, out bool v))
-                return v;
-            return ControlStateManager.GetSwitchState(ControlKeyMigrations.ShowHiddenAttrsKey);
+            if (!_showHiddenLoaded)
+            {
+                _showHiddenLoaded = true;
+                var data = BlockDataStore.LoadRowData(DockBlockKind.Properties);
+                if (data.TryGetValue(ShowHiddenRowKey, out string stored))
+                    _showHidden = string.Equals(stored, "true", StringComparison.OrdinalIgnoreCase);
+                else
+                    _showHidden = ControlStateManager.GetSwitchState(ControlKeyMigrations.ShowHiddenAttrsKey);
+            }
+            return _showHidden;
         }
 
         private static void SetShowHidden(int goId, bool value)
         {
-            _showHiddenPerGO[goId] = value;
+            _showHidden = value;
+            _showHiddenLoaded = true;
+            BlockDataStore.SetRowData(DockBlockKind.Properties, ShowHiddenRowKey, value ? "true" : "false");
         }
 
         // ── Button hover tooltip ───────────────────────────────────────────────────
@@ -78,6 +87,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Size"]                  = "Width and height of this object's collision bounds",
             ["Shape"]                 = "Geometry type used for the physics body",
             ["Mass"]                  = "Physical mass affecting physics and derived combat stats",
+            ["Draw Layer"]            = "Render order layer; higher values draw on top (0=default, 100=bullets, 200=units)",
             ["Offset"]                = "Position offset of the barrel relative to the agent's body center",
             // Body Attributes (non-hidden, Agent)
             ["Health Regen"]          = "HP regenerated per second after the damage delay expires",
@@ -107,15 +117,38 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Bullet Speed"]          = "Initial velocity of bullets when fired",
             ["Bullet Lifespan"]       = "Maximum time in seconds a bullet can travel before disappearing",
             // Hidden Barrel Attributes
+            ["Bullet Knockback"]      = "Effective push force bullets exert on collided targets",
+            ["Recoil Mass"]           = "Recoil impulse mass, derived from bullet mass",
             ["Bullet Health"]         = "Durability of each bullet before it is destroyed on impact",
             ["Bullet Radius"]         = "Physical radius of each bullet in pixels",
             ["Bullet Drag"]           = "Air resistance slowing bullets as they travel",
+            // Bullet Effectors (body-equivalent stats on bullets)
+            ["Bullet Health Regen"]       = "HP regenerated per second on the bullet after damage delay",
+            ["Bullet Health Armor"]       = "Multiplier reducing incoming health damage to the bullet",
+            ["Bullet Dmg Regen Delay"]    = "Seconds after bullet takes damage before HP regen resumes",
+            ["Bullet Max Shield"]         = "Maximum shield capacity on the bullet",
+            ["Bullet Shield Regen"]       = "Shield regenerated per second on the bullet after damage delay",
+            ["Bullet Shield Armor"]       = "Multiplier reducing incoming shield damage to the bullet",
+            ["Bullet Dmg Shield Delay"]   = "Seconds after bullet takes shield damage before shield regen resumes",
+            ["Bullet Coll. Dmg Resist"]   = "Resistance reducing collision damage the bullet receives",
+            ["Bullet Control"]            = "Controls bullet rotation and acceleration responsiveness",
             // Non-agent Body Attributes
             ["Health Regen Delay"]    = "Seconds after taking damage before HP regeneration resumes",
             ["Shield Regen Delay"]    = "Seconds after taking damage before shield regeneration resumes",
             ["Body Collision Damage"] = "Damage dealt to other objects on physical contact",
             ["Coll. Dmg Resistance"]  = "Resistance reducing collision-based damage received",
             ["Bullet Dmg Resistance"] = "Resistance reducing bullet damage received",
+            // Hidden Barrel Transform
+            ["Barrel Width"]          = "Narrow dimension of the barrel, matching bullet diameter",
+            ["Barrel Height"]         = "Long dimension of the barrel, scaled from bullet speed",
+            // Colors (Body Transform / Barrel Transform)
+            ["Fill"]                  = "Fill color of this object or barrel",
+            ["Outline"]               = "Outline color of this object or barrel",
+            // Flags (GameObject)
+            ["Flags"]                 = "Tags describing this object's role and physics behavior",
+            // Farm Attributes
+            ["FloatAmplitude"]        = "Amplitude of the sine-wave float animation",
+            ["FloatSpeed"]            = "Direction-reversal frequency in cycles per second",
         };
 
         // "Derived from" text for hidden (derived) attribute rows (displayed as second tooltip).
@@ -125,9 +158,18 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Body Knockback"]  = "Derived from: Mass",
             ["Rotation Speed"]  = "Derived from: Control",
             ["Accel. Speed"]    = "Derived from: Control",
-            ["Bullet Health"]   = "Derived from: Bullet Mass",
-            ["Bullet Radius"]   = "Derived from: Bullet Mass",
-            ["Bullet Drag"]     = "Derived from: Bullet Mass",
+            ["Bullet Knockback"]       = "Derived from: Bullet Penetration",
+            ["Recoil Mass"]            = "Derived from: Bullet Mass",
+            ["Bullet Health"]          = "Derived from: Bullet Mass",
+            ["Bullet Radius"]          = "Derived from: Bullet Mass",
+            ["Bullet Drag"]            = "Derived from: Bullet Mass",
+            ["Bullet Health Regen"]    = "Derived from: Bullet Mass",
+            ["Bullet Dmg Regen Delay"] = "Derived from: Bullet Mass",
+            ["Bullet Health Armor"]    = "Derived from: Bullet Mass",
+            ["Bullet Coll. Dmg Resist"]= "Derived from: Bullet Mass",
+            ["Bullet Dmg Resist"]      = "Derived from: Bullet Mass",
+            ["Barrel Width"]           = "Derived from: Bullet Mass",
+            ["Barrel Height"]          = "Derived from: Bullet Speed",
         };
 
         /// <summary>
@@ -139,10 +181,13 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             foreach (var (label, desc) in _propDescriptions)
             {
+                // Always emit a non-hidden tooltip so the description works on normal rows.
+                yield return ("props_row:" + label, [(desc, string.Empty)]);
+
+                // If this label is also used as a hidden (derived) attribute, emit a
+                // second entry with the "Derived from" line so hidden rows get both.
                 if (_hiddenAttrDerivedFrom.TryGetValue(label, out string derivedFrom))
                     yield return ("props_attr:" + label, [(desc, string.Empty), (derivedFrom, string.Empty)]);
-                else
-                    yield return ("props_row:" + label, [(desc, string.Empty)]);
             }
         }
 
@@ -249,7 +294,7 @@ namespace op.io.UI.BlockScripts.Blocks
             InspectableObjectInfo scrollTarget = InspectModeState.GetActiveTarget();
             InspectableObjectInfo scrollLocked = InspectModeState.GetLockedTarget();
             float totalContentHeight = CalculateTotalContentHeight(scrollTarget, scrollLocked, contentBounds, scrollTarget?.Source is Agent);
-            ScrollPanel.Update(contentBounds, totalContentHeight, blockLocked ? previousMouseState : mouseState, previousMouseState);
+            ScrollPanel.Update(contentBounds, totalContentHeight, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -496,14 +541,32 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     int N      = agentSrc.BarrelCount;
                     float step = N > 1 ? MathF.Tau / N : 0f;
+                    float bodyRadius = Math.Max(target.Shape.Width, target.Shape.Height) / 2f;
+
+                    // Standby barrels first so the active barrel draws on top
                     for (int i = 0; i < N; i++)
                     {
+                        if (i == agentSrc.ActiveBarrelIndex) continue;
                         var slot = agentSrc.Barrels[i];
                         if (slot.FullShape == null) continue;
                         float localAngle = i * step - agentSrc.CarouselAngle;
-                        float halfLen    = slot.FullShape.Width / 2f;
-                        Vector2 localOff = new(MathF.Cos(localAngle) * halfLen, MathF.Sin(localAngle) * halfLen);
+                        float scaledHalfLen = slot.FullShape.Width * slot.CurrentHeightScale / 2f;
+                        Vector2 dir = new(MathF.Cos(localAngle), MathF.Sin(localAngle));
+                        Vector2 localOff = dir * (bodyRadius + scaledHalfLen);
                         shapes.Add((slot.FullShape, localOff, localAngle, slot.CurrentHeightScale));
+                    }
+
+                    // Active barrel last
+                    {
+                        var active = agentSrc.Barrels[agentSrc.ActiveBarrelIndex];
+                        if (active.FullShape != null)
+                        {
+                            float localAngle = agentSrc.ActiveBarrelIndex * step - agentSrc.CarouselAngle;
+                            float scaledHalfLen = active.FullShape.Width * active.CurrentHeightScale / 2f;
+                            Vector2 dir = new(MathF.Cos(localAngle), MathF.Sin(localAngle));
+                            Vector2 localOff = dir * (bodyRadius + scaledHalfLen);
+                            shapes.Add((active.FullShape, localOff, localAngle, active.CurrentHeightScale));
+                        }
                     }
                 }
                 else if (target.Source != null)
@@ -522,9 +585,10 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 float minX = float.MaxValue, maxX = float.MinValue,
                       minY = float.MaxValue, maxY = float.MinValue;
-                foreach (var (s, off, _, _) in shapes)
+                foreach (var (s, off, _, hScale) in shapes)
                 {
-                    float halfDiag = MathF.Sqrt(s.Width * s.Width + s.Height * s.Height) / 2f;
+                    float scaledW = s.Width * hScale;
+                    float halfDiag = MathF.Sqrt(scaledW * scaledW + s.Height * s.Height) / 2f;
                     minX = Math.Min(minX, off.X - halfDiag);
                     maxX = Math.Max(maxX, off.X + halfDiag);
                     minY = Math.Min(minY, off.Y - halfDiag);
@@ -580,13 +644,13 @@ namespace op.io.UI.BlockScripts.Blocks
                             localOff.X * cos - localOff.Y * sin,
                             localOff.X * sin + localOff.Y * cos);
 
-                        float baseScale = worldScale * s.Width / tex.Width;
-                        baseScale = Math.Max(0.1f, baseScale);
+                        float scaleX = Math.Max(0.1f, worldScale * s.Width  / tex.Width);
+                        float scaleY = Math.Max(0.1f, worldScale * s.Height / tex.Height);
                         Vector2 pos    = worldOrigin + rotatedOff * worldScale;
                         Vector2 origin = new(tex.Width / 2f, tex.Height / 2f);
                         spriteBatch.Draw(tex, pos, null, Color.White,
                             parentRotation + localRot, origin,
-                            new Vector2(baseScale * hScale, baseScale),
+                            new Vector2(scaleX * hScale, scaleY),
                             SpriteEffects.None, 0f);
                     }
                 }
