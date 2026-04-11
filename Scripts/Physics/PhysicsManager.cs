@@ -10,6 +10,17 @@ namespace op.io
     {
         private static bool _initialized = false;
 
+        private static float? _cachedFrictionRate = null;
+        public static float FrictionRate
+        {
+            get
+            {
+                if (!_cachedFrictionRate.HasValue)
+                    _cachedFrictionRate = DatabaseFetch.GetValue<float>("PhysicsSettings", "Value", "SettingKey", "PhysicsFrictionRate");
+                return _cachedFrictionRate.Value;
+            }
+        }
+
         /// <summary>
         /// Initializes core physics modules. Call once from GameInitializer.
         /// </summary>

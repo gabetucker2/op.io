@@ -27,7 +27,7 @@ namespace op.io
         private const string BarsBlockKey = "bars";
         private const string ChatBlockKey = "chat";
         private const string PerformanceBlockKey = "performance";
-        private const string MathBlockKey = "math";
+
         private const string InteractBlockKey = "interact";
         private const string BlockMenuControlKey = "BlockMenu";
 private const string DockingSetupActiveRowKey = "__ActiveSetup";
@@ -113,7 +113,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         public static float CameraZoom => _cameraZoom;
         // When releasing middle-mouse drag, if the camera is within this distance of
         // the player-centered position it snaps back automatically (loaded from DB).
-        private static float _cameraSnapRange = 150f;
+        private static float _cameraSnapRange = 75f;
         // True once the drag has moved outside snap range; snap preview only activates after this.
         private static bool _cameraDragArmed = false;
         private static float _uiScale = 1f;
@@ -650,9 +650,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 var loaded = DatabaseFetch.LoadBlockTooltips();
                 foreach (var pair in loaded)
                     _blockTooltips[pair.Key] = [pair.Value];
-                foreach (var (key, text) in MathBlock.GetTooltipEntries())
-                    _blockTooltips[key] = [(text, string.Empty)];
-
                 // Button tooltips for PropertiesBlock
                 _blockTooltips["props_btn:lock:lock"]     = [("Click to lock the current inspect target", string.Empty)];
                 _blockTooltips["props_btn:lock:unlock"]   = [("Click to unlock the inspect target", string.Empty)];
@@ -1790,7 +1787,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _blockMenuEntries.Add(new BlockMenuEntry(BarsBlockKey, BarsBlock.BlockTitle, DockBlockKind.Bars, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ChatBlockKey, ChatBlock.BlockTitle, DockBlockKind.Chat, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(PerformanceBlockKey, PerformanceBlock.BlockTitle, DockBlockKind.Performance, BlockMenuControlMode.Toggle, initialVisible: true));
-            _blockMenuEntries.Add(new BlockMenuEntry(MathBlockKey, MathBlock.BlockTitle, DockBlockKind.Math, BlockMenuControlMode.Toggle, initialVisible: true));
+
             _blockMenuEntries.Add(new BlockMenuEntry(InteractBlockKey, InteractBlock.BlockTitle, DockBlockKind.Interact, BlockMenuControlMode.Toggle, initialVisible: true));
         }
 
@@ -1924,7 +1921,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (backendGroup != null)
                 {
                     MergeBlockIntoGroup(backendGroup, ChatBlockKey);
-                    MergeBlockIntoGroup(backendGroup, MathBlockKey);
+
                     MergeBlockIntoGroup(backendGroup, SpecsBlockKey);
                 }
             }
@@ -2085,17 +2082,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
 
                 MergeBlockIntoGroup(backendGroup, performanceBlock.Id);
-            }
-
-            if (_blocks.TryGetValue(MathBlockKey, out DockBlock mathBlock) && mathBlock != null)
-            {
-                PanelGroup mathGroup = GetPanelGroupForBlock(mathBlock);
-                if (mathGroup != null && !ReferenceEquals(backendGroup, mathGroup))
-                {
-                    backendLocked |= mathGroup.IsLocked;
-                }
-
-                MergeBlockIntoGroup(backendGroup, mathBlock.Id);
             }
 
             backendGroup.IsLocked = backendLocked;
@@ -2424,15 +2410,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         {
             PanelGroup group = GetPanelGroupForBlock(block);
             int groupBarHeight = GetGroupBarHeight(group);
-            // When drag bar is hovered, panel is unlocked, and block has an opacity slider, the opacity row
-            // expands below the header, pushing content down.
-            if (BlockHasOpacitySlider(block) &&
-                (string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal) ||
-                 string.Equals(_opacityExpandedId, block.Id, StringComparison.Ordinal))
-                && (group == null || !IsPanelLocked(group)))
-            {
-                groupBarHeight += OpacityRowHeight;
-            }
+            // Opacity row is drawn as an overlay on the content area — it no longer
+            // pushes content down, so we do NOT add OpacityRowHeight here.
             return block.GetContentBounds(dragBarHeight, UIStyle.BlockPadding, groupBarHeight);
         }
 
@@ -2792,8 +2771,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             (int minWidth, int minHeight) = GetBlockMinimumSize();
             block.MinWidth = minWidth;
             block.MinHeight = minHeight;
-            if (kind == DockBlockKind.Specs)
-                block.BackgroundOpacity = 0f;
             _blocks[id] = block;
             _orderedBlocks.Add(block);
             BlockNode node = new(block);
@@ -3451,6 +3428,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     _draggingPanel = GetPanelGroupForBlock(block);
                     _draggingStartBounds = block.Bounds;
                     _dragOffset = new Point(_mousePosition.X - block.Bounds.X, _mousePosition.Y - block.Bounds.Y);
+                    DebugLogger.PrintUI($"[DragBarDragStart] Block={block.Id} ({block.Kind}) Bounds={block.Bounds} Mouse={_mousePosition}");
                 }
             }
             else if (_draggingBlock != null)
@@ -3954,7 +3932,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         }
 
         private static bool BlockHasOpacitySlider(DockBlock block) =>
-            block != null && (block.Kind == DockBlockKind.Blank || block.Kind == DockBlockKind.Specs || block.IsOverlay);
+            block != null;
 
         // Returns the bounds of the opacity row that appears below the header bar when hovered.
         private static Rectangle GetOpacityRowBounds(DockBlock block, PanelGroup group, int dragBarHeight)
@@ -4384,30 +4362,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     return tabPreview;
                 }
 
-                // Allow superimpose when dragging a tab over a block body
-                foreach (DockBlock block in _orderedBlocks)
-                {
-                    if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
-                    {
-                        continue;
-                    }
-
-                    Rectangle bounds = block.Bounds;
-                    if (!bounds.Contains(position))
-                    {
-                        continue;
-                    }
-
-                    Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
-                    if (superimposeZone.Contains(position))
-                    {
-                        _superimposeLocked = true;
-                        _superimposeLockedTarget = block;
-                        return BuildSuperimposePreview(block, bounds, superimposeZone, position);
-                    }
-                }
-
-                return null;
+                // Tab drags that leave the tab strip fall through to the same
+                // adjacency / edge / superimpose logic used by drag-bar drags,
+                // so dragging a tab upward can displace the block above.
             }
 
             // First pass: check if the cursor is over a block that is adjacent to
@@ -4430,6 +4387,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 bool va = IsEdgeAdjacent(_draggingStartBounds, bounds, DockSplitOrientation.Horizontal);
                 bool ha = IsEdgeAdjacent(_draggingStartBounds, bounds, DockSplitOrientation.Vertical);
+                DebugLogger.PrintUI($"[BuildDropPreview] CursorOver={block.Id} ({block.Kind}) va={va} ha={ha} DragStart={_draggingStartBounds} Target={bounds} Mouse={position}");
                 if (va || ha)
                 {
                     adjacentTarget = block;
@@ -4540,7 +4498,13 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     Edge = edge,
                     HighlightBounds = highlight
                 };
+                DebugLogger.PrintUI($"[BuildDropPreview] Result: Target={block.Id} Edge={edge} Adjacent={isAdjacent} relY={relativeY:F3} relX={relativeX:F3}");
                 break;
+            }
+
+            if (!preview.HasValue)
+            {
+                DebugLogger.PrintUI($"[BuildDropPreview] NoPreview dragging={_draggingBlock?.Id} fromTab={_draggingFromTab} startBounds={_draggingStartBounds} mouse={position}");
             }
 
             return preview;
@@ -5110,6 +5074,35 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
         }
 
+        /// <summary>
+        /// After DetachDraggingTabFromGroup, the dragging block may have been fully
+        /// removed from _blockNodes / _panelGroups (single-block panel case).
+        /// This helper re-creates the node and panel infrastructure so subsequent
+        /// layout operations (Detach / InsertRelative) can find the block.
+        /// </summary>
+        private static void EnsureDraggingBlockHasNode()
+        {
+            if (_draggingBlock == null)
+                return;
+
+            string id = _draggingBlock.Id;
+
+            if (!_blockNodes.TryGetValue(id, out BlockNode node))
+            {
+                node = new BlockNode(_draggingBlock);
+                _blockNodes[id] = node;
+            }
+
+            if (GetPanelGroupForBlock(_draggingBlock) == null)
+            {
+                _panelGroups[id] = new PanelGroup(id, _draggingBlock);
+                _panelNodes[id] = node;
+                _blockToPanel[id] = id;
+                if (!_orderedPanelIds.Contains(id))
+                    _orderedPanelIds.Add(id);
+            }
+        }
+
         private static void ApplyDrop(DockDropPreview preview)
         {
             if (_draggingBlock == null)
@@ -5126,6 +5119,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             if (preview.IsViewportSnap)
             {
                 DetachDraggingTabFromGroup();
+                EnsureDraggingBlockHasNode();
                 ApplyViewportSnap(preview.Edge);
                 return;
             }
@@ -5147,6 +5141,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             DetachDraggingTabFromGroup();
+            EnsureDraggingBlockHasNode();
 
             if (!_blockNodes.TryGetValue(_draggingBlock.Id, out BlockNode movingNode) ||
                 !_blockNodes.TryGetValue(preview.TargetBlock.Id, out BlockNode targetNode))
@@ -5154,6 +5149,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
+            DebugLogger.PrintUI($"[ApplyDrop] Moving={_draggingBlock.Id} Target={preview.TargetBlock.Id} Edge={preview.Edge}");
             _rootNode = DockLayout.Detach(_rootNode, movingNode);
             _rootNode ??= targetNode;
             _rootNode = DockLayout.InsertRelative(_rootNode, movingNode, targetNode, preview.Edge);
@@ -6240,9 +6236,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 case DockBlockKind.Performance:
                     PerformanceBlock.Draw(spriteBatch, contentBounds);
                     break;
-                case DockBlockKind.Math:
-                    MathBlock.Draw(spriteBatch, contentBounds);
-                    break;
                 case DockBlockKind.Interact:
                     InteractBlock.Draw(spriteBatch, contentBounds);
                     break;
@@ -6265,7 +6258,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 ?? (!IsBlockLocked(DockBlockKind.Backend)   ? BackendBlock.GetHoveredRowKey()      : null)
                 ?? (!IsBlockLocked(DockBlockKind.Specs)     ? SpecsBlock.GetHoveredRowKey()        : null)
                 ?? (!IsBlockLocked(DockBlockKind.ColorScheme) ? ColorSchemeBlock.GetHoveredRowKey() : null)
-                ?? (!IsBlockLocked(DockBlockKind.Math)      ? MathBlock.GetHoveredRowKey()         : null)
                 ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredButtonKey() : null)
                 ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredPropRowKey() : null)
                 ?? (!IsBlockLocked(DockBlockKind.Interact)  ? InteractBlock.GetHoveredRowKey()      : null);
@@ -6275,7 +6267,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     ?? BackendBlock.GetHoveredRowLabel()
                     ?? SpecsBlock.GetHoveredRowLabel()
                     ?? ColorSchemeBlock.GetHoveredRowLabel()
-                    ?? MathBlock.GetHoveredRowLabel()
                     ?? PropertiesBlock.GetHoveredPropRowLabel()
                     ?? InteractBlock.GetHoveredRowLabel())
                 : null;
@@ -6675,9 +6666,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         break;
                     case DockBlockKind.Performance:
                         PerformanceBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
-                        break;
-                    case DockBlockKind.Math:
-                        MathBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                     case DockBlockKind.Interact:
                         InteractBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse, keyboardState, previousKeyboardState);
@@ -7510,6 +7498,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             if (string.IsNullOrEmpty(_hoveredDragBarId)) return "None";
             return _blocks.TryGetValue(_hoveredDragBarId, out DockBlock b) ? b.Kind.ToString() : "None";
         }
+
+        public static bool IsDragBarHovered => !string.IsNullOrEmpty(_hoveredDragBarId);
 
         public static bool IsAnyGuiInteracting
         {

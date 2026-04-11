@@ -19,7 +19,6 @@ namespace op.io
         Bars,
         Chat,
         Performance,
-        Math,
         Interact
     }
 

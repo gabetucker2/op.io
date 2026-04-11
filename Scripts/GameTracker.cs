@@ -34,6 +34,26 @@ namespace op.io
         /// </summary>
         public static string BlockType => BlockManager.GetFocusedBlockCategory();
 
+        // ── Constants (from MathBlock) ────────────────────────────────────────
+        // Bullet Physics (DB-driven)
+        public static float AirResistanceScalar     => BulletManager.AirResistanceScalar;
+        public static float BounceVelocityLoss      => BulletManager.BounceVelocityLoss;
+        public static float HitVelocityLoss         => BulletManager.HitVelocityLoss;
+        public static float PenetrationSpring       => BulletManager.PenetrationSpringCoeff;
+        public static float PenetrationDamping      => BulletManager.PenetrationDamping;
+        // Bullet Defaults (DB-driven)
+        public static float DefaultBulletSpeed      => BulletManager.DefaultBulletSpeed;
+        public static float DefaultBulletLifespan   => BulletManager.DefaultBulletLifespan;
+        public static float DefaultDragFactor       => BulletManager.DefaultBulletDragFactor;
+        public static float DefaultBulletMass       => BulletManager.DefaultBulletMass;
+        public static float DefaultBulletDamage     => BulletManager.DefaultBulletDamage;
+        public static float DefaultBulletPenHP      => BulletManager.DefaultBulletHealth;
+        // Physics (DB-driven)
+        public static float PhysicsFrictionRate     => PhysicsManager.FrictionRate;
+        // Code-defined constants
+        public static string AngularAccelFactor     => "4";
+        public static string BarrelSwitchSpeed      => "15 /s";
+
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {
             List<GameTrackerVariable> variables = new();

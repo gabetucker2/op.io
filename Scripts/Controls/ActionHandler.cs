@@ -138,8 +138,10 @@ namespace op.io
             BulletManager.SpawnBullet(agent);
 
             float bulletMass = agent.BarrelAttributes.BulletMass > 0f ? agent.BarrelAttributes.BulletMass : BulletManager.DefaultBulletMass;
-            float recoilMass = AttributeDerived.RecoilMass(bulletMass);
-            float recoilSpeed = recoilMass * RecoilMassScale * BulletManager.BulletKnockbackScalar;
+            float bulletPenetration = agent.BarrelAttributes.BulletPenetration >= 0 ? agent.BarrelAttributes.BulletPenetration : BulletManager.DefaultBulletPenetration;
+            float bulletKnockback = AttributeDerived.BulletKnockback(bulletPenetration, BulletManager.BulletKnockbackScalar);
+            float bulletRecoil = AttributeDerived.BulletRecoil(bulletMass, bulletKnockback, BulletManager.BulletRecoilScalar);
+            float recoilSpeed = bulletRecoil * RecoilMassScale;
             Vector2 recoilDir = new Vector2(MathF.Cos(agent.Rotation + MathF.PI), MathF.Sin(agent.Rotation + MathF.PI));
             agent.PhysicsVelocity += recoilSpeed * recoilDir;
 

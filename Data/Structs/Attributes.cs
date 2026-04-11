@@ -25,7 +25,7 @@ namespace op.io
         // Movement
         public float BulletControl             { get; set; }
 
-        // Hidden: RecoilMass (from BulletMass),
+        // Hidden: BulletRecoil (from BulletMass + BulletKnockback),
         //         BulletRadius (from BulletMass), BulletDrag (from BulletRadius),
         //         BulletHealthRegen (from BulletMass), BulletHealthRegenDelay (from BulletMass),
         //         BulletHealthArmor (from BulletMass), BulletCollisionDamageResistance (from BulletMass),
@@ -142,12 +142,13 @@ namespace op.io
         // ── Barrel: hidden attributes derived from BulletMass ───────────────────
 
         /// <summary>
-        /// Recoil mass derived from bullet mass.
-        /// Formula: bulletMass × RecoilMassPerBulletMass
+        /// Bullet recoil derived from bullet mass and bullet knockback.
+        /// Formula: bulletMass × (1 + bulletKnockback) × BulletRecoilScalar
+        /// Knockback amplifies recoil but mass alone still produces a base recoil.
+        /// BulletRecoilScalar is loaded from BulletPhysics DB table.
         /// </summary>
-        public const float RecoilMassPerBulletMass = 1f / 3f;
-        public static float RecoilMass(float bulletMass)
-            => bulletMass * RecoilMassPerBulletMass;
+        public static float BulletRecoil(float bulletMass, float bulletKnockback, float bulletRecoilScalar)
+            => bulletMass * (1f + bulletKnockback) * bulletRecoilScalar;
 
         /// <summary>
         /// Bullet penetration HP. Formula: mass × (10/3) so default mass=3 → HP=10.
@@ -241,7 +242,7 @@ namespace op.io
         public static readonly string[] AffectsSpeed              = ["Movement speed"];
         public static readonly string[] AffectsRotationSpeed      = ["Turn rate"];
         public static readonly string[] AffectsAccelerationSpeed  = ["Movement ramp-up"];
-        public static readonly string[] AffectsRecoilMass           = ["Recoil force"];
+        public static readonly string[] AffectsBulletRecoil          = ["Recoil force"];
         public static readonly string[] AffectsBulletHealth       = ["Penetration HP"];
         public static readonly string[] AffectsBulletRadius       = ["Visual size", "Hitbox radius"];
         public static readonly string[] AffectsBulletDrag         = ["Decel rate"];

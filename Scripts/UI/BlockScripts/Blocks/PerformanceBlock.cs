@@ -77,7 +77,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             int perfHeaderH = hfc.HeaderVisible ? HeaderRowHeight : 0;
             var headerStrip = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, perfHeaderH);
-            hfc.ShowHeaderToggle = BlockManager.DockingModeEnabled;
+            hfc.ShowHeaderToggle = BlockManager.DockingModeEnabled && !blockLocked && contentBounds.Contains(mouseState.Position);
             hfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
             hfc.UpdateHeaderHover(headerStrip, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
 

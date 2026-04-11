@@ -328,8 +328,8 @@ namespace op.io
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletKnockback);
             yield return new Row("Reload Speed",       $"{a.ReloadSpeed:0.##}");
 
-            yield return new Row("Recoil Mass",        $"{AttributeDerived.RecoilMass(mass):0.##}",
-                                 isHidden: true, affectsList: AttributeDerived.AffectsRecoilMass);
+            yield return new Row("Bullet Recoil",      $"{AttributeDerived.BulletRecoil(mass, AttributeDerived.BulletKnockback(a.BulletPenetration, BulletManager.BulletKnockbackScalar), BulletManager.BulletRecoilScalar):0.##}",
+                                 isHidden: true, affectsList: AttributeDerived.AffectsBulletRecoil);
             yield return new Row("Bullet Health",      $"{AttributeDerived.BulletHealth(mass):0.##}",
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletHealth);
             yield return new Row("Bullet Radius",      $"{radius:0.##} px",
@@ -508,9 +508,15 @@ namespace op.io
             parts.Add(_target.IsCollidable ? "Collidable" : "Non-collidable");
             parts.Add(_target.IsDestructible ? "Destructible" : "Indestructible");
             if (_target.IsInteract)
+            {
                 parts.Add("Interact");
-            if (_target.IsZoneBlock)
+                if (_target.IsZoneBlock)
+                    parts.Add("  ZoneBlock");
+            }
+            else if (_target.IsZoneBlock)
+            {
                 parts.Add("ZoneBlock");
+            }
             return new Row("Flags", parts.ToArray());
         }
 

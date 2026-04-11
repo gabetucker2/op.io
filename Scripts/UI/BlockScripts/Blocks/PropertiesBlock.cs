@@ -118,7 +118,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Bullet Lifespan"]       = "Maximum time in seconds a bullet can travel before disappearing",
             // Hidden Barrel Attributes
             ["Bullet Knockback"]      = "Effective push force bullets exert on collided targets",
-            ["Recoil Mass"]           = "Recoil impulse mass, derived from bullet mass",
+            ["Bullet Recoil"]         = "Recoil impulse derived from bullet mass and bullet knockback",
             ["Bullet Health"]         = "Durability of each bullet before it is destroyed on impact",
             ["Bullet Radius"]         = "Physical radius of each bullet in pixels",
             ["Bullet Drag"]           = "Air resistance slowing bullets as they travel",
@@ -159,7 +159,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Rotation Speed"]  = "Derived from: Control",
             ["Accel. Speed"]    = "Derived from: Control",
             ["Bullet Knockback"]       = "Derived from: Bullet Penetration",
-            ["Recoil Mass"]            = "Derived from: Bullet Mass",
+            ["Bullet Recoil"]          = "Derived from: Bullet Mass, Bullet Knockback",
             ["Bullet Health"]          = "Derived from: Bullet Mass",
             ["Bullet Radius"]          = "Derived from: Bullet Mass",
             ["Bullet Drag"]            = "Derived from: Bullet Mass",
@@ -170,6 +170,26 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Bullet Dmg Resist"]      = "Derived from: Bullet Mass",
             ["Barrel Width"]           = "Derived from: Bullet Mass",
             ["Barrel Height"]          = "Derived from: Bullet Speed",
+        };
+
+        private static readonly Dictionary<string, string> _hiddenAttrEquation = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Max Health"]             = "= mass × 33.33",
+            ["Body Knockback"]         = "= mass × KnockbackMassScale",
+            ["Rotation Speed"]         = "= BaseRotDelay / control",
+            ["Accel. Speed"]           = "= BaseAccelDelay / control",
+            ["Bullet Knockback"]       = "= bulletPenetration × BulletKnockbackScalar",
+            ["Bullet Recoil"]          = "= bulletMass × (1 + bulletKnockback) × BulletRecoilScalar",
+            ["Bullet Health"]          = "= bulletMass × 3.33",
+            ["Bullet Radius"]          = "= √bulletMass × BulletRadiusScalar",
+            ["Bullet Drag"]            = "= airResistance × π × radius² / dragFactor",
+            ["Bullet Health Regen"]    = "= bulletMass × 0",
+            ["Bullet Dmg Regen Delay"] = "= bulletMass × 0",
+            ["Bullet Health Armor"]    = "= bulletMass × 0",
+            ["Bullet Coll. Dmg Resist"]= "= bulletMass × 0",
+            ["Bullet Dmg Resist"]      = "= bulletMass × 0",
+            ["Barrel Width"]           = "= 2 × √bulletMass × BulletRadiusScalar",
+            ["Barrel Height"]          = "= max(4, bulletSpeed × BarrelHeightScalar)",
         };
 
         /// <summary>
@@ -185,9 +205,18 @@ namespace op.io.UI.BlockScripts.Blocks
                 yield return ("props_row:" + label, [(desc, string.Empty)]);
 
                 // If this label is also used as a hidden (derived) attribute, emit a
-                // second entry with the "Derived from" line so hidden rows get both.
+                // second entry with the "Derived from" line and equation so hidden rows get all three.
                 if (_hiddenAttrDerivedFrom.TryGetValue(label, out string derivedFrom))
-                    yield return ("props_attr:" + label, [(desc, string.Empty), (derivedFrom, string.Empty)]);
+                {
+                    var entries = new List<(string Text, string DataType)>
+                    {
+                        (desc, string.Empty),
+                        (derivedFrom, string.Empty)
+                    };
+                    if (_hiddenAttrEquation.TryGetValue(label, out string equation))
+                        entries.Add((equation, string.Empty));
+                    yield return ("props_attr:" + label, entries.ToArray());
+                }
             }
         }
 
@@ -587,8 +616,10 @@ namespace op.io.UI.BlockScripts.Blocks
                       minY = float.MaxValue, maxY = float.MinValue;
                 foreach (var (s, off, _, hScale) in shapes)
                 {
-                    float scaledW = s.Width * hScale;
-                    float halfDiag = MathF.Sqrt(scaledW * scaledW + s.Height * s.Height) / 2f;
+                    float baseW = s.Width + s.OutlineWidth * 2f;
+                    float baseH = s.Height + s.OutlineWidth * 2f;
+                    float scaledW = baseW * hScale;
+                    float halfDiag = MathF.Sqrt(scaledW * scaledW + baseH * baseH) / 2f;
                     minX = Math.Min(minX, off.X - halfDiag);
                     maxX = Math.Max(maxX, off.X + halfDiag);
                     minY = Math.Min(minY, off.Y - halfDiag);
@@ -644,8 +675,10 @@ namespace op.io.UI.BlockScripts.Blocks
                             localOff.X * cos - localOff.Y * sin,
                             localOff.X * sin + localOff.Y * cos);
 
-                        float scaleX = Math.Max(0.1f, worldScale * s.Width  / tex.Width);
-                        float scaleY = Math.Max(0.1f, worldScale * s.Height / tex.Height);
+                        float baseW = s.Width + s.OutlineWidth * 2f;
+                        float baseH = s.Height + s.OutlineWidth * 2f;
+                        float scaleX = Math.Max(0.1f, worldScale * baseW  / tex.Width);
+                        float scaleY = Math.Max(0.1f, worldScale * baseH / tex.Height);
                         Vector2 pos    = worldOrigin + rotatedOff * worldScale;
                         Vector2 origin = new(tex.Width / 2f, tex.Height / 2f);
                         spriteBatch.Draw(tex, pos, null, Color.White,

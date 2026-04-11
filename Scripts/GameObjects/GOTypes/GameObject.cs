@@ -318,7 +318,7 @@ namespace op.io
             if (PhysicsVelocity != Vector2.Zero && DynamicPhysics)
             {
                 Position += PhysicsVelocity * Core.DELTATIME;
-                PhysicsVelocity *= MathHelper.Clamp(1f - 6f * Core.DELTATIME, 0f, 1f);
+                PhysicsVelocity *= MathHelper.Clamp(1f - PhysicsManager.FrictionRate * Core.DELTATIME, 0f, 1f);
                 if (PhysicsVelocity.LengthSquared() < 1f)
                     PhysicsVelocity = Vector2.Zero;
             }

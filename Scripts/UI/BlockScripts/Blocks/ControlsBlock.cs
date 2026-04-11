@@ -311,7 +311,7 @@ namespace op.io.UI.BlockScripts.Blocks
             int headerH2 = headerFunColEarly.HeaderVisible ? ControlsHeaderHeight : 0;
             var headerBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, headerH2);
             var headerFunCol = headerFunColEarly;
-            headerFunCol.ShowHeaderToggle = BlockManager.DockingModeEnabled;
+            headerFunCol.ShowHeaderToggle = BlockManager.DockingModeEnabled && !blockLocked && contentBounds.Contains(mouseState.Position);
             headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
             headerFunCol.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
             if (headerFunCol.HeaderToggleClicked)

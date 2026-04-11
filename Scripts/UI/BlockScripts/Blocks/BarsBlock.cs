@@ -160,7 +160,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _cachedListBounds = listViewport;
 
             bool isDragging = _drag.Active;
-            _listFunCol.Update(_cachedListBounds, mouseState, dt, suppressHover: isDragging || blockLocked || !BlockManager.DockingModeEnabled);
+            _listFunCol.Update(_cachedListBounds, mouseState, dt, suppressHover: isDragging || blockLocked || !BlockManager.DockingModeEnabled || BlockManager.IsDragBarHovered);
 
             if (!blockLocked)
             {

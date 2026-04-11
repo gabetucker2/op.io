@@ -177,6 +177,17 @@ namespace op.io
             }
         }
 
+        private static float? _cachedBulletRecoilScalar = null;
+        public static float BulletRecoilScalar
+        {
+            get
+            {
+                if (!_cachedBulletRecoilScalar.HasValue)
+                    _cachedBulletRecoilScalar = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "BulletRecoilScalar");
+                return _cachedBulletRecoilScalar.Value;
+            }
+        }
+
         private static float? _cachedBulletFarmKnockbackScalar = null;
         public static float BulletFarmKnockbackScalar
         {

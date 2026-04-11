@@ -942,17 +942,18 @@ namespace op.io.UI.BlockScripts.Blocks
                 BulletManager.DefaultBulletDragFactor);
 
             // ── Barrel Attributes ────────────────────────────────────────────────
-            float recoilMass = AttributeDerived.RecoilMass(mass);
+            float bulletKnockback = AttributeDerived.BulletKnockback(a.BulletPenetration, BulletManager.BulletKnockbackScalar);
+            float bulletRecoil = AttributeDerived.BulletRecoil(mass, bulletKnockback, BulletManager.BulletRecoilScalar);
 
             var attrs = new List<Properties.Row>
             {
                 new("Bullet Damage",      $"{a.BulletDamage:0.##}"),
                 new("Bullet Penetration", $"{a.BulletPenetration:0.##}"),
-                new("Bullet Knockback",   $"{AttributeDerived.BulletKnockback(a.BulletPenetration, BulletManager.BulletKnockbackScalar):0.##}",
+                new("Bullet Knockback",   $"{bulletKnockback:0.##}",
                     isHidden: true, affectsList: AttributeDerived.AffectsBulletKnockback),
                 new("Reload Speed",       $"{a.ReloadSpeed:0.##}"),
-                new("Recoil Mass",        $"{recoilMass:0.##}",
-                    isHidden: true, affectsList: AttributeDerived.AffectsRecoilMass),
+                new("Bullet Recoil",      $"{bulletRecoil:0.##}",
+                    isHidden: true, affectsList: AttributeDerived.AffectsBulletRecoil),
                 new("Bullet Health",      $"{AttributeDerived.BulletHealth(mass):0.##}",
                     isHidden: true, affectsList: AttributeDerived.AffectsBulletHealth),
                 new("Bullet Radius",      $"{radius:0.##} px",

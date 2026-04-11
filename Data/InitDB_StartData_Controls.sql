@@ -47,6 +47,23 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CursorOnGameBloc
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoveredBlock',       'Name of the UI block the cursor is currently over, or None if over the game viewport or outside the window.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoveredDragBar',     'Name of the UI block whose drag bar the cursor is currently hovering over, or None.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FocusedBlock',       'The block that last captured keyboard focus. Keyboard shortcuts routed to block content use this. None if no block has focus.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BlockType',          'Category of the focused block: Standard, Overlay, or Dynamic.');
+
+-- Backend block — physics & bullet constants
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AirResistanceScalar',   'Drag scalar applied to bullets: drag = AirResistanceScalar × bulletVolume / bulletDragFactor.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BounceVelocityLoss',    'Fraction of bullet speed lost per bounce off static objects, scaled by mass ratio.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HitVelocityLoss',       'Fraction of bullet speed lost when penetrating non-static objects, scaled by mass ratio.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PenetrationSpring',     'Spring stiffness governing how deeply bullets embed in objects. Higher = shallower penetration.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PenetrationDamping',    'Damping on embedded bullets. 0 = elastic bounce; higher = stickier impact.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletSpeed',    'Fallback bullet speed (px/s) when a barrel does not specify one.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletLifespan', 'Fallback bullet lifespan in seconds before automatic despawn.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultDragFactor',     'Fallback bullet drag factor used in air-resistance calculations.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletMass',     'Fallback bullet mass, affects recoil, knockback, and drag.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletDamage',   'Fallback flat damage dealt by a bullet on hit.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletPenHP',    'Fallback penetration HP; consumed as a bullet passes through objects.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PhysicsFrictionRate',   'Velocity decay rate applied to game objects each frame: vel *= clamp(1 − rate × dt, 0, 1).');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AngularAccelFactor',    'Multiplier on angular acceleration when rotating toward the cursor.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelSwitchSpeed',     'Speed at which the active barrel index rotates between barrels (units/s).');
 
 -- Controls block — XP bar toggle
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPBar', 'Toggle XP bars visible under all units. Configure bar layout in the Bars block.');

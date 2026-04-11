@@ -142,7 +142,7 @@ namespace op.io.UI.BlockScripts.Blocks
             // Update header hover so DrawHeader can show column tooltips + hide toggle
             int specsHdrH = specsHfc.HeaderVisible ? HeaderRowHeight : 0;
             var headerBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, specsHdrH);
-            specsHfc.ShowHeaderToggle = BlockManager.DockingModeEnabled;
+            specsHfc.ShowHeaderToggle = BlockManager.DockingModeEnabled && !blockLocked && contentBounds.Contains(mouseState.Position);
             specsHfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
             specsHfc.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
             if (specsHfc.HeaderToggleClicked)
