@@ -58,6 +58,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const int OpacityRowHeight = 22;
         private const int SuperimposeZoneMaxSide = 500;
 
+        /// <summary>
+        /// When dragging toward a target block from one side, the edge detection
+        /// midpoint is biased so that the displacement edge (the far side) covers
+        /// this fraction of the block, making displacement easier to reach.
+        /// 0.3 means only 30% of the block nearest the drag origin triggers the
+        /// no-op edge; the remaining 70% triggers displacement.
+        /// </summary>
+        private const float DisplacementBiasThreshold = 0.3f;
+
         private static Color GroupBarBackground => ColorPalette.TabBarBackground;
         private static Color TabInactiveBackground => ColorPalette.TabInactive;
         private static Color TabHoverBackground => ColorPalette.TabHover;
@@ -492,6 +501,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     bool resizingBlocks = !tabInteracted && allowReorder && (UpdateCornerResizeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
                         UpdateResizeEdgeState(leftClickStarted, leftClickHeld, leftClickReleased) ||
                         UpdateOverlayResizeState(leftClickStarted, leftClickHeld, leftClickReleased));
+                    if (leftClickStarted)
+                    {
+                        DebugLogger.PrintUI($"[InputChain] mouse={_mousePosition} tabInteracted={tabInteracted} resizingBlocks={resizingBlocks} dockingEnabled={dockingEnabled} allowReorder={allowReorder} → {(resizingBlocks || tabInteracted ? "BLOCKED" : "UpdateDragState")}");
+                    }
                     if (!resizingBlocks && !tabInteracted)
                     {
                         UpdateDragState(leftClickStarted, leftClickReleased, allowReorder);
@@ -2914,9 +2927,16 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 // If the click is also on a drag bar grab region, yield to the drag bar
                 // so vertically stacked blocks can be displaced by dragging upward.
-                DockBlock dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
+                // Also check with a small vertical margin because the resize edge's
+                // inflated hit zone extends a few pixels above the lower block's drag bar,
+                // creating a dead zone where the user intends to grab the drag bar but the
+                // resize edge would steal the click.
+                DockBlock dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true, logDiagnostics: true);
+                DebugLogger.PrintUI($"[ResizeEdgeGuard] mouse={_mousePosition} dragBarHit={dragBarHit?.Id ?? "null"} edge={DescribeResizeEdge(hovered.Value)}");
+
                 if (dragBarHit != null)
                 {
+                    DebugLogger.PrintUI($"[ResizeEdgeGuard] YIELDING to drag bar {dragBarHit.Id}");
                     _hoveredResizeEdge = null;
                     return false;
                 }
@@ -2980,7 +3000,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 // If the click is also on a drag bar grab region, yield to the drag bar
                 // so vertically stacked blocks can be displaced by dragging upward.
+                // Also probe a few pixels below to cover the resize edge overlap zone.
                 DockBlock dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
+
                 if (dragBarHit != null)
                 {
                     _hoveredCornerHandle = null;
@@ -3466,7 +3488,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             DockBlock dragBarHit = null;
             if (leftClickStarted)
             {
-                dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
+                dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true, logDiagnostics: true);
+                DebugLogger.PrintUI($"[DragState] leftClickStarted mouse={_mousePosition} dragBarHit={dragBarHit?.Id ?? "null"} allowReorder={allowReorder}");
                 if (dragBarHit != null)
                 {
                     SetFocusedBlock(dragBarHit);
@@ -3552,6 +3575,19 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 {
                     _dropPreview = BuildDropPreview(_mousePosition);
 
+                    // ── Per-frame drag-bar diagnostics ──
+                    if (!_draggingFromTab)
+                    {
+                        string dragId = _draggingBlock?.Id ?? "null";
+                        string previewDesc = _dropPreview.HasValue
+                            ? $"Target={_dropPreview.Value.TargetBlock?.Id ?? "null"} Edge={_dropPreview.Value.Edge} IsOverlay={_dropPreview.Value.IsOverlayDrop} IsTab={_dropPreview.Value.IsTabDrop} IsSnap={_dropPreview.Value.IsViewportSnap} Highlight={_dropPreview.Value.HighlightBounds}"
+                            : "NONE";
+                        bool mouseAbove = _mousePosition.Y < _draggingStartBounds.Y;
+                        bool mouseBelow = _mousePosition.Y > _draggingStartBounds.Bottom;
+                        string dir = mouseAbove ? "UP" : mouseBelow ? "DOWN" : "WITHIN";
+                        DebugLogger.PrintUI($"[DragFrame] dir={dir} mouse={_mousePosition} block={dragId} startBounds={_draggingStartBounds} preview={previewDesc}");
+                    }
+
                     if (leftClickReleased)
                     {
                         // If locked into superimpose mode but cursor left the parent panel (_dropPreview is null),
@@ -3560,8 +3596,17 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         {
                             if (_dropPreview.HasValue)
                             {
+                                DebugLogger.PrintUI($"[DragBarDrop] Applying: Target={_dropPreview.Value.TargetBlock?.Id ?? "null"} Edge={_dropPreview.Value.Edge} IsOverlay={_dropPreview.Value.IsOverlayDrop}");
                                 ApplyDrop(_dropPreview.Value);
                             }
+                            else
+                            {
+                                DebugLogger.PrintUI("[DragBarDrop] No preview on release — drop cancelled.");
+                            }
+                        }
+                        else
+                        {
+                            DebugLogger.PrintUI("[DragBarDrop] SuperimposeLocked with no preview — drop cancelled.");
                         }
 
                         _draggingBlock = null;
@@ -3975,7 +4020,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _blockLockStates[block.Id] = storedLock;
         }
 
-        private static DockBlock HitTestDragBarBlock(Point position, bool excludeDragBarButtons = false, bool requireGrabRegion = false)
+        private static DockBlock HitTestDragBarBlock(Point position, bool excludeDragBarButtons = false, bool requireGrabRegion = false, bool logDiagnostics = false)
         {
             int standardDbh = GetActiveDragBarHeight();
 
@@ -3999,6 +4044,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         continue;
                     }
 
+                    if (logDiagnostics)
+                    {
+                        DebugLogger.PrintUI($"[DragBarHitTest] block={block.Id} dragBar={dragBarRect} mouse={position} onButton={excludeDragBarButtons && IsPointOnDragBarButton(block, dbh, position)}");
+                    }
+
                     if (excludeDragBarButtons && IsPointOnDragBarButton(block, dbh, position))
                     {
                         continue;
@@ -4008,6 +4058,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     {
                         PanelGroup group = GetPanelGroupForBlock(block);
                         Rectangle grabBounds = GetDragBarGrabBounds(block, group, dbh);
+                        if (logDiagnostics)
+                        {
+                            DebugLogger.PrintUI($"[DragBarHitTest]   grabRegion={grabBounds} contains={grabBounds != Rectangle.Empty && grabBounds.Contains(position)}");
+                        }
                         if (grabBounds == Rectangle.Empty || !grabBounds.Contains(position))
                         {
                             continue;
@@ -4474,8 +4528,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static DockDropPreview? BuildDropPreview(Point position)
         {
-            // Once the user enters a superimpose zone, lock preview to that parent panel until drag ends.
-            if (_superimposeLocked && _superimposeLockedTarget != null && _superimposeLockedTarget.IsVisible)
+            // Once the user enters a superimpose zone during a tab drag, lock preview
+            // to that parent panel until the drag ends. Drag-bar drags skip superimpose
+            // entirely so this lock cannot engage for them.
+            if (_draggingFromTab && _superimposeLocked && _superimposeLockedTarget != null && _superimposeLockedTarget.IsVisible)
             {
                 Rectangle parentBounds = _superimposeLockedTarget.Bounds;
                 if (parentBounds.Contains(position))
@@ -4514,28 +4570,47 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             // Single pass: find the block under the cursor. Check superimpose zone
-            // first, then use 4-hemisphere edge detection (whichever axis has the
-            // larger displacement from center wins). Adjacent and non-adjacent blocks
-            // use the same logic so all four edges are always available.
+            // first (tab drags only — drag-bar drags skip it so the zone does not
+            // block displacement), then use 4-hemisphere edge detection (whichever
+            // axis has the larger displacement from center wins, biased toward the
+            // displacement direction so upward and downward drags feel symmetric).
             DockDropPreview? preview = null;
+
+            if (!_draggingFromTab)
+            {
+                DebugLogger.PrintUI($"[DropPreview] Scanning {_orderedBlocks.Count} blocks. dragging={_draggingBlock?.Id} startBounds={_draggingStartBounds} mouse={position}");
+            }
 
             foreach (DockBlock block in _orderedBlocks)
             {
                 if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
+                {
+                    if (!_draggingFromTab && block == _draggingBlock)
+                        DebugLogger.PrintUI($"[DropPreview]   SKIP self: {block.Id}");
                     continue;
+                }
 
                 Rectangle bounds = block.Bounds;
                 if (!bounds.Contains(position))
-                    continue;
-
-                // Center superimpose zone — always checked regardless of adjacency.
-                Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
-                if (superimposeZone.Contains(position))
                 {
-                    _superimposeLocked = true;
-                    _superimposeLockedTarget = block;
-                    preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
-                    break;
+                    if (!_draggingFromTab)
+                        DebugLogger.PrintUI($"[DropPreview]   MISS: {block.Id} bounds={bounds} mouse={position}");
+                    continue;
+                }
+
+                // Center superimpose zone — only for tab drags. Drag-bar drags
+                // skip the zone so the user can traverse a block's center to reach
+                // the displacement edge without triggering an overlay preview.
+                if (_draggingFromTab)
+                {
+                    Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
+                    if (superimposeZone.Contains(position))
+                    {
+                        _superimposeLocked = true;
+                        _superimposeLockedTarget = block;
+                        preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
+                        break;
+                    }
                 }
 
                 // 4-hemisphere edge detection: the axis with the larger offset from
@@ -4545,18 +4620,36 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 float distX = Math.Abs(relativeX - 0.5f);
                 float distY = Math.Abs(relativeY - 0.5f);
 
+                // Bias the vertical midpoint toward the displacement direction so
+                // dragging upward and downward both trigger displacement as soon as
+                // the cursor crosses ~30% of the target block, not the full 50%.
+                float yMidpoint = 0.5f;
+                if (_draggingStartBounds.Y >= bounds.Bottom)
+                    yMidpoint = 1f - DisplacementBiasThreshold; // dragging from below → favor Top (larger Top zone)
+                else if (_draggingStartBounds.Bottom <= bounds.Y)
+                    yMidpoint = DisplacementBiasThreshold; // dragging from above → favor Bottom (larger Bottom zone)
+
+                // Same bias for horizontal drags.
+                float xMidpoint = 0.5f;
+                if (_draggingStartBounds.X >= bounds.Right)
+                    xMidpoint = 1f - DisplacementBiasThreshold; // dragging from the right → favor Left (larger Left zone)
+                else if (_draggingStartBounds.Right <= bounds.X)
+                    xMidpoint = DisplacementBiasThreshold; // dragging from the left → favor Right (larger Right zone)
+
                 DockEdge edge;
                 if (distY >= distX)
-                    edge = relativeY <= 0.5f ? DockEdge.Top : DockEdge.Bottom;
+                    edge = relativeY <= yMidpoint ? DockEdge.Top : DockEdge.Bottom;
                 else
-                    edge = relativeX <= 0.5f ? DockEdge.Left : DockEdge.Right;
+                    edge = relativeX <= xMidpoint ? DockEdge.Left : DockEdge.Right;
 
+                int highlightSplitY = (int)(bounds.Height * yMidpoint);
+                int highlightSplitX = (int)(bounds.Width * xMidpoint);
                 Rectangle highlight = edge switch
                 {
-                    DockEdge.Top => new Rectangle(bounds.X, bounds.Y, bounds.Width, bounds.Height / 2),
-                    DockEdge.Bottom => new Rectangle(bounds.X, bounds.Y + bounds.Height / 2, bounds.Width, bounds.Height / 2),
-                    DockEdge.Left => new Rectangle(bounds.X, bounds.Y, bounds.Width / 2, bounds.Height),
-                    DockEdge.Right => new Rectangle(bounds.X + bounds.Width / 2, bounds.Y, bounds.Width / 2, bounds.Height),
+                    DockEdge.Top => new Rectangle(bounds.X, bounds.Y, bounds.Width, highlightSplitY),
+                    DockEdge.Bottom => new Rectangle(bounds.X, bounds.Y + highlightSplitY, bounds.Width, bounds.Height - highlightSplitY),
+                    DockEdge.Left => new Rectangle(bounds.X, bounds.Y, highlightSplitX, bounds.Height),
+                    DockEdge.Right => new Rectangle(bounds.X + highlightSplitX, bounds.Y, bounds.Width - highlightSplitX, bounds.Height),
                     _ => bounds
                 };
 
@@ -4566,7 +4659,13 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     Edge = edge,
                     HighlightBounds = highlight
                 };
-                DebugLogger.PrintUI($"[BuildDropPreview] Result: Target={block.Id} Edge={edge} relY={relativeY:F3} relX={relativeX:F3}");
+                if (!_draggingFromTab)
+                {
+                    bool fromBelow = _draggingStartBounds.Y >= bounds.Bottom;
+                    bool fromAbove = _draggingStartBounds.Bottom <= bounds.Y;
+                    DebugLogger.PrintUI($"[DropPreview]   HIT: {block.Id} bounds={bounds}");
+                    DebugLogger.PrintUI($"[DropPreview]   fromAbove={fromAbove} fromBelow={fromBelow} relY={relativeY:F3} relX={relativeX:F3} distY={distY:F3} distX={distX:F3} yMid={yMidpoint:F2} xMid={xMidpoint:F2} → Edge={edge}");
+                }
                 break;
             }
 
@@ -4745,10 +4844,26 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 Rectangle hitBounds = handle.Bounds;
                 hitBounds.Inflate(2, 2);
+
+                // Clip inflated hit zone at the split boundary so it cannot
+                // extend into the second child's drag bar area.
+                if (handle.Node?.Second != null)
+                {
+                    int boundary = handle.Orientation == DockSplitOrientation.Horizontal
+                        ? handle.Node.Second.Bounds.Y
+                        : handle.Node.Second.Bounds.X;
+                    if (handle.Orientation == DockSplitOrientation.Horizontal && hitBounds.Bottom > boundary)
+                        hitBounds.Height = Math.Max(1, boundary - hitBounds.Y);
+                    else if (handle.Orientation == DockSplitOrientation.Vertical && hitBounds.Right > boundary)
+                        hitBounds.Width = Math.Max(1, boundary - hitBounds.X);
+                }
+
                 if (!hitBounds.Contains(position))
                 {
                     continue;
                 }
+
+                DebugLogger.PrintUI($"[ResizeHitTest] HIT edge ori={handle.Orientation} bounds={handle.Bounds} clipped={hitBounds} mouse={position} secondY={handle.Node?.Second?.Bounds.Y}");
 
                 int axisCenter = GetResizeEdgeAxisCenter(handle);
                 int axisDistance = handle.Orientation == DockSplitOrientation.Vertical
@@ -8313,18 +8428,25 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             int thickness = Math.Max(2, UIStyle.ResizeEdgeThickness);
             if (split.Orientation == DockSplitOrientation.Vertical)
             {
-                int centerX = split.First.Bounds.Right;
+                // Position the edge so its right side aligns with the split
+                // boundary (First.Bounds.Right), keeping it within the left
+                // block's area so it doesn't overlap the right block's drag bar.
+                int boundary = split.First.Bounds.Right;
                 int minX = bounds.X;
                 int maxX = Math.Max(bounds.X, bounds.Right - thickness);
-                int x = Math.Clamp(centerX - thickness / 2, minX, maxX);
+                int x = Math.Clamp(boundary - thickness, minX, maxX);
                 return new Rectangle(x, bounds.Y, thickness, bounds.Height);
             }
             else
             {
-                int centerY = split.First.Bounds.Bottom;
+                // Position the edge so its bottom aligns with the split boundary
+                // (First.Bounds.Bottom). This keeps the edge entirely within the
+                // upper block's area so it never overlaps the lower block's drag
+                // bar, allowing upward drag-bar displacement to work.
+                int boundary = split.First.Bounds.Bottom;
                 int minY = bounds.Y;
                 int maxY = Math.Max(bounds.Y, bounds.Bottom - thickness);
-                int y = Math.Clamp(centerY - thickness / 2, minY, maxY);
+                int y = Math.Clamp(boundary - thickness, minY, maxY);
                 return new Rectangle(bounds.X, y, bounds.Width, thickness);
             }
         }

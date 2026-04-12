@@ -19,6 +19,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ButtonSpacing = BlockButtonRowLayout.DefaultButtonSpacing;
         private const int Padding = 12;
         private const int TextPadding = 8;
+        private const int RedFlagButtonWidth = 110;
         private const int OpenFolderButtonWidth = 130;
         private const int CopyButtonWidth = 90;
         private const double CopyFeedbackDurationSeconds = 2.0;
@@ -28,6 +29,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly List<RenderedLine> Lines = new();
         private static int _lastEntryCount = -1;
         private static int _lastTextWidth = -1;
+        private static bool _redFlagMode;
+        private static bool _redFlagModeLoaded;
         private static Texture2D _pixel;
         private static MouseState _lastMouseState;
         private static KeyboardState _previousKeyboardState;
@@ -38,15 +41,17 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private readonly struct DebugLogLayout
         {
-            public DebugLogLayout(Rectangle toolbar, Rectangle openFolder, Rectangle copy, Rectangle viewport)
+            public DebugLogLayout(Rectangle toolbar, Rectangle redFlag, Rectangle openFolder, Rectangle copy, Rectangle viewport)
             {
                 ToolbarBounds = toolbar;
+                RedFlagBounds = redFlag;
                 OpenFolderBounds = openFolder;
                 CopyBounds = copy;
                 LogViewport = viewport;
             }
 
             public Rectangle ToolbarBounds { get; }
+            public Rectangle RedFlagBounds { get; }
             public Rectangle OpenFolderBounds { get; }
             public Rectangle CopyBounds { get; }
             public Rectangle LogViewport { get; }
@@ -67,6 +72,13 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             _lastMouseState = mouseState;
+            if (!_redFlagModeLoaded)
+            {
+                string raw = DatabaseFetch.GetSetting<string>("GeneralSettings", "Value", "SettingKey", "DebugLogRedFlagMode", "false");
+                _redFlagMode = string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
+                _redFlagModeLoaded = true;
+            }
+
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.DebugLogs);
             UIStyle.UIFont font = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Regular);
             if (!font.IsAvailable)
@@ -104,13 +116,18 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             if (leftClickStarted && !layout.LogViewport.Contains(mouseState.Position) &&
+                !layout.RedFlagBounds.Contains(mouseState.Position) &&
                 !layout.OpenFolderBounds.Contains(mouseState.Position) &&
                 !layout.CopyBounds.Contains(mouseState.Position))
             {
                 ClearSelection();
             }
 
-            if (!blockLocked && leftClickStarted && layout.OpenFolderBounds.Contains(mouseState.Position))
+            if (!blockLocked && leftClickStarted && layout.RedFlagBounds.Contains(mouseState.Position))
+            {
+                ToggleRedFlagMode();
+            }
+            else if (!blockLocked && leftClickStarted && layout.OpenFolderBounds.Contains(mouseState.Position))
             {
                 OpenLogsFolder();
             }
@@ -239,6 +256,9 @@ namespace op.io.UI.BlockScripts.Blocks
             int startIndex = Math.Max(0, entries.Length - MaxDisplayedEntries);
             for (int i = startIndex; i < entries.Length; i++)
             {
+                if (_redFlagMode && entries[i].Color != ConsoleColor.Red && entries[i].Color != ConsoleColor.DarkYellow)
+                    continue;
+
                 Color lineColor = ToUiColor(entries[i].Color);
                 string text = entries[i].Message ?? string.Empty;
                 AppendWrappedLine(text, font, availableWidth, lineColor);
@@ -354,6 +374,15 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.DebugLogs);
+
+            bool redFlagHovered = !blockLocked && UIButtonRenderer.IsHovered(layout.RedFlagBounds, _lastMouseState.Position);
+            Color redFlagFill = _redFlagMode ? new Color(120, 30, 30) : ColorPalette.ButtonNeutral;
+            Color redFlagHoverFill = _redFlagMode ? new Color(150, 40, 40) : ColorPalette.ButtonNeutralHover;
+            Color redFlagBorder = _redFlagMode ? new Color(200, 60, 60) : UIStyle.BlockBorder;
+            Color redFlagText = _redFlagMode ? new Color(255, 100, 100) : UIStyle.TextColor;
+            UIButtonRenderer.Draw(spriteBatch, layout.RedFlagBounds, "Red flags", UIButtonRenderer.ButtonStyle.Grey, redFlagHovered, isDisabled: blockLocked,
+                textColorOverride: blockLocked ? null : redFlagText, fillOverride: redFlagFill, hoverFillOverride: redFlagHoverFill, borderOverride: redFlagBorder);
+
             bool folderHovered = !blockLocked && UIButtonRenderer.IsHovered(layout.OpenFolderBounds, _lastMouseState.Position);
             bool copyHovered = !blockLocked && UIButtonRenderer.IsHovered(layout.CopyBounds, _lastMouseState.Position);
             UIButtonRenderer.Draw(spriteBatch, layout.OpenFolderBounds, "Open folder", UIButtonRenderer.ButtonStyle.Grey, folderHovered, isDisabled: blockLocked);
@@ -385,18 +414,19 @@ namespace op.io.UI.BlockScripts.Blocks
             Rectangle buttonRow = new(toolbar.X, toolbar.Y, toolbar.Width, toolbar.Height);
             IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildRow(
                 buttonRow,
-                new[] { OpenFolderButtonWidth, CopyButtonWidth },
+                new[] { RedFlagButtonWidth, OpenFolderButtonWidth, CopyButtonWidth },
                 ButtonHeight,
                 ButtonSpacing);
 
-            Rectangle openFolderBounds = buttons.Count > 0 ? buttons[0] : Rectangle.Empty;
-            Rectangle copyBounds = buttons.Count > 1 ? buttons[1] : Rectangle.Empty;
+            Rectangle redFlagBounds = buttons.Count > 0 ? buttons[0] : Rectangle.Empty;
+            Rectangle openFolderBounds = buttons.Count > 1 ? buttons[1] : Rectangle.Empty;
+            Rectangle copyBounds = buttons.Count > 2 ? buttons[2] : Rectangle.Empty;
 
             int viewportY = toolbar.Bottom + Padding;
             int viewportHeight = Math.Max(0, contentBounds.Bottom - viewportY);
             Rectangle logViewport = new(contentBounds.X, viewportY, contentBounds.Width, viewportHeight);
 
-            return new DebugLogLayout(toolbar, openFolderBounds, copyBounds, logViewport);
+            return new DebugLogLayout(toolbar, redFlagBounds, openFolderBounds, copyBounds, logViewport);
         }
 
         private static void CopyLogsToClipboard()
@@ -416,6 +446,23 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 DebugLogger.PrintWarning($"Failed to copy logs to clipboard: {ex.Message}");
             }
+        }
+
+        private static void ToggleRedFlagMode()
+        {
+            _redFlagMode = !_redFlagMode;
+            string newValue = _redFlagMode ? "true" : "false";
+            if (!DatabaseManager.UpdateSetting("GeneralSettings", "Value", "SettingKey", "DebugLogRedFlagMode", newValue))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO GeneralSettings (SettingKey, Value) VALUES (@key, @val);",
+                    new System.Collections.Generic.Dictionary<string, object> { { "@key", "DebugLogRedFlagMode" }, { "@val", newValue } });
+            }
+
+            _lastEntryCount = -1;
+            _lastTextWidth = -1;
+            Lines.Clear();
+            ClearSelection();
         }
 
         private static void OpenLogsFolder()

@@ -28,6 +28,7 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('FixedTimeStep', 'false'
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TargetFrameRate', '240');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('NumLogFiles', '5');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('CameraSnapRange', '75');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('DebugLogRedFlagMode', 'false');
 
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('KnockbackMassScale', '4.0');
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('RecoilMassScale', '50.0');
