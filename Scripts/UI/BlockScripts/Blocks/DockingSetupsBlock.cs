@@ -90,6 +90,26 @@ namespace op.io.UI.BlockScripts.Blocks
         private static KeyboardState PreviousKeyboardState;
         private static MouseState LastMouseState;
 
+        public static string GetHoveredRowKey()
+        {
+            Point pos = LastMouseState.Position;
+            for (int i = 0; i < CommandOrder.Length; i++)
+            {
+                if (CommandBounds[i] != Rectangle.Empty && CommandBounds[i].Contains(pos))
+                {
+                    return CommandOrder[i] switch
+                    {
+                        DockingCommand.Save   => "Btn_SetupSave",
+                        DockingCommand.New    => "Btn_SetupNew",
+                        DockingCommand.Rename => "Btn_SetupRename",
+                        DockingCommand.Delete => "Btn_SetupDelete",
+                        _ => null
+                    };
+                }
+            }
+            return null;
+        }
+
         private static Texture2D PixelTexture;
         private static Texture2D IconNew;
         private static Texture2D IconSave;

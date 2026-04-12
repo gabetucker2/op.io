@@ -62,8 +62,14 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletMas
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletDamage',   'Fallback flat damage dealt by a bullet on hit.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletPenHP',    'Fallback penetration HP; consumed as a bullet passes through objects.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PhysicsFrictionRate',   'Velocity decay rate applied to game objects each frame: vel *= clamp(1 − rate × dt, 0, 1).');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AngularAccelFactor',    'Multiplier on angular acceleration when rotating toward the cursor.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelSwitchSpeed',     'Speed at which the active barrel index rotates between barrels (units/s).');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AngularAccelFactor',        'Multiplier on angular acceleration when rotating toward the cursor.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelSwitchSpeed',         'Speed at which the active barrel index rotates between barrels (units/s).');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletRadiusScalar',        'Bullet visual radius = sqrt(mass) × BulletRadiusScalar.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelHeightScalar',        'Barrel length = max(4, bulletSpeed × BarrelHeightScalar).');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletKnockbackScalar',     'Knockback multiplier: knockback = bulletPenetration × BulletKnockbackScalar.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletRecoilScalar',        'Recoil multiplier: recoil = bulletMass × (1 + knockback) × BulletRecoilScalar.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletFarmKnockbackScalar', 'Knockback attenuation for farm objects hit by bullets.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OwnerImmunityDuration',    'Seconds after spawn during which a bullet cannot collide with or damage its owner. Bullet fades in over this period.');
 
 -- Controls block — XP bar toggle
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPBar', 'Toggle XP bars visible under all units. Configure bar layout in the Bars block.');
@@ -85,6 +91,23 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CPUThreads',    
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ProcessMemory',  'Total memory allocated to this process by the OS.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ManagedMemory',  'Memory used by the .NET managed heap.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OS',             'Operating system name and version.');
+
+-- Drag bar button tooltips
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_Close',         'Close this tab. If it is the last tab in the panel, the panel is removed from the layout.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_Lock',          'Toggle the panel lock. Locked panels cannot be scrolled, resized, or reordered.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_OverlayMerge',  'Merge this overlay into its parent panel. All overlay tabs become tabs of the parent.');
+
+-- Color scheme block button tooltips
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SchemeSave',    'Save the current color values to the active scheme.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SchemeNew',     'Create a new color scheme copied from the current values.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SchemeRename',  'Rename the active scheme. Built-in schemes cannot be renamed.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SchemeDelete',  'Delete the active scheme. Built-in schemes cannot be deleted.');
+
+-- Setup block button tooltips (shared by Control Setups, Docking Setups, and Notes)
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SetupSave',     'Save current settings to the selected configuration.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SetupNew',      'Create a new configuration from the current settings.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SetupRename',   'Rename the selected configuration.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SetupDelete',   'Delete the selected configuration.');
 
 ---------------------------------------------------------------------------------------------------------------------------
 

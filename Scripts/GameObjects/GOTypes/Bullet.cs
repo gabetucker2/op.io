@@ -18,6 +18,7 @@ namespace op.io
         public float BulletDamage { get; }
         public float BulletPenetration { get; }
         public float BulletKnockback { get; }
+        public float MaxSpeed { get; }
         public float MaxLifespan { get; }
         public float DragFactor { get; }
         public new bool IsDying { get; private set; } = false;
@@ -28,7 +29,7 @@ namespace op.io
         public Bullet(int id, Vector2 position, Vector2 velocity, float mass,
                       float maxLifespan, float dragFactor, Shape shape,
                       float bulletHealth, float bulletDamage, float bulletPenetration,
-                      float bulletKnockback,
+                      float bulletKnockback, float maxSpeed,
                       Color fillColor, Color outlineColor, int outlineWidth)
             : base(id, "Bullet", position, 0f, mass,
                    false, false, false,
@@ -44,6 +45,7 @@ namespace op.io
             BulletDamage = bulletDamage;
             BulletPenetration = bulletPenetration;
             BulletKnockback = bulletKnockback;
+            MaxSpeed = maxSpeed;
             DrawLayer = 100;
             _volume = ComputeVolume(shape);
         }
@@ -61,6 +63,9 @@ namespace op.io
             };
         }
 
+        /// <summary>True while the bullet cannot collide with or damage its owner.</summary>
+        public bool IsOwnerImmune => LifetimeElapsed < BulletManager.OwnerImmunityDuration;
+
         public void StartDying()
         {
             if (IsDying) return;
@@ -77,6 +82,13 @@ namespace op.io
             if (HitFlash > 0f)
                 HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
 
+            // During owner immunity, fade from fully transparent to fully opaque.
+            float immunityDuration = BulletManager.OwnerImmunityDuration;
+            if (immunityDuration > 0f && LifetimeElapsed < immunityDuration)
+                Opacity = MathHelper.Clamp(LifetimeElapsed / immunityDuration, 0f, 1f);
+            else if (!IsDying)
+                Opacity = 1f;
+
             if (IsDying)
             {
                 _dyingTimer += Core.DELTATIME;
@@ -92,6 +104,14 @@ namespace op.io
 
             float drag = BulletManager.AirResistanceScalar * _volume / MathF.Max(DragFactor, 0.0001f);
             Velocity *= MathF.Max(1f - drag * Core.DELTATIME, 0f);
+
+            // Hard ceiling — no collision resolver can push velocity past MaxSpeed.
+            if (MaxSpeed > 0f)
+            {
+                float spdSq = Velocity.LengthSquared();
+                if (spdSq > MaxSpeed * MaxSpeed)
+                    Velocity = Vector2.Normalize(Velocity) * MaxSpeed;
+            }
 
             Vector2 movement = Velocity * Core.DELTATIME;
             Position += movement;

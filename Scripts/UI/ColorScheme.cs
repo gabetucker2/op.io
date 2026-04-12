@@ -53,7 +53,36 @@ namespace op.io
         LockUnlockedFill,
         LockUnlockedHoverFill,
         CloseGlyph,
-        CloseGlyphHover
+        CloseGlyphHover,
+        // Gameplay colors
+        HealthBarLow,
+        HealthBarHigh,
+        ShieldBar,
+        XPBar,
+        BarBackground,
+        DamageNumber,
+        BarRegenTick,
+        ShieldRegenTick,
+        // Chat colors
+        ChatAll,
+        ChatParty,
+        ChatProximity,
+        ChatWhisper,
+        ChatInputBar,
+        ChatInputField,
+        // Tab bar colors
+        TabBarBackground,
+        TabInactive,
+        TabHover,
+        TabActive,
+        // Tooltip colors
+        TooltipBackground,
+        TooltipBorder,
+        TooltipText,
+        TooltipMuted,
+        // Slider colors
+        SliderTrack,
+        SliderFill
     }
 
     public sealed class ColorOption
@@ -536,7 +565,7 @@ namespace op.io
             // System / engine colors
             Add(new ColorOption(ColorRole.TransparentWindowKey, "Transparent window key", "System", new Color(255, 105, 180), "Window chroma key", isLockedByDefault: true));
             Add(new ColorOption(ColorRole.DefaultFallback, "Default fallback", "System", new Color(255, 105, 179), "Used as a last-resort color when lookups fail.", isLockedByDefault: true));
-            Add(new ColorOption(ColorRole.GameBackground, "Game background", "System", new Color(20, 20, 25), "Backbuffer clear color."));
+            Add(new ColorOption(ColorRole.GameBackground, "Game background", "System", new Color(127, 229, 242), "Backbuffer clear color.", isLockedByDefault: true));
 
             // UI layout
             Add(new ColorOption(ColorRole.ScreenBackground, "Screen background", "UI", new Color(18, 18, 18)));
@@ -598,6 +627,40 @@ namespace op.io
             Add(new ColorOption(ColorRole.LockUnlockedHoverFill, "Lock fill (unlocked hover)", "Locks", new Color(68, 92, 160, 250)));
             Add(new ColorOption(ColorRole.CloseGlyph, "Close glyph", "Locks", Color.OrangeRed));
             Add(new ColorOption(ColorRole.CloseGlyphHover, "Close glyph hover", "Locks", Color.White));
+
+            // Gameplay colors
+            Add(new ColorOption(ColorRole.HealthBarLow, "Health bar (low)", "Gameplay", new Color(220, 50, 50), "Bar fill when health is low."));
+            Add(new ColorOption(ColorRole.HealthBarHigh, "Health bar (high)", "Gameplay", new Color(60, 200, 60), "Bar fill when health is full."));
+            Add(new ColorOption(ColorRole.ShieldBar, "Shield bar", "Gameplay", new Color(0, 180, 255), "Shield bar fill color."));
+            Add(new ColorOption(ColorRole.XPBar, "XP bar", "Gameplay", new Color(50, 220, 80), "Experience bar fill color."));
+            Add(new ColorOption(ColorRole.BarBackground, "Bar background", "Gameplay", new Color(64, 64, 64), "Empty portion of health/shield/XP bars."));
+            Add(new ColorOption(ColorRole.DamageNumber, "Damage number", "Gameplay", new Color(255, 20, 20), "Floating damage text color."));
+            Add(new ColorOption(ColorRole.BarRegenTick, "Regen tick", "Gameplay", new Color(220, 200, 75), "Health regeneration tick flash."));
+            Add(new ColorOption(ColorRole.ShieldRegenTick, "Shield regen tick", "Gameplay", new Color(75, 220, 200), "Shield regeneration tick flash."));
+
+            // Chat colors
+            Add(new ColorOption(ColorRole.ChatAll, "Chat (all)", "Chat", new Color(220, 220, 225), "Default all-channel chat text."));
+            Add(new ColorOption(ColorRole.ChatParty, "Chat (party)", "Chat", new Color(100, 210, 120), "Party channel chat text."));
+            Add(new ColorOption(ColorRole.ChatProximity, "Chat (proximity)", "Chat", new Color(240, 210, 80), "Proximity channel chat text."));
+            Add(new ColorOption(ColorRole.ChatWhisper, "Chat (whisper)", "Chat", new Color(200, 120, 220), "Whisper channel chat text."));
+            Add(new ColorOption(ColorRole.ChatInputBar, "Chat input bar", "Chat", new Color(22, 22, 26), "Background of the chat input bar."));
+            Add(new ColorOption(ColorRole.ChatInputField, "Chat input field", "Chat", new Color(35, 35, 40), "Background of the chat text input."));
+
+            // Tab bar colors
+            Add(new ColorOption(ColorRole.TabBarBackground, "Tab bar background", "Tabs", new Color(28, 28, 30), "Panel tab bar background."));
+            Add(new ColorOption(ColorRole.TabInactive, "Tab inactive", "Tabs", new Color(40, 40, 42), "Background of inactive panel tabs."));
+            Add(new ColorOption(ColorRole.TabHover, "Tab hover", "Tabs", new Color(50, 50, 54), "Background of hovered panel tabs."));
+            Add(new ColorOption(ColorRole.TabActive, "Tab active", "Tabs", new Color(60, 60, 64), "Background of the active panel tab."));
+
+            // Tooltip colors
+            Add(new ColorOption(ColorRole.TooltipBackground, "Tooltip background", "Tooltips", new Color(255, 255, 255), "Tooltip box fill color."));
+            Add(new ColorOption(ColorRole.TooltipBorder, "Tooltip border", "Tooltips", new Color(180, 180, 180), "Tooltip box outline."));
+            Add(new ColorOption(ColorRole.TooltipText, "Tooltip text", "Tooltips", new Color(0, 0, 0), "Primary tooltip text color."));
+            Add(new ColorOption(ColorRole.TooltipMuted, "Tooltip muted", "Tooltips", new Color(130, 130, 130), "Secondary tooltip text (data types, bullets)."));
+
+            // Slider colors
+            Add(new ColorOption(ColorRole.SliderTrack, "Slider track", "Sliders", new Color(52, 52, 56), "Background rail for slider controls."));
+            Add(new ColorOption(ColorRole.SliderFill, "Slider fill", "Sliders", new Color(230, 230, 235), "Filled portion of slider controls."));
         }
 
         private static void Add(ColorOption option)
@@ -852,7 +915,20 @@ namespace op.io
                 { ColorRole.LockUnlockedFill, new Color(74, 108, 210, 230) },
                 { ColorRole.LockUnlockedHoverFill, new Color(74, 108, 210, 245) },
                 { ColorRole.CloseGlyph, new Color(200, 70, 52) },
-                { ColorRole.CloseGlyphHover, new Color(255, 255, 255) }
+                { ColorRole.CloseGlyphHover, new Color(255, 255, 255) },
+                // Tabs
+                { ColorRole.TabBarBackground, new Color(232, 236, 244) },
+                { ColorRole.TabInactive, new Color(222, 226, 234) },
+                { ColorRole.TabHover, new Color(212, 216, 228) },
+                { ColorRole.TabActive, new Color(255, 255, 255) },
+                // Tooltips
+                { ColorRole.TooltipBackground, new Color(44, 44, 50) },
+                { ColorRole.TooltipBorder, new Color(80, 80, 96) },
+                { ColorRole.TooltipText, new Color(240, 240, 240) },
+                { ColorRole.TooltipMuted, new Color(160, 160, 168) },
+                // Sliders
+                { ColorRole.SliderTrack, new Color(208, 212, 220) },
+                { ColorRole.SliderFill, new Color(74, 108, 210) }
             };
         }
 

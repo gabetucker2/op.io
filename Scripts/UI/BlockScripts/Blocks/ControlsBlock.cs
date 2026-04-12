@@ -125,6 +125,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Controls);
                 if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
                     headerFunColEarly.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                if (rowData.TryGetValue("FunColColumnWeights", out string weightStr))
+                    ApplyEncodedWeights(headerFunColEarly, weightStr);
                 _headerVisibleLoaded = true;
             }
 
@@ -316,6 +318,12 @@ namespace op.io.UI.BlockScripts.Blocks
             headerFunCol.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
             if (headerFunCol.HeaderToggleClicked)
                 BlockDataStore.SetRowData(DockBlockKind.Controls, "FunColHeaderVisible", headerFunCol.HeaderVisible ? "true" : "false");
+            if (headerFunCol.ColumnWeightsChanged)
+            {
+                string encoded = EncodeWeights(headerFunCol.GetWeights());
+                BlockDataStore.SetRowData(DockBlockKind.Controls, "FunColColumnWeights", encoded);
+                PropagateWeightsToRowFunCols(headerFunCol.GetWeights());
+            }
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -667,8 +675,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static FunColInterface GetOrCreateRowFunCol(string action)
         {
             if (_rowFunCols.TryGetValue(action, out var existing)) return existing;
+            float[] weights = _headerFunCol?.GetWeights() ?? new float[] { 0.35f, 0.25f, 0.22f, 0.18f };
             var fc = new FunColInterface(
-                new float[] { 0.35f, 0.25f, 0.22f, 0.18f },
+                weights,
                 new TextLabelFeature("Action", FunColTextAlign.Right),
                 new TextLabelFeature("Key",    FunColTextAlign.Left),
                 new TextLabelFeature("Type",   FunColTextAlign.Left),
@@ -700,7 +709,40 @@ namespace op.io.UI.BlockScripts.Blocks
             _headerFunCol.DisableExpansion = true;
             _headerFunCol.DisableColors = true;
             _headerFunCol.ShowHeaderTooltips = true;
+            _headerFunCol.EnableColumnResize = true;
             return _headerFunCol;
+        }
+
+        private static void PropagateWeightsToRowFunCols(float[] weights)
+        {
+            foreach (var fc in _rowFunCols.Values)
+                fc.SetWeights(weights);
+            _dragGhostFunCol?.SetWeights(weights);
+        }
+
+        private static string EncodeWeights(float[] weights)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < weights.Length; i++)
+            {
+                if (i > 0) sb.Append('|');
+                sb.Append(weights[i].ToString("F4", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return sb.ToString();
+        }
+
+        private static void ApplyEncodedWeights(FunColInterface fc, string encoded)
+        {
+            if (string.IsNullOrEmpty(encoded)) return;
+            string[] parts = encoded.Split('|');
+            float[] weights = new float[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!float.TryParse(parts[i], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out weights[i]))
+                    return;
+            }
+            fc.SetWeights(weights);
         }
 
         private static void UpdateTypeToggleBounds(UIStyle.UIFont boldFont)
@@ -960,8 +1002,8 @@ namespace op.io.UI.BlockScripts.Blocks
             if (col3.Width < FloatArrowW * 2 + FloatInputW + 8) return;
 
             float lockedAlpha = blockLocked ? 0.4f : 1.0f;
-            Color btnBg = new Color(55, 55, 60) * lockedAlpha;
-            Color inputBg = new Color(28, 28, 32) * lockedAlpha;
+            Color btnBg = ColorPalette.ButtonNeutral * lockedAlpha;
+            Color inputBg = ColorPalette.ChatInputField * lockedAlpha;
             Color border = UIStyle.BlockBorder * lockedAlpha;
             Color text = UIStyle.TextColor * lockedAlpha;
 

@@ -69,7 +69,7 @@ namespace op.io
             public bool    IsNewHit; // true if any caller this frame flagged a new contact
         }
 
-        private static readonly Color DefaultTextColor = new Color(255, 20, 20);
+        private static Color DefaultTextColor => ColorPalette.DamageNumber;
 
         private static readonly List<StackEntry>                  _active  = new();
         private static readonly Dictionary<(int, int), PendingEntry> _pending = new();

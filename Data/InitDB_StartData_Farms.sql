@@ -21,7 +21,7 @@ INSERT INTO GameObjects (
     'Polygon', 'Triangle',
     300, 300, 60, 60, 3, 0,
     255, 150, 150, 255,
-    128, 75, 75, 255, 2,
+    128, 75, 75, 255, 5,
     1, 1, 12.0, 0
 );
 INSERT INTO FarmData (
@@ -58,7 +58,7 @@ INSERT INTO GameObjects (
     'Polygon', 'Square',
     350, 350, 70, 70, 4, 0,
     255, 255, 100, 255,
-    128, 128, 50, 255, 3,
+    128, 128, 50, 255, 5,
     1, 1, 15, 0
 );
 INSERT INTO FarmData (
@@ -95,7 +95,7 @@ INSERT INTO GameObjects (
     'Polygon', 'Pentagon',
     400, 400, 80, 80, 5, 0,
     100, 100, 255, 255,
-    50, 50, 128, 255, 4,
+    50, 50, 128, 255, 5,
     1, 1, 25, 0
 );
 INSERT INTO FarmData (
@@ -170,7 +170,7 @@ INSERT INTO GameObjects (
     'Rectangle', 'BlueLoot',
     500, 500, 150, 150, 0, 0,
     50, 50, 200, 255,
-    0, 0, 128, 255, 4,
+    0, 0, 128, 255, 5,
     1, 1, 50, 0
 );
 INSERT INTO FarmData (

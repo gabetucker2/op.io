@@ -58,6 +58,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Specs);
                 if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
                     specsHfc.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                if (rowData.TryGetValue("FunColColumnWeights", out string weightStr))
+                    ApplyEncodedWeights(specsHfc, weightStr);
                 _headerVisibleLoaded = true;
             }
 
@@ -147,6 +149,12 @@ namespace op.io.UI.BlockScripts.Blocks
             specsHfc.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
             if (specsHfc.HeaderToggleClicked)
                 BlockDataStore.SetRowData(DockBlockKind.Specs, "FunColHeaderVisible", specsHfc.HeaderVisible ? "true" : "false");
+            if (specsHfc.ColumnWeightsChanged)
+            {
+                string encoded = EncodeWeights(specsHfc.GetWeights());
+                BlockDataStore.SetRowData(DockBlockKind.Specs, "FunColColumnWeights", encoded);
+                PropagateWeightsToRowFunCols(specsHfc.GetWeights());
+            }
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -476,8 +484,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static FunColInterface GetOrCreateRowFunCol(string key)
         {
             if (_rowFunCols.TryGetValue(key, out var existing)) return existing;
+            float[] weights = _headerFunCol?.GetWeights() ?? new float[] { 0.42f, 0.58f };
             var fc = new FunColInterface(
-                new float[] { 0.42f, 0.58f },
+                weights,
                 new TextLabelFeature("Label", FunColTextAlign.Right),
                 new ValueDisplayFeature("Value")
             );
@@ -501,7 +510,40 @@ namespace op.io.UI.BlockScripts.Blocks
             _headerFunCol.DisableExpansion = true;
             _headerFunCol.DisableColors = true;
             _headerFunCol.ShowHeaderTooltips = true;
+            _headerFunCol.EnableColumnResize = true;
             return _headerFunCol;
+        }
+
+        private static void PropagateWeightsToRowFunCols(float[] weights)
+        {
+            foreach (var fc in _rowFunCols.Values)
+                fc.SetWeights(weights);
+            _dragGhostFunCol?.SetWeights(weights);
+        }
+
+        private static string EncodeWeights(float[] weights)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < weights.Length; i++)
+            {
+                if (i > 0) sb.Append('|');
+                sb.Append(weights[i].ToString("F4", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return sb.ToString();
+        }
+
+        private static void ApplyEncodedWeights(FunColInterface fc, string encoded)
+        {
+            if (string.IsNullOrEmpty(encoded)) return;
+            string[] parts = encoded.Split('|');
+            float[] weights = new float[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!float.TryParse(parts[i], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out weights[i]))
+                    return;
+            }
+            fc.SetWeights(weights);
         }
 
         private static void DrawRowWithFunCol(SpriteBatch spriteBatch, SpecRow row,

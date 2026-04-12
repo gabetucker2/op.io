@@ -58,10 +58,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private const int OpacityRowHeight = 22;
         private const int SuperimposeZoneMaxSide = 500;
 
-        private static readonly Color GroupBarBackground = new(28, 28, 30);
-        private static readonly Color TabInactiveBackground = new(40, 40, 42);
-        private static readonly Color TabHoverBackground = new(50, 50, 54);
-        private static readonly Color TabActiveBackground = new(60, 60, 64);
+        private static Color GroupBarBackground => ColorPalette.TabBarBackground;
+        private static Color TabInactiveBackground => ColorPalette.TabInactive;
+        private static Color TabHoverBackground => ColorPalette.TabHover;
+        private static Color TabActiveBackground => ColorPalette.TabActive;
         private static readonly Color TabCloseHoverTint = new Color(255, 255, 255, 22);
 
         private static bool _dockingModeEnabled = false;
@@ -504,7 +504,25 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
                 else
                 {
-                    ClearDockingDragState();
+                    // Overlays are always interactive (drag, resize, lock, close, opacity)
+                    // even outside docking mode. Standard block chrome is cleared.
+                    bool overlayResizing = !tabInteracted && UpdateOverlayResizeState(leftClickStarted, leftClickHeld, leftClickReleased);
+                    if (!overlayResizing && !tabInteracted)
+                    {
+                        UpdateDragState(leftClickStarted, leftClickReleased, allowReorder: false);
+                    }
+                    else
+                    {
+                        _draggingBlock = null;
+                        _dropPreview = null;
+                    }
+
+                    // Clear standard-block-only docking state that doesn't apply outside docking mode.
+                    _hoveredResizeEdge = null;
+                    _activeResizeEdge = null;
+                    _hoveredCornerHandle = null;
+                    _activeCornerHandle = null;
+                    _activeCornerLinkedHandle = null;
                 }
             }
             else
@@ -2381,7 +2399,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return Rectangle.Empty;
             }
 
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
             int buttonStart = dragBar.Right - DragBarButtonPadding;
             if (closeBounds != Rectangle.Empty)
             {
@@ -2391,6 +2409,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             if (panelLockBounds != Rectangle.Empty)
             {
                 buttonStart = Math.Min(buttonStart, panelLockBounds.X);
+            }
+
+            if (mergeBounds != Rectangle.Empty)
+            {
+                buttonStart = Math.Min(buttonStart, mergeBounds.X);
             }
 
             Rectangle groupBar = GetGroupBarBounds(block, group, dragBarHeight);
@@ -2483,7 +2506,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     continue;
                 }
 
-                PanelGroupBarLayout layout = BuildGroupBarLayout(active, group, dragBarHeight);
+                // Overlays always show drag bars regardless of docking mode.
+                int dbh = active.IsOverlay ? UIStyle.DragBarHeight : dragBarHeight;
+                PanelGroupBarLayout layout = BuildGroupBarLayout(active, group, dbh);
                 if (layout != null)
                 {
                     _groupBarLayoutCache[group.PanelId] = layout;
@@ -2875,11 +2900,27 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return true;
             }
 
+            // Suppress resize edge hover and activation while a drag bar drag is in progress.
+            if (_draggingBlock != null)
+            {
+                _hoveredResizeEdge = null;
+                return false;
+            }
+
             ResizeEdge? hovered = HitTestResizeEdge(_mousePosition);
             _hoveredResizeEdge = hovered;
 
             if (hovered.HasValue && leftClickStarted)
             {
+                // If the click is also on a drag bar grab region, yield to the drag bar
+                // so vertically stacked blocks can be displaced by dragging upward.
+                DockBlock dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
+                if (dragBarHit != null)
+                {
+                    _hoveredResizeEdge = null;
+                    return false;
+                }
+
                 DebugLogger.PrintUI($"[ResizeEdgeStart] {DescribeResizeEdge(hovered.Value)} Mouse={_mousePosition}");
                 CaptureBlockBoundsForResize();
                 _activeResizeEdge = hovered;
@@ -2925,11 +2966,27 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return true;
             }
 
+            // Suppress corner handle hover and activation while a drag bar drag is in progress.
+            if (_draggingBlock != null)
+            {
+                _hoveredCornerHandle = null;
+                return false;
+            }
+
             CornerHandle? hovered = HitTestCornerHandle(_mousePosition);
             _hoveredCornerHandle = hovered;
 
             if (hovered.HasValue && leftClickStarted)
             {
+                // If the click is also on a drag bar grab region, yield to the drag bar
+                // so vertically stacked blocks can be displaced by dragging upward.
+                DockBlock dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
+                if (dragBarHit != null)
+                {
+                    _hoveredCornerHandle = null;
+                    return false;
+                }
+
                 DebugLogger.PrintUI($"[CornerStart] {DescribeCornerHandle(hovered.Value)} Mouse={_mousePosition}");
                 CaptureBlockBoundsForResize();
                 _activeCornerHandle = hovered;
@@ -3333,6 +3390,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
             }
 
+            if (leftClickStarted && TryOverlayMerge(_mousePosition))
+            {
+                return;
+            }
+
             if (leftClickStarted && TryTogglePanelLock(_mousePosition))
             {
                 return;
@@ -3363,7 +3425,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             if (_hoveredDragBarId != null &&
                 _blocks.TryGetValue(_hoveredDragBarId, out DockBlock hoverBlockForOpacity) &&
                 BlockHasOpacitySlider(hoverBlockForOpacity) &&
-                !IsPanelLocked(GetPanelGroupForBlock(hoverBlockForOpacity)))
+                !IsPanelLocked(GetPanelGroupForBlock(hoverBlockForOpacity)) &&
+                !IsBlockLocked(hoverBlockForOpacity))
             {
                 _opacityExpandedId = _hoveredDragBarId;
             }
@@ -3412,9 +3475,30 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             if (!allowReorder)
             {
-                _draggingBlock = null;
-                _dropPreview = null;
-                return;
+                // Overlay blocks are always draggable even outside docking mode.
+                // Only clear drag state for non-overlay blocks.
+                if (_draggingBlock != null && !_draggingBlock.IsOverlay)
+                {
+                    _draggingBlock = null;
+                    _dropPreview = null;
+                }
+
+                // Still allow initiating overlay drags.
+                if (_draggingBlock == null && leftClickStarted && dragBarHit != null && dragBarHit.IsOverlay)
+                {
+                    _draggingFromTab = false;
+                    ClearPressedTabState();
+                    _draggingBlock = dragBarHit;
+                    _draggingPanel = GetPanelGroupForBlock(dragBarHit);
+                    _draggingStartBounds = dragBarHit.Bounds;
+                    _dragOffset = new Point(_mousePosition.X - dragBarHit.Bounds.X, _mousePosition.Y - dragBarHit.Bounds.Y);
+                }
+
+                if (_draggingBlock == null || !_draggingBlock.IsOverlay)
+                {
+                    _dropPreview = null;
+                    return;
+                }
             }
 
             if (_draggingBlock == null && leftClickStarted)
@@ -3567,6 +3651,71 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 ToggleBlockLock(lockHit);
             ClearDockingInteractions();
             return true;
+        }
+
+        /// <summary>
+        /// Hit-tests the merge button and, if clicked, merges the overlay block (or
+        /// all tabs of the overlay panel) into the parent panel group.
+        /// </summary>
+        private static bool TryOverlayMerge(Point position)
+        {
+            int standardDbh = GetActiveDragBarHeight();
+
+            // Only check overlay blocks.
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible || !block.IsOverlay) continue;
+
+                int dbh = UIStyle.DragBarHeight;
+                Rectangle mergeBounds = GetMergeButtonBounds(block, dbh);
+                if (mergeBounds == Rectangle.Empty || !mergeBounds.Contains(position)) continue;
+
+                // Find the parent panel group to merge into.
+                if (string.IsNullOrEmpty(block.OverlayParentId)) return false;
+                if (!_blocks.TryGetValue(block.OverlayParentId, out DockBlock parent)) return false;
+                PanelGroup parentGroup = GetPanelGroupForBlock(parent);
+                if (parentGroup == null) return false;
+
+                PanelGroup overlayGroup = GetPanelGroupForBlock(block);
+                if (overlayGroup == null) return false;
+
+                // Collect all blocks from the overlay panel.
+                List<DockBlock> blocksToMerge = overlayGroup.Blocks.ToList();
+
+                // Remove each block from the overlay group and add to the parent group.
+                foreach (DockBlock overlayBlock in blocksToMerge)
+                {
+                    overlayGroup.RemoveBlock(overlayBlock.Id, out _);
+                    _blockToPanel.Remove(overlayBlock.Id);
+
+                    overlayBlock.IsOverlay = false;
+                    overlayBlock.OverlayParentId = null;
+                    overlayBlock.IsVisible = false;
+
+                    parentGroup.AddBlock(overlayBlock);
+                    MapBlockToPanel(overlayBlock, parentGroup);
+                }
+
+                // Clean up the now-empty overlay panel group.
+                if (overlayGroup.Blocks.Count == 0)
+                {
+                    RemovePanelGroup(overlayGroup);
+                }
+
+                // Activate the first merged block in the parent panel.
+                if (blocksToMerge.Count > 0)
+                {
+                    DockBlock firstMerged = blocksToMerge[0];
+                    SetPanelActiveBlock(parentGroup, firstMerged);
+                    firstMerged.IsVisible = true;
+                }
+
+                RebuildGroupBarLayoutCache(GetActiveDragBarHeight());
+                MarkLayoutDirty();
+                return true;
+            }
+
+            return false;
         }
 
         private static void HandleBlockClose(DockBlock block)
@@ -3828,11 +3977,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static DockBlock HitTestDragBarBlock(Point position, bool excludeDragBarButtons = false, bool requireGrabRegion = false)
         {
-            int dragBarHeight = GetActiveDragBarHeight();
-            if (dragBarHeight <= 0)
-            {
-                return null;
-            }
+            int standardDbh = GetActiveDragBarHeight();
 
             // Two passes: overlay blocks first so they intercept hits in regions they cover.
             for (int pass = 0; pass < 2; pass++)
@@ -3845,13 +3990,16 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         continue;
                     }
 
-                    Rectangle dragBarRect = block.GetDragBarBounds(dragBarHeight);
+                    int dbh = block.IsOverlay ? UIStyle.DragBarHeight : standardDbh;
+                    if (dbh <= 0) continue;
+
+                    Rectangle dragBarRect = block.GetDragBarBounds(dbh);
                     if (!dragBarRect.Contains(position))
                     {
                         continue;
                     }
 
-                    if (excludeDragBarButtons && IsPointOnDragBarButton(block, dragBarHeight, position))
+                    if (excludeDragBarButtons && IsPointOnDragBarButton(block, dbh, position))
                     {
                         continue;
                     }
@@ -3859,7 +4007,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     if (requireGrabRegion)
                     {
                         PanelGroup group = GetPanelGroupForBlock(block);
-                        Rectangle grabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
+                        Rectangle grabBounds = GetDragBarGrabBounds(block, group, dbh);
                         if (grabBounds == Rectangle.Empty || !grabBounds.Contains(position))
                         {
                             continue;
@@ -3875,11 +4023,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static DockBlock HitTestCloseButton(Point position)
         {
-            int dragBarHeight = GetActiveDragBarHeight();
-            if (dragBarHeight <= 0)
-            {
-                return null;
-            }
+            int standardDbh = GetActiveDragBarHeight();
 
             for (int pass = 0; pass < 2; pass++)
             {
@@ -3891,7 +4035,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         continue;
                     }
 
-                    Rectangle closeBounds = GetCloseButtonBounds(block, dragBarHeight);
+                    int dbh = block.IsOverlay ? UIStyle.DragBarHeight : standardDbh;
+                    if (dbh <= 0) continue;
+
+                    Rectangle closeBounds = GetCloseButtonBounds(block, dbh);
                     if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
                     {
                         return block;
@@ -3904,11 +4051,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static DockBlock HitTestPanelLockButton(Point position)
         {
-            int dragBarHeight = GetActiveDragBarHeight();
-            if (dragBarHeight <= 0)
-            {
-                return null;
-            }
+            int standardDbh = GetActiveDragBarHeight();
 
             for (int pass = 0; pass < 2; pass++)
             {
@@ -3920,7 +4063,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                         continue;
                     }
 
-                    Rectangle panelLockBounds = GetPanelLockButtonBounds(block, dragBarHeight);
+                    int dbh = block.IsOverlay ? UIStyle.DragBarHeight : standardDbh;
+                    if (dbh <= 0) continue;
+
+                    Rectangle panelLockBounds = GetPanelLockButtonBounds(block, dbh);
                     if (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position))
                     {
                         return block;
@@ -3944,8 +4090,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return Rectangle.Empty;
             }
 
-            // Only expand when the panel is unlocked
-            if (group != null && IsPanelLocked(group))
+            // Only expand when neither the panel nor the block is locked
+            if ((group != null && IsPanelLocked(group)) || IsBlockLocked(block))
             {
                 return Rectangle.Empty;
             }
@@ -4025,13 +4171,13 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             // Track background — thin dark rail
-            DrawRect(spriteBatch, track, new Color(52, 52, 56));
+            DrawRect(spriteBatch, track, ColorPalette.SliderTrack);
 
             // Track fill grows left→right as transparency increases (right = 100% transparent)
             int fillW = (int)(track.Width * transparency);
             if (fillW > 0)
             {
-                DrawRect(spriteBatch, new Rectangle(track.X, track.Y, fillW, track.Height), new Color(230, 230, 235));
+                DrawRect(spriteBatch, new Rectangle(track.X, track.Y, fillW, track.Height), ColorPalette.SliderFill);
             }
 
             // Thumb handle — slightly taller white rectangle at fill end
@@ -4105,27 +4251,40 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static bool IsPointOnDragBarButton(DockBlock block, int dragBarHeight, Point position)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
             return (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position)) ||
-                (closeBounds != Rectangle.Empty && closeBounds.Contains(position));
+                (closeBounds != Rectangle.Empty && closeBounds.Contains(position)) ||
+                (mergeBounds != Rectangle.Empty && mergeBounds.Contains(position));
         }
 
         private static Rectangle GetCloseButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out _, out Rectangle closeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out Rectangle closeBounds, out _);
             return closeBounds;
         }
 
         private static Rectangle GetPanelLockButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out _);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out _, out _);
             return panelLockBounds;
+        }
+
+        private static Rectangle GetMergeButtonBounds(DockBlock block, int dragBarHeight)
+        {
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out _, out Rectangle mergeBounds);
+            return mergeBounds;
         }
 
         private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds)
         {
+            GetDragBarButtonBounds(block, dragBarHeight, out panelLockBounds, out closeBounds, out _);
+        }
+
+        private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeButtonBounds)
+        {
             panelLockBounds = Rectangle.Empty;
             closeBounds = Rectangle.Empty;
+            mergeButtonBounds = Rectangle.Empty;
 
             if (block == null || dragBarHeight <= 0)
             {
@@ -4146,15 +4305,26 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             int buttonSize = closeBounds.Width;
-            int x = closeBounds.X - DragBarButtonSpacing - buttonSize;
-            int y = closeBounds.Y;
             int minimumX = dragBarRect.X + DragBarButtonPadding;
-            if (x < minimumX)
+
+            int lockX = closeBounds.X - DragBarButtonSpacing - buttonSize;
+            int y = closeBounds.Y;
+            if (lockX < minimumX)
             {
                 return;
             }
 
-            panelLockBounds = new Rectangle(x, y, buttonSize, buttonSize);
+            panelLockBounds = new Rectangle(lockX, y, buttonSize, buttonSize);
+
+            // Merge button only for overlay blocks — to the left of the lock button.
+            if (block.IsOverlay)
+            {
+                int mergeX = lockX - DragBarButtonSpacing - buttonSize;
+                if (mergeX >= minimumX)
+                {
+                    mergeButtonBounds = new Rectangle(mergeX, y, buttonSize, buttonSize);
+                }
+            }
         }
 
         private static bool IsLockToggleAvailable(DockBlock block)
@@ -4270,30 +4440,6 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         /// Returns true when <paramref name="a"/> and <paramref name="b"/> share an edge
         /// along the given split orientation.  Horizontal orientation means stacked
         /// vertically (shared top/bottom edge); Vertical means side-by-side (shared
-        /// left/right edge).  A small tolerance is used so that a 1-2 px gap from
-        /// resize-edge rendering does not prevent adjacency detection.
-        /// </summary>
-        private static bool IsEdgeAdjacent(Rectangle a, Rectangle b, DockSplitOrientation orientation)
-        {
-            const int tolerance = 4;
-            if (orientation == DockSplitOrientation.Horizontal)
-            {
-                // Vertically stacked: they share a horizontal edge and overlap on X.
-                bool xOverlap = a.Left < b.Right && b.Left < a.Right;
-                bool yAdjacent = Math.Abs(a.Bottom - b.Top) <= tolerance ||
-                                 Math.Abs(b.Bottom - a.Top) <= tolerance;
-                return xOverlap && yAdjacent;
-            }
-            else
-            {
-                // Side-by-side: they share a vertical edge and overlap on Y.
-                bool yOverlap = a.Top < b.Bottom && b.Top < a.Bottom;
-                bool xAdjacent = Math.Abs(a.Right - b.Left) <= tolerance ||
-                                 Math.Abs(b.Right - a.Left) <= tolerance;
-                return yOverlap && xAdjacent;
-            }
-        }
-
         private static Rectangle ComputeSuperimposeZone(Rectangle bounds)
         {
             int shortSide = Math.Min(bounds.Width, bounds.Height);
@@ -4367,14 +4513,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 // so dragging a tab upward can displace the block above.
             }
 
-            // First pass: check if the cursor is over a block that is adjacent to
-            // the block being dragged.  Adjacent drops take priority over viewport
-            // snap so the user can drag all the way across a neighbour (even near
-            // the window edge) to displace it.
+            // Single pass: find the block under the cursor. Check superimpose zone
+            // first, then use 4-hemisphere edge detection (whichever axis has the
+            // larger displacement from center wins). Adjacent and non-adjacent blocks
+            // use the same logic so all four edges are always available.
             DockDropPreview? preview = null;
-            DockBlock adjacentTarget = null;
-            bool adjacentVertical = false;
-            bool adjacentHorizontal = false;
 
             foreach (DockBlock block in _orderedBlocks)
             {
@@ -4385,103 +4528,28 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (!bounds.Contains(position))
                     continue;
 
-                bool va = IsEdgeAdjacent(_draggingStartBounds, bounds, DockSplitOrientation.Horizontal);
-                bool ha = IsEdgeAdjacent(_draggingStartBounds, bounds, DockSplitOrientation.Vertical);
-                DebugLogger.PrintUI($"[BuildDropPreview] CursorOver={block.Id} ({block.Kind}) va={va} ha={ha} DragStart={_draggingStartBounds} Target={bounds} Mouse={position}");
-                if (va || ha)
+                // Center superimpose zone — always checked regardless of adjacency.
+                Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
+                if (superimposeZone.Contains(position))
                 {
-                    adjacentTarget = block;
-                    adjacentVertical = va;
-                    adjacentHorizontal = ha;
-                }
-                break;
-            }
-
-            // Viewport snap only applies when the cursor is NOT over an adjacent block.
-            if (adjacentTarget == null)
-            {
-                preview = BuildViewportSnapPreview(position);
-                if (preview.HasValue)
-                {
-                    return preview;
-                }
-            }
-
-            preview = null;
-            foreach (DockBlock block in _orderedBlocks)
-            {
-                if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
-                {
-                    continue;
+                    _superimposeLocked = true;
+                    _superimposeLockedTarget = block;
+                    preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
+                    break;
                 }
 
-                Rectangle bounds = block.Bounds;
-                if (!bounds.Contains(position))
-                {
-                    continue;
-                }
-
-                bool isAdjacent = block == adjacentTarget;
-
-                if (!isAdjacent)
-                {
-                    // Check center superimpose zone first
-                    Rectangle superimposeZone = ComputeSuperimposeZone(bounds);
-
-                    if (superimposeZone.Contains(position))
-                    {
-                        _superimposeLocked = true;
-                        _superimposeLockedTarget = block;
-                        preview = BuildSuperimposePreview(block, bounds, superimposeZone, position);
-                        break;
-                    }
-                }
-
+                // 4-hemisphere edge detection: the axis with the larger offset from
+                // center determines whether Top/Bottom or Left/Right is chosen.
                 float relativeX = (position.X - bounds.X) / (float)Math.Max(1, bounds.Width);
                 float relativeY = (position.Y - bounds.Y) / (float)Math.Max(1, bounds.Height);
+                float distX = Math.Abs(relativeX - 0.5f);
+                float distY = Math.Abs(relativeY - 0.5f);
 
                 DockEdge edge;
-                if (isAdjacent)
-                {
-                    // Adjacent blocks use a simple 50/50 split along the shared axis so
-                    // crossing the midpoint of the target triggers a displacement swap.
-                    if (adjacentVertical && !adjacentHorizontal)
-                    {
-                        edge = relativeY <= 0.5f ? DockEdge.Top : DockEdge.Bottom;
-                    }
-                    else if (adjacentHorizontal && !adjacentVertical)
-                    {
-                        edge = relativeX <= 0.5f ? DockEdge.Left : DockEdge.Right;
-                    }
-                    else
-                    {
-                        float distX = Math.Abs(relativeX - 0.5f);
-                        float distY = Math.Abs(relativeY - 0.5f);
-                        if (distY >= distX)
-                            edge = relativeY <= 0.5f ? DockEdge.Top : DockEdge.Bottom;
-                        else
-                            edge = relativeX <= 0.5f ? DockEdge.Left : DockEdge.Right;
-                    }
-                }
+                if (distY >= distX)
+                    edge = relativeY <= 0.5f ? DockEdge.Top : DockEdge.Bottom;
                 else
-                {
-                    if (relativeY <= UIStyle.DropEdgeThreshold)
-                    {
-                        edge = DockEdge.Top;
-                    }
-                    else if (relativeY >= 1f - UIStyle.DropEdgeThreshold)
-                    {
-                        edge = DockEdge.Bottom;
-                    }
-                    else if (relativeX <= 0.5f)
-                    {
-                        edge = DockEdge.Left;
-                    }
-                    else
-                    {
-                        edge = DockEdge.Right;
-                    }
-                }
+                    edge = relativeX <= 0.5f ? DockEdge.Left : DockEdge.Right;
 
                 Rectangle highlight = edge switch
                 {
@@ -4498,8 +4566,14 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     Edge = edge,
                     HighlightBounds = highlight
                 };
-                DebugLogger.PrintUI($"[BuildDropPreview] Result: Target={block.Id} Edge={edge} Adjacent={isAdjacent} relY={relativeY:F3} relX={relativeX:F3}");
+                DebugLogger.PrintUI($"[BuildDropPreview] Result: Target={block.Id} Edge={edge} relY={relativeY:F3} relX={relativeX:F3}");
                 break;
+            }
+
+            // Viewport snap: only when cursor is not over any block.
+            if (!preview.HasValue)
+            {
+                preview = BuildViewportSnapPreview(position);
             }
 
             if (!preview.HasValue)
@@ -5385,67 +5459,65 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 RedrawBlockHeader(spriteBatch, block, dragBarHeight, mouseBlockedByOverlay);
             }
 
+            // Overlay drag/resize chrome is always drawn; standard block chrome only in docking mode.
+            DrawOverlayResizeChrome(spriteBatch);
+
+            if (_draggingBlock != null && _draggingBlock.IsOverlay)
+            {
+                // Subtle parent context — shows the constrained movement region.
+                if (!string.IsNullOrEmpty(_draggingBlock.OverlayParentId) &&
+                    _blocks.TryGetValue(_draggingBlock.OverlayParentId, out DockBlock overlayParent) &&
+                    overlayParent.IsVisible)
+                {
+                    DrawRect(spriteBatch, overlayParent.Bounds, UIStyle.AccentMuted * 0.08f);
+                    DrawRectOutline(spriteBatch, overlayParent.Bounds, UIStyle.AccentColor * 0.35f, 1);
+                }
+
+                // Drop-target highlight: brighter accent outline on the block the overlay would re-parent to.
+                if (_overlayDropTargetBlock != null && _overlayDropTargetBlock.IsVisible)
+                {
+                    DrawRect(spriteBatch, _overlayDropTargetBlock.Bounds, UIStyle.AccentColor * 0.12f);
+                    DrawRectOutline(spriteBatch, _overlayDropTargetBlock.Bounds, UIStyle.AccentColor * 0.85f, 2);
+                }
+
+                // Ghost preview: precise outline showing where the panel will land on release.
+                if (_overlayDragPreviewBounds.HasValue)
+                {
+                    Rectangle ghost = _overlayDragPreviewBounds.Value;
+                    DrawRect(spriteBatch, ghost, UIStyle.BlockBackground * 0.75f);
+                    int previewBarH = Math.Min(UIStyle.DragBarHeight, ghost.Height);
+                    DrawRect(spriteBatch, new Rectangle(ghost.X, ghost.Y, ghost.Width, previewBarH), UIStyle.DragBarBackground * 0.95f);
+                    // Draw resize edges translated to the ghost position.
+                    Point edgeOffset = new(ghost.X - _draggingStartBounds.X, ghost.Y - _draggingStartBounds.Y);
+                    foreach (OverlayResizeEdge edge in _overlayResizeEdges)
+                    {
+                        if (!ReferenceEquals(edge.Overlay, _draggingBlock)) continue;
+                        DrawRect(spriteBatch, new Rectangle(edge.Bounds.X + edgeOffset.X, edge.Bounds.Y + edgeOffset.Y, edge.Bounds.Width, edge.Bounds.Height), UIStyle.ResizeEdgeActiveColor);
+                    }
+                    foreach (OverlayCornerHandle corner in _overlayCornerHandles)
+                    {
+                        if (!ReferenceEquals(corner.VerticalEdge.Overlay, _draggingBlock)) continue;
+                        DrawRect(spriteBatch, new Rectangle(corner.Bounds.X + edgeOffset.X, corner.Bounds.Y + edgeOffset.Y, corner.Bounds.Width, corner.Bounds.Height), UIStyle.ResizeEdgeActiveColor);
+                    }
+                    DrawRectOutline(spriteBatch, ghost, UIStyle.AccentColor * 0.8f, UIStyle.DragOutlineThickness);
+                }
+            }
+
             if (showDockingChrome)
             {
                 DrawResizeEdges(spriteBatch);
                 DrawCornerHandles(spriteBatch);
 
-                if (_draggingBlock != null)
+                if (_draggingBlock != null && !_draggingBlock.IsOverlay)
                 {
-                    if (_draggingBlock.IsOverlay)
+                    foreach (DockBlock block in _orderedBlocks)
                     {
-                        // Subtle parent context — shows the constrained movement region.
-                        if (!string.IsNullOrEmpty(_draggingBlock.OverlayParentId) &&
-                            _blocks.TryGetValue(_draggingBlock.OverlayParentId, out DockBlock overlayParent) &&
-                            overlayParent.IsVisible)
+                        if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
                         {
-                            DrawRect(spriteBatch, overlayParent.Bounds, UIStyle.AccentMuted * 0.08f);
-                            DrawRectOutline(spriteBatch, overlayParent.Bounds, UIStyle.AccentColor * 0.35f, 1);
+                            continue;
                         }
 
-                        // Drop-target highlight: brighter accent outline on the block the overlay would re-parent to.
-                        if (_overlayDropTargetBlock != null && _overlayDropTargetBlock.IsVisible)
-                        {
-                            DrawRect(spriteBatch, _overlayDropTargetBlock.Bounds, UIStyle.AccentColor * 0.12f);
-                            DrawRectOutline(spriteBatch, _overlayDropTargetBlock.Bounds, UIStyle.AccentColor * 0.85f, 2);
-                        }
-
-                        // Ghost preview: precise outline showing where the panel will land on release.
-                        if (_overlayDragPreviewBounds.HasValue)
-                        {
-                            Rectangle ghost = _overlayDragPreviewBounds.Value;
-                            DrawRect(spriteBatch, ghost, UIStyle.BlockBackground * 0.75f);
-                            if (dragBarHeight > 0)
-                            {
-                                int previewBarH = Math.Min(dragBarHeight, ghost.Height);
-                                DrawRect(spriteBatch, new Rectangle(ghost.X, ghost.Y, ghost.Width, previewBarH), UIStyle.DragBarBackground * 0.95f);
-                            }
-                            // Draw resize edges translated to the ghost position.
-                            Point edgeOffset = new(ghost.X - _draggingStartBounds.X, ghost.Y - _draggingStartBounds.Y);
-                            foreach (OverlayResizeEdge edge in _overlayResizeEdges)
-                            {
-                                if (!ReferenceEquals(edge.Overlay, _draggingBlock)) continue;
-                                DrawRect(spriteBatch, new Rectangle(edge.Bounds.X + edgeOffset.X, edge.Bounds.Y + edgeOffset.Y, edge.Bounds.Width, edge.Bounds.Height), UIStyle.ResizeEdgeActiveColor);
-                            }
-                            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
-                            {
-                                if (!ReferenceEquals(corner.VerticalEdge.Overlay, _draggingBlock)) continue;
-                                DrawRect(spriteBatch, new Rectangle(corner.Bounds.X + edgeOffset.X, corner.Bounds.Y + edgeOffset.Y, corner.Bounds.Width, corner.Bounds.Height), UIStyle.ResizeEdgeActiveColor);
-                            }
-                            DrawRectOutline(spriteBatch, ghost, UIStyle.AccentColor * 0.8f, UIStyle.DragOutlineThickness);
-                        }
-                    }
-                    else
-                    {
-                        foreach (DockBlock block in _orderedBlocks)
-                        {
-                            if (!block.IsVisible || block.IsOverlay || block == _draggingBlock)
-                            {
-                                continue;
-                            }
-
-                            DrawSuperimposeZone(spriteBatch, block);
-                        }
+                        DrawSuperimposeZone(spriteBatch, block);
                     }
                 }
             }
@@ -5506,6 +5578,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static void DrawOverlayBlocks(SpriteBatch spriteBatch, int dragBarHeight)
         {
+            // Overlays always show drag bars regardless of docking mode.
+            int overlayDbh = UIStyle.DragBarHeight;
+
             foreach (DockBlock block in _orderedBlocks)
             {
                 if (!block.IsVisible || !block.IsOverlay)
@@ -5513,8 +5588,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     continue;
                 }
 
-                DrawBlockBackground(spriteBatch, block, dragBarHeight);
-                DrawBlockContent(spriteBatch, block, dragBarHeight);
+                DrawBlockBackground(spriteBatch, block, overlayDbh);
+                DrawBlockContent(spriteBatch, block, overlayDbh);
             }
 
             foreach (DockBlock block in _orderedBlocks)
@@ -5524,7 +5599,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     continue;
                 }
 
-                RedrawBlockHeader(spriteBatch, block, dragBarHeight);
+                RedrawBlockHeader(spriteBatch, block, overlayDbh);
             }
         }
 
@@ -5548,8 +5623,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 DrawRect(spriteBatch, handle.Bounds, color);
             }
+            // Overlay resize edges/corners drawn by DrawOverlayResizeChrome (always-on path).
+        }
 
-            // Overlay resize edges (same visual style as panel edges)
+        /// <summary>
+        /// Draws overlay resize edges and corner handles. Called from both docking
+        /// and non-docking draw paths so overlays are always resizable.
+        /// </summary>
+        private static void DrawOverlayResizeChrome(SpriteBatch spriteBatch)
+        {
             foreach (OverlayResizeEdge edge in _overlayResizeEdges)
             {
                 Color color = UIStyle.ResizeEdgeColor;
@@ -5571,6 +5653,28 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     color = UIStyle.ResizeEdgeHoverColor;
 
                 DrawRect(spriteBatch, edge.Bounds, color);
+            }
+
+            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
+            {
+                Color color = UIStyle.ResizeEdgeColor;
+
+                bool isActive = _activeOverlayCornerHandle.HasValue &&
+                    ReferenceEquals(_activeOverlayCornerHandle.Value.VerticalEdge.Overlay, corner.VerticalEdge.Overlay) &&
+                    _activeOverlayCornerHandle.Value.VerticalEdge.Side == corner.VerticalEdge.Side &&
+                    _activeOverlayCornerHandle.Value.HorizontalEdge.Side == corner.HorizontalEdge.Side;
+
+                bool isHovered = !isActive && _hoveredOverlayCornerHandle.HasValue &&
+                    ReferenceEquals(_hoveredOverlayCornerHandle.Value.VerticalEdge.Overlay, corner.VerticalEdge.Overlay) &&
+                    _hoveredOverlayCornerHandle.Value.VerticalEdge.Side == corner.VerticalEdge.Side &&
+                    _hoveredOverlayCornerHandle.Value.HorizontalEdge.Side == corner.HorizontalEdge.Side;
+
+                if (isActive)
+                    color = UIStyle.ResizeEdgeActiveColor;
+                else if (isHovered)
+                    color = UIStyle.ResizeEdgeHoverColor;
+
+                DrawRect(spriteBatch, corner.Bounds, color);
             }
         }
 
@@ -5665,13 +5769,21 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 {
                     DrawRect(spriteBatch, dragBar, UIStyle.DragBarBackground);
                     bool dragBarHovered = string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal);
-                    GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockButtonBounds, out Rectangle closeButtonBounds);
+                    GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockButtonBounds, out Rectangle closeButtonBounds, out Rectangle mergeButtonBounds);
                     Rectangle dragGrabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
 
                     if (dragBarHovered && dragGrabBounds != Rectangle.Empty)
                     {
                         DrawRect(spriteBatch, dragGrabBounds, UIStyle.DragBarHoverTint);
                         DrawDragBarGrabHint(spriteBatch, dragGrabBounds);
+                    }
+
+                    // Merge/separate button for overlay blocks — left of the lock button.
+                    if (mergeButtonBounds != Rectangle.Empty && block.IsOverlay)
+                    {
+                        bool hovered = mergeButtonBounds.Contains(_mousePosition);
+                        bool isSingleTab = group == null || group.Blocks.Count <= 1;
+                        DrawOverlayMergeButton(spriteBatch, mergeButtonBounds, isSingleTab, hovered);
                     }
 
                     if (panelLockButtonBounds != Rectangle.Empty)
@@ -5858,6 +5970,28 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             DrawCenteredGlyph(spriteBatch, glyphFont, glyph, bounds, glyphColor, -1f);
         }
 
+        /// <summary>
+        /// Draws the overlay merge button. For single-tab overlays the glyph is a
+        /// down-arrow (merge this tab into parent). For multi-tab overlay panels
+        /// the glyph shows a double-arrow (merge all tabs).
+        /// </summary>
+        private static void DrawOverlayMergeButton(SpriteBatch spriteBatch, Rectangle bounds, bool isSingleTab, bool hovered)
+        {
+            Color accent = UIStyle.AccentColor;
+            float strength = hovered ? 0.7f : 0.4f;
+            Color background = accent * strength;
+            Color border = hovered ? accent : accent * 0.8f;
+            DrawRect(spriteBatch, bounds, background);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+
+            UIStyle.UIFont glyphFont = UIStyle.FontBody;
+            if (!glyphFont.IsAvailable) return;
+
+            // Down arrow = merge single tab into parent; double down = merge all tabs
+            string glyph = isSingleTab ? "\u2193" : "\u21CA";
+            DrawCenteredGlyph(spriteBatch, glyphFont, glyph, bounds, Color.White, -1f);
+        }
+
         private static void DrawCenteredGlyph(SpriteBatch spriteBatch, UIStyle.UIFont font, string glyph, Rectangle bounds, Color color, float verticalOffset)
         {
             if (!font.IsAvailable || spriteBatch == null || string.IsNullOrEmpty(glyph) || bounds.Width <= 0 || bounds.Height <= 0)
@@ -5910,11 +6044,12 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static bool IsMouseOnAnyOverlayDragBar(int dragBarHeight)
         {
-            if (dragBarHeight <= 0) return false;
+            // Overlays always have drag bars regardless of docking mode.
+            int overlayDbh = UIStyle.DragBarHeight;
             foreach (DockBlock block in _orderedBlocks)
             {
                 if (!block.IsVisible || !block.IsOverlay) continue;
-                Rectangle dragBar = block.GetDragBarBounds(dragBarHeight);
+                Rectangle dragBar = block.GetDragBarBounds(overlayDbh);
                 if (dragBar != Rectangle.Empty && dragBar.Contains(_mousePosition))
                     return true;
             }
@@ -5933,6 +6068,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static bool IsMouseCoveredByOverlayGroupBar(int dragBarHeight)
         {
+            // Overlays always have drag bars so use their dedicated height.
+            int overlayDbh = UIStyle.DragBarHeight;
             foreach (DockBlock block in _orderedBlocks)
             {
                 if (!block.IsVisible || !block.IsOverlay)
@@ -5946,7 +6083,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     continue;
                 }
 
-                Rectangle groupBar = GetGroupBarBounds(block, group, dragBarHeight);
+                Rectangle groupBar = GetGroupBarBounds(block, group, overlayDbh);
                 if (groupBar != Rectangle.Empty && groupBar.Contains(_mousePosition))
                 {
                     return true;
@@ -6144,27 +6281,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 DrawRect(spriteBatch, bounds, color);
             }
-
-            // Overlay corner handles (same visual style)
-            foreach (OverlayCornerHandle corner in _overlayCornerHandles)
-            {
-                Color color = UIStyle.ResizeEdgeColor;
-
-                bool isActive = _activeOverlayCornerHandle.HasValue &&
-                    ReferenceEquals(_activeOverlayCornerHandle.Value.VerticalEdge.Overlay, corner.VerticalEdge.Overlay) &&
-                    _activeOverlayCornerHandle.Value.VerticalEdge.Side == corner.VerticalEdge.Side;
-
-                bool isHovered = !isActive && _hoveredOverlayCornerHandle.HasValue &&
-                    ReferenceEquals(_hoveredOverlayCornerHandle.Value.VerticalEdge.Overlay, corner.VerticalEdge.Overlay) &&
-                    _hoveredOverlayCornerHandle.Value.VerticalEdge.Side == corner.VerticalEdge.Side;
-
-                if (isActive)
-                    color = UIStyle.ResizeEdgeActiveColor;
-                else if (isHovered)
-                    color = UIStyle.ResizeEdgeHoverColor;
-
-                DrawRect(spriteBatch, corner.Bounds, color);
-            }
+            // Overlay corner handles are drawn by DrawOverlayResizeChrome.
         }
 
         private static void DrawFloatingBlockPreview(SpriteBatch spriteBatch, int dragBarHeight)
@@ -6254,13 +6371,17 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             string rowKey =
-                (!IsBlockLocked(DockBlockKind.Controls)     ? ControlsBlock.GetHoveredRowKey()    : null)
-                ?? (!IsBlockLocked(DockBlockKind.Backend)   ? BackendBlock.GetHoveredRowKey()      : null)
-                ?? (!IsBlockLocked(DockBlockKind.Specs)     ? SpecsBlock.GetHoveredRowKey()        : null)
-                ?? (!IsBlockLocked(DockBlockKind.ColorScheme) ? ColorSchemeBlock.GetHoveredRowKey() : null)
-                ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredButtonKey() : null)
-                ?? (!IsBlockLocked(DockBlockKind.Properties) ? PropertiesBlock.GetHoveredPropRowKey() : null)
-                ?? (!IsBlockLocked(DockBlockKind.Interact)  ? InteractBlock.GetHoveredRowKey()      : null);
+                ControlsBlock.GetHoveredRowKey()
+                ?? BackendBlock.GetHoveredRowKey()
+                ?? SpecsBlock.GetHoveredRowKey()
+                ?? ColorSchemeBlock.GetHoveredRowKey()
+                ?? PropertiesBlock.GetHoveredButtonKey()
+                ?? PropertiesBlock.GetHoveredPropRowKey()
+                ?? InteractBlock.GetHoveredRowKey()
+                ?? ControlSetupsBlock.GetHoveredRowKey()
+                ?? DockingSetupsBlock.GetHoveredRowKey()
+                ?? NotesBlock.GetHoveredRowKey()
+                ?? GetHoveredDragBarButtonTooltipKey();
 
             string rowLabel = rowKey != null
                 ? (ControlsBlock.GetHoveredRowLabel()
@@ -6281,6 +6402,30 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             {
                 _tooltipHoverElapsed += elapsedSeconds;
             }
+        }
+
+        /// <summary>
+        /// Returns a tooltip key if the mouse is hovering over a drag bar button
+        /// (Close, Lock, or Merge). Returns null otherwise.
+        /// </summary>
+        private static string GetHoveredDragBarButtonTooltipKey()
+        {
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (!block.IsVisible) continue;
+                int dbh = GetDragBarHeightForBlock(block);
+                if (dbh <= 0) continue;
+
+                GetDragBarButtonBounds(block, dbh, out Rectangle lockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
+
+                if (closeBounds != Rectangle.Empty && closeBounds.Contains(_mousePosition))
+                    return "Btn_Close";
+                if (lockBounds != Rectangle.Empty && lockBounds.Contains(_mousePosition))
+                    return "Btn_Lock";
+                if (mergeBounds != Rectangle.Empty && mergeBounds.Contains(_mousePosition))
+                    return "Btn_OverlayMerge";
+            }
+            return null;
         }
 
         private const string BulletPrefix = "\u2022 "; // "• "
@@ -6362,7 +6507,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             tipY = Math.Max(_layoutBounds.Y, tipY);
 
             // ── Draw each tooltip box ──────────────────────────────────────────────
-            var bulletColor = new Color(60, 60, 60);
+            var bulletColor = ColorPalette.TooltipMuted;
             int curY = tipY;
             for (int bi = 0; bi < boxes.Length; bi++)
             {
@@ -6373,19 +6518,19 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 if (lines.Count == 0 && !showLbl) continue;
 
                 Rectangle bg = new(tipX, curY, bW, bH);
-                DrawRect(spriteBatch, bg, Color.White);
-                DrawRectOutline(spriteBatch, bg, new Color(180, 180, 180), UIStyle.BlockBorderThickness);
+                DrawRect(spriteBatch, bg, ColorPalette.TooltipBackground);
+                DrawRectOutline(spriteBatch, bg, ColorPalette.TooltipBorder, UIStyle.BlockBorderThickness);
 
                 float ty = curY + TooltipPadding;
                 if (showLbl)
                 {
-                    boldFont.DrawString(spriteBatch, _tooltipHoveredRowLabel, new Vector2(tipX + TooltipPadding, ty), Color.Black);
+                    boldFont.DrawString(spriteBatch, _tooltipHoveredRowLabel, new Vector2(tipX + TooltipPadding, ty), ColorPalette.TooltipText);
                     if (showDt)
                     {
                         float lw  = boldFont.MeasureString(_tooltipHoveredRowLabel).X;
                         float dtx = tipX + TooltipPadding + lw + DataTypeGap;
                         float dty = ty + (boldH - italicFont.LineHeight) * 0.5f;
-                        italicFont.DrawString(spriteBatch, tooltipEntries[0].DataType, new Vector2(dtx, dty), new Color(130, 130, 130));
+                        italicFont.DrawString(spriteBatch, tooltipEntries[0].DataType, new Vector2(dtx, dty), ColorPalette.TooltipMuted);
                     }
                     ty += boldH + LabelBodyGap;
                 }
@@ -6393,7 +6538,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 for (int li = 0; li < lines.Count; li++)
                 {
                     string line = lines[li];
-                    Color lc = line.StartsWith(BulletPrefix, StringComparison.Ordinal) ? bulletColor : Color.Black;
+                    Color lc = line.StartsWith(BulletPrefix, StringComparison.Ordinal) ? bulletColor : ColorPalette.TooltipText;
                     font.DrawString(spriteBatch, line, new Vector2(tipX + TooltipPadding, ty + li * lineHeight), lc);
                 }
                 curY += bH + BoxGap;
@@ -6572,7 +6717,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     continue;
                 }
 
-                Rectangle contentBounds = GetPanelContentBounds(block, dragBarHeight);
+                Rectangle contentBounds = GetPanelContentBounds(block, GetDragBarHeightForBlock(block));
 
                 // Suppress mouse input for blocks whose content area is covered by an overlay block.
                 MouseState effectiveMouse = mouseState;
@@ -7432,6 +7577,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             return DockingModeEnabled ? UIStyle.DragBarHeight : 0;
         }
 
+        /// <summary>
+        /// Overlay blocks always show drag bars so they can be moved/resized outside
+        /// docking mode. Standard blocks only show drag bars during docking mode.
+        /// </summary>
+        private static int GetDragBarHeightForBlock(DockBlock block)
+        {
+            return block.IsOverlay ? UIStyle.DragBarHeight : GetActiveDragBarHeight();
+        }
+
         private static bool AnyBlockVisible() => _orderedBlocks.Any(block => block.IsVisible);
 
         public static bool IsBlockMenuOpen() => _overlayMenuVisible;
@@ -7500,6 +7654,22 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         }
 
         public static bool IsDragBarHovered => !string.IsNullOrEmpty(_hoveredDragBarId);
+
+        public static bool IsCursorInAnyDragBar
+        {
+            get
+            {
+                foreach (DockBlock block in _orderedBlocks)
+                {
+                    if (!block.IsVisible) continue;
+                    int dbh = GetDragBarHeightForBlock(block);
+                    if (dbh <= 0) continue;
+                    if (block.GetDragBarBounds(dbh).Contains(_mousePosition))
+                        return true;
+                }
+                return false;
+            }
+        }
 
         public static bool IsAnyGuiInteracting
         {
@@ -7702,7 +7872,18 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
             else
             {
-                ClearResizeEdges();
+                // Clear standard block resize edges but keep overlay resize handles
+                // so overlays remain resizable outside docking mode.
+                _resizeEdges.Clear();
+                _hoveredResizeEdge = null;
+                _activeResizeEdge = null;
+                ClearResizeEdgeSnap();
+                _cornerHandles.Clear();
+                _hoveredCornerHandle = null;
+                _activeCornerHandle = null;
+                _activeCornerLinkedHandle = null;
+                ClearCornerSnap();
+                CollectOverlayResizeHandles();
             }
 
             _gameContentBounds = Rectangle.Empty;
@@ -8326,6 +8507,14 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
             }
 
+            // Suppress overlay resize hover and activation while a drag bar drag is in progress.
+            if (_draggingBlock != null)
+            {
+                _hoveredOverlayCornerHandle = null;
+                _hoveredOverlayResizeEdge = null;
+                return false;
+            }
+
             OverlayCornerHandle? hoveredCorner = HitTestOverlayCornerHandle(_mousePosition);
             _hoveredOverlayCornerHandle = hoveredCorner;
 
@@ -8334,8 +8523,13 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             if (leftClickStarted)
             {
+                // If the click is also on a drag bar grab region, yield to the drag bar
+                // so vertically stacked blocks can be displaced by dragging upward.
+                DockBlock dragBarHit = HitTestDragBarBlock(_mousePosition, excludeDragBarButtons: true, requireGrabRegion: true);
+
                 if (hoveredCorner.HasValue)
                 {
+                    if (dragBarHit != null) return false;
                     _activeOverlayCornerHandle = hoveredCorner;
                     ApplyOverlayEdgeDrag(hoveredCorner.Value.VerticalEdge, _mousePosition);
                     ApplyOverlayEdgeDrag(hoveredCorner.Value.HorizontalEdge, _mousePosition);
@@ -8343,6 +8537,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 }
                 if (hoveredEdge.HasValue)
                 {
+                    if (dragBarHit != null) return false;
                     _activeOverlayResizeEdge = hoveredEdge;
                     ApplyOverlayEdgeDrag(hoveredEdge.Value, _mousePosition);
                     return true;

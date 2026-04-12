@@ -32,9 +32,9 @@ INSERT INTO BarrelPrototypes (
     3,   -- BulletMaxLifespan
     3,   -- BulletMass (→ radius≈10.4px)
     -1,  -- BulletHealth (-1 → derived from mass ≈ 10)
-    255, 0,   0, 255,   -- Fill    RGBA
-    139, 0,   0, 255,   -- Outline RGBA
-    1                   -- OutlineWidth
+    80,  80,  80, 255,   -- Fill    RGBA (dark grey)
+    50,  50,  50, 255,   -- Outline RGBA (darker grey)
+    5                   -- OutlineWidth
 );
 
 -- Heavy: mass=6 → health≈20, radius≈14.7px, drag≈1.80/s
@@ -55,9 +55,9 @@ INSERT INTO BarrelPrototypes (
     3,   -- BulletMaxLifespan
     6,   -- BulletMass (→ radius≈14.7px)
     -1,  -- BulletHealth (-1 → derived from mass ≈ 20)
-    200, 200, 200, 255,   -- Fill    RGBA
-    150, 150, 150, 255,   -- Outline RGBA
-    2                     -- OutlineWidth
+    80,  80,  80, 255,   -- Fill    RGBA (dark grey)
+    50,  50,  50, 255,   -- Outline RGBA (darker grey)
+    5                     -- OutlineWidth
 );
 
 -- ================================

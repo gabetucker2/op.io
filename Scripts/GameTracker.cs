@@ -41,6 +41,13 @@ namespace op.io
         public static float HitVelocityLoss         => BulletManager.HitVelocityLoss;
         public static float PenetrationSpring       => BulletManager.PenetrationSpringCoeff;
         public static float PenetrationDamping      => BulletManager.PenetrationDamping;
+        // Scalars (DB-driven)
+        public static float BulletRadiusScalar          => BulletManager.BulletRadiusScalar;
+        public static float BarrelHeightScalar          => BulletManager.BarrelHeightScalar;
+        public static float BulletKnockbackScalar       => BulletManager.BulletKnockbackScalar;
+        public static float BulletRecoilScalar          => BulletManager.BulletRecoilScalar;
+        public static float BulletFarmKnockbackScalar   => BulletManager.BulletFarmKnockbackScalar;
+        public static float OwnerImmunityDuration       => BulletManager.OwnerImmunityDuration;
         // Bullet Defaults (DB-driven)
         public static float DefaultBulletSpeed      => BulletManager.DefaultBulletSpeed;
         public static float DefaultBulletLifespan   => BulletManager.DefaultBulletLifespan;
@@ -65,6 +72,10 @@ namespace op.io
 
                 // Skip FreezeGameInputsReason — it's surfaced as the Detail of FreezeGameInputs instead.
                 if (string.Equals(property.Name, nameof(FreezeGameInputsReason), StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // Default bullet settings are static DB config, not runtime state — hide from Backend block.
+                if (property.Name.StartsWith("Default", StringComparison.Ordinal))
                     continue;
 
                 object value;

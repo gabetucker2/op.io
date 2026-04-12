@@ -83,6 +83,31 @@ namespace op.io.UI.FunCol
         private const int   ToggleBtnSize = 10;
         private const int   ToggleBtnPad  = 3;
 
+        // ── Column resize ─────────────────────────────────────────────────────
+        /// <summary>
+        /// When true, column dividers in the header can be dragged to resize adjacent columns.
+        /// Only active when <see cref="HeaderVisible"/> is true and the block is unlocked
+        /// (controlled by the block passing the appropriate clickMouse to UpdateHeaderHover).
+        /// </summary>
+        public bool EnableColumnResize { get; set; } = false;
+
+        /// <summary>True for one or more frames while column weights are being changed by a resize drag.</summary>
+        public bool ColumnWeightsChanged { get; private set; }
+
+        /// <summary>Index of the left column whose right divider is currently hovered (-1 = none).</summary>
+        public int HoveredDivider { get; private set; } = -1;
+
+        /// <summary>True while the user is actively dragging a column divider.</summary>
+        public bool IsResizeDragging => _resizeDragging;
+
+        private bool _resizeDragging;
+        private int _resizeDragIndex = -1;
+        private int _resizeDragStartX;
+        private float[] _resizeDragStartWeights;
+        private int _resizeDragHeaderWidth;
+        private const int ResizeGrabWidth = 4;
+        private const float MinColumnWeight = 0.05f;
+
         // ── Header toggle ─────────────────────────────────────────────────────
         /// <summary>When true, a small toggle button appears at the left of the header on hover.</summary>
         public bool ShowHeaderToggle { get; set; } = false;
@@ -149,6 +174,30 @@ namespace op.io.UI.FunCol
 
             // Initialize current widths to target weights
             for (int i = 0; i < n; i++) _widths[i] = _weights[i];
+        }
+
+        // ── Weight access (for persistence) ───────────────────────────────────
+
+        /// <summary>Returns a copy of the current normalized column weights.</summary>
+        public float[] GetWeights()
+        {
+            float[] copy = new float[_weights.Length];
+            Array.Copy(_weights, copy, _weights.Length);
+            return copy;
+        }
+
+        /// <summary>Replaces column weights (re-normalized). Snaps animated widths immediately.</summary>
+        public void SetWeights(float[] weights)
+        {
+            if (weights == null || weights.Length != _weights.Length) return;
+            float sum = 0f;
+            for (int i = 0; i < weights.Length; i++) sum += Math.Max(0f, weights[i]);
+            if (sum <= 0.001f) return;
+            for (int i = 0; i < _weights.Length; i++)
+            {
+                _weights[i] = Math.Max(0f, weights[i]) / sum;
+                _widths[i] = _weights[i];
+            }
         }
 
         // ── Update ────────────────────────────────────────────────────────────
@@ -240,9 +289,44 @@ namespace op.io.UI.FunCol
             bool clickStart = leftDown && !_prevLeftDown;
 
             HeaderToggleClicked  = false;
+            ColumnWeightsChanged = false;
             _toggleButtonHovered = false;
             _headerIsHovered     = headerBounds.Contains(mouse.Position);
 
+            // ── Active column-resize drag ─────────────────────────────────────
+            if (_resizeDragging && EnableColumnResize)
+            {
+                if (!leftDown)
+                {
+                    // Drag released — finalize
+                    _resizeDragging = false;
+                    _resizeDragIndex = -1;
+                    ColumnWeightsChanged = true;
+                }
+                else if (_resizeDragHeaderWidth > 0 && _resizeDragStartWeights != null)
+                {
+                    float deltaWeight = (mouse.Position.X - _resizeDragStartX) / (float)_resizeDragHeaderWidth;
+                    int li = _resizeDragIndex;
+                    int ri = _resizeDragIndex + 1;
+                    float leftW  = _resizeDragStartWeights[li] + deltaWeight;
+                    float rightW = _resizeDragStartWeights[ri] - deltaWeight;
+
+                    float combined = _resizeDragStartWeights[li] + _resizeDragStartWeights[ri];
+                    if (leftW < MinColumnWeight)  { leftW = MinColumnWeight;  rightW = combined - MinColumnWeight; }
+                    if (rightW < MinColumnWeight) { rightW = MinColumnWeight; leftW  = combined - MinColumnWeight; }
+
+                    _weights[li] = leftW;
+                    _weights[ri] = rightW;
+                    for (int i = 0; i < _widths.Length; i++) _widths[i] = _weights[i];
+                    ColumnWeightsChanged = true;
+                }
+
+                HoveredDivider = _resizeDragIndex;
+                _prevLeftDown = leftDown;
+                return; // consume all input during resize
+            }
+
+            // ── Toggle button ─────────────────────────────────────────────────
             if (ShowHeaderToggle && !HeaderVisible && CollapsedToggleBounds.HasValue)
             {
                 // Header is collapsed: toggle button lives at top-left of the first visible row.
@@ -266,6 +350,22 @@ namespace op.io.UI.FunCol
             }
 
             bool consumed = _toggleButtonHovered && clickStart;
+
+            // ── Column resize start detection ─────────────────────────────────
+            HoveredDivider = -1;
+            if (EnableColumnResize && HeaderVisible && _headerIsHovered && !consumed)
+            {
+                HoveredDivider = GetDividerAtX(headerBounds, mouse.Position.X);
+                if (HoveredDivider >= 0 && clickStart)
+                {
+                    _resizeDragging = true;
+                    _resizeDragIndex = HoveredDivider;
+                    _resizeDragStartX = mouse.Position.X;
+                    _resizeDragStartWeights = (float[])_weights.Clone();
+                    _resizeDragHeaderWidth = headerBounds.Width;
+                    consumed = true;
+                }
+            }
 
             _headerHoveredColumn = (!consumed && _headerIsHovered)
                 ? GetColumnAtX(headerBounds, mouse.Position.X)
@@ -364,7 +464,7 @@ namespace op.io.UI.FunCol
 
             // Background
             if (!DisableColors)
-                sb.Draw(pixel, headerBounds, new Color(20, 20, 22, 180));
+                sb.Draw(pixel, headerBounds, ColorPalette.OverlayBackground);
 
             // Header is collapsed: draw nothing for the strip, but always show the toggle button
             // at the first visible row position (CollapsedToggleBounds) so the user can expand it.
@@ -406,10 +506,21 @@ namespace op.io.UI.FunCol
                     }
                 }
 
-                // Column divider
+                // Column divider (highlight when resize-hovered or actively dragging)
                 if (i < n - 1 && cw > 0)
-                    DrawOutline(sb, pixel, new Rectangle(colBounds.Right - 1, headerBounds.Y, 1, headerBounds.Height),
-                        UIStyle.BlockBorder, 0);
+                {
+                    bool divActive = EnableColumnResize && (HoveredDivider == i || (_resizeDragging && _resizeDragIndex == i));
+                    if (divActive)
+                    {
+                        int divW = 3;
+                        int divX = colBounds.Right - divW / 2 - 1;
+                        sb.Draw(pixel, new Rectangle(divX, headerBounds.Y, divW, headerBounds.Height), Color.White * 0.70f);
+                    }
+                    else
+                    {
+                        sb.Draw(pixel, new Rectangle(colBounds.Right - 1, headerBounds.Y, 1, headerBounds.Height), UIStyle.BlockBorder);
+                    }
+                }
 
                 x += cw;
             }
@@ -442,7 +553,7 @@ namespace op.io.UI.FunCol
                     ? (headerBounds.Right - cx)
                     : (int)(headerBounds.Width * _widths[_headerHoveredColumn]);
 
-                Color tipBg = new Color(22, 22, 26, 220);
+                Color tipBg = ColorPalette.OverlayBackground;
                 Color tipFg = DisableColors ? UIStyle.MutedTextColor
                     : FunColInterface.GetColumnColor(_headerHoveredColumn) * 0.90f;
 
@@ -524,10 +635,10 @@ namespace op.io.UI.FunCol
         {
             Rectangle r = GetToggleButtonRect(headerBounds);
             Color fill = HeaderVisible
-                ? (_toggleButtonHovered ? new Color(80, 200, 80, 230) : new Color(50, 130, 50, 170))
-                : (_toggleButtonHovered ? new Color(200, 80, 80, 230) : new Color(110, 50, 50, 170));
+                ? (_toggleButtonHovered ? ColorPalette.IndicatorActive * 0.9f : ColorPalette.IndicatorActive * 0.67f)
+                : (_toggleButtonHovered ? ColorPalette.IndicatorInactive * 0.9f : ColorPalette.IndicatorInactive * 0.67f);
             sb.Draw(pixel, r, fill);
-            DrawOutline(sb, pixel, r, new Color(160, 160, 160, 140), 1);
+            DrawOutline(sb, pixel, r, ColorPalette.TextMuted * 0.55f, 1);
         }
 
         private static List<string> WrapHeaderTooltip(UIStyle.UIFont font, string text, int maxWidth)
@@ -576,6 +687,23 @@ namespace op.io.UI.FunCol
                 x += cw;
             }
             return n - 1;
+        }
+
+        /// <summary>Returns the index of the left column whose right-edge divider is near mouseX, or -1.</summary>
+        private int GetDividerAtX(Rectangle bounds, int mouseX)
+        {
+            int n = _features.Length;
+            if (n <= 1 || bounds.Width <= 0) return -1;
+            int x = bounds.X;
+            for (int i = 0; i < n - 1; i++)
+            {
+                int cw = (int)(bounds.Width * _widths[i]);
+                int dividerX = x + cw;
+                if (Math.Abs(mouseX - dividerX) <= ResizeGrabWidth)
+                    return i;
+                x += cw;
+            }
+            return -1;
         }
 
         private static void DrawOutline(SpriteBatch sb, Texture2D pixel, Rectangle r, Color c, int t)

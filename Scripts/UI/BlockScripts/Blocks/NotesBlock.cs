@@ -108,6 +108,26 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static KeyboardState PreviousKeyboardState;
         private static MouseState LastMouseState;
+
+        public static string GetHoveredRowKey()
+        {
+            Point pos = LastMouseState.Position;
+            for (int i = 0; i < CommandOrder.Length; i++)
+            {
+                if (CommandBounds[i] != Rectangle.Empty && CommandBounds[i].Contains(pos))
+                {
+                    return CommandOrder[i] switch
+                    {
+                        NotesCommand.Save   => "Btn_SetupSave",
+                        NotesCommand.New    => "Btn_SetupNew",
+                        NotesCommand.Rename => "Btn_SetupRename",
+                        NotesCommand.Delete => "Btn_SetupDelete",
+                        _ => null
+                    };
+                }
+            }
+            return null;
+        }
         private static int OverlayHoverIndex = -1;
         private static SavePromptState SavePrompt;
 

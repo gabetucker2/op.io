@@ -199,6 +199,17 @@ namespace op.io
             }
         }
 
+        private static float? _cachedOwnerImmunityDuration = null;
+        public static float OwnerImmunityDuration
+        {
+            get
+            {
+                if (!_cachedOwnerImmunityDuration.HasValue)
+                    _cachedOwnerImmunityDuration = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "OwnerImmunityDuration");
+                return _cachedOwnerImmunityDuration.Value;
+            }
+        }
+
         private static (float FadeIn, float Hold, float FadeOut)? _cachedHitFlashAnim;
         private static (float FadeIn, float Hold, float FadeOut) HitFlashAnim =>
             _cachedHitFlashAnim ??= DatabaseFetch.GetAnimSetting("HitFlashAnim", 0.05f, 0f, 0.2f);
@@ -276,12 +287,8 @@ namespace op.io
                 : Vector2.Zero;
             Vector2 velocity = inheritedVelocity + dir * speed;
 
-            // Spawn at the barrel tip so the bullet starts flush with the end of the barrel.
-            // The barrel extends from the body edge outward, so the tip is at bodyRadius + barrelLength.
-            float bodyRadius = agent.Shape != null
-                ? Math.Max(agent.Shape.Width, agent.Shape.Height) / 2f : 0f;
-            float barrelLength = agent.BarrelShape?.Width ?? 0f;
-            Vector2 spawnPos = agent.Position + dir * (bodyRadius + barrelLength);
+            // Spawn at the center of the player so the bullet visually emerges from the body.
+            Vector2 spawnPos = agent.Position;
 
             float radius = ComputeBulletRadius(mass);
             int diameter = Math.Max(1, (int)MathF.Round(radius * 2));
@@ -295,7 +302,8 @@ namespace op.io
             float bulletDamage      = attrs.BulletDamage      >= 0 ? attrs.BulletDamage      : DefaultBulletDamage;
             float bulletPenetration = attrs.BulletPenetration >= 0 ? attrs.BulletPenetration : DefaultBulletPenetration;
             float bulletKnockback   = AttributeDerived.BulletKnockback(bulletPenetration, BulletKnockbackScalar); // hidden: derived from BulletPenetration
-            var bullet = new Bullet(_nextId++, spawnPos, velocity, mass, lifespan, dragFactor, shape, bulletHealth, bulletDamage, bulletPenetration, bulletKnockback, fill, outline, outlineW);
+            float bulletMaxSpeed    = speed + agent.BaseSpeed; // hidden: ceiling = bulletSpeed + body speed
+            var bullet = new Bullet(_nextId++, spawnPos, velocity, mass, lifespan, dragFactor, shape, bulletHealth, bulletDamage, bulletPenetration, bulletKnockback, bulletMaxSpeed, fill, outline, outlineW);
             bullet.OwnerID  = agent.ID;
             bullet.SourceID = HashCode.Combine(agent.ID, agent.ActiveBarrelIndex);
             _bullets.Add(bullet);

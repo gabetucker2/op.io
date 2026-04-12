@@ -1135,7 +1135,7 @@ namespace op.io.UI.BlockScripts.Blocks
             if (dotSize <= 0) return;
             int dotY = (int)(y + (font.LineHeight - dotSize) / 2f);
 
-            Color dotColor = boolValue ? new Color(80, 220, 80) : new Color(220, 80, 80);
+            Color dotColor = boolValue ? ColorPalette.IndicatorActive : ColorPalette.IndicatorInactive;
             DrawRect(spriteBatch, new Rectangle((int)dotX, dotY, dotSize, dotSize), dotColor);
         }
 

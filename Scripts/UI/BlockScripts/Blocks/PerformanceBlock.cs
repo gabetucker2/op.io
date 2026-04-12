@@ -72,6 +72,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Performance);
                 if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
                     hfc.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                if (rowData.TryGetValue("FunColColumnWeights", out string weightStr))
+                    ApplyEncodedWeights(hfc, weightStr);
                 _headerVisibleLoaded = true;
             }
 
@@ -84,6 +86,12 @@ namespace op.io.UI.BlockScripts.Blocks
             // Persist header visibility when toggled
             if (hfc.HeaderToggleClicked)
                 BlockDataStore.SetRowData(DockBlockKind.Performance, "FunColHeaderVisible", hfc.HeaderVisible ? "true" : "false");
+            if (hfc.ColumnWeightsChanged)
+            {
+                string encoded = EncodeWeights(hfc.GetWeights());
+                BlockDataStore.SetRowData(DockBlockKind.Performance, "FunColColumnWeights", encoded);
+                PropagateWeightsToRowFunCols(hfc.GetWeights());
+            }
 
             // Refresh + sort entries
             _entries = FrameProfiler.GetEntries();
@@ -237,8 +245,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static FunColInterface GetOrCreateRowFunCol(string key)
         {
             if (_rowFunCols.TryGetValue(key, out var existing)) return existing;
+            float[] weights = _headerFunCol?.GetWeights() ?? ColWeights;
             var fc = new FunColInterface(
-                ColWeights,
+                weights,
                 new TextLabelFeature("Function",      FunColTextAlign.Left),
                 new ValueDisplayFeature("Cur Mem")    { TextAlign = FunColTextAlign.Right },
                 new ValueDisplayFeature("Avg Mem")    { TextAlign = FunColTextAlign.Right },
@@ -269,7 +278,39 @@ namespace op.io.UI.BlockScripts.Blocks
             _headerFunCol.DisableColors       = true;
             _headerFunCol.EnableColumnSort    = true;
             _headerFunCol.ShowHeaderTooltips  = true;
+            _headerFunCol.EnableColumnResize  = true;
             return _headerFunCol;
+        }
+
+        private static void PropagateWeightsToRowFunCols(float[] weights)
+        {
+            foreach (var fc in _rowFunCols.Values)
+                fc.SetWeights(weights);
+        }
+
+        private static string EncodeWeights(float[] weights)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < weights.Length; i++)
+            {
+                if (i > 0) sb.Append('|');
+                sb.Append(weights[i].ToString("F4", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return sb.ToString();
+        }
+
+        private static void ApplyEncodedWeights(FunColInterface fc, string encoded)
+        {
+            if (string.IsNullOrEmpty(encoded)) return;
+            string[] parts = encoded.Split('|');
+            float[] weights = new float[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!float.TryParse(parts[i], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out weights[i]))
+                    return;
+            }
+            fc.SetWeights(weights);
         }
 
         // ── Row drawing ───────────────────────────────────────────────────────

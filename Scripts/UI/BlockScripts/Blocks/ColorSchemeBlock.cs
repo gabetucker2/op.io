@@ -241,7 +241,12 @@ namespace op.io.UI.BlockScripts.Blocks
 
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             _hoveredRowKey = !blockLocked ? hitRow : null;
-            _tooltipRowKey = hitRow;
+            // Check scheme buttons for tooltip keys
+            _tooltipRowKey = hitRow
+                ?? (_saveSchemeBounds != Rectangle.Empty && _saveSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeSave" : null)
+                ?? (_newSchemeBounds != Rectangle.Empty && _newSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeNew" : null)
+                ?? (_renameSchemeBounds != Rectangle.Empty && _renameSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeRename" : null)
+                ?? (_deleteSchemeBounds != Rectangle.Empty && _deleteSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeDelete" : null);
 
             if (_dragState.IsDragging)
             {

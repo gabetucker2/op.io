@@ -82,6 +82,7 @@ namespace op.io
             float massFraction = mObject / (mBullet + mObject); // 0 → light obj, 1 → infinitely heavy obj
             float speedRetained = MathF.Max(1f - BulletManager.BounceVelocityLoss * massFraction, 0f);
             bullet.Velocity *= speedRetained;
+            ClampBulletSpeed(bullet);
         }
 
         // Bullet hits a non-static, non-agent object.
@@ -112,6 +113,7 @@ namespace op.io
             float springAccel  = BulletManager.PenetrationSpringCoeff * mtvLen;   // outward
             float dampingAccel = -BulletManager.PenetrationDamping * vDotN;       // opposes motion
             bullet.Velocity += separationNormal * (springAccel + dampingAccel) * Core.DELTATIME;
+            ClampBulletSpeed(bullet);
 
             // Drain bullet penetration HP proportional to overlap depth and object resistance.
             float massFraction = mObject / totalMass;
@@ -138,6 +140,15 @@ namespace op.io
                 float transferSpeed = vInward * mBullet / totalMass * BulletManager.BulletFarmKnockbackScalar;
                 obj.PhysicsVelocity += -separationNormal * transferSpeed;
             }
+        }
+
+        private static void ClampBulletSpeed(Bullet bullet)
+        {
+            float maxSpd = bullet.MaxSpeed;
+            if (maxSpd <= 0f) return;
+            float spdSq = bullet.Velocity.LengthSquared();
+            if (spdSq > maxSpd * maxSpd)
+                bullet.Velocity = Vector2.Normalize(bullet.Velocity) * maxSpd;
         }
     }
 }

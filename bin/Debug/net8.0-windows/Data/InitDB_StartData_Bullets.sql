@@ -12,8 +12,9 @@ INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('PenetrationDamping',    '
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRadiusScalar',    '6');    -- bullet radius scalar: radius = sqrt(mass) * BulletRadiusScalar
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BarrelHeightScalar',   '0.075'); -- barrel height scalar: height = bulletSpeed * BarrelHeightScalar
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletKnockbackScalar','0.5');  -- multiplier applied to bullet recoil knockback (< 1 attenuates)
-INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRecoilScalar',  '0.25'); -- multiplier: recoil = mass × (1 + knockback) × BulletRecoilScalar
+INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRecoilScalar',  '0.625'); -- multiplier: recoil = mass × (1 + knockback) × BulletRecoilScalar
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletFarmKnockbackScalar','0.15'); -- scalar for bullet momentum transfer to farm objects (0 = no push; 1 = full physics transfer)
+INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('OwnerImmunityDuration',   '0.3');   -- seconds after spawn during which a bullet cannot collide with or damage its owner
 
 ---------------------------------------------------------------------------------------------------------------------------
 -- BulletDefaults — fallback bullet attributes used when a barrel does not explicitly set them.
@@ -26,15 +27,15 @@ INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletDamage',   
 INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletHealth',      '10');  -- fallback bullet penetration HP
 INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletPenetration', '0');   -- fallback bullet penetration (armor bypass; 0 = no bypass)
 
--- Default bullet fill color
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillR',      '255');
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillG',      '0');
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillB',      '0');
+-- Default bullet fill color (dark grey)
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillR',      '80');
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillG',      '80');
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillB',      '80');
 INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletFillA',      '255');
 
--- Default bullet outline color
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineR',   '139');
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineG',   '0');
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineB',   '0');
+-- Default bullet outline color (darker grey)
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineR',   '50');
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineG',   '50');
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineB',   '50');
 INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineA',   '255');
-INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineWidth','2');
+INSERT INTO BulletDefaults (SettingKey, Value) VALUES ('DefaultBulletOutlineWidth','5');

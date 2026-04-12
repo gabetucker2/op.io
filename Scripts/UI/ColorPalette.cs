@@ -60,5 +60,39 @@ namespace op.io
         public static Color LockUnlockedHoverFill => ColorScheme.GetColor(ColorRole.LockUnlockedHoverFill);
         public static Color CloseGlyph => ColorScheme.GetColor(ColorRole.CloseGlyph);
         public static Color CloseGlyphHover => ColorScheme.GetColor(ColorRole.CloseGlyphHover);
+
+        // Gameplay
+        public static Color HealthBarLow => ColorScheme.GetColor(ColorRole.HealthBarLow);
+        public static Color HealthBarHigh => ColorScheme.GetColor(ColorRole.HealthBarHigh);
+        public static Color ShieldBar => ColorScheme.GetColor(ColorRole.ShieldBar);
+        public static Color XPBar => ColorScheme.GetColor(ColorRole.XPBar);
+        public static Color BarBackground => ColorScheme.GetColor(ColorRole.BarBackground);
+        public static Color DamageNumber => ColorScheme.GetColor(ColorRole.DamageNumber);
+        public static Color BarRegenTick => ColorScheme.GetColor(ColorRole.BarRegenTick);
+        public static Color ShieldRegenTick => ColorScheme.GetColor(ColorRole.ShieldRegenTick);
+
+        // Chat
+        public static Color ChatAll => ColorScheme.GetColor(ColorRole.ChatAll);
+        public static Color ChatParty => ColorScheme.GetColor(ColorRole.ChatParty);
+        public static Color ChatProximity => ColorScheme.GetColor(ColorRole.ChatProximity);
+        public static Color ChatWhisper => ColorScheme.GetColor(ColorRole.ChatWhisper);
+        public static Color ChatInputBar => ColorScheme.GetColor(ColorRole.ChatInputBar);
+        public static Color ChatInputField => ColorScheme.GetColor(ColorRole.ChatInputField);
+
+        // Tabs
+        public static Color TabBarBackground => ColorScheme.GetColor(ColorRole.TabBarBackground);
+        public static Color TabInactive => ColorScheme.GetColor(ColorRole.TabInactive);
+        public static Color TabHover => ColorScheme.GetColor(ColorRole.TabHover);
+        public static Color TabActive => ColorScheme.GetColor(ColorRole.TabActive);
+
+        // Tooltips
+        public static Color TooltipBackground => ColorScheme.GetColor(ColorRole.TooltipBackground);
+        public static Color TooltipBorder => ColorScheme.GetColor(ColorRole.TooltipBorder);
+        public static Color TooltipText => ColorScheme.GetColor(ColorRole.TooltipText);
+        public static Color TooltipMuted => ColorScheme.GetColor(ColorRole.TooltipMuted);
+
+        // Sliders
+        public static Color SliderTrack => ColorScheme.GetColor(ColorRole.SliderTrack);
+        public static Color SliderFill => ColorScheme.GetColor(ColorRole.SliderFill);
     }
 }

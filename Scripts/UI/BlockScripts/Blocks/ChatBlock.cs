@@ -39,12 +39,12 @@ namespace op.io.UI.BlockScripts.Blocks
         private const string InputFocusOwner = "ChatBlock.Input";
         private const string PlayerName = "You";
 
-        private static readonly Color ColorAll       = new Color(220, 220, 225);
-        private static readonly Color ColorParty     = new Color(100, 210, 120);
-        private static readonly Color ColorProximity = new Color(240, 210, 80);
-        private static readonly Color ColorWhisper   = new Color(200, 120, 220);
-        private static readonly Color InputBarBg     = new Color(22, 22, 26);
-        private static readonly Color InputFieldBg   = new Color(35, 35, 40);
+        private static Color ColorAll       => ColorPalette.ChatAll;
+        private static Color ColorParty     => ColorPalette.ChatParty;
+        private static Color ColorProximity => ColorPalette.ChatProximity;
+        private static Color ColorWhisper   => ColorPalette.ChatWhisper;
+        private static Color InputBarBg     => ColorPalette.ChatInputBar;
+        private static Color InputFieldBg   => ColorPalette.ChatInputField;
 
         private static readonly List<ChatMessage> _messages = new();
         private static readonly StringBuilder _inputBuffer = new();

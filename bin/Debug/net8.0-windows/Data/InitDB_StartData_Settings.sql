@@ -16,9 +16,9 @@ INSERT INTO DebugVisuals (SettingKey, Value) VALUES ('DebugCircleRadius', '3');
 ---------------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BarsVisible', 'true');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '20');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_G', '20');
-INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '25');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_R', '127');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_G', '229');
+INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_B', '242');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('BackgroundColor_A', '255');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportWidth', '1200');
 INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('ViewportHeight', '1200');
@@ -31,6 +31,6 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('CameraSnapRange', '75')
 
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('KnockbackMassScale', '4.0');
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('RecoilMassScale', '50.0');
-INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('PhysicsFrictionRate', '8');  -- velocity decay: vel *= clamp(1 - rate * dt, 0, 1)
+INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('PhysicsFrictionRate', '2');  -- velocity decay: vel *= clamp(1 - rate * dt, 0, 1)
 
 

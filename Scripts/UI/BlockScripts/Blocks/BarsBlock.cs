@@ -160,7 +160,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _cachedListBounds = listViewport;
 
             bool isDragging = _drag.Active;
-            _listFunCol.Update(_cachedListBounds, mouseState, dt, suppressHover: isDragging || blockLocked || !BlockManager.DockingModeEnabled || BlockManager.IsDragBarHovered);
+            _listFunCol.Update(_cachedListBounds, mouseState, dt, suppressHover: isDragging || blockLocked || !BlockManager.DockingModeEnabled || BlockManager.IsCursorInAnyDragBar);
 
             if (!blockLocked)
             {
@@ -382,8 +382,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 barsOn ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey,
                 toggleHov,
                 isDisabled: blockLocked,
-                fillOverride:       barsOn ? new Color(50, 155, 75)  : new Color(130, 45, 45),
-                hoverFillOverride:  barsOn ? new Color(65, 195, 95)  : new Color(170, 60, 60));
+                fillOverride:       barsOn ? ColorPalette.IndicatorActive * 0.75f  : ColorPalette.IndicatorInactive * 0.68f,
+                hoverFillOverride:  barsOn ? ColorPalette.IndicatorActive * 0.95f  : ColorPalette.IndicatorInactive * 0.88f);
 
             // Simulate Damage button (right half)
             var simRect = new Rectangle(x + btnW + gap, y + 2, w - btnW - gap, btnH);
@@ -393,8 +393,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 UIButtonRenderer.ButtonStyle.Grey,
                 simHov,
                 isDisabled: blockLocked,
-                fillOverride:      new Color(55, 95, 160),
-                hoverFillOverride: new Color(75, 125, 210));
+                fillOverride:      ColorPalette.ButtonPrimary,
+                hoverFillOverride: ColorPalette.ButtonPrimaryHover);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -508,7 +508,7 @@ namespace op.io.UI.BlockScripts.Blocks
             else
             {
                 // Fallback: filled circle + orientation line
-                DrawCircleApprox(sb, cx, cy, PreviewPlayerR, new Color(0, 220, 220, 200), new Color(0, 140, 140), 3);
+                DrawCircleApprox(sb, cx, cy, PreviewPlayerR, ColorPalette.ShieldBar * 0.78f, ColorPalette.ShieldBar * 0.55f, 3);
                 float rot = _previewAimAngle;
                 int ex = cx + (int)(MathF.Cos(rot) * (PreviewPlayerR + 8));
                 int ey = cy + (int)(MathF.Sin(rot) * (PreviewPlayerR + 8));
@@ -516,7 +516,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 int lx = Math.Min(cx, ex), ly = Math.Min(cy, ey);
                 int lw = Math.Max(1, Math.Abs(ex - cx));
                 int lh = Math.Max(1, Math.Abs(ey - cy));
-                DrawRect(sb, new Rectangle(lx, ly, lw, lh), new Color(200, 200, 200, 200));
+                DrawRect(sb, new Rectangle(lx, ly, lw, lh), ColorPalette.TextPrimary * 0.78f);
             }
         }
 
@@ -723,7 +723,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     var splitRect = new Rectangle(sbX, sbY, SplitBtnSize, SplitBtnSize);
                     _splitBtnRects.Add((entry.Type, barRow, splitRect));
                     Color splitBg = splitRect.Contains(_lastMousePosition)
-                        ? new Color(80, 130, 200) : new Color(40, 65, 110);
+                        ? ColorPalette.ButtonPrimaryHover : ColorPalette.ButtonPrimary;
                     DrawRect(sb, splitRect, splitBg);
                     DrawOutline(sb, splitRect, FunColInterface.GetColumnColor(ColDragBar), 1);
                     UIStyle.UIFont sfont = UIStyle.FontTech;
@@ -767,7 +767,7 @@ namespace op.io.UI.BlockScripts.Blocks
             int panelW = hovRow.RowRect.Width;
 
             var panel = new Rectangle(panelX, panelY, panelW, panelH);
-            DrawRect(sb, panel, new Color(30, 30, 36, 230));
+            DrawRect(sb, panel, ColorPalette.OverlayBackground);
             DrawOutline(sb, panel, FunColInterface.GetColumnColor(ColSegments), 1);
 
             string key = entry.Type.ToString();
@@ -777,7 +777,7 @@ namespace op.io.UI.BlockScripts.Blocks
             // Segments-enabled checkbox
             int checkSize = 12;
             var checkRect = new Rectangle(fx, panelY + (panelH - checkSize) / 2, checkSize, checkSize);
-            DrawRect(sb, checkRect, entry.SegmentsEnabled ? new Color(80, 180, 80) : new Color(55, 55, 55));
+            DrawRect(sb, checkRect, entry.SegmentsEnabled ? ColorPalette.IndicatorActive : ColorPalette.ToggleIdle);
             DrawOutline(sb, checkRect, UIStyle.BlockBorder, 1);
             fx += checkSize + 4;
 
@@ -788,19 +788,19 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 int arrowY = panelY + (panelH - ArrowBtnSize) / 2;
 
-                DrawRect(sb, new Rectangle(fx, arrowY, ArrowBtnSize, ArrowBtnSize), new Color(55, 55, 60));
+                DrawRect(sb, new Rectangle(fx, arrowY, ArrowBtnSize, ArrowBtnSize), ColorPalette.ButtonNeutral);
                 font.DrawString(sb, "-", new Vector2(fx + ArrowBtnSize / 2f - 3, arrowY + 1), UIStyle.TextColor);
                 fx += ArrowBtnSize + 2;
 
                 string val      = _editingSegBarType == key ? _segInputBuffer : entry.SegmentCount.ToString();
                 var inputRect   = new Rectangle(fx, arrowY, SegInputWidth, ArrowBtnSize);
-                DrawRect(sb, inputRect, new Color(28, 28, 32));
+                DrawRect(sb, inputRect, ColorPalette.ChatInputField);
                 DrawOutline(sb, inputRect, _editingSegBarType == key ? UIStyle.AccentColor : UIStyle.BlockBorder, 1);
                 font.DrawString(sb, val,
                     new Vector2(fx + 4, arrowY + (ArrowBtnSize - font.LineHeight) / 2f), UIStyle.TextColor);
                 fx += SegInputWidth + 2;
 
-                DrawRect(sb, new Rectangle(fx, arrowY, ArrowBtnSize, ArrowBtnSize), new Color(55, 55, 60));
+                DrawRect(sb, new Rectangle(fx, arrowY, ArrowBtnSize, ArrowBtnSize), ColorPalette.ButtonNeutral);
                 font.DrawString(sb, "+", new Vector2(fx + ArrowBtnSize / 2f - 3, arrowY + 1), UIStyle.TextColor);
                 fx += ArrowBtnSize + 2;
             }
@@ -809,7 +809,7 @@ namespace op.io.UI.BlockScripts.Blocks
             fx += 6;
             int pctCheckSize = 12;
             var pctCheckRect = new Rectangle(fx, panelY + (panelH - pctCheckSize) / 2, pctCheckSize, pctCheckSize);
-            DrawRect(sb, pctCheckRect, entry.ShowPercent ? new Color(80, 180, 80) : new Color(55, 55, 55));
+            DrawRect(sb, pctCheckRect, entry.ShowPercent ? ColorPalette.IndicatorActive : ColorPalette.ToggleIdle);
             DrawOutline(sb, pctCheckRect, UIStyle.BlockBorder, 1);
             fx += pctCheckSize + 4;
             font.DrawString(sb, "% Text", new Vector2(fx, fy), UIStyle.MutedTextColor);
@@ -824,15 +824,15 @@ namespace op.io.UI.BlockScripts.Blocks
             string[] labels = { "Save", "Apply", "Discard" };
             Color[]  fills  =
             {
-                new Color(50,  140, 80),
-                new Color(100, 100, 50),
-                new Color(140, 60,  60)
+                ColorPalette.IndicatorActive * 0.7f,
+                ColorPalette.Warning * 0.5f,
+                ColorPalette.IndicatorInactive * 0.73f
             };
             Color[] hoverFills =
             {
-                new Color(65,  180, 100),
-                new Color(130, 130, 70),
-                new Color(180, 80,  80)
+                ColorPalette.IndicatorActive * 0.9f,
+                ColorPalette.Warning * 0.65f,
+                ColorPalette.IndicatorInactive * 0.93f
             };
 
             int totalGap = ButtonSpacing * (labels.Length - 1);
@@ -892,7 +892,7 @@ namespace op.io.UI.BlockScripts.Blocks
             int ox = mousePos.X + 14;
             int oy = mousePos.Y - (int)(ts.Y / 2f);
             var bg = new Rectangle(ox - 4, oy - 2, (int)ts.X + 8, (int)ts.Y + 4);
-            DrawRect(sb, bg, new Color(18, 18, 22, 215));
+            DrawRect(sb, bg, ColorPalette.OverlayBackground);
             DrawOutline(sb, bg, UIStyle.AccentColor, 1);
             font.DrawString(sb, text, new Vector2(ox, oy), Color.White);
         }
@@ -1347,8 +1347,8 @@ namespace op.io.UI.BlockScripts.Blocks
             BarType.Health      => Color.Lerp(HealthBarManager.HealthFillLow, HealthBarManager.HealthFillHigh, 0.7f),
             BarType.Shield      => HealthBarManager.ShieldFillColor,
             BarType.XP          => HealthBarManager.XPFillColor,
-            BarType.HealthRegen => new Color(220, 200, 80),
-            BarType.ShieldRegen => new Color(80, 220, 200),
+            BarType.HealthRegen => ColorPalette.BarRegenTick,
+            BarType.ShieldRegen => ColorPalette.ShieldRegenTick,
             _                   => Color.Gray
         };
 

@@ -14,7 +14,7 @@ INSERT INTO GameObjects (
     'Rectangle', 'RedWall',
     300, 300, 300, 30, 0, 0,
     200, 50, 50, 255,
-    128, 0, 0, 255, 2,
+    128, 0, 0, 255, 5,
     1, 0, 0.0, 1
 );
 INSERT INTO Destructibles (
@@ -36,7 +36,7 @@ INSERT INTO GameObjects (
     'Rectangle', 'GreenBackground',
     800, 300, 300, 30, 0, 0,
     50, 200, 50, 255,
-    0, 128, 0, 255, 0,
+    0, 128, 0, 255, 5,
     0, 0, 0.0, 1
 );
 INSERT INTO Destructibles (

@@ -60,7 +60,7 @@ INSERT OR REPLACE INTO BlockSpecs (RowKey, RenderOrder) VALUES ('OS', 16);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, IsLocked) VALUES ('BlockLock', 1); -- default locked state stored at block-level
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TransparentWindowKey', '#FF69B4FF', 1, 1);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('DefaultFallback', '#FF69B3FF', 2, 1);
-INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('GameBackground', '#141419FF', 3, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('GameBackground', '#7FE5F2FF', 3, 1);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ScreenBackground', '#121212FF', 4, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('BlockBackground', '#1A1A1AFF', 5, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('BlockBorder', '#303030FF', 6, 0);
@@ -104,6 +104,35 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked)
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('LockUnlockedHoverFill', '#445CA0FA', 44, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('CloseGlyph', '#FF4500FF', 45, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('CloseGlyphHover', '#FFFFFFFF', 46, 0);
+-- Gameplay
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('HealthBarLow', '#DC3232FF', 47, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('HealthBarHigh', '#3CC83CFF', 48, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ShieldBar', '#00B4FFFF', 49, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('XPBar', '#32DC50FF', 50, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('BarBackground', '#404040FF', 51, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('DamageNumber', '#FF1414FF', 52, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('BarRegenTick', '#DCC84BFF', 53, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ShieldRegenTick', '#4BDCC8FF', 54, 0);
+-- Chat
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ChatAll', '#DCDCE1FF', 55, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ChatParty', '#64D278FF', 56, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ChatProximity', '#F0D250FF', 57, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ChatWhisper', '#C878DCFF', 58, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ChatInputBar', '#16161AFF', 59, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ChatInputField', '#232328FF', 60, 0);
+-- Tabs
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TabBarBackground', '#1C1C1EFF', 61, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TabInactive', '#28282AFF', 62, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TabHover', '#323236FF', 63, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TabActive', '#3C3C40FF', 64, 0);
+-- Tooltips
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TooltipBackground', '#FFFFFFFF', 65, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TooltipBorder', '#B4B4B4FF', 66, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TooltipText', '#000000FF', 67, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('TooltipMuted', '#828282FF', 68, 0);
+-- Sliders
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('SliderTrack', '#343438FF', 69, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('SliderFill', '#E6E6EBFF', 70, 0);
 
 -- Named color schemes (stored in RowData only; RenderOrder is left null)
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('__ActiveScheme', 'DarkMode');
@@ -111,7 +140,7 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('__ActiveSchem
 -- Default (dark) palette snapshot
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TransparentWindowKey', '#FF69B4FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::DefaultFallback', '#FF69B3FF');
-INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::GameBackground', '#141419FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::GameBackground', '#7FE5F2FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ScreenBackground', '#121212FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::BlockBackground', '#1A1A1AFF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::BlockBorder', '#303030FF');
@@ -155,6 +184,30 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMo
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::LockUnlockedHoverFill', '#445CA0FA');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::CloseGlyph', '#FF4500FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::CloseGlyphHover', '#FFFFFFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::HealthBarLow', '#DC3232FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::HealthBarHigh', '#3CC83CFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ShieldBar', '#00B4FFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::XPBar', '#32DC50FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::BarBackground', '#404040FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::DamageNumber', '#FF1414FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::BarRegenTick', '#DCC84BFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ShieldRegenTick', '#4BDCC8FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ChatAll', '#DCDCE1FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ChatParty', '#64D278FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ChatProximity', '#F0D250FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ChatWhisper', '#C878DCFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ChatInputBar', '#16161AFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ChatInputField', '#232328FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TabBarBackground', '#1C1C1EFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TabInactive', '#28282AFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TabHover', '#323236FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TabActive', '#3C3C40FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TooltipBackground', '#FFFFFFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TooltipBorder', '#B4B4B4FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TooltipText', '#000000FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::TooltipMuted', '#828282FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::SliderTrack', '#343438FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::SliderFill', '#E6E6EBFF');
 
 -- Light mode palette snapshot
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TransparentWindowKey', '#FF69B4FF');
@@ -203,6 +256,30 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightM
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::LockUnlockedHoverFill', '#4A6CD2F5');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::CloseGlyph', '#C84634FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::CloseGlyphHover', '#FFFFFFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::HealthBarLow', '#DC3232FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::HealthBarHigh', '#3CC83CFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ShieldBar', '#00B4FFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::XPBar', '#32DC50FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::BarBackground', '#404040FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::DamageNumber', '#FF1414FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::BarRegenTick', '#DCC84BFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ShieldRegenTick', '#4BDCC8FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ChatAll', '#303035FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ChatParty', '#1B8030FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ChatProximity', '#9E7A10FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ChatWhisper', '#8040A0FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ChatInputBar', '#F0F2F8FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ChatInputField', '#FFFFFFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TabBarBackground', '#E8ECF4FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TabInactive', '#DEE2EAFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TabHover', '#D4D8E4FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TabActive', '#FFFFFFFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TooltipBackground', '#2C2C32FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TooltipBorder', '#505060FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TooltipText', '#F0F0F0FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::TooltipMuted', '#A0A0A8FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::SliderTrack', '#D0D4DCFF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::SliderFill', '#4A6CD2FF');
 
 -----------------------------------------------------------------------
 -- Docking setups block

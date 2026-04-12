@@ -40,6 +40,22 @@ namespace op.io
         private static readonly List<Contact> _allContacts   = new();
         private static readonly List<Contact> _bulletContacts = new();
 
+        // Tracks same-owner bullet pairs that were overlapping when friendly-fire immunity
+        // expired (spawn overlaps). Value = velocity cap for that interaction, set to the
+        // faster bullet's speed at the moment the overlap was first detected.
+        // These pairs get normal elastic collision physics but with a speed ceiling so the
+        // depenetration impulse can't launch bullets faster than either was already moving.
+        private static readonly Dictionary<long, float> _spawnOverlapCaps = new();
+        private static readonly HashSet<long> _activeSpawnOverlaps = new();
+        private static readonly List<long> _staleKeys = new();
+
+        private static long BulletPairKey(int idA, int idB)
+        {
+            int lo = Math.Min(idA, idB);
+            int hi = Math.Max(idA, idB);
+            return ((long)lo << 32) | (uint)hi;
+        }
+
         private static long ContactKey(int bulletId, int agentId) => ((long)bulletId << 32) | (uint)agentId;
 
         private struct Contact
@@ -87,6 +103,9 @@ namespace op.io
                     foreach (var enemy in _agents)
                     {
                         if (enemy == null) continue;
+
+                        // Skip owner during immunity period so the bullet can leave the body.
+                        if (bullet.IsOwnerImmune && enemy.ID == bullet.OwnerID) continue;
 
                         float   er   = enemy.Shape != null ? enemy.Shape.Width * 0.5f : EnemyRadius;
                         float   sumR = br + er;
@@ -185,6 +204,7 @@ namespace op.io
                 Bullet bullet = contact.Bullet;
                 Agent  enemy  = contact.Enemy;
                 if (bullet == null || enemy == null) continue;
+                if (bullet.IsOwnerImmune && enemy.ID == bullet.OwnerID) continue;
 
                 float   br    = bullet.Shape != null ? bullet.Shape.Width * 0.5f : BulletRadius;
                 float   er    = enemy.Shape  != null ? enemy.Shape.Width  * 0.5f : EnemyRadius;
@@ -212,11 +232,13 @@ namespace op.io
                 float vDotN = Vector2.Dot(bullet.Velocity, normal);
                 if (vDotN < 0f)
                     bullet.Velocity -= (vDotN * mEnemy / (mBullet + mEnemy)) * normal;
+                ClampBulletSpeed(bullet);
             }
 
             // ── Step 7: Bullet-bullet elastic collision ───────────────────────────
             // Bullets are not registered in GameObjects so no other system handles
             // this. Process each unique pair once (i < j).
+            _activeSpawnOverlaps.Clear();
             for (int i = 0; i < bullets.Count; i++)
             {
                 Bullet ba = bullets[i];
@@ -229,6 +251,9 @@ namespace op.io
                     Bullet bb = bullets[j];
                     if (bb == null || bb.IsDying || IsBulletExpired(bb)) continue;
 
+                    // Skip collision between same-owner bullets while either is still immune.
+                    if (ba.OwnerID == bb.OwnerID && (ba.IsOwnerImmune || bb.IsOwnerImmune)) continue;
+
                     float   rb   = bb.Shape != null ? bb.Shape.Width * 0.5f : BulletRadius;
                     float   sumR = ra + rb;
                     Vector2 diff = ba.Position - bb.Position;
@@ -237,6 +262,25 @@ namespace op.io
 
                     float overlap = sumR - dist;
                     Vector2 normal = dist > 1e-6f ? diff / dist : Vector2.UnitX;
+
+                    // Same-owner bullets that overlap once immunity expires were spawned
+                    // on top of each other. Instead of killing the newer one, track the
+                    // pair with a velocity cap so the depenetration impulse can't launch
+                    // them faster than either was already moving.
+                    bool isSpawnOverlap = false;
+                    float spawnCap = 0f;
+                    if (ba.OwnerID == bb.OwnerID)
+                    {
+                        long pairKey = BulletPairKey(ba.ID, bb.ID);
+                        if (!_spawnOverlapCaps.TryGetValue(pairKey, out spawnCap))
+                        {
+                            // First detection — cap = speed of whichever bullet is faster right now.
+                            spawnCap = MathF.Max(ba.Velocity.Length(), bb.Velocity.Length());
+                            _spawnOverlapCaps[pairKey] = spawnCap;
+                        }
+                        _activeSpawnOverlaps.Add(pairKey);
+                        isSpawnOverlap = true;
+                    }
 
                     float mA        = MathF.Max(ba.Mass, 0.0001f);
                     float mB        = MathF.Max(bb.Mass, 0.0001f);
@@ -254,6 +298,18 @@ namespace op.io
                     float impulse = -2f * vRelN / (1f / mA + 1f / mB);
                     ba.Velocity += (impulse / mA) * normal;
                     bb.Velocity -= (impulse / mB) * normal;
+
+                    // Spawn-overlap pairs use the recorded cap; normal collisions use MaxSpeed.
+                    if (isSpawnOverlap)
+                    {
+                        ClampToSpeed(ba, spawnCap);
+                        ClampToSpeed(bb, spawnCap);
+                    }
+                    else
+                    {
+                        ClampBulletSpeed(ba);
+                        ClampBulletSpeed(bb);
+                    }
 
                     // Bullet-vs-bullet damage: each bullet deals its BulletDamage to the other's health.
                     float dmgToB = ba.BulletDamage;
@@ -274,6 +330,36 @@ namespace op.io
                     }
                 }
             }
+
+            // Prune spawn-overlap entries for pairs that have separated or whose bullets died.
+            if (_spawnOverlapCaps.Count > 0)
+            {
+                _staleKeys.Clear();
+                foreach (long key in _spawnOverlapCaps.Keys)
+                {
+                    if (!_activeSpawnOverlaps.Contains(key))
+                        _staleKeys.Add(key);
+                }
+                foreach (long key in _staleKeys)
+                    _spawnOverlapCaps.Remove(key);
+            }
+        }
+
+        private static void ClampBulletSpeed(Bullet bullet)
+        {
+            float maxSpd = bullet.MaxSpeed;
+            if (maxSpd <= 0f) return;
+            float spdSq = bullet.Velocity.LengthSquared();
+            if (spdSq > maxSpd * maxSpd)
+                bullet.Velocity = Vector2.Normalize(bullet.Velocity) * maxSpd;
+        }
+
+        private static void ClampToSpeed(Bullet bullet, float cap)
+        {
+            if (cap <= 0f) return;
+            float spdSq = bullet.Velocity.LengthSquared();
+            if (spdSq > cap * cap)
+                bullet.Velocity = Vector2.Normalize(bullet.Velocity) * cap;
         }
 
         private static bool IsBulletExpired(Bullet bullet)

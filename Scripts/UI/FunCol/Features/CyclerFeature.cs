@@ -66,7 +66,7 @@ namespace op.io.UI.FunCol.Features
             };
             int dy = colBounds.Y + (colBounds.Height - dotSize) / 2;
 
-            Color dotColor = BoolState ? new Color(80, 220, 80) : new Color(220, 80, 80);
+            Color dotColor = BoolState ? ColorPalette.IndicatorActive : ColorPalette.IndicatorInactive;
             if (IsLocked) dotColor *= 0.5f;
 
             sb.Draw(pixel, new Rectangle(dx, dy, dotSize, dotSize), dotColor);

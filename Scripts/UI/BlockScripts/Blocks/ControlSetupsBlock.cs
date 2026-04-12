@@ -89,6 +89,26 @@ namespace op.io.UI.BlockScripts.Blocks
         private static KeyboardState PreviousKeyboardState;
         private static MouseState LastMouseState;
 
+        public static string GetHoveredRowKey()
+        {
+            Point pos = LastMouseState.Position;
+            for (int i = 0; i < CommandOrder.Length; i++)
+            {
+                if (CommandBounds[i] != Rectangle.Empty && CommandBounds[i].Contains(pos))
+                {
+                    return CommandOrder[i] switch
+                    {
+                        ControlSetupCommand.Save   => "Btn_SetupSave",
+                        ControlSetupCommand.New    => "Btn_SetupNew",
+                        ControlSetupCommand.Rename => "Btn_SetupRename",
+                        ControlSetupCommand.Delete => "Btn_SetupDelete",
+                        _ => null
+                    };
+                }
+            }
+            return null;
+        }
+
         private static Texture2D PixelTexture;
         private static Texture2D IconNew;
         private static Texture2D IconSave;

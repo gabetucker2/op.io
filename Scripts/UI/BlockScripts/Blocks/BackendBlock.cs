@@ -53,6 +53,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 Dictionary<string, string> rowData = BlockDataStore.LoadRowData(DockBlockKind.Backend);
                 if (rowData.TryGetValue("FunColHeaderVisible", out string stored))
                     hfc.HeaderVisible = !string.Equals(stored, "false", StringComparison.OrdinalIgnoreCase);
+                if (rowData.TryGetValue("FunColColumnWeights", out string weightStr))
+                    ApplyEncodedWeights(hfc, weightStr);
                 _headerVisibleLoaded = true;
             }
 
@@ -143,6 +145,12 @@ namespace op.io.UI.BlockScripts.Blocks
             hfc.UpdateHeaderHover(headerBounds, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
             if (hfc.HeaderToggleClicked)
                 BlockDataStore.SetRowData(DockBlockKind.Backend, "FunColHeaderVisible", hfc.HeaderVisible ? "true" : "false");
+            if (hfc.ColumnWeightsChanged)
+            {
+                string encoded = EncodeWeights(hfc.GetWeights());
+                BlockDataStore.SetRowData(DockBlockKind.Backend, "FunColColumnWeights", encoded);
+                PropagateWeightsToRowFunCols(hfc.GetWeights());
+            }
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -293,8 +301,9 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (_lineHeightCache <= 0f) return _lineHeightCache;
 
-            // Message column is weight 0.65 of total width
-            int msgColWidth = (int)(listWidth * 0.65f);
+            // Message column width from header weights (col 2)
+            float msgWeight = _headerFunCol?.GetWeights() is float[] w && w.Length > 2 ? w[2] : (1f / 3f);
+            int msgColWidth = (int)(listWidth * msgWeight);
             int lines = GetOrCreateRowFunColWrapping(row.Name)
                 .CalculateMessageLines(font, msgColWidth, row.LastChangeMessage ?? string.Empty);
             return Math.Max(1, lines) * _lineHeightCache;
@@ -544,8 +553,9 @@ namespace op.io.UI.BlockScripts.Blocks
         private static FunColInterface GetOrCreateRowFunCol(string name)
         {
             if (_rowFunCols.TryGetValue(name, out var existing)) return existing;
+            float[] weights = _headerFunCol?.GetWeights() ?? new float[] { 1f / 3f, 1f / 3f, 1f / 3f };
             var fc = new FunColInterface(
-                new float[] { 0.27f, 0.08f, 0.65f },
+                weights,
                 new TextLabelFeature("Name", FunColTextAlign.Right),
                 new ValueDisplayFeature("Value"),
                 new WrappingTextFeature("Message", FunColTextAlign.Left)
@@ -570,7 +580,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (_headerFunCol != null) return _headerFunCol;
             _headerFunCol = new FunColInterface(
-                new float[] { 0.27f, 0.08f, 0.65f },
+                new float[] { 1f / 3f, 1f / 3f, 1f / 3f },
                 new TextLabelFeature("Name", FunColTextAlign.Right)
                     { HeaderTooltipTexts = ["Variable name"] },
                 new ValueDisplayFeature("Value")
@@ -581,7 +591,40 @@ namespace op.io.UI.BlockScripts.Blocks
             _headerFunCol.DisableExpansion = true;
             _headerFunCol.DisableColors = true;
             _headerFunCol.ShowHeaderTooltips = true;
+            _headerFunCol.EnableColumnResize = true;
             return _headerFunCol;
+        }
+
+        private static void PropagateWeightsToRowFunCols(float[] weights)
+        {
+            foreach (var fc in _rowFunCols.Values)
+                fc.SetWeights(weights);
+            _dragGhostFunCol?.SetWeights(weights);
+        }
+
+        private static string EncodeWeights(float[] weights)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < weights.Length; i++)
+            {
+                if (i > 0) sb.Append('|');
+                sb.Append(weights[i].ToString("F4", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return sb.ToString();
+        }
+
+        private static void ApplyEncodedWeights(FunColInterface fc, string encoded)
+        {
+            if (string.IsNullOrEmpty(encoded)) return;
+            string[] parts = encoded.Split('|');
+            float[] weights = new float[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!float.TryParse(parts[i], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out weights[i]))
+                    return;
+            }
+            fc.SetWeights(weights);
         }
 
         private static void DrawRowWithFunCol(SpriteBatch spriteBatch, BackendVariable row,
@@ -622,7 +665,7 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_dragGhostFunCol == null)
             {
                 _dragGhostFunCol = new FunColInterface(
-                    new float[] { 0.27f, 0.08f, 0.65f },
+                    _headerFunCol?.GetWeights() ?? new float[] { 1f / 3f, 1f / 3f, 1f / 3f },
                     new TextLabelFeature("Name", FunColTextAlign.Right),
                     new ValueDisplayFeature("Value"),
                     new WrappingTextFeature("Message", FunColTextAlign.Left)

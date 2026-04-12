@@ -95,50 +95,18 @@ namespace op.io
             }
         }
 
-        // ── Bar fill colors ──────────────────────────────────────────────────
+        // ── Bar fill colors (driven by ColorScheme) ────────────────────────
 
-        private static Color? _cachedHealthFillLow;
-        public static Color HealthFillLow =>
-            _cachedHealthFillLow ??= LoadColor("HealthBarFillLow", new Color(220, 50, 50));
+        public static Color HealthFillLow  => ColorPalette.HealthBarLow;
+        public static Color HealthFillHigh => ColorPalette.HealthBarHigh;
+        public static Color BarBackground  => ColorPalette.BarBackground;
+        public static Color ShieldFillColor => ColorPalette.ShieldBar;
+        public static Color XPFillColor    => ColorPalette.XPBar;
 
-        private static Color? _cachedHealthFillHigh;
-        public static Color HealthFillHigh =>
-            _cachedHealthFillHigh ??= LoadColor("HealthBarFillHigh", new Color(60, 200, 60));
-
-        private static Color? _cachedBg;
-        public static Color BarBackground =>
-            _cachedBg ??= LoadColor("HealthBarBg", new Color(64, 64, 64));
-
-        private static Color? _cachedShieldFill;
-        public static Color ShieldFillColor =>
-            _cachedShieldFill ??= LoadColor("ShieldBarFill", new Color(0, 180, 255));
-
-        private static Color? _cachedXPFill;
-        public static Color XPFillColor =>
-            _cachedXPFill ??= LoadColor("XPBarFill", new Color(50, 220, 80));
-
-        // ── Properties block bar colors ──────────────────────────────────────
-
-        private static Color? _cachedPropHealthLow;
-        public static Color PropBarHealthLow =>
-            _cachedPropHealthLow ??= LoadColor("PropBarHealthLow", new Color(200, 50, 50));
-
-        private static Color? _cachedPropHealthHigh;
-        public static Color PropBarHealthHigh =>
-            _cachedPropHealthHigh ??= LoadColor("PropBarHealthHigh", new Color(50, 200, 80));
-
-        private static Color? _cachedPropEmpty;
-        public static Color PropBarEmpty =>
-            _cachedPropEmpty ??= LoadColor("PropBarEmpty", new Color(35, 35, 35, 210));
-
-        private static Color LoadColor(string prefix, Color fallback)
-        {
-            int r = DatabaseFetch.GetSetting<int>("BarSettings", "Value", "SettingKey", prefix + "R", fallback.R);
-            int g = DatabaseFetch.GetSetting<int>("BarSettings", "Value", "SettingKey", prefix + "G", fallback.G);
-            int b = DatabaseFetch.GetSetting<int>("BarSettings", "Value", "SettingKey", prefix + "B", fallback.B);
-            int a = DatabaseFetch.GetSetting<int>("BarSettings", "Value", "SettingKey", prefix + "A", fallback.A);
-            return new Color(r, g, b, a);
-        }
+        // Properties block bars reuse the same scheme colors with slight alpha variation.
+        public static Color PropBarHealthLow  => ColorPalette.HealthBarLow;
+        public static Color PropBarHealthHigh => ColorPalette.HealthBarHigh;
+        public static Color PropBarEmpty      => ColorPalette.BarBackground * 0.82f;
 
         // ── Update ───────────────────────────────────────────────────────────
 
@@ -378,7 +346,7 @@ namespace op.io
                                 float segPts  = segCount > 1 ? hRegenDelay / segCount : 0f;
                                 DrawSingleBar(spriteBatch, bx, currentRowY, bw, barHeight,
                                     elapsed, hRegenDelay, segPts, segCount,
-                                    new Color(220, 200, 75), bgColor, 1f, entry.ShowPercent);
+                                    ColorPalette.BarRegenTick, bgColor, 1f, entry.ShowPercent);
                                 break;
                             }
                             case BarType.ShieldRegen:
@@ -388,7 +356,7 @@ namespace op.io
                                 float segPts  = segCount > 1 ? sRegenDelay / segCount : 0f;
                                 DrawSingleBar(spriteBatch, bx, currentRowY, bw, barHeight,
                                     elapsed, sRegenDelay, segPts, segCount,
-                                    new Color(75, 220, 200), bgColor, 1f, entry.ShowPercent);
+                                    ColorPalette.ShieldRegenTick, bgColor, 1f, entry.ShowPercent);
                                 break;
                             }
                         }

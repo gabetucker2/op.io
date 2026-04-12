@@ -570,8 +570,8 @@ namespace op.io.UI.BlockScripts.Blocks
                     Vector2 barrelCenter = drawCenter + dir * (playerRadius + BarrelGap + halfLength);
 
                     Color barrelColor = i == player.ActiveBarrelIndex
-                        ? new Color(180, 220, 255, 220)
-                        : new Color(120, 140, 160, 180);
+                        ? ColorPalette.Accent * 0.86f
+                        : ColorPalette.TextMuted * 0.7f;
 
                     DrawRotatedRect(spriteBatch, barrelCenter, barrelLength, barrelWidth,
                         barrelAngle, barrelColor);
@@ -657,7 +657,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 int fieldW = GetRenameButtonBounds(panelBounds).X - fieldX - HeaderButtonGap;
                 int fieldH = (int)heading.LineHeight;
                 Rectangle fieldRect = new(fieldX, (int)headerY, Math.Max(20, fieldW), fieldH);
-                DrawRect(spriteBatch, fieldRect, new Color(35, 35, 40));
+                DrawRect(spriteBatch, fieldRect, ColorPalette.ChatInputField);
                 DrawRectOutline(spriteBatch, fieldRect, UIStyle.AccentColor, 1);
 
                 string displayText = _renameBuffer.ToString();
