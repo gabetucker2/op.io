@@ -2910,6 +2910,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                     ApplyResizeEdgeDrag(snapTarget, snappedPosition);
                 }
 
+                // Cascade overflow to ancestor split when active edge is clamped at a child's minimum.
+                CascadeResizeToAncestor(_activeResizeEdge.Value);
+
                 return true;
             }
 
@@ -5242,6 +5245,156 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             int maxClamp = Math.Max(minClamp, spanLength - minSecond);
             int clamped = Math.Clamp(relativePosition, minClamp, maxClamp);
             return clamped / (float)Math.Max(1, spanLength);
+        }
+
+        /// <summary>
+        /// Walks from <paramref name="root"/> to find the nearest ancestor <see cref="SplitNode"/>
+        /// with the same orientation as <paramref name="target"/> where the target sits on the
+        /// correct side for the drag direction.  When shrinking First (dragging toward First),
+        /// target must be in the ancestor's Second subtree so that shrinking the ancestor's First
+        /// gives more room.  The reverse applies when shrinking Second.
+        /// Returns the deepest (nearest to target) matching ancestor, or null.
+        /// </summary>
+        private static SplitNode FindCascadeAncestor(DockNode root, SplitNode target, bool shrinkingFirst)
+        {
+            if (root is not SplitNode split || ReferenceEquals(split, target))
+            {
+                return null;
+            }
+
+            // Recurse into whichever subtree contains the target to find a deeper match first.
+            SplitNode deeper = FindCascadeAncestor(split.First, target, shrinkingFirst)
+                            ?? FindCascadeAncestor(split.Second, target, shrinkingFirst);
+
+            if (deeper != null)
+            {
+                return deeper;
+            }
+
+            // Check whether this split qualifies as a cascade ancestor.
+            if (split.Orientation != target.Orientation)
+            {
+                return null;
+            }
+
+            if (shrinkingFirst && LayoutContainsNode(split.Second, target))
+            {
+                return split;
+            }
+
+            if (!shrinkingFirst && LayoutContainsNode(split.First, target))
+            {
+                return split;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// When the active resize edge is clamped because a child hit its minimum size,
+        /// propagates the remaining mouse overflow to the nearest ancestor split node
+        /// along the same axis.  Called only from <see cref="UpdateResizeEdgeState"/>
+        /// during an active edge drag — corners, snap-linked edges, and overlays never
+        /// reach this path.
+        /// </summary>
+        private static void CascadeResizeToAncestor(ResizeEdge activeEdge)
+        {
+            // Don't cascade while the edge is snapped to another edge.
+            if (_activeResizeEdgeSnapCoordinate.HasValue)
+            {
+                return;
+            }
+
+            SplitNode node = activeEdge.Node;
+            if (node == null)
+            {
+                return;
+            }
+
+            Rectangle bounds = node.Bounds;
+            bool isHorizontal = activeEdge.Orientation == DockSplitOrientation.Horizontal;
+            int spanLength = isHorizontal ? bounds.Height : bounds.Width;
+            int boundsStart = isHorizontal ? bounds.Y : bounds.X;
+
+            if (spanLength <= 0)
+            {
+                return;
+            }
+
+            // Where the mouse wants the edge (relative to this split's start).
+            int mouseRelative = (isHorizontal ? _mousePosition.Y : _mousePosition.X) - boundsStart;
+
+            // Replicate the ClampSplitRatio boundaries to detect overflow.
+            int minFirst = isHorizontal
+                ? node.First?.GetMinHeight() ?? 0
+                : node.First?.GetMinWidth() ?? 0;
+            int minSecond = isHorizontal
+                ? node.Second?.GetMinHeight() ?? 0
+                : node.Second?.GetMinWidth() ?? 0;
+
+            minFirst = Math.Clamp(minFirst, 0, spanLength);
+            minSecond = Math.Clamp(minSecond, 0, spanLength);
+
+            int minClamp = Math.Min(spanLength, Math.Max(0, minFirst));
+            int maxClamp = Math.Max(minClamp, spanLength - minSecond);
+            int clampedRelative = Math.Clamp(mouseRelative, minClamp, maxClamp);
+
+            // No overflow — the edge is not clamped at a child's minimum.
+            if (clampedRelative == mouseRelative)
+            {
+                return;
+            }
+
+            int overflow = mouseRelative - clampedRelative;
+            bool shrinkingFirst = overflow < 0;
+
+            // Only cascade when the relevant child is actually at its minimum.
+            int currentEdgePos = (int)MathF.Round(spanLength * node.SplitRatio);
+            if (shrinkingFirst && currentEdgePos > minFirst + 1)
+            {
+                return;
+            }
+
+            if (!shrinkingFirst && (spanLength - currentEdgePos) > minSecond + 1)
+            {
+                return;
+            }
+
+            SplitNode ancestor = FindCascadeAncestor(_rootNode, node, shrinkingFirst);
+            if (ancestor == null)
+            {
+                return;
+            }
+
+            Rectangle ancestorBounds = ancestor.Bounds;
+            int ancestorSpan = isHorizontal ? ancestorBounds.Height : ancestorBounds.Width;
+            int ancestorStart = isHorizontal ? ancestorBounds.Y : ancestorBounds.X;
+
+            if (ancestorSpan <= 0)
+            {
+                return;
+            }
+
+            int ancestorEdgeAbsolute = ancestorStart + (int)MathF.Round(ancestorSpan * ancestor.SplitRatio);
+            int newAncestorRelative = (ancestorEdgeAbsolute + overflow) - ancestorStart;
+
+            float newRatio = ClampSplitRatio(ancestor, newAncestorRelative, ancestorSpan);
+            newRatio = MathHelper.Clamp(newRatio, 0.001f, 0.999f);
+
+            if (Math.Abs(newRatio - ancestor.SplitRatio) < 0.0001f)
+            {
+                return;
+            }
+
+            DebugLogger.PrintUI($"[CascadeResize] overflow={overflow} shrinkFirst={shrinkingFirst} ancestor={DescribeNode(ancestor)} prevRatio={ancestor.SplitRatio:F3} newRatio={newRatio:F3}");
+
+            ancestor.SplitRatio = newRatio;
+            int newFirstSpan = Math.Max(0, Math.Min(ancestorSpan, (int)MathF.Round(ancestorSpan * newRatio)));
+            int newSecondSpan = Math.Max(0, ancestorSpan - newFirstSpan);
+            ancestor.PreferredFirstSpan = newFirstSpan;
+            ancestor.PreferredSecondSpan = newSecondSpan;
+
+            MarkLayoutDirty();
         }
 
         private static void DetachDraggingTabFromGroup()
