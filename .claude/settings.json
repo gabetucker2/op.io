@@ -15,7 +15,10 @@
       "Bash(taskkill /PID 44080 /F)",
       "Bash(taskkill /IM \"op.io.exe\" /F)",
       "Bash(taskkill //IM \"op.io.exe\" //F)",
-      "Bash(taskkill //PID 44080 //F)"
+      "Bash(taskkill //PID 44080 //F)",
+      "Bash(sort -t: -k3 -n)",
+      "Bash(sort -u -t: -k3 -n)",
+      "Bash(ls -t \"c:\\\\Users\\\\gabeq\\\\OneDrive\\\\Desktop\\\\Coding_Projects\\\\op.io\\\\Logs\"/*.txt)"
     ]
   }
 }
