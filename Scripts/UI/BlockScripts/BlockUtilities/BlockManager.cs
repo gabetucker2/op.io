@@ -5412,48 +5412,17 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             if (dirty)
             {
-                // Pre-adjust preferred spans for every node along the cascade path
-                // so AdjustPreferredSpansForParentChange assigns gained space to the
-                // growing child, not the child at its minimum.  Each node below the
-                // highest ancestor gains pixels equal to the sum of what all ancestors
-                // above it absorbed.  We accumulate top-down (reverse of cascade order).
-                int cumulativeGain = 0;
-                for (int i = cascadeCount - 1; i >= 0; i--)
-                {
-                    if (i < cascadeCount - 1)
-                    {
-                        // This node is below a cascaded ancestor; it will gain pixels.
-                        SplitNode n = cascadePath[i];
-                        if (cumulativeGain != 0)
-                        {
-                            if (shrinkingFirst)
-                            {
-                                int fallback = isHorizontal ? n.Bounds.Height : n.Bounds.Width;
-                                int currentSecond = n.PreferredSecondSpan ?? (fallback - (int)MathF.Round(fallback * n.SplitRatio));
-                                n.PreferredSecondSpan = currentSecond + cumulativeGain;
-                            }
-                            else
-                            {
-                                int fallback = isHorizontal ? n.Bounds.Height : n.Bounds.Width;
-                                int currentFirst = n.PreferredFirstSpan ?? (int)MathF.Round(fallback * n.SplitRatio);
-                                n.PreferredFirstSpan = currentFirst + cumulativeGain;
-                            }
-                        }
-                    }
+                // Arrange immediately so the layout settles within this frame.
+                // If we only MarkLayoutDirty, the deferred Arrange next frame runs
+                // AdjustPreferredSpansForParentChange which sees the bounds change
+                // and redistributes gained space to the child at minimum — causing
+                // a 1-frame oscillation (stutter).  By arranging now, the next
+                // frame's Arrange sees previousBounds == newBounds (no change) and
+                // AdjustPreferredSpansForParentChange returns immediately.
+                _rootNode?.Arrange(_layoutBounds);
 
-                    // Ancestors absorbed pixels that flow down as gained space below them.
-                    if (i > 0 && i < cascadeCount)
-                    {
-                        SplitNode anc = cascadePath[i];
-                        Rectangle ab = anc.Bounds;
-                        int aSpan = isHorizontal ? ab.Height : ab.Width;
-                        int oldEdge = (isHorizontal ? ab.Y : ab.X) + (int)MathF.Round(aSpan * anc.SplitRatio);
-                        // The ancestor's ratio was already updated; compute absorbed from preferred spans.
-                        int newEdge = (isHorizontal ? ab.Y : ab.X) + (anc.PreferredFirstSpan ?? (int)MathF.Round(aSpan * anc.SplitRatio));
-                        cumulativeGain += Math.Abs(newEdge - oldEdge);
-                    }
-                }
-
+                // Still mark dirty so RebuildResizeEdges runs next frame to update
+                // edge positions for hit testing.
                 MarkLayoutDirty();
             }
         }
