@@ -5292,10 +5292,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         /// <summary>
         /// When the active resize edge is clamped because a child hit its minimum size,
-        /// propagates the remaining mouse overflow to the nearest ancestor split node
-        /// along the same axis.  Called only from <see cref="UpdateResizeEdgeState"/>
-        /// during an active edge drag — corners, snap-linked edges, and overlays never
-        /// reach this path.
+        /// propagates the remaining mouse overflow to ancestor split nodes along the same
+        /// axis, walking upward until all overflow is absorbed or no more ancestors exist.
+        /// Called only from <see cref="UpdateResizeEdgeState"/> during an active edge drag
+        /// — corners, snap-linked edges, and overlays never reach this path.
         /// </summary>
         private static void CascadeResizeToAncestor(ResizeEdge activeEdge)
         {
@@ -5348,53 +5348,114 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             int overflow = mouseRelative - clampedRelative;
             bool shrinkingFirst = overflow < 0;
 
-            // Only cascade when the relevant child is actually at its minimum.
-            int currentEdgePos = (int)MathF.Round(spanLength * node.SplitRatio);
-            if (shrinkingFirst && currentEdgePos > minFirst + 1)
+            // Walk upward through ancestors, absorbing overflow at each level.
+            // Track every node along the cascade path so we can pre-adjust their
+            // preferred spans afterward to prevent AdjustPreferredSpansForParentChange
+            // from assigning gained space to the wrong child (which causes stutter).
+            SplitNode current = node;
+            int remaining = overflow;
+            bool dirty = false;
+            int cascadeCount = 0;
+            // Small inline array: [node, ancestor0, ancestor1, ...]
+            // node is at index 0; ancestors follow in bottom-up order.
+            SplitNode[] cascadePath = new SplitNode[8];
+            cascadePath[cascadeCount++] = node;
+
+            while (remaining != 0 && cascadeCount < cascadePath.Length)
             {
-                return;
+                SplitNode ancestor = FindCascadeAncestor(_rootNode, current, shrinkingFirst);
+                if (ancestor == null)
+                {
+                    break;
+                }
+
+                Rectangle ancestorBounds = ancestor.Bounds;
+                int ancestorSpan = isHorizontal ? ancestorBounds.Height : ancestorBounds.Width;
+                int ancestorStart = isHorizontal ? ancestorBounds.Y : ancestorBounds.X;
+
+                if (ancestorSpan <= 0)
+                {
+                    break;
+                }
+
+                int ancestorEdgeAbsolute = ancestorStart + (int)MathF.Round(ancestorSpan * ancestor.SplitRatio);
+                int newAncestorRelative = (ancestorEdgeAbsolute + remaining) - ancestorStart;
+
+                float newRatio = ClampSplitRatio(ancestor, newAncestorRelative, ancestorSpan);
+                newRatio = MathHelper.Clamp(newRatio, 0.001f, 0.999f);
+
+                if (Math.Abs(newRatio - ancestor.SplitRatio) < 0.0001f)
+                {
+                    // This ancestor is saturated (at its own min). Skip it and
+                    // try the next ancestor up the tree.
+                    current = ancestor;
+                    continue;
+                }
+
+                // How many pixels this ancestor actually absorbed.
+                int newEdgeAbsolute = ancestorStart + (int)MathF.Round(ancestorSpan * newRatio);
+                int absorbed = newEdgeAbsolute - ancestorEdgeAbsolute;
+
+                DebugLogger.PrintUI($"[CascadeResize] overflow={remaining} absorbed={absorbed} shrinkFirst={shrinkingFirst} ancestor={DescribeNode(ancestor)} prevRatio={ancestor.SplitRatio:F3} newRatio={newRatio:F3}");
+
+                ancestor.SplitRatio = newRatio;
+                int newFirstSpan = Math.Max(0, Math.Min(ancestorSpan, (int)MathF.Round(ancestorSpan * newRatio)));
+                int newSecondSpan = Math.Max(0, ancestorSpan - newFirstSpan);
+                ancestor.PreferredFirstSpan = newFirstSpan;
+                ancestor.PreferredSecondSpan = newSecondSpan;
+
+                remaining -= absorbed;
+                current = ancestor;
+                cascadePath[cascadeCount++] = ancestor;
+                dirty = true;
             }
 
-            if (!shrinkingFirst && (spanLength - currentEdgePos) > minSecond + 1)
+            if (dirty)
             {
-                return;
+                // Pre-adjust preferred spans for every node along the cascade path
+                // so AdjustPreferredSpansForParentChange assigns gained space to the
+                // growing child, not the child at its minimum.  Each node below the
+                // highest ancestor gains pixels equal to the sum of what all ancestors
+                // above it absorbed.  We accumulate top-down (reverse of cascade order).
+                int cumulativeGain = 0;
+                for (int i = cascadeCount - 1; i >= 0; i--)
+                {
+                    if (i < cascadeCount - 1)
+                    {
+                        // This node is below a cascaded ancestor; it will gain pixels.
+                        SplitNode n = cascadePath[i];
+                        if (cumulativeGain != 0)
+                        {
+                            if (shrinkingFirst)
+                            {
+                                int fallback = isHorizontal ? n.Bounds.Height : n.Bounds.Width;
+                                int currentSecond = n.PreferredSecondSpan ?? (fallback - (int)MathF.Round(fallback * n.SplitRatio));
+                                n.PreferredSecondSpan = currentSecond + cumulativeGain;
+                            }
+                            else
+                            {
+                                int fallback = isHorizontal ? n.Bounds.Height : n.Bounds.Width;
+                                int currentFirst = n.PreferredFirstSpan ?? (int)MathF.Round(fallback * n.SplitRatio);
+                                n.PreferredFirstSpan = currentFirst + cumulativeGain;
+                            }
+                        }
+                    }
+
+                    // Ancestors absorbed pixels that flow down as gained space below them.
+                    if (i > 0 && i < cascadeCount)
+                    {
+                        SplitNode anc = cascadePath[i];
+                        Rectangle ab = anc.Bounds;
+                        int aSpan = isHorizontal ? ab.Height : ab.Width;
+                        int oldEdge = (isHorizontal ? ab.Y : ab.X) + (int)MathF.Round(aSpan * anc.SplitRatio);
+                        // The ancestor's ratio was already updated; compute absorbed from preferred spans.
+                        int newEdge = (isHorizontal ? ab.Y : ab.X) + (anc.PreferredFirstSpan ?? (int)MathF.Round(aSpan * anc.SplitRatio));
+                        cumulativeGain += Math.Abs(newEdge - oldEdge);
+                    }
+                }
+
+                MarkLayoutDirty();
             }
-
-            SplitNode ancestor = FindCascadeAncestor(_rootNode, node, shrinkingFirst);
-            if (ancestor == null)
-            {
-                return;
-            }
-
-            Rectangle ancestorBounds = ancestor.Bounds;
-            int ancestorSpan = isHorizontal ? ancestorBounds.Height : ancestorBounds.Width;
-            int ancestorStart = isHorizontal ? ancestorBounds.Y : ancestorBounds.X;
-
-            if (ancestorSpan <= 0)
-            {
-                return;
-            }
-
-            int ancestorEdgeAbsolute = ancestorStart + (int)MathF.Round(ancestorSpan * ancestor.SplitRatio);
-            int newAncestorRelative = (ancestorEdgeAbsolute + overflow) - ancestorStart;
-
-            float newRatio = ClampSplitRatio(ancestor, newAncestorRelative, ancestorSpan);
-            newRatio = MathHelper.Clamp(newRatio, 0.001f, 0.999f);
-
-            if (Math.Abs(newRatio - ancestor.SplitRatio) < 0.0001f)
-            {
-                return;
-            }
-
-            DebugLogger.PrintUI($"[CascadeResize] overflow={overflow} shrinkFirst={shrinkingFirst} ancestor={DescribeNode(ancestor)} prevRatio={ancestor.SplitRatio:F3} newRatio={newRatio:F3}");
-
-            ancestor.SplitRatio = newRatio;
-            int newFirstSpan = Math.Max(0, Math.Min(ancestorSpan, (int)MathF.Round(ancestorSpan * newRatio)));
-            int newSecondSpan = Math.Max(0, ancestorSpan - newFirstSpan);
-            ancestor.PreferredFirstSpan = newFirstSpan;
-            ancestor.PreferredSecondSpan = newSecondSpan;
-
-            MarkLayoutDirty();
         }
 
         private static void DetachDraggingTabFromGroup()
