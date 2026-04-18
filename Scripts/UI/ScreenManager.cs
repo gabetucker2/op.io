@@ -9,16 +9,32 @@ namespace op.io
 {
     public static class ScreenManager
     {
+        public static bool NativeWindowResizeEdgesEnabled => _nativeWindowResizeEdgesEnabled;
+        public static bool CustomDockingResizeEdgesEnabled => _customDockingResizeEdgesEnabled;
+
+        public enum DockingWindowResizeEdge
+        {
+            Top,
+            Left,
+            Right,
+            Bottom,
+            TopLeft,
+            TopRight,
+            BottomLeft,
+            BottomRight
+        }
+
         public static void ApplyWindowMode(Core game)
         {
             var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            bool nativeResizeEdgesEnabled = ShouldEnableNativeResizeEdges(game);
 
             switch (game.WindowMode)
             {
                 case WindowMode.BorderedWindowed:
                     game.Graphics.IsFullScreen = false;
                     game.Window.IsBorderless = false;
-                    game.Window.AllowUserResizing = true;
+                    game.Window.AllowUserResizing = IsWindowResizeAllowed(game);
                     SyncViewportToClient(game);
                     AttachResizeHandler(game);
                     break;
@@ -26,9 +42,9 @@ namespace op.io
                 case WindowMode.BorderlessWindowed:
                     game.Graphics.IsFullScreen = false;
                     game.Window.IsBorderless = true;
-                    game.Window.AllowUserResizing = false;
+                    game.Window.AllowUserResizing = IsWindowResizeAllowed(game);
                     SyncViewportToClient(game);
-                    DetachResizeHandler();
+                    AttachResizeHandler(game);
                     break;
 
                 case WindowMode.BorderlessFullscreen:
@@ -40,6 +56,7 @@ namespace op.io
                     game.Graphics.PreferredBackBufferWidth = display.Width;
                     game.Graphics.PreferredBackBufferHeight = display.Height;
                     DetachResizeHandler();
+                    nativeResizeEdgesEnabled = false;
                     break;
 
                 case WindowMode.LegacyFullscreen:
@@ -51,13 +68,157 @@ namespace op.io
                     game.Graphics.PreferredBackBufferWidth = display.Width;
                     game.Graphics.PreferredBackBufferHeight = display.Height;
                     DetachResizeHandler();
+                    nativeResizeEdgesEnabled = false;
                     break;
             }
 
             game.Graphics.ApplyChanges();
+            _nativeWindowResizeEdgesEnabled = nativeResizeEdgesEnabled;
+            _customDockingResizeEdgesEnabled = ShouldEnableCustomDockingResizeEdges(game);
+            ConfigureNativeResizeFrame(game.Window?.Handle ?? IntPtr.Zero, game.WindowMode);
+            GameInitializer.ApplyWindowIcon(game);
             GameInitializer.ApplyWindowCaptionColor(UIStyle.DragBarBackground);
             GameInitializer.RefreshTransparencyKey();
             DebugLogger.PrintUI($"Applied WindowMode: {game.WindowMode}, Resolution: {game.ViewportWidth}x{game.ViewportHeight}");
+        }
+
+        public static void CenterWindowOnCurrentMonitor(Core game)
+        {
+            if (game == null || game.Window == null || !IsWindowedMode(game.WindowMode))
+            {
+                return;
+            }
+
+            IntPtr hwnd = game.Window.Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            NativeWindowPlacement placement = new() { Length = (uint)Marshal.SizeOf<NativeWindowPlacement>() };
+            bool hasPlacement = GetWindowPlacement(hwnd, ref placement);
+            bool isMinimized = IsIconic(hwnd) || (hasPlacement && placement.ShowCmd == SW_SHOWMINIMIZED);
+
+            int outerWidth = 0;
+            int outerHeight = 0;
+            bool hasOuterRect = GetWindowRect(hwnd, out NativeRect windowRect);
+            if (hasOuterRect)
+            {
+                outerWidth = windowRect.Right - windowRect.Left;
+                outerHeight = windowRect.Bottom - windowRect.Top;
+            }
+
+            if (isMinimized && hasPlacement)
+            {
+                int normalWidth = placement.NormalPosition.Right - placement.NormalPosition.Left;
+                int normalHeight = placement.NormalPosition.Bottom - placement.NormalPosition.Top;
+                if (normalWidth > 64 && normalHeight > 64)
+                {
+                    outerWidth = normalWidth;
+                    outerHeight = normalHeight;
+                }
+            }
+
+            if (outerWidth <= 64 || outerHeight <= 64)
+            {
+                if (!TryGetExpectedWindowOuterSize(game, hwnd, out outerWidth, out outerHeight))
+                {
+                    int fallbackClientWidth = Math.Max(game.ViewportWidth, game.Graphics?.PreferredBackBufferWidth ?? 0);
+                    int fallbackClientHeight = Math.Max(game.ViewportHeight, game.Graphics?.PreferredBackBufferHeight ?? 0);
+                    if (fallbackClientWidth <= 0 || fallbackClientHeight <= 0)
+                    {
+                        return;
+                    }
+
+                    outerWidth = fallbackClientWidth;
+                    outerHeight = fallbackClientHeight;
+                }
+            }
+
+            int clientWidth = game.Window.ClientBounds.Width;
+            int clientHeight = game.Window.ClientBounds.Height;
+            if (clientWidth <= 1 || clientHeight <= 1)
+            {
+                clientWidth = Math.Max(game.ViewportWidth, game.Graphics?.PreferredBackBufferWidth ?? 0);
+                clientHeight = Math.Max(game.ViewportHeight, game.Graphics?.PreferredBackBufferHeight ?? 0);
+            }
+
+            if (clientWidth <= 0 || clientHeight <= 0)
+            {
+                return;
+            }
+
+            Rectangle workArea = GetMonitorWorkArea(hwnd);
+            if (workArea.Width <= 0 || workArea.Height <= 0)
+            {
+                return;
+            }
+
+            int targetOuterX = workArea.Left + (workArea.Width - outerWidth) / 2;
+            int targetOuterY = workArea.Top + (workArea.Height - outerHeight) / 2;
+            targetOuterX = Math.Clamp(targetOuterX, workArea.Left, Math.Max(workArea.Left, workArea.Right - outerWidth));
+            targetOuterY = Math.Clamp(targetOuterY, workArea.Top, Math.Max(workArea.Top, workArea.Bottom - outerHeight));
+
+            // Persist restore position as well so minimizing/restoring or late startup style
+            // changes cannot knock the window off-screen.
+            if (hasPlacement)
+            {
+                placement.NormalPosition = new NativeRect
+                {
+                    Left = targetOuterX,
+                    Top = targetOuterY,
+                    Right = targetOuterX + outerWidth,
+                    Bottom = targetOuterY + outerHeight
+                };
+
+                SetWindowPlacement(hwnd, ref placement);
+            }
+
+            if (isMinimized)
+            {
+                _desiredClientTopLeft = null;
+                return;
+            }
+
+            const uint centerFlags = SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
+            SetWindowPos(hwnd, IntPtr.Zero, targetOuterX, targetOuterY, outerWidth, outerHeight, centerFlags);
+
+            int targetClientX = workArea.Left + (workArea.Width - clientWidth) / 2;
+            int targetClientY = workArea.Top + (workArea.Height - clientHeight) / 2;
+
+            int maxClientX = Math.Max(workArea.Left, workArea.Right - clientWidth);
+            int maxClientY = Math.Max(workArea.Top, workArea.Bottom - clientHeight);
+            targetClientX = Math.Clamp(targetClientX, workArea.Left, maxClientX);
+            targetClientY = Math.Clamp(targetClientY, workArea.Top, maxClientY);
+
+            // Client-anchored centering is robust against border/caption sizing and late startup
+            // frame adjustments. Pending anchor guarantees a follow-up correction if needed.
+            _desiredClientTopLeft = new Point(targetClientX, targetClientY);
+            EnsurePendingClientAnchor(hwnd);
+        }
+
+        public static void RefreshWindowResizeIntegration(Core game)
+        {
+            if (game == null || game.Window == null)
+            {
+                return;
+            }
+
+            bool windowedMode = IsWindowedMode(game.WindowMode);
+            bool nativeResizeEdgesEnabled = ShouldEnableNativeResizeEdges(game);
+            game.Window.AllowUserResizing = IsWindowResizeAllowed(game);
+            if (windowedMode)
+            {
+                AttachResizeHandler(game);
+            }
+            else
+            {
+                DetachResizeHandler();
+            }
+
+            _nativeWindowResizeEdgesEnabled = nativeResizeEdgesEnabled;
+            _customDockingResizeEdgesEnabled = ShouldEnableCustomDockingResizeEdges(game);
+            ConfigureNativeResizeFrame(game.Window.Handle, game.WindowMode);
         }
 
         private static Core _resizeTarget;
@@ -66,7 +227,10 @@ namespace op.io
         private static WindowMode _dockingDisabledWindowMode = WindowMode.BorderlessWindowed;
         private static Point? _desiredClientTopLeft;
         private static ResizePaintHook _resizePaintHook;
+        private static IntPtr _resizeHookHandle;
         private static bool _inResizeDraw;
+        private static bool _nativeWindowResizeEdgesEnabled;
+        private static bool _customDockingResizeEdgesEnabled;
 
         public static void ApplyDockingWindowChrome(Core game, bool dockingEnabled)
         {
@@ -80,6 +244,7 @@ namespace op.io
             WindowMode targetMode = dockingEnabled ? _dockingEnabledWindowMode : _dockingDisabledWindowMode;
             if (game.WindowMode == targetMode)
             {
+                RefreshWindowResizeIntegration(game);
                 if (dockingEnabled)
                 {
                     GameInitializer.ApplyWindowCaptionColor(UIStyle.DragBarBackground);
@@ -140,19 +305,37 @@ namespace op.io
 
         private static void AttachResizeHandler(Core game)
         {
-            if (_resizeTarget == game)
+            if (game?.Window == null)
             {
                 return;
             }
 
-            DetachResizeHandler();
-            _resizeTarget = game;
-            game.Window.ClientSizeChanged += OnClientSizeChanged;
+            IntPtr hwnd = game.Window.Handle;
+            bool sameTarget = _resizeTarget == game;
+            bool sameHook = _resizePaintHook != null && _resizeHookHandle == hwnd && hwnd != IntPtr.Zero;
 
-            IntPtr hwnd = game.Window?.Handle ?? IntPtr.Zero;
+            if (!sameTarget)
+            {
+                DetachResizeHandler();
+                _resizeTarget = game;
+                game.Window.ClientSizeChanged += OnClientSizeChanged;
+            }
+            else if (sameHook)
+            {
+                return;
+            }
+
+            if (_resizePaintHook != null && !sameHook)
+            {
+                _resizePaintHook.Detach();
+                _resizePaintHook = null;
+                _resizeHookHandle = IntPtr.Zero;
+            }
+
             if (hwnd != IntPtr.Zero)
             {
                 _resizePaintHook = new ResizePaintHook(hwnd);
+                _resizeHookHandle = hwnd;
             }
         }
 
@@ -168,6 +351,7 @@ namespace op.io
 
             _resizePaintHook?.Detach();
             _resizePaintHook = null;
+            _resizeHookHandle = IntPtr.Zero;
             _inResizeDraw = false;
         }
 
@@ -270,6 +454,340 @@ namespace op.io
         private static bool IsWindowedMode(WindowMode mode)
         {
             return mode == WindowMode.BorderedWindowed || mode == WindowMode.BorderlessWindowed;
+        }
+
+        private static bool IsWindowResizeAllowed(Core game)
+        {
+            return game != null && IsWindowedMode(game.WindowMode) && BlockManager.DockingModeEnabled;
+        }
+
+        private static bool ShouldEnableCustomDockingResizeEdges(Core game)
+        {
+            return game != null && IsWindowedMode(game.WindowMode) && BlockManager.DockingModeEnabled;
+        }
+
+        private static bool ShouldEnableNativeResizeEdges(Core game)
+        {
+            return IsWindowResizeAllowed(game) && !ShouldEnableCustomDockingResizeEdges(game);
+        }
+
+        public static bool TryGetWindowBounds(Core game, out Rectangle bounds)
+        {
+            bounds = Rectangle.Empty;
+            if (game?.Window == null)
+            {
+                return false;
+            }
+
+            IntPtr hwnd = game.Window.Handle;
+            if (hwnd == IntPtr.Zero || !GetWindowRect(hwnd, out NativeRect rect))
+            {
+                return false;
+            }
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+            if (width <= 0 || height <= 0)
+            {
+                return false;
+            }
+
+            bounds = new Rectangle(rect.Left, rect.Top, width, height);
+            return true;
+        }
+
+        public static bool TryGetCursorScreenPosition(out Point screenPosition)
+        {
+            screenPosition = Point.Zero;
+            if (!GetCursorPos(out NativePoint cursor))
+            {
+                return false;
+            }
+
+            screenPosition = new Point(cursor.X, cursor.Y);
+            return true;
+        }
+
+        public static bool TryResizeWindowFromDockingEdgeDelta(Core game, DockingWindowResizeEdge edge, Rectangle dragStartWindowBounds, Point dragDeltaScreen)
+        {
+            if (game?.Window == null ||
+                !CustomDockingResizeEdgesEnabled ||
+                !IsWindowedMode(game.WindowMode))
+            {
+                return false;
+            }
+
+            IntPtr hwnd = game.Window.Handle;
+            if (hwnd == IntPtr.Zero || IsWindowMaximized(hwnd) || dragStartWindowBounds.Width <= 0 || dragStartWindowBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            int left = dragStartWindowBounds.Left;
+            int top = dragStartWindowBounds.Top;
+            int right = dragStartWindowBounds.Right;
+            int bottom = dragStartWindowBounds.Bottom;
+
+            switch (edge)
+            {
+                case DockingWindowResizeEdge.Top:
+                    top += dragDeltaScreen.Y;
+                    break;
+                case DockingWindowResizeEdge.Left:
+                    left += dragDeltaScreen.X;
+                    break;
+                case DockingWindowResizeEdge.Right:
+                    right += dragDeltaScreen.X;
+                    break;
+                case DockingWindowResizeEdge.Bottom:
+                    bottom += dragDeltaScreen.Y;
+                    break;
+                case DockingWindowResizeEdge.TopLeft:
+                    top += dragDeltaScreen.Y;
+                    left += dragDeltaScreen.X;
+                    break;
+                case DockingWindowResizeEdge.TopRight:
+                    top += dragDeltaScreen.Y;
+                    right += dragDeltaScreen.X;
+                    break;
+                case DockingWindowResizeEdge.BottomLeft:
+                    left += dragDeltaScreen.X;
+                    bottom += dragDeltaScreen.Y;
+                    break;
+                case DockingWindowResizeEdge.BottomRight:
+                    right += dragDeltaScreen.X;
+                    bottom += dragDeltaScreen.Y;
+                    break;
+            }
+
+            int minWidth = Math.Max(320, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CXMINTRACK)));
+            int minHeight = Math.Max(220, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CYMINTRACK)));
+
+            Rectangle dockingResizeBounds = GetDockingResizeBounds();
+            int minLeft = dockingResizeBounds.Left;
+            int minTop = dockingResizeBounds.Top;
+            int maxRight = dockingResizeBounds.Right;
+            int maxBottom = dockingResizeBounds.Bottom;
+
+            if (edge is DockingWindowResizeEdge.Top)
+            {
+                top = Math.Clamp(top, minTop, bottom - minHeight);
+            }
+
+            if (edge is DockingWindowResizeEdge.TopLeft or DockingWindowResizeEdge.TopRight)
+            {
+                top = Math.Clamp(top, minTop, bottom - minHeight);
+            }
+
+            if (edge is DockingWindowResizeEdge.Left or DockingWindowResizeEdge.BottomLeft)
+            {
+                left = Math.Clamp(left, minLeft, right - minWidth);
+            }
+
+            if (edge is DockingWindowResizeEdge.TopLeft)
+            {
+                left = Math.Clamp(left, minLeft, right - minWidth);
+            }
+
+            if (edge is DockingWindowResizeEdge.Right or DockingWindowResizeEdge.BottomRight)
+            {
+                int minRight = left + minWidth;
+                right = Math.Clamp(right, minRight, Math.Max(minRight, maxRight));
+            }
+
+            if (edge is DockingWindowResizeEdge.TopRight)
+            {
+                int minRight = left + minWidth;
+                right = Math.Clamp(right, minRight, Math.Max(minRight, maxRight));
+            }
+
+            if (edge is DockingWindowResizeEdge.Bottom or DockingWindowResizeEdge.BottomLeft or DockingWindowResizeEdge.BottomRight)
+            {
+                int minBottom = top + minHeight;
+                bottom = Math.Clamp(bottom, minBottom, Math.Max(minBottom, maxBottom));
+            }
+
+            int newWidth = Math.Max(minWidth, right - left);
+            int newHeight = Math.Max(minHeight, bottom - top);
+            if (newWidth <= 0 || newHeight <= 0)
+            {
+                return false;
+            }
+
+            if (newWidth == dragStartWindowBounds.Width &&
+                newHeight == dragStartWindowBounds.Height &&
+                left == dragStartWindowBounds.X &&
+                top == dragStartWindowBounds.Y)
+            {
+                return false;
+            }
+
+            const uint flags = SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
+            return SetWindowPos(hwnd, IntPtr.Zero, left, top, newWidth, newHeight, flags);
+        }
+
+        public static bool TryResizeWindowFromDockingEdge(Core game, DockingWindowResizeEdge edge, Point clientMousePosition)
+        {
+            if (game?.Window == null ||
+                !CustomDockingResizeEdgesEnabled ||
+                !IsWindowedMode(game.WindowMode))
+            {
+                return false;
+            }
+
+            IntPtr hwnd = game.Window.Handle;
+            if (hwnd == IntPtr.Zero || IsWindowMaximized(hwnd) || !GetWindowRect(hwnd, out NativeRect windowRect))
+            {
+                return false;
+            }
+
+            NativePoint screenPoint = new() { X = clientMousePosition.X, Y = clientMousePosition.Y };
+            if (!ClientToScreen(hwnd, ref screenPoint))
+            {
+                return false;
+            }
+
+            int left = windowRect.Left;
+            int top = windowRect.Top;
+            int right = windowRect.Right;
+            int bottom = windowRect.Bottom;
+            int width = right - left;
+            int height = bottom - top;
+            if (width <= 0 || height <= 0)
+            {
+                return false;
+            }
+
+            int minWidth = Math.Max(320, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CXMINTRACK)));
+            int minHeight = Math.Max(220, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CYMINTRACK)));
+
+            Rectangle dockingResizeBounds = GetDockingResizeBounds();
+            int minLeft = dockingResizeBounds.Left;
+            int minTop = dockingResizeBounds.Top;
+            int maxRight = dockingResizeBounds.Right;
+            int maxBottom = dockingResizeBounds.Bottom;
+
+            switch (edge)
+            {
+                case DockingWindowResizeEdge.Top:
+                {
+                    int maxTop = bottom - minHeight;
+                    top = Math.Clamp(screenPoint.Y, minTop, maxTop);
+                    break;
+                }
+            }
+
+            switch (edge)
+            {
+                case DockingWindowResizeEdge.Left:
+                case DockingWindowResizeEdge.BottomLeft:
+                case DockingWindowResizeEdge.TopLeft:
+                {
+                    int maxLeft = right - minWidth;
+                    left = Math.Clamp(screenPoint.X, minLeft, maxLeft);
+                    break;
+                }
+            }
+
+            switch (edge)
+            {
+                case DockingWindowResizeEdge.Right:
+                case DockingWindowResizeEdge.BottomRight:
+                case DockingWindowResizeEdge.TopRight:
+                {
+                    int minRight = left + minWidth;
+                    right = Math.Clamp(screenPoint.X, minRight, Math.Max(minRight, maxRight));
+                    break;
+                }
+            }
+
+            switch (edge)
+            {
+                case DockingWindowResizeEdge.Bottom:
+                case DockingWindowResizeEdge.BottomLeft:
+                case DockingWindowResizeEdge.BottomRight:
+                {
+                    int minBottom = top + minHeight;
+                    bottom = Math.Clamp(screenPoint.Y, minBottom, Math.Max(minBottom, maxBottom));
+                    break;
+                }
+            }
+
+            switch (edge)
+            {
+                case DockingWindowResizeEdge.TopLeft:
+                case DockingWindowResizeEdge.TopRight:
+                {
+                    int maxTop = bottom - minHeight;
+                    top = Math.Clamp(screenPoint.Y, minTop, maxTop);
+                    break;
+                }
+            }
+
+            int newWidth = Math.Max(minWidth, right - left);
+            int newHeight = Math.Max(minHeight, bottom - top);
+
+            if (newWidth == width && newHeight == height && left == windowRect.Left && top == windowRect.Top)
+            {
+                return false;
+            }
+
+            const uint flags = SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
+            return SetWindowPos(hwnd, IntPtr.Zero, left, top, newWidth, newHeight, flags);
+        }
+
+        private static bool TryGetExpectedWindowOuterSize(Core game, IntPtr hwnd, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+
+            if (game == null)
+            {
+                return false;
+            }
+
+            int clientWidth = game.Window?.ClientBounds.Width ?? 0;
+            int clientHeight = game.Window?.ClientBounds.Height ?? 0;
+            if (clientWidth <= 1 || clientHeight <= 1)
+            {
+                clientWidth = Math.Max(1, game.ViewportWidth);
+                clientHeight = Math.Max(1, game.ViewportHeight);
+            }
+
+            if (clientWidth <= 0 || clientHeight <= 0)
+            {
+                return false;
+            }
+
+            if (game.WindowMode == WindowMode.BorderlessWindowed)
+            {
+                width = clientWidth;
+                height = clientHeight;
+                return true;
+            }
+
+            long style = hwnd != IntPtr.Zero ? GetWindowLongPtr(hwnd, GWL_STYLE) : 0;
+            long exStyle = hwnd != IntPtr.Zero ? GetWindowLongPtr(hwnd, GWL_EXSTYLE) : 0;
+            NativeRect frame = new()
+            {
+                Left = 0,
+                Top = 0,
+                Right = clientWidth,
+                Bottom = clientHeight
+            };
+
+            if (AdjustWindowRectEx(ref frame, unchecked((uint)style), false, unchecked((uint)exStyle)))
+            {
+                width = frame.Right - frame.Left;
+                height = frame.Bottom - frame.Top;
+            }
+            else
+            {
+                width = clientWidth;
+                height = clientHeight;
+            }
+
+            return width > 0 && height > 0;
         }
 
         private static Point? GetClientTopLeftOnScreen(IntPtr hwnd)
@@ -383,10 +901,6 @@ namespace op.io
 
             Point desired = _desiredClientTopLeft.Value;
 
-            // Always clear immediately — this is a one-shot correction for the chrome toggle.
-            // Keeping the anchor alive across multiple events causes it to fight user resizes.
-            _desiredClientTopLeft = null;
-
             Point? current = GetClientTopLeftOnScreen(hwnd);
             if (current == null)
             {
@@ -397,6 +911,7 @@ namespace op.io
             int deltaY = desired.Y - current.Value.Y;
             if (Math.Abs(deltaX) <= 1 && Math.Abs(deltaY) <= 1)
             {
+                _desiredClientTopLeft = null;
                 return;
             }
 
@@ -409,12 +924,168 @@ namespace op.io
             }
 
             const uint flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
-            SetWindowPos(hwnd, IntPtr.Zero, windowRect.Left + deltaX, windowRect.Top + deltaY, 0, 0, flags);
+            if (SetWindowPos(hwnd, IntPtr.Zero, windowRect.Left + deltaX, windowRect.Top + deltaY, 0, 0, flags))
+            {
+                _desiredClientTopLeft = null;
+            }
         }
 
         private static bool IsWindowMaximized(IntPtr hwnd)
         {
             return hwnd != IntPtr.Zero && IsZoomed(hwnd);
+        }
+
+        private static void ConfigureNativeResizeFrame(IntPtr hwnd, WindowMode mode)
+        {
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            bool enableThickFrame = mode == WindowMode.BorderedWindowed;
+            bool enableMaximizeBox = mode == WindowMode.BorderedWindowed;
+
+            long style = GetWindowLongPtr(hwnd, GWL_STYLE);
+            if (style == 0)
+            {
+                return;
+            }
+
+            long desiredStyle = style;
+            desiredStyle = enableThickFrame
+                ? desiredStyle | WS_THICKFRAME
+                : desiredStyle & ~WS_THICKFRAME;
+            desiredStyle = enableMaximizeBox
+                ? desiredStyle | WS_MAXIMIZEBOX
+                : desiredStyle & ~WS_MAXIMIZEBOX;
+
+            if (desiredStyle == style)
+            {
+                return;
+            }
+
+            SetWindowLongPtr(hwnd, GWL_STYLE, desiredStyle);
+            const uint flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED;
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, flags);
+        }
+
+        private static bool TryGetNativeResizeHit(IntPtr hwnd, IntPtr lParam, out IntPtr hitResult)
+        {
+            hitResult = IntPtr.Zero;
+            if (!_nativeWindowResizeEdgesEnabled || hwnd == IntPtr.Zero || IsWindowMaximized(hwnd))
+            {
+                return false;
+            }
+
+            if (!GetWindowRect(hwnd, out NativeRect windowRect))
+            {
+                return false;
+            }
+
+            int screenX = GetSignedLowWord(lParam);
+            int screenY = GetSignedHighWord(lParam);
+            if (screenX < windowRect.Left || screenX >= windowRect.Right ||
+                screenY < windowRect.Top || screenY >= windowRect.Bottom)
+            {
+                return false;
+            }
+
+            int borderX = GetNativeResizeBorderThicknessX();
+            int borderY = GetNativeResizeBorderThicknessY();
+
+            bool onLeft = screenX - windowRect.Left < borderX;
+            bool onRight = windowRect.Right - screenX <= borderX;
+            bool onTop = screenY - windowRect.Top < borderY;
+            bool onBottom = windowRect.Bottom - screenY <= borderY;
+
+            if (onTop && onLeft)
+            {
+                hitResult = (IntPtr)HTTOPLEFT;
+                return true;
+            }
+
+            if (onTop && onRight)
+            {
+                hitResult = (IntPtr)HTTOPRIGHT;
+                return true;
+            }
+
+            if (onBottom && onLeft)
+            {
+                hitResult = (IntPtr)HTBOTTOMLEFT;
+                return true;
+            }
+
+            if (onBottom && onRight)
+            {
+                hitResult = (IntPtr)HTBOTTOMRIGHT;
+                return true;
+            }
+
+            if (onLeft)
+            {
+                hitResult = (IntPtr)HTLEFT;
+                return true;
+            }
+
+            if (onRight)
+            {
+                hitResult = (IntPtr)HTRIGHT;
+                return true;
+            }
+
+            if (onTop)
+            {
+                hitResult = (IntPtr)HTTOP;
+                return true;
+            }
+
+            if (onBottom)
+            {
+                hitResult = (IntPtr)HTBOTTOM;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsNativeResizeHitResult(IntPtr hitResult)
+        {
+            int value = hitResult.ToInt32();
+            return value == HTLEFT ||
+                value == HTRIGHT ||
+                value == HTTOP ||
+                value == HTTOPLEFT ||
+                value == HTTOPRIGHT ||
+                value == HTBOTTOM ||
+                value == HTBOTTOMLEFT ||
+                value == HTBOTTOMRIGHT;
+        }
+
+        private static int GetNativeResizeBorderThicknessX()
+        {
+            int frame = Math.Max(0, GetSystemMetrics(SM_CXSIZEFRAME));
+            int padded = Math.Max(0, GetSystemMetrics(SM_CXPADDEDBORDER));
+            int systemBorder = frame + padded;
+            return Math.Max(UIStyle.ResizeEdgeThickness, Math.Max(2, systemBorder));
+        }
+
+        private static int GetNativeResizeBorderThicknessY()
+        {
+            int frame = Math.Max(0, GetSystemMetrics(SM_CYSIZEFRAME));
+            int padded = Math.Max(0, GetSystemMetrics(SM_CXPADDEDBORDER));
+            int systemBorder = frame + padded;
+            return Math.Max(UIStyle.ResizeEdgeThickness, Math.Max(2, systemBorder));
+        }
+
+        private static int GetSignedLowWord(IntPtr value)
+        {
+            return unchecked((short)((long)value & 0xFFFF));
+        }
+
+        private static int GetSignedHighWord(IntPtr value)
+        {
+            return unchecked((short)(((long)value >> 16) & 0xFFFF));
         }
 
         private static Rectangle GetMonitorWorkArea(IntPtr hwnd)
@@ -432,6 +1103,41 @@ namespace op.io
                     {
                         return new Rectangle(work.Left, work.Top, width, height);
                     }
+                }
+            }
+
+            DisplayMode display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            return new Rectangle(0, 0, display.Width, display.Height);
+        }
+
+        private static Rectangle GetDockingResizeBounds()
+        {
+            System.Drawing.Rectangle virtualScreen = SystemInformation.VirtualScreen;
+            if (virtualScreen.Width > 0 && virtualScreen.Height > 0)
+            {
+                return new Rectangle(virtualScreen.Left, virtualScreen.Top, virtualScreen.Width, virtualScreen.Height);
+            }
+
+            Screen[] screens = Screen.AllScreens;
+            if (screens is { Length: > 0 })
+            {
+                int left = int.MaxValue;
+                int top = int.MaxValue;
+                int right = int.MinValue;
+                int bottom = int.MinValue;
+
+                foreach (Screen screen in screens)
+                {
+                    System.Drawing.Rectangle bounds = screen.Bounds;
+                    left = Math.Min(left, bounds.Left);
+                    top = Math.Min(top, bounds.Top);
+                    right = Math.Max(right, bounds.Right);
+                    bottom = Math.Max(bottom, bounds.Bottom);
+                }
+
+                if (right > left && bottom > top)
+                {
+                    return new Rectangle(left, top, right - left, bottom - top);
                 }
             }
 
@@ -495,6 +1201,8 @@ namespace op.io
         {
             private const int WM_SIZE = 0x0005;
             private const int WM_PAINT = 0x000F;
+            private const int WM_ERASEBKGND = 0x0014;
+            private const int WM_NCHITTEST = 0x0084;
             private const int GWLP_WNDPROC = -4;
 
             private delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
@@ -519,6 +1227,24 @@ namespace op.io
 
             private IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
             {
+                if (msg == WM_NCHITTEST)
+                {
+                    IntPtr baseResult = CallWindowProc(_originalWndProc, hwnd, msg, wParam, lParam);
+                    if (!_nativeWindowResizeEdgesEnabled && IsNativeResizeHitResult(baseResult))
+                    {
+                        baseResult = (IntPtr)HTCLIENT;
+                    }
+
+                    if (baseResult != (IntPtr)HTCLIENT)
+                    {
+                        return baseResult;
+                    }
+
+                    return TryGetNativeResizeHit(hwnd, lParam, out IntPtr resizeHit)
+                        ? resizeHit
+                        : baseResult;
+                }
+
                 if (msg == WM_SIZE)
                 {
                     // Forward to the original proc so ClientSizeChanged fires and
@@ -526,6 +1252,12 @@ namespace op.io
                     // calls InvalidateRect to queue WM_PAINT, which handles the draw.
                     // Do NOT call RunResizeDraw here — see class comment above.
                     return CallWindowProc(_originalWndProc, hwnd, msg, wParam, lParam);
+                }
+                if (msg == WM_ERASEBKGND)
+                {
+                    // Prevent default background erase during resize to avoid white flashes
+                    // between swap-chain presents.
+                    return (IntPtr)1;
                 }
                 if (msg == WM_PAINT)
                 {
@@ -574,6 +1306,17 @@ namespace op.io
             public uint Flags;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeWindowPlacement
+        {
+            public uint Length;
+            public uint Flags;
+            public uint ShowCmd;
+            public NativePoint MinPosition;
+            public NativePoint MaxPosition;
+            public NativeRect NormalPosition;
+        }
+
         [DllImport("user32.dll")]
         private static extern bool GetClientRect(IntPtr hWnd, out NativeRect lpRect);
 
@@ -581,13 +1324,43 @@ namespace op.io
         private static extern bool ClientToScreen(IntPtr hWnd, ref NativePoint lpPoint);
 
         [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out NativePoint lpPoint);
+
+        [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hWnd, out NativeRect lpRect);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetWindowPlacement(IntPtr hWnd, ref NativeWindowPlacement lpwndpl);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPlacement(IntPtr hWnd, [In] ref NativeWindowPlacement lpwndpl);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool AdjustWindowRectEx(ref NativeRect lpRect, uint dwStyle, bool bMenu, uint dwExStyle);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+        private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+        private static extern long GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+        private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
         [DllImport("user32.dll")]
         private static extern bool IsZoomed(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
 
         [DllImport("user32.dll")]
         private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
@@ -599,6 +1372,37 @@ namespace op.io
         private const uint SWP_NOZORDER = 0x0004;
         private const uint SWP_NOOWNERZORDER = 0x0200;
         private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_FRAMECHANGED = 0x0020;
         private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+        private const int GWL_STYLE = -16;
+        private const int GWL_EXSTYLE = -20;
+        private const long WS_THICKFRAME = 0x00040000L;
+        private const long WS_MAXIMIZEBOX = 0x00010000L;
+        private const int HTCLIENT = 1;
+        private const int HTLEFT = 10;
+        private const int HTRIGHT = 11;
+        private const int HTTOP = 12;
+        private const int HTTOPLEFT = 13;
+        private const int HTTOPRIGHT = 14;
+        private const int HTBOTTOM = 15;
+        private const int HTBOTTOMLEFT = 16;
+        private const int HTBOTTOMRIGHT = 17;
+        private const int SM_CXSIZEFRAME = 32;
+        private const int SM_CYSIZEFRAME = 33;
+        private const int SM_CXMINTRACK = 34;
+        private const int SM_CYMINTRACK = 35;
+        private const int SM_CXPADDEDBORDER = 92;
+        private const uint SW_SHOWMINIMIZED = 2;
+
+        private static long GetWindowLongPtr(IntPtr hWnd, int nIndex)
+        {
+            return IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLong32(hWnd, nIndex);
+        }
+
+        private static long SetWindowLongPtr(IntPtr hWnd, int nIndex, long dwNewLong)
+        {
+            return IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLong32(hWnd, nIndex, unchecked((int)dwNewLong));
+        }
     }
 }

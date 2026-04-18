@@ -54,6 +54,20 @@ namespace op.io
                     player.SwitchBarrelRight();
             }
 
+            // Body swap — Ctrl+Q rotates left, Ctrl+E rotates right; no-op with <2 bodies
+            if (InputManager.IsInputActive(ControlKeyMigrations.BodyLeftKey))
+            {
+                Agent bodyPlayer = Core.Instance.Player;
+                if (bodyPlayer != null && bodyPlayer.BodyCount >= 2)
+                    bodyPlayer.SwitchBodyLeft();
+            }
+            if (InputManager.IsInputActive(ControlKeyMigrations.BodyRightKey))
+            {
+                Agent bodyPlayer = Core.Instance.Player;
+                if (bodyPlayer != null && bodyPlayer.BodyCount >= 2)
+                    bodyPlayer.SwitchBodyRight();
+            }
+
             // Respawn Action — only activates when the player is dead or dying.
             if (InputManager.IsInputActive(ControlKeyMigrations.RespawnKey))
             {
@@ -180,6 +194,18 @@ namespace op.io
                 newPlayer.ClearBarrels();
                 foreach (var barrel in barrels)
                     newPlayer.AddBarrel(barrel);
+            }
+
+            var bodies = BodyLoader.LoadBodiesForAgent(newPlayer.ID);
+            if (bodies.Count > 0)
+            {
+                newPlayer.ClearBodies();
+                for (int bi = 0; bi < bodies.Count; bi++)
+                {
+                    newPlayer.AddBody(bodies[bi].Attrs);
+                    if (!string.IsNullOrEmpty(bodies[bi].Name))
+                        newPlayer.Bodies[bi].Name = bodies[bi].Name;
+                }
             }
 
             Core.Instance.GameObjects.Add(newPlayer);

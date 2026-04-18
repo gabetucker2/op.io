@@ -18,6 +18,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         // ── Active Dynamic content ──────────────────────────────────────────────
         private static string _activeDynamicKey;
+        private static string _activeDynamicMechanism;
         /// <summary>Key of the currently displayed Dynamic content (null = none).</summary>
         public static string ActiveDynamicKey => _activeDynamicKey;
 
@@ -36,6 +37,16 @@ namespace op.io.UI.BlockScripts.Blocks
         // ── Barrel extrusion ────────────────────────────────────────────────────
         private const float BarrelGap = 10f;
         private const float BulletSampleGap = 6f;
+
+        // ── Body row ────────────────────────────────────────────────────────────
+        private const int BodyRowHeight = 36;
+        private const int BodyRowPadding = 6;
+        private const int BodySlotSize = 24;
+        private const int BodySlotSpacing = 8;
+        private const int BodyRowLineThickness = 1;
+
+        private const int DynamicInfoHeaderHeight = 24;
+        private const int DynamicInfoHeaderGap = 6;
 
         // ── Selection state ─────────────────────────────────────────────────────
         private enum SelectedPart { None, Body, Barrel }
@@ -88,9 +99,14 @@ namespace op.io.UI.BlockScripts.Blocks
         /// Called by the ZoneBlock detection system to activate a specific Dynamic
         /// content view inside the Interact block.
         /// </summary>
-        public static void SetActiveDynamicContent(string dynamicKey)
+        public static void SetActiveDynamicContent(string dynamicKey, string mechanism = null)
         {
-            if (string.Equals(_activeDynamicKey, dynamicKey, StringComparison.OrdinalIgnoreCase))
+            bool keyChanged = !string.Equals(_activeDynamicKey, dynamicKey, StringComparison.OrdinalIgnoreCase);
+            _activeDynamicMechanism = string.IsNullOrWhiteSpace(mechanism)
+                ? "ZoneBlock overlap detector"
+                : mechanism.Trim();
+
+            if (!keyChanged)
                 return;
 
             _activeDynamicKey = dynamicKey;
@@ -104,6 +120,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void ClearActiveDynamicContent()
         {
             _activeDynamicKey = null;
+            _activeDynamicMechanism = null;
             _previewCameraOffset = Vector2.Zero;
             _previewPanAnchor = null;
             _previewDragArmed = false;
@@ -155,11 +172,15 @@ namespace op.io.UI.BlockScripts.Blocks
             MouseState mouseState, MouseState previousMouseState,
             KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
-            _lastContentBounds = contentBounds;
             _lastMouseState = mouseState;
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Interact);
 
             if (blockLocked || !HasActiveContent)
+                return;
+
+            Rectangle dynamicContentBounds = GetDynamicContentBounds(contentBounds);
+            _lastContentBounds = dynamicContentBounds;
+            if (dynamicContentBounds.Width <= 0 || dynamicContentBounds.Height <= 0)
                 return;
 
             if (!string.Equals(_activeDynamicKey, "PlayerPreview", StringComparison.OrdinalIgnoreCase))
@@ -167,13 +188,27 @@ namespace op.io.UI.BlockScripts.Blocks
 
             Agent player = Core.Instance?.Player;
 
+            // Reserve body row space (must mirror Draw logic)
+            bool showBodyRow = player != null && player.BodyCount >= 2;
+            Rectangle mainBounds = dynamicContentBounds;
+            Rectangle bodyRowBounds = Rectangle.Empty;
+            if (showBodyRow && dynamicContentBounds.Height > BodyRowHeight + 60)
+            {
+                int mainHeight = dynamicContentBounds.Height - BodyRowHeight;
+                mainBounds = new Rectangle(dynamicContentBounds.X, dynamicContentBounds.Y,
+                    dynamicContentBounds.Width, mainHeight);
+                bodyRowBounds = new Rectangle(dynamicContentBounds.X,
+                    dynamicContentBounds.Y + mainHeight,
+                    dynamicContentBounds.Width, BodyRowHeight);
+            }
+
             // Validate barrel selection still in range
             if (_selectedPart == SelectedPart.Barrel &&
                 (player == null || _selectedBarrelIndex < 0 || _selectedBarrelIndex >= player.BarrelCount))
                 ClearSelection();
 
             bool panelVisible = _selectedPart != SelectedPart.None;
-            ComputeLayout(contentBounds, panelVisible, out Rectangle previewBounds, out Rectangle panelBounds);
+            ComputeLayout(mainBounds, panelVisible, out Rectangle previewBounds, out Rectangle panelBounds);
 
             // ── Rename keyboard input ──────────────────────────────────────────
             if (_renaming && !blockLocked)
@@ -320,10 +355,26 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
 
+            // Body row click handling
+            if (!clickHandled && showBodyRow && bodyRowBounds != Rectangle.Empty &&
+                leftClickReleased && bodyRowBounds.Contains(mouseState.Position))
+            {
+                int hitBody = HitTestBodyRow(bodyRowBounds, mouseState.Position, player);
+                if (hitBody >= 0 && hitBody != player.ActiveBodyIndex)
+                {
+                    // Switch to the clicked body using the public API
+                    while (player.ActiveBodyIndex != hitBody)
+                    {
+                        player.SwitchBodyRight();
+                    }
+                }
+                clickHandled = true;
+            }
+
             // Recompute layout if selection state changed
             bool nowPanelVisible = _selectedPart != SelectedPart.None;
             if (nowPanelVisible != panelVisible)
-                ComputeLayout(contentBounds, nowPanelVisible, out previewBounds, out panelBounds);
+                ComputeLayout(mainBounds, nowPanelVisible, out previewBounds, out panelBounds);
 
             // Update attributes scroll panel
             if (_selectedPart != SelectedPart.None && player != null && panelBounds.Width > 0)
@@ -336,7 +387,7 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             // Camera drag constrained to preview area
-            Rectangle dragBounds = previewBounds != Rectangle.Empty ? previewBounds : contentBounds;
+            Rectangle dragBounds = previewBounds != Rectangle.Empty ? previewBounds : mainBounds;
             UpdatePreviewCameraDrag(dragBounds, mouseState, previousMouseState);
         }
 
@@ -355,10 +406,31 @@ namespace op.io.UI.BlockScripts.Blocks
                 return;
             }
 
+            DrawDynamicInfoHeader(spriteBatch, contentBounds);
+            Rectangle dynamicContentBounds = GetDynamicContentBounds(contentBounds);
+            if (dynamicContentBounds.Width <= 0 || dynamicContentBounds.Height <= 0)
+                return;
+
             if (string.Equals(_activeDynamicKey, "PlayerPreview", StringComparison.OrdinalIgnoreCase))
             {
+                // Reserve space at the bottom for the body row when the player has multiple bodies.
+                Agent bodyRowPlayer = Core.Instance?.Player;
+                bool showBodyRow = bodyRowPlayer != null && bodyRowPlayer.BodyCount >= 2;
+                Rectangle mainBounds = dynamicContentBounds;
+                Rectangle bodyRowBounds = Rectangle.Empty;
+
+                if (showBodyRow && dynamicContentBounds.Height > BodyRowHeight + 60)
+                {
+                    int mainHeight = dynamicContentBounds.Height - BodyRowHeight;
+                    mainBounds = new Rectangle(dynamicContentBounds.X, dynamicContentBounds.Y,
+                        dynamicContentBounds.Width, mainHeight);
+                    bodyRowBounds = new Rectangle(dynamicContentBounds.X,
+                        dynamicContentBounds.Y + mainHeight,
+                        dynamicContentBounds.Width, BodyRowHeight);
+                }
+
                 bool panelVisible = _selectedPart != SelectedPart.None;
-                ComputeLayout(contentBounds, panelVisible, out Rectangle previewBounds, out Rectangle panelBounds);
+                ComputeLayout(mainBounds, panelVisible, out Rectangle previewBounds, out Rectangle panelBounds);
 
                 if (previewBounds != Rectangle.Empty)
                     DrawPlayerPreview(spriteBatch, previewBounds);
@@ -377,10 +449,89 @@ namespace op.io.UI.BlockScripts.Blocks
                         DrawDogleg(spriteBatch, from, to, ConnectorLineColor, ConnectorLineThickness);
                     }
                 }
+
+                if (showBodyRow && bodyRowBounds != Rectangle.Empty)
+                    DrawBodyRow(spriteBatch, bodyRowBounds, bodyRowPlayer);
             }
         }
 
         // ── Layout ──────────────────────────────────────────────────────────────
+
+        private static Rectangle GetDynamicInfoHeaderBounds(Rectangle contentBounds)
+        {
+            if (contentBounds.Width <= 0 || contentBounds.Height <= 0)
+                return Rectangle.Empty;
+
+            int headerHeight = Math.Min(DynamicInfoHeaderHeight, contentBounds.Height);
+            if (headerHeight <= 0)
+                return Rectangle.Empty;
+
+            return new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, headerHeight);
+        }
+
+        private static Rectangle GetDynamicContentBounds(Rectangle contentBounds)
+        {
+            Rectangle headerBounds = GetDynamicInfoHeaderBounds(contentBounds);
+            if (headerBounds == Rectangle.Empty)
+                return contentBounds;
+
+            int contentY = headerBounds.Bottom + DynamicInfoHeaderGap;
+            int contentHeight = contentBounds.Bottom - contentY;
+            if (contentHeight <= 0)
+                return Rectangle.Empty;
+
+            return new Rectangle(contentBounds.X, contentY, contentBounds.Width, contentHeight);
+        }
+
+        private static void DrawDynamicInfoHeader(SpriteBatch spriteBatch, Rectangle contentBounds)
+        {
+            Rectangle headerBounds = GetDynamicInfoHeaderBounds(contentBounds);
+            if (headerBounds == Rectangle.Empty)
+                return;
+
+            DrawRect(spriteBatch, headerBounds, ColorPalette.BlockBackground * 0.7f);
+            DrawRectOutline(spriteBatch, headerBounds, UIStyle.BlockBorder, 1);
+
+            UIStyle.UIFont font = UIStyle.FontTech;
+            if (!font.IsAvailable)
+                return;
+
+            string blockLabel = HumanizeDynamicBlockKey(_activeDynamicKey);
+            string mechanismLabel = string.IsNullOrWhiteSpace(_activeDynamicMechanism)
+                ? "Unknown mechanism"
+                : _activeDynamicMechanism;
+            string infoText = $"Temporary Block: {blockLabel} | Mechanism: {mechanismLabel}";
+
+            float textY = headerBounds.Y + (headerBounds.Height - font.LineHeight) / 2f;
+            font.DrawString(spriteBatch, infoText, new Vector2(headerBounds.X + AttrPadding, textY), UIStyle.MutedTextColor);
+        }
+
+        private static string HumanizeDynamicBlockKey(string dynamicKey)
+        {
+            if (string.IsNullOrWhiteSpace(dynamicKey))
+                return "None";
+
+            var builder = new System.Text.StringBuilder(dynamicKey.Length + 8);
+            char previous = '\0';
+            for (int i = 0; i < dynamicKey.Length; i++)
+            {
+                char ch = dynamicKey[i];
+                bool shouldInsertSpace = i > 0 &&
+                    char.IsUpper(ch) &&
+                    (char.IsLower(previous) || char.IsDigit(previous));
+                if (shouldInsertSpace)
+                    builder.Append(' ');
+
+                if (ch == '_' || ch == '-')
+                    builder.Append(' ');
+                else
+                    builder.Append(ch);
+
+                previous = ch;
+            }
+
+            return builder.ToString().Trim();
+        }
 
         private static void ComputeLayout(Rectangle contentBounds, bool panelVisible,
             out Rectangle previewBounds, out Rectangle panelBounds)
@@ -505,6 +656,25 @@ namespace op.io.UI.BlockScripts.Blocks
                     + dir * (barrelTipDist + BulletSampleGap + bulletRadius);
 
                 if (PointInCircle(clickPos, bulletCenter, bulletRadius))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private static int HitTestBodyRow(Rectangle rowBounds, Point mousePos, Agent player)
+        {
+            if (player == null || player.BodyCount < 2) return -1;
+
+            GetBodyRowLayout(rowBounds, player.BodyCount, out int slotSize, out int slotSpacing, out int startX, out int centerY);
+            float radius = slotSize / 2f;
+
+            for (int i = 0; i < player.BodyCount; i++)
+            {
+                float slotCenterX = startX + i * (slotSize + slotSpacing) + slotSize / 2f;
+                float dx = mousePos.X - slotCenterX;
+                float dy = mousePos.Y - centerY;
+                if (dx * dx + dy * dy <= radius * radius)
                     return i;
             }
 
@@ -878,7 +1048,18 @@ namespace op.io.UI.BlockScripts.Blocks
                 new("Rotation", $"{MathHelper.ToDegrees(player.Rotation):0.0} deg")
             };
             if (player.Shape != null)
-                transform.Add(new Properties.Row("Size", $"{player.Shape.Width} x {player.Shape.Height}"));
+            {
+                if (player.Shape.ShapeType == "Circle")
+                {
+                    float radius = AttributeDerived.BodyRadius(player.BodyAttributes.Mass, CollisionResolver.BodyRadiusScalar);
+                    transform.Add(new Properties.Row("Radius", $"{radius:0.##} px",
+                                                     isHidden: true, affectsList: AttributeDerived.AffectsBodyRadius));
+                }
+                else
+                {
+                    transform.Add(new Properties.Row("Size", $"{player.Shape.Width} x {player.Shape.Height}"));
+                }
+            }
 
             string shapeText = player.Shape?.ShapeType ?? "-";
             if (player.Shape is { ShapeType: "Polygon", Sides: > 0 })
@@ -1041,6 +1222,96 @@ namespace op.io.UI.BlockScripts.Blocks
                     _previewCameraOffset = Vector2.Zero;
 
                 _previewPanAnchor = null;
+            }
+        }
+
+        // ── Body row drawing ────────────────────────────────────────────────────
+
+        private static void GetBodyRowLayout(Rectangle rowBounds, int bodyCount,
+            out int slotSize, out int slotSpacing, out int startX, out int centerY)
+        {
+            slotSize = BodySlotSize;
+            slotSpacing = BodySlotSpacing;
+            centerY = rowBounds.Y + rowBounds.Height / 2;
+            startX = rowBounds.X + BodyRowPadding;
+
+            if (bodyCount <= 0 || rowBounds.Width <= 0)
+                return;
+
+            int availableWidth = Math.Max(0, rowBounds.Width - BodyRowPadding * 2);
+            int totalWidth = bodyCount * slotSize + (bodyCount - 1) * slotSpacing;
+
+            if (availableWidth > 0 && totalWidth > availableWidth)
+            {
+                float scale = availableWidth / (float)totalWidth;
+                slotSize = Math.Max(12, (int)MathF.Floor(slotSize * scale));
+                slotSpacing = Math.Max(0, (int)MathF.Floor(slotSpacing * scale));
+                totalWidth = bodyCount * slotSize + (bodyCount - 1) * slotSpacing;
+
+                if (totalWidth > availableWidth)
+                {
+                    slotSpacing = bodyCount > 1
+                        ? Math.Max(0, (availableWidth - bodyCount * slotSize) / (bodyCount - 1))
+                        : 0;
+                    totalWidth = bodyCount * slotSize + (bodyCount - 1) * slotSpacing;
+                }
+
+                if (totalWidth > availableWidth)
+                {
+                    slotSize = Math.Max(12, availableWidth / bodyCount);
+                    slotSpacing = bodyCount > 1
+                        ? Math.Max(0, (availableWidth - bodyCount * slotSize) / (bodyCount - 1))
+                        : 0;
+                    totalWidth = bodyCount * slotSize + (bodyCount - 1) * slotSpacing;
+                }
+            }
+
+            startX = rowBounds.X + Math.Max(BodyRowPadding, (rowBounds.Width - totalWidth) / 2);
+        }
+
+        private static void DrawBodyRow(SpriteBatch spriteBatch, Rectangle bounds, Agent player)
+        {
+            if (player == null || player.BodyCount < 2) return;
+
+            // Background strip
+            DrawRect(spriteBatch, bounds, ColorPalette.BlockBackground * 0.6f);
+            DrawRectOutline(spriteBatch, bounds, UIStyle.BlockBorder, 1);
+
+            GetBodyRowLayout(bounds, player.BodyCount, out int slotSize, out int slotSpacing, out int startX, out int centerY);
+            float radius = slotSize / 2f;
+
+            UIStyle.UIFont numberFont = UIStyle.FontTech;
+
+            if (player.BodyCount > 1)
+            {
+                float firstCenterX = startX + slotSize / 2f;
+                float lastCenterX = startX + (player.BodyCount - 1) * (slotSize + slotSpacing) + slotSize / 2f;
+                DrawLine(spriteBatch, new Vector2(firstCenterX, centerY), new Vector2(lastCenterX, centerY),
+                    UIStyle.BlockBorder, BodyRowLineThickness);
+            }
+
+            for (int i = 0; i < player.BodyCount; i++)
+            {
+                int slotX = startX + i * (slotSize + slotSpacing);
+                float slotCenterX = slotX + slotSize / 2f;
+                float slotCenterY = centerY;
+
+                bool isActive = i == player.ActiveBodyIndex;
+                Color fillColor = isActive ? ColorPalette.Accent * 0.9f : ColorPalette.TextMuted * 0.4f;
+                Color outlineColor = isActive ? ColorPalette.Accent : UIStyle.BlockBorder;
+
+                Vector2 center = new(slotCenterX, slotCenterY);
+                DrawFilledCircle(spriteBatch, center, radius, fillColor);
+                DrawCircleOutline(spriteBatch, center, radius, outlineColor, isActive ? 2 : 1);
+
+                if (numberFont.IsAvailable)
+                {
+                    string indexLabel = (i + 1).ToString();
+                    Vector2 textSize = numberFont.MeasureString(indexLabel);
+                    Vector2 textPos = new(slotCenterX - textSize.X / 2f, slotCenterY - textSize.Y / 2f);
+                    numberFont.DrawString(spriteBatch, indexLabel, textPos,
+                        isActive ? UIStyle.TextColor : UIStyle.MutedTextColor);
+                }
             }
         }
 

@@ -18,6 +18,7 @@ namespace op.io
             public bool MetaControl { get; init; }
             public int RenderOrder { get; init; }
             public bool LockMode { get; init; }
+            public string EnumDisabledOptions { get; init; }
         }
 
         public static ControlKeyRecord GetControl(string settingKey)
@@ -33,7 +34,7 @@ namespace op.io
             };
 
             const string sql = @"
-SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode
+SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
 FROM ControlKey
 WHERE SettingKey = @settingKey
 LIMIT 1;";
@@ -59,7 +60,10 @@ LIMIT 1;";
                 FloatStartState = floatStart,
                 MetaControl = row.TryGetValue("MetaControl", out object metaValue) && Convert.ToInt32(metaValue) != 0,
                 RenderOrder = row.TryGetValue("ControlOrder", out object orderValue) ? Convert.ToInt32(orderValue) : 0,
-                LockMode = row.TryGetValue("LockMode", out object lockValue) && Convert.ToInt32(lockValue) != 0
+                LockMode = row.TryGetValue("LockMode", out object lockValue) && Convert.ToInt32(lockValue) != 0,
+                EnumDisabledOptions = row.TryGetValue("EnumDisabledOptions", out object enumDisabledValue)
+                    ? enumDisabledValue?.ToString() ?? string.Empty
+                    : string.Empty
             };
         }
 
@@ -77,41 +81,57 @@ LIMIT 1;";
                 ["@inputType"] = record.InputType ?? "Hold",
                 ["@metaControl"] = record.MetaControl ? 1 : 0,
                 ["@switchStartState"] = record.SwitchStartState,
-                ["@lockMode"] = record.LockMode ? 1 : 0
+                ["@lockMode"] = record.LockMode ? 1 : 0,
+                ["@enumDisabledOptions"] = record.EnumDisabledOptions ?? string.Empty
             };
 
             bool orderColumnAvailable = ColumnExists(RenderOrderColumnName);
             bool lockModeAvailable = ColumnExists("LockMode");
+            bool enumDisabledColumnAvailable = ColumnExists("EnumDisabledOptions");
             if (orderColumnAvailable)
             {
                 parameters["@renderOrder"] = record.RenderOrder > 0 ? record.RenderOrder : GetNextRenderOrderValue();
             }
 
-            string sql;
-            if (orderColumnAvailable && lockModeAvailable)
+            List<string> columns =
+            [
+                "SettingKey",
+                "InputKey",
+                "InputType",
+                "MetaControl",
+                "SwitchStartState"
+            ];
+
+            List<string> values =
+            [
+                "@settingKey",
+                "@inputKey",
+                "@inputType",
+                "@metaControl",
+                "@switchStartState"
+            ];
+
+            if (orderColumnAvailable)
             {
-                sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState, LockMode)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @renderOrder, @switchStartState, @lockMode);";
+                columns.Add("RenderOrder");
+                values.Add("@renderOrder");
             }
-            else if (orderColumnAvailable)
+
+            if (lockModeAvailable)
             {
-                sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, RenderOrder, SwitchStartState)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @renderOrder, @switchStartState);";
+                columns.Add("LockMode");
+                values.Add("@lockMode");
             }
-            else if (lockModeAvailable)
+
+            if (enumDisabledColumnAvailable)
             {
-                sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, LockMode)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @lockMode);";
+                columns.Add("EnumDisabledOptions");
+                values.Add("@enumDisabledOptions");
             }
-            else
-            {
-                sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState);";
-            }
+
+            string sql = $@"
+INSERT INTO ControlKey ({string.Join(", ", columns)})
+VALUES ({string.Join(", ", values)});";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }

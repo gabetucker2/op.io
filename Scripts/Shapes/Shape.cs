@@ -53,6 +53,21 @@ namespace op.io
             _renderer = new ShapeRenderer();
         }
 
+        /// <summary>
+        /// Updates width and height (e.g. when a circle's radius changes due to mass).
+        /// Reloads the renderer so the visual matches the new dimensions.
+        /// </summary>
+        public void UpdateDimensions(int width, int height, GraphicsDevice graphicsDevice)
+        {
+            if (width <= 0 || height <= 0)
+                return;
+            Width = width;
+            Height = height;
+            _renderer.Dispose();
+            _renderer = new ShapeRenderer();
+            _renderer.LoadContent(this, graphicsDevice);
+        }
+
         // This method uses ShapeRenderer to load the shape content
         public void LoadContent(GraphicsDevice graphicsDevice)
         {

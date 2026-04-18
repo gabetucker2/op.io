@@ -111,6 +111,13 @@ namespace op.io
         public static float BodyKnockback(float mass, float knockbackMassScale)
             => mass * knockbackMassScale;
 
+        /// <summary>
+        /// Circle body radius in pixels. Formula: sqrt(mass) × BodyRadiusScalar.
+        /// Width and Height for circle objects are derived as diameter = 2 × radius.
+        /// </summary>
+        public static float BodyRadius(float mass, float bodyRadiusScalar)
+            => System.MathF.Sqrt(System.MathF.Max(mass, 0.01f)) * bodyRadiusScalar;
+
         // ── Body: hidden attributes derived from Control ─────────────────────────
 
         /// <summary>Base acceleration ramp time when Control = 1.</summary>
@@ -237,6 +244,7 @@ namespace op.io
 
         // ── Display labels for the Affects column ────────────────────────────────
 
+        public static readonly string[] AffectsBodyRadius          = ["Visual size", "Hitbox diameter"];
         public static readonly string[] AffectsMaxHealth         = ["Health cap", "Health bar size"];
         public static readonly string[] AffectsBodyKnockback      = ["Collision impulse"];
         public static readonly string[] AffectsSpeed              = ["Movement speed"];

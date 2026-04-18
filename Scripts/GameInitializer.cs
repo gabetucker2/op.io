@@ -80,6 +80,7 @@ namespace op.io
             }
 
             ScreenManager.ApplyWindowMode(Core.Instance);
+            ApplyWindowIcon(Core.Instance);
 
             Core.Instance.Graphics.SynchronizeWithVerticalRetrace = Core.Instance.VSyncEnabled;
             Core.Instance.IsFixedTimeStep = Core.Instance.UseFixedTimeStep;
@@ -88,6 +89,8 @@ namespace op.io
             Core.Instance.TargetElapsedTime = TimeSpan.FromSeconds(1.0 / safeFps);
 
             Core.Instance.Graphics.ApplyChanges();
+            ScreenManager.RefreshWindowResizeIntegration(Core.Instance);
+            ScreenManager.CenterWindowOnCurrentMonitor(Core.Instance);
 
             // Make the background to the game be transparent (https://stackoverflow.com/a)
             var contentManager = Core.Instance.Content;
@@ -129,8 +132,37 @@ namespace op.io
             // Now initialize physics
             PhysicsManager.Initialize();
 
+            // Re-center after startup switch consumers apply DockingMode chrome so the final
+            // window mode lands centered on the monitor.
+            ScreenManager.CenterWindowOnCurrentMonitor(Core.Instance);
+
             DebugLogger.Print("Game initialization complete.");
             SafeLog("GameInitializer.Initialize: complete");
+        }
+
+        public static void ApplyWindowIcon(Core game)
+        {
+            if (game?.Window == null)
+            {
+                return;
+            }
+
+            IntPtr hwnd = game.Window.Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            EnsureWindowIconHandlesLoaded();
+            if (_windowIconBig == IntPtr.Zero || _windowIconSmall == IntPtr.Zero)
+            {
+                return;
+            }
+
+            SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, _windowIconBig);
+            SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, _windowIconSmall);
+            SetClassLongPtr(hwnd, GCLP_HICON, _windowIconBig);
+            SetClassLongPtr(hwnd, GCLP_HICONSM, _windowIconSmall);
         }
 
         public static void RefreshTransparencyKey()
@@ -331,9 +363,187 @@ namespace op.io
             _isTopmost = clickThroughEnabled;
         }
 
+        private static void EnsureWindowIconHandlesLoaded()
+        {
+            if (_windowIconAttemptedLoad)
+            {
+                return;
+            }
+
+            _windowIconAttemptedLoad = true;
+
+            string bitmapPath = ResolveWindowIconBitmapPath();
+            if (TryLoadWindowIconHandlesFromBitmap(bitmapPath))
+            {
+                return;
+            }
+
+            string iconPath = ResolveWindowIconPath();
+            if (string.IsNullOrWhiteSpace(iconPath))
+            {
+                DebugLogger.PrintWarning("Window icon file was not found; skipping runtime icon assignment.");
+                return;
+            }
+
+            try
+            {
+                using System.Drawing.Icon baseIcon = new(iconPath);
+                using System.Drawing.Icon smallIcon = new(baseIcon, new System.Drawing.Size(16, 16));
+
+                _windowIconBig = CopyIcon(baseIcon.Handle);
+                _windowIconSmall = CopyIcon(smallIcon.Handle);
+
+                if (_windowIconBig == IntPtr.Zero || _windowIconSmall == IntPtr.Zero)
+                {
+                    DebugLogger.PrintWarning("CopyIcon failed while loading runtime window icon handles.");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to load runtime window icon from '{iconPath}': {ex.Message}");
+                _windowIconBig = IntPtr.Zero;
+                _windowIconSmall = IntPtr.Zero;
+            }
+        }
+
+        private static bool TryLoadWindowIconHandlesFromBitmap(string bitmapPath)
+        {
+            if (string.IsNullOrWhiteSpace(bitmapPath) || !File.Exists(bitmapPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                using System.Drawing.Bitmap source = new(bitmapPath);
+                IntPtr big = CreateIconHandleFromBitmap(source, 256);
+                IntPtr small = CreateIconHandleFromBitmap(source, 16);
+
+                if (big == IntPtr.Zero || small == IntPtr.Zero)
+                {
+                    if (big != IntPtr.Zero)
+                    {
+                        DestroyIcon(big);
+                    }
+
+                    if (small != IntPtr.Zero)
+                    {
+                        DestroyIcon(small);
+                    }
+
+                    DebugLogger.PrintWarning($"Failed to build runtime window icon handles from '{bitmapPath}'.");
+                    return false;
+                }
+
+                _windowIconBig = big;
+                _windowIconSmall = small;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to build runtime window icon handles from '{bitmapPath}': {ex.Message}");
+                return false;
+            }
+        }
+
+        private static IntPtr CreateIconHandleFromBitmap(System.Drawing.Bitmap source, int size)
+        {
+            if (source == null || source.Width <= 0 || source.Height <= 0)
+            {
+                return IntPtr.Zero;
+            }
+
+            int targetSize = Math.Max(16, size);
+            using System.Drawing.Bitmap canvas = new(
+                targetSize,
+                targetSize,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(canvas))
+            {
+                g.Clear(System.Drawing.Color.Transparent);
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+
+                float scale = Math.Min(targetSize / (float)source.Width, targetSize / (float)source.Height);
+                int drawWidth = Math.Max(1, (int)MathF.Round(source.Width * scale));
+                int drawHeight = Math.Max(1, (int)MathF.Round(source.Height * scale));
+                int drawX = (targetSize - drawWidth) / 2;
+                int drawY = (targetSize - drawHeight) / 2;
+
+                g.DrawImage(source, new System.Drawing.Rectangle(drawX, drawY, drawWidth, drawHeight));
+            }
+
+            IntPtr rawHandle = canvas.GetHicon();
+            if (rawHandle == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            IntPtr iconHandle = CopyIcon(rawHandle);
+            if (iconHandle != IntPtr.Zero)
+            {
+                DestroyIcon(rawHandle);
+                return iconHandle;
+            }
+
+            return rawHandle;
+        }
+
+        private static string ResolveWindowIconBitmapPath()
+        {
+            string outputBmp = Path.Combine(AppContext.BaseDirectory, "Icon.bmp");
+            if (File.Exists(outputBmp))
+            {
+                return outputBmp;
+            }
+
+            if (!string.IsNullOrWhiteSpace(DatabaseConfig.ProjectRootPath))
+            {
+                string projectBmp = Path.Combine(DatabaseConfig.ProjectRootPath, "Icon.bmp");
+                if (File.Exists(projectBmp))
+                {
+                    return projectBmp;
+                }
+
+                string logoPng = Path.Combine(DatabaseConfig.ProjectRootPath, "Images", "op.ai_Logo.png");
+                if (File.Exists(logoPng))
+                {
+                    return logoPng;
+                }
+            }
+
+            return null;
+        }
+
+        private static string ResolveWindowIconPath()
+        {
+            string outputCandidate = Path.Combine(AppContext.BaseDirectory, "Icon.ico");
+            if (File.Exists(outputCandidate))
+            {
+                return outputCandidate;
+            }
+
+            if (!string.IsNullOrWhiteSpace(DatabaseConfig.ProjectRootPath))
+            {
+                string projectCandidate = Path.Combine(DatabaseConfig.ProjectRootPath, "Icon.ico");
+                if (File.Exists(projectCandidate))
+                {
+                    return projectCandidate;
+                }
+            }
+
+            return null;
+        }
+
         private static IntPtr _transparentWindowHandle;
         private static bool _clickThroughEnabled;
         private static bool _isTopmost;
+        private static bool _windowIconAttemptedLoad;
+        private static IntPtr _windowIconBig;
+        private static IntPtr _windowIconSmall;
 
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x00080000;
@@ -346,6 +556,11 @@ namespace op.io
         private const uint SWP_NOOWNERZORDER = 0x0200;
         private static readonly IntPtr HWND_TOPMOST = new(-1);
         private static readonly IntPtr HWND_NOTOPMOST = new(-2);
+        private const int WM_SETICON = 0x0080;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+        private const int GCLP_HICON = -14;
+        private const int GCLP_HICONSM = -34;
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
@@ -368,6 +583,21 @@ namespace op.io
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr CopyIcon(IntPtr hIcon);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        [DllImport("user32.dll", EntryPoint = "SetClassLongPtrW", SetLastError = true)]
+        private static extern IntPtr SetClassLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetClassLongW", SetLastError = true)]
+        private static extern uint SetClassLong32(IntPtr hWnd, int nIndex, uint dwNewLong);
+
         private static long GetWindowLongPtr(IntPtr hWnd, int nIndex)
         {
             return IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLong32(hWnd, nIndex);
@@ -376,6 +606,17 @@ namespace op.io
         private static long SetWindowLongPtr(IntPtr hWnd, int nIndex, long dwNewLong)
         {
             return IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : SetWindowLong32(hWnd, nIndex, unchecked((int)dwNewLong));
+        }
+
+        private static IntPtr SetClassLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        {
+            if (IntPtr.Size == 8)
+            {
+                return SetClassLongPtr64(hWnd, nIndex, dwNewLong);
+            }
+
+            uint raw = SetClassLong32(hWnd, nIndex, unchecked((uint)dwNewLong.ToInt64()));
+            return new IntPtr(unchecked((int)raw));
         }
     }
 }

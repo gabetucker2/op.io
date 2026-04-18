@@ -886,6 +886,8 @@ namespace op.io.UI.BlockScripts.Blocks
         /// <summary>Floating tooltip near the cursor during drag.</summary>
         private static void DrawDragTooltip(SpriteBatch sb, string text, Point mousePos)
         {
+            if (!UIStyle.AreTooltipsEnabled) return;
+
             UIStyle.UIFont font = UIStyle.FontTech;
             if (!font.IsAvailable || _pixel == null || string.IsNullOrEmpty(text)) return;
             Vector2 ts  = font.MeasureString(text);

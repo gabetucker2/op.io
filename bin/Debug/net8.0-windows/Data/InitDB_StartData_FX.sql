@@ -8,6 +8,9 @@ INSERT INTO FXSettings (SettingKey, Value) VALUES ('HitFlashAnim',  '0.05|0.0|0.
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('DespawnAnim',   '0.0|0.0|0.2');   -- despawn:    fadeIn | hold | fadeOut
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('DamageNumAnim', '0.12|0.8|0.8');  -- damage num: fadeIn | hold | fadeOut
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeAnim',  '0.0|0.0|0.5');   -- GO death:   fadeIn | hold | fadeOut
+INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeScaleMultiplier',     '1.5');   -- final scale multiplier reached at the end of death fade (1.5 = +50%)
+INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeSpinMinDegPerSecond', '90');    -- minimum random death spin speed (degrees/second)
+INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeSpinMaxDegPerSecond', '240');   -- maximum random death spin speed (degrees/second)
 
 ---------------------------------------------------------------------------------------------------------------------------
 -- Damage number behavior

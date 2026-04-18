@@ -67,6 +67,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static readonly Rectangle[] CommandBounds = new Rectangle[CommandOrder.Length];
         private static readonly UIDropdown SetupDropdown = new();
+        private const string SetupDropdownTooltipKey = "Dropdown_DockingSetupOption";
         private static readonly List<SetupEntry> SetupEntries = new();
         private static readonly KeyRepeatTracker PromptRepeater = new();
 
@@ -92,6 +93,12 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static string GetHoveredRowKey()
         {
+            string dropdownTooltip = GetHoveredDropdownTooltip(out _);
+            if (!string.IsNullOrWhiteSpace(dropdownTooltip))
+            {
+                return dropdownTooltip;
+            }
+
             Point pos = LastMouseState.Position;
             for (int i = 0; i < CommandOrder.Length; i++)
             {
@@ -108,6 +115,32 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
             return null;
+        }
+
+        public static string GetHoveredRowLabel()
+        {
+            _ = GetHoveredDropdownTooltip(out string label);
+            return label;
+        }
+
+        private static string GetHoveredDropdownTooltip(out string label)
+        {
+            label = null;
+            Point pos = LastMouseState.Position;
+            if (DropdownBounds == Rectangle.Empty || !SetupDropdown.IsPointerOverDropdown(pos))
+            {
+                return null;
+            }
+
+            string tooltipKey = SetupDropdown.GetHoveredOptionTooltipKey();
+            label = SetupDropdown.GetHoveredOptionTooltipLabel();
+            if (!string.IsNullOrWhiteSpace(tooltipKey))
+            {
+                return tooltipKey;
+            }
+
+            label ??= !string.IsNullOrWhiteSpace(SelectedSetupName) ? SelectedSetupName : SetupDropdown.SelectedId;
+            return SetupDropdownTooltipKey;
         }
 
         private static Texture2D PixelTexture;
@@ -1075,7 +1108,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void EnsureDropdownOptions()
         {
-            IEnumerable<UIDropdown.Option> options = SetupEntries.Select(entry => new UIDropdown.Option(entry.Name, entry.Name));
+            IEnumerable<UIDropdown.Option> options = SetupEntries.Select(entry => new UIDropdown.Option(entry.Name, entry.Name, false, SetupDropdownTooltipKey, entry.Name));
             string desired = !string.IsNullOrWhiteSpace(SelectedSetupName) ? SelectedSetupName : SetupEntries.FirstOrDefault().Name;
             SetupDropdown.SetOptions(options, desired);
 

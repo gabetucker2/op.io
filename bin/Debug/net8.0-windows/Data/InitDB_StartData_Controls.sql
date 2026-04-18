@@ -17,6 +17,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Exit',          
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BlockMenu',               'Open the block visibility overlay to show or hide UI panels.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DockingMode',             'Toggle docking mode to resize and rearrange UI panels.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DebugMode',               'Toggle debug visuals such as the physics collision circle.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DisableToolTips',         'When enabled, tooltips do not appear anywhere in the UI.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AllowGameInputFreeze',    'Allow the game input freeze toggle. Must be enabled before FreezeGameInputs takes effect.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TransparentTabBlocking',  'When enabled, the transparent block intercepts clicks instead of passing them to the game.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoldInputs',              'Toggle hold mode for directional inputs, keeping them active without holding the key.');
@@ -28,6 +29,8 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TabSwitchRequire
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Fire',                     'Fire the equipped weapon.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelLeft',               'Rotate barrel selection counter-clockwise.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelRight',              'Rotate barrel selection clockwise.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyLeft',                 'Switch to the previous body configuration.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyRight',                'Switch to the next body configuration.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CombatText',               'Toggle floating damage numbers and XP text during combat.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CameraLockMode',           'Camera follow mode: Free (no follow), Scout (always centered), or Locked (fixed offset).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CameraSnapToPlayer',       'Snap the camera to center on the player. In Locked mode, resets the offset.');
@@ -40,6 +43,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FreezeGameInputs
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AnyGUIInteracting',  'True when the cursor is pressed inside a UI block (not the game viewport). Gameplay inputs are suppressed while this is active.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('GUIInteractingWith', 'Name of the UI block currently being clicked. Empty or None means no block is being interacted with.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DockingMode',        'Whether block-layout docking mode is active. When true, blocks can be resized and repositioned.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('NativeWindowResizeEdges', 'True when borderless window mode is exposing native Windows outer-edge resize hit targets.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BlockMenuOpen',      'Whether the block visibility overlay is currently open. Use it to show or hide UI panels.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('InputBlocked',       'True when a modal overlay (rebind dialog, block menu, or color editor) is consuming all input.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DraggingLayout',     'True while a UI block or panel is actively being dragged to a new position.');
@@ -64,6 +68,9 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletPen
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PhysicsFrictionRate',   'Velocity decay rate applied to game objects each frame: vel *= clamp(1 − rate × dt, 0, 1).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AngularAccelFactor',        'Multiplier on angular acceleration when rotating toward the cursor.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelSwitchSpeed',         'Speed at which the active barrel index rotates between barrels (units/s).');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ActiveBodyIndex',           'Zero-based index of the currently active body slot.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ActiveBodyName',            'Display name of the currently active body.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyRadiusScalar',           'Circle body radius = sqrt(mass) × BodyRadiusScalar.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletRadiusScalar',        'Bullet visual radius = sqrt(mass) × BulletRadiusScalar.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelHeightScalar',        'Barrel length = max(4, bulletSpeed × BarrelHeightScalar).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletKnockbackScalar',     'Knockback multiplier: knockback = bulletPenetration × BulletKnockbackScalar.');
@@ -94,8 +101,11 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OS',            
 
 -- Drag bar button tooltips
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_Close',         'Close this tab. If it is the last tab in the panel, the panel is removed from the layout.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_Lock',          'Toggle the panel lock. Locked panels cannot be scrolled, resized, or reordered.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_OverlayMerge',  'Merge this overlay into its parent panel. All overlay tabs become tabs of the parent.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_PanelLock',     'Toggle panel lock for drag-bar layout actions.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_TabLock',       'Toggle lock for this tab''s block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_TabRelease',    'Move this overlay tab back into its parent panel.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_OverlayMerge',  'Move overlay tab(s) from this panel back to the parent panel.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_Lock',          'Toggle panel lock for drag-bar layout actions.');
 
 -- Color scheme block button tooltips
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SchemeSave',    'Save the current color values to the active scheme.');
@@ -115,6 +125,8 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SetupDelete'
 -- Meta controls with explicit defaults are seeded here so their initial state is easy to change.
 INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, LockMode)
     VALUES ('DebugMode', 'Shift + B', 'SaveSwitch', 0, 1, 13, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, LockMode)
+    VALUES ('DisableToolTips', 'Ctrl + T', 'SaveSwitch', 0, 1, 20, 0);
 INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, LockMode)
     VALUES ('CameraLockMode', 'C', 'SaveEnum', 0, 1, 26, 0);
 

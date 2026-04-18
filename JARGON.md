@@ -1,31 +1,37 @@
-- **Rows and columns** are the grid-like building blocks of the screen layout
-    - **Resize edges** are the edges between panels, rows, and columns used to resize them
-    - **Panels** are a rectangular space inside a row or column that us occupied by groups containing a drag bar at the top with the currently selected block in the panel’s group beneath the drag bar
-        - **Panel locks** prevent you from managing group bars, dragging the drag bar, etc in DockingMode
-        - **Panel body** is the content inside a panel.
-        - **Panel head** is the top of a panel with information and managerial actions available.
-            - **Drag bars** are the bars you click, hold, and drag with the X buttons on the top right to close their panel and a lock button to lock that panel (which will prevent drag bars from being interactive with, and thus group bars and tabs)
-                - **Group bars** are the spaces in a panel’s drag bar containing 1-N tabs you can interact with
-                    - **Tabs** are interactable fields inside a group bar that open their respective block when clicked, can be dragged to be moved to other group bars, can be closed, and have a lock icon, which will lock their respective block
-                        - **Tab locks** prevent you from interacting with the block
-        - **Groups** are sets of blocks contained within a panel; when there is only one block it is a group of 1
-            - **Blocks** perform a specific function within a panel
-                - **Block types** are categories assigned to each block. Each block has one type, and type is distinct from the block name.
-                    - **Standard** blocks are regular blocks
-                    - **Overlay** blocks can be superimposed on other blocks
-                    - **Dynamic** blocks appear on top of the Interact block via a stimulus in the Game block, e.g., walking into range of a section on the map prompting customization.
-                - **Bar groups** are groups of bar rows in some vertical order arrangement
-                    - **Bar rows** are a row of elements containing 1-N bars within it, e.g., to display your shield on the right side of your health in one big row, again like League healthebars.
-                        - **Bars** are arrays of information about stats that can be rendered inside blocks
-                        - **Bar segments** are bars that up/downscale to represent total amount of a stat, like League healthbars superficially making you look stronger
-                - **Sections** are sets of information inside of a block
-                    - **Feedback giver** is text in a block that tells you when a button press was registered and other functionality so you know that your clicks are working
-                    - **GR indicator** is a custom indicator for a boolean-like variable that turns green or red to indicate being true or false
-                    - **Fun-col interfaces** are a custom-made UI interface that allow custom functional code to be applied to a set of items, e.g., to edit properties, to reorder them, etc.
-                        - The **main field** is the rectangle the entire Gabe UI comprises of spatially.
-                            - **Rows/Row fields** are rows in the main field representing items hooked in from an SQL script you can adjust using the fun-col interface.
-                            - **Columns/Function fields** are rectangles in the main field, 100% of the height of the main field, and 1/N (total number of function fields in the main field) of the main field’s width. When the cursor enters the main field, whichever function field the cursor will enlarge and take up the whole screen, unless this would be distracting or disruptive.
-                                - **Function field features** are custom sets of code written to do something within a function field, whether a custom UI in each row field, a way you can drag the row field around to reorder it, displaying information that may or may not be clickable, or otherwise.
+- The monogame **window** is the window comprising the entire game display on your screen.
+    - **Window resize edges**
+    - **Window resize corners**
+    - **Window drag panel**
+    - **Window body**
+        - **Rows and columns** are the grid-like building blocks of the screen layout
+            - **Resize edges** are the edges between panels, rows, and columns used to resize them
+            - **Resize corners** are the corners intersecting two resize edges used to resize them
+            - **Panels** are a rectangular space inside a row or column that us occupied by groups containing a drag bar at the top with the currently selected block in the panel’s group beneath the drag bar
+                - **Panel locks** prevent you from managing group bars, dragging the drag bar, etc in DockingMode
+                - **Panel body** is the content inside a panel.
+                - **Panel head** is the top of a panel with information and managerial actions available.
+                    - **Drag bars** are the bars you click, hold, and drag with the X buttons on the top right to close their panel and a lock button to lock that panel (which will prevent drag bars from being interactive with, and thus group bars and tabs)
+                        - **Group bars** are the spaces in a panel’s drag bar containing 1-N tabs you can interact with
+                            - **Tabs** are interactable fields inside a group bar that open their respective block when clicked, can be dragged to be moved to other group bars, can be closed, and have a lock icon, which will lock their respective block
+                                - **Tab locks** prevent you from interacting with the block
+                - **Groups** are sets of blocks contained within a panel; when there is only one block it is a group of 1
+                    - **Blocks** perform a specific function within a panel
+                        - **Block types** are categories assigned to each block. Each block has one type, and type is distinct from the block name.
+                            - **Standard** blocks are regular blocks
+                            - **Overlay** blocks can be superimposed on other blocks
+                            - **Dynamic** blocks appear on top of the Interact block via a stimulus in the Game block, e.g., walking into range of a section on the map prompting customization.
+                        - **Bar groups** are groups of bar rows in some vertical order arrangement
+                            - **Bar rows** are a row of elements containing 1-N bars within it, e.g., to display your shield on the right side of your health in one big row, again like League healthebars.
+                                - **Bars** are arrays of information about stats that can be rendered inside blocks
+                                - **Bar segments** are bars that up/downscale to represent total amount of a stat, like League healthbars superficially making you look stronger
+                        - **Sections** are sets of information inside of a block
+                            - **Feedback giver** is text in a block that tells you when a button press was registered and other functionality so you know that your clicks are working
+                            - **GR indicator** is a custom indicator for a boolean-like variable that turns green or red to indicate being true or false
+                            - **Fun-col interfaces** are a custom-made UI interface that allow custom functional code to be applied to a set of items, e.g., to edit properties, to reorder them, etc.
+                                - The **main field** is the rectangle the entire Gabe UI comprises of spatially.
+                                    - **Rows/Row fields** are rows in the main field representing items hooked in from an SQL script you can adjust using the fun-col interface.
+                                    - **Columns/Function fields** are rectangles in the main field, 100% of the height of the main field, and 1/N (total number of function fields in the main field) of the main field’s width. When the cursor enters the main field, whichever function field the cursor will enlarge and take up the whole screen, unless this would be distracting or disruptive.
+                                        - **Function field features** are custom sets of code written to do something within a function field, whether a custom UI in each row field, a way you can drag the row field around to reorder it, displaying information that may or may not be clickable, or otherwise.
 
 - Objects
     - Units
@@ -49,6 +55,65 @@
     - **Dynamic** means it is affected by physics
     - **Collideable** means the block can collide
     - **Destructible** means it can be destroyed
+    - **Prototype** means the GO is created from a template used for spawning copies (e.g., farm prototypes) and is not registered in the game world itself
+    - **Interact** means it triggers a custom behavior
+        - **ZoneBlock** means it triggers a block upon walking into its zone- The monogame **window** is the window comprising the entire game display on your screen.
+    - **Window resize edges**
+    - **Window resize corners**
+    - **Window drag panel**
+    - **Window body**
+        - **Rows and columns** are the grid-like building blocks of the screen layout
+            - **Resize edges** are the edges between panels, rows, and columns used to resize them
+            - **Resize corners** are the corners intersecting two resize edges used to resize them
+            - **Panels** are a rectangular space inside a row or column that us occupied by groups containing a drag bar at the top with the currently selected block in the panel’s group beneath the drag bar
+                - **Panel locks** prevent you from managing group bars, dragging the drag bar, etc in DockingMode
+                - **Panel body** is the content inside a panel.
+                - **Panel head** is the top of a panel with information and managerial actions available.
+                    - **Drag bars** are the bars you click, hold, and drag with the X buttons on the top right to close their panel and a lock button to lock that panel (which will prevent drag bars from being interactive with, and thus group bars and tabs)
+                        - **Group bars** are the spaces in a panel’s drag bar containing 1-N tabs you can interact with
+                            - **Tabs** are interactable fields inside a group bar that open their respective block when clicked, can be dragged to be moved to other group bars, can be closed, and have a lock icon, which will lock their respective block
+                                - **Tab locks** prevent you from interacting with the block
+                - **Groups** are sets of blocks contained within a panel; when there is only one block it is a group of 1
+                    - **Blocks** perform a specific function within a panel
+                        - **Block types** are categories assigned to each block. Each block has one type, and type is distinct from the block name.
+                            - **Standard** blocks are regular blocks
+                            - **Overlay** blocks can be superimposed on other blocks
+                            - **Dynamic** blocks appear on top of the Interact block via a stimulus in the Game block, e.g., walking into range of a section on the map prompting customization.
+                        - **Bar groups** are groups of bar rows in some vertical order arrangement
+                            - **Bar rows** are a row of elements containing 1-N bars within it, e.g., to display your shield on the right side of your health in one big row, again like League healthebars.
+                                - **Bars** are arrays of information about stats that can be rendered inside blocks
+                                - **Bar segments** are bars that up/downscale to represent total amount of a stat, like League healthbars superficially making you look stronger
+                        - **Sections** are sets of information inside of a block
+                            - **Feedback giver** is text in a block that tells you when a button press was registered and other functionality so you know that your clicks are working
+                            - **GR indicator** is a custom indicator for a boolean-like variable that turns green or red to indicate being true or false
+                            - **Fun-col interfaces** are a custom-made UI interface that allow custom functional code to be applied to a set of items, e.g., to edit properties, to reorder them, etc.
+                                - The **main field** is the rectangle the entire Gabe UI comprises of spatially.
+                                    - **Rows/Row fields** are rows in the main field representing items hooked in from an SQL script you can adjust using the fun-col interface.
+                                    - **Columns/Function fields** are rectangles in the main field, 100% of the height of the main field, and 1/N (total number of function fields in the main field) of the main field’s width. When the cursor enters the main field, whichever function field the cursor will enlarge and take up the whole screen, unless this would be distracting or disruptive.
+                                        - **Function field features** are custom sets of code written to do something within a function field, whether a custom UI in each row field, a way you can drag the row field around to reorder it, displaying information that may or may not be clickable, or otherwise.
+
+- Objects
+    - Units
+        - Barrels
+            - “Active” - The barrel currently being used
+            - “On standby” - A barrel not currently being used
+        - Players
+
+- Survival
+    - Stat types
+        - Health
+        - Shields
+
+- Damage
+    - **Flat damage** represents the unadjusted damage dealt to health stats
+    - **Max health damage** represents damage as a % of maximum health
+    - **Current health damage** represents damage as a % of current health
+
+- **GO flags** are used to confer certain qualities to GOs
+    - **Player** is the unit you control
+    - **Dynamic** means it is affected by physics
+    - **Collideable** means the block can collide
+    - **Destructible** means it can be destroyed
+    - **Prototype** means the GO is created from a template used for spawning copies (e.g., farm prototypes) and is not registered in the game world itself
     - **Interact** means it triggers a custom behavior
         - **ZoneBlock** means it triggers a block upon walking into its zone
-    - **Prototype** means the GO is a template used for spawning copies (e.g., farm prototypes) and is not registered in the game world itself

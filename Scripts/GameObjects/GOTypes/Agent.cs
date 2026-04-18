@@ -6,6 +6,109 @@ namespace op.io
 {
     public class Agent : GameObject
     {
+        // ── Body slot ───────────────────────────────────────────────────────────
+        // Holds one body's attributes and optional display name.
+        public class BodySlot
+        {
+            public Attributes_Body Attrs;
+            /// <summary>Custom display name (null = use default "Body N").</summary>
+            public string Name;
+
+            public BodySlot(Attributes_Body attrs)
+            {
+                Attrs = attrs;
+            }
+        }
+
+        // ── Body list & switching ───────────────────────────────────────────────
+        private readonly List<BodySlot> _bodies = new();
+        public IReadOnlyList<BodySlot> Bodies => _bodies;
+        public int BodyCount => _bodies.Count;
+        public int ActiveBodyIndex { get; private set; } = 0;
+
+        /// <summary>
+        /// Attaches a new body to this agent. The first body added becomes the
+        /// active one and its attributes are applied immediately.
+        /// </summary>
+        public void AddBody(Attributes_Body attrs)
+        {
+            _bodies.Add(new BodySlot(attrs));
+            if (_bodies.Count == 1)
+                ApplyBodyAttributes(0);
+        }
+
+        /// <summary>
+        /// Removes all body slots and resets the active index.
+        /// Call before re-applying a build from JSON deserialization.
+        /// </summary>
+        public void ClearBodies()
+        {
+            _bodies.Clear();
+            ActiveBodyIndex = 0;
+        }
+
+        /// <summary>
+        /// Rotates to the previous body slot (Ctrl+Q).
+        /// No-op when fewer than 2 bodies are equipped.
+        /// </summary>
+        public void SwitchBodyLeft()
+        {
+            if (BodyCount < 2) return;
+            int newIndex = (ActiveBodyIndex - 1 + BodyCount) % BodyCount;
+            ApplyBodyAttributes(newIndex);
+        }
+
+        /// <summary>
+        /// Rotates to the next body slot (Ctrl+E).
+        /// No-op when fewer than 2 bodies are equipped.
+        /// </summary>
+        public void SwitchBodyRight()
+        {
+            if (BodyCount < 2) return;
+            int newIndex = (ActiveBodyIndex + 1) % BodyCount;
+            ApplyBodyAttributes(newIndex);
+        }
+
+        /// <summary>
+        /// Applies the body attributes at the given index to this agent,
+        /// updating all derived stats (health, shield, regen, mass, etc.).
+        /// Health is clamped to the new maximum rather than reset.
+        /// </summary>
+        private void ApplyBodyAttributes(int index)
+        {
+            if (index < 0 || index >= BodyCount) return;
+            ActiveBodyIndex = index;
+            Attributes_Body body = _bodies[index].Attrs;
+            BodyAttributes = body;
+
+            float newMaxHp = AttributeDerived.MaxHealth(body.Mass);
+            // Preserve health ratio when switching bodies
+            float hpRatio = MaxHealth > 0f ? CurrentHealth / MaxHealth : 1f;
+            MaxHealth = newMaxHp;
+            CurrentHealth = MathF.Min(hpRatio * newMaxHp, newMaxHp);
+
+            MaxShield = body.MaxShield;
+            CurrentShield = MathF.Min(CurrentShield, body.MaxShield);
+            HealthRegen = body.HealthRegen;
+            HealthRegenDelay = body.HealthRegenDelay;
+            ShieldRegen = body.ShieldRegen;
+            ShieldRegenDelay = body.ShieldRegenDelay;
+            Mass = body.Mass;
+
+            UpdateCircleDimensions(body.Mass);
+        }
+
+        /// <summary>
+        /// For circle shapes, recomputes Width/Height from the derived body radius.
+        /// </summary>
+        public void UpdateCircleDimensions(float mass)
+        {
+            if (Shape == null || Shape.ShapeType != "Circle") return;
+            float radius = AttributeDerived.BodyRadius(mass, CollisionResolver.BodyRadiusScalar);
+            int diameter = Math.Max(1, (int)MathF.Round(2f * radius));
+            Shape.UpdateDimensions(diameter, diameter, Core.Instance.GraphicsDevice);
+        }
+
         // ── Barrel slot ─────────────────────────────────────────────────────────
         // Holds one barrel's attributes, full-size shape, and animated height scale.
         public class BarrelSlot

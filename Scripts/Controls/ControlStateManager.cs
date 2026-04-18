@@ -19,6 +19,8 @@ namespace op.io
         private static readonly Dictionary<string, int> _enumIndices = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, string[]> _enumOptions = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, bool> _enumPersistence = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, bool[]> _enumDisabledOptions = new(StringComparer.OrdinalIgnoreCase);
+        private const string EnumDisabledOptionsColumn = "EnumDisabledOptions";
 
         public static void Tickwise_PrevSwitchTrackUpdate()
         {
@@ -66,22 +68,45 @@ namespace op.io
 
         public static void RegisterEnumOptions(string settingKey, string[] options, int defaultIndex, bool persist)
         {
-            if (string.IsNullOrWhiteSpace(settingKey) || options == null || options.Length == 0) return;
+            if (string.IsNullOrWhiteSpace(settingKey) || options == null || options.Length == 0)
+            {
+                return;
+            }
+
             _enumTypes.Add(settingKey);
             _enumOptions[settingKey] = options;
             _enumPersistence[settingKey] = persist;
-            int clamped = Math.Clamp(defaultIndex, 0, options.Length - 1);
-            if (!_enumIndices.ContainsKey(settingKey))
-                _enumIndices[settingKey] = clamped;
+
+            int clampedDefault = Math.Clamp(defaultIndex, 0, options.Length - 1);
+            bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, clampedDefault);
+            int existingIndex = _enumIndices.TryGetValue(settingKey, out int cachedIndex) ? cachedIndex : clampedDefault;
+            _enumIndices[settingKey] = ResolveEnumIndexForSelection(options.Length, existingIndex, clampedDefault, disabled);
         }
 
-        public static void LoadEnumState(string settingKey, int index, bool persist)
+        public static void LoadEnumState(string settingKey, int index, bool persist, string encodedDisabledOptions = null)
         {
-            if (string.IsNullOrWhiteSpace(settingKey)) return;
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
             _enumTypes.Add(settingKey);
             _enumPersistence[settingKey] = persist;
-            if (_enumOptions.TryGetValue(settingKey, out string[] opts) && opts.Length > 0)
-                index = Math.Clamp(index, 0, opts.Length - 1);
+            if (_enumOptions.TryGetValue(settingKey, out string[] options) && options.Length > 0)
+            {
+                bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, index, encodedDisabledOptions);
+                index = ResolveEnumIndexForSelection(options.Length, index, 0, disabled);
+
+                if (persist && !string.IsNullOrWhiteSpace(encodedDisabledOptions))
+                {
+                    string normalizedEncoding = EncodeEnumDisabledOptions(disabled);
+                    if (!string.Equals(normalizedEncoding, encodedDisabledOptions, StringComparison.Ordinal))
+                    {
+                        SaveEnumDisabledOptions(settingKey, normalizedEncoding);
+                    }
+                }
+            }
+
             _enumIndices[settingKey] = index;
         }
 
@@ -90,45 +115,439 @@ namespace op.io
 
         public static int GetEnumIndex(string settingKey)
         {
-            if (_enumIndices.TryGetValue(settingKey, out int idx)) return idx;
-            return 0;
+            if (!_enumIndices.TryGetValue(settingKey, out int index))
+            {
+                return 0;
+            }
+
+            if (_enumOptions.TryGetValue(settingKey, out string[] options) && options.Length > 0)
+            {
+                bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, index);
+                int resolved = ResolveEnumIndexForSelection(options.Length, index, 0, disabled);
+                if (resolved != index)
+                {
+                    _enumIndices[settingKey] = resolved;
+                }
+                return resolved;
+            }
+
+            return index;
         }
 
         public static string GetEnumValue(string settingKey)
         {
-            if (!_enumOptions.TryGetValue(settingKey, out string[] opts) || opts.Length == 0)
+            if (!_enumOptions.TryGetValue(settingKey, out string[] options) || options.Length == 0)
+            {
                 return string.Empty;
-            int idx = GetEnumIndex(settingKey);
-            return opts[Math.Clamp(idx, 0, opts.Length - 1)];
+            }
+
+            int index = GetEnumIndex(settingKey);
+            return options[Math.Clamp(index, 0, options.Length - 1)];
         }
 
         public static string[] GetEnumOptions(string settingKey)
         {
-            return _enumOptions.TryGetValue(settingKey, out string[] opts) ? opts : System.Array.Empty<string>();
+            return _enumOptions.TryGetValue(settingKey, out string[] options) ? options : System.Array.Empty<string>();
         }
+
+        public static bool IsEnumOptionDisabled(string settingKey, string optionValue)
+        {
+            int index = FindEnumOptionIndex(settingKey, optionValue);
+            return index >= 0 && IsEnumOptionDisabled(settingKey, index);
+        }
+
+        public static bool IsEnumOptionDisabled(string settingKey, int optionIndex)
+        {
+            if (!_enumOptions.TryGetValue(settingKey, out string[] options) || options.Length == 0)
+            {
+                return false;
+            }
+
+            int index = Math.Clamp(optionIndex, 0, options.Length - 1);
+            bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, index);
+            return disabled[index];
+        }
+
+        public static bool TrySetEnumValue(string settingKey, string optionValue, string source = null)
+        {
+            if (!_enumTypes.Contains(settingKey))
+            {
+                return false;
+            }
+
+            int index = FindEnumOptionIndex(settingKey, optionValue);
+            if (index < 0 || IsEnumOptionDisabled(settingKey, index))
+            {
+                return false;
+            }
+
+            SetEnumIndex(settingKey, index, source ?? "ControlStateManager.TrySetEnumValue");
+            return true;
+        }
+
+        public static bool TrySetEnumOptionDisabled(string settingKey, string optionValue, bool disabled, string source = null)
+        {
+            if (!_enumTypes.Contains(settingKey))
+            {
+                return false;
+            }
+
+            if (!_enumOptions.TryGetValue(settingKey, out string[] options) || options.Length == 0)
+            {
+                return false;
+            }
+
+            int optionIndex = FindEnumOptionIndex(settingKey, optionValue);
+            if (optionIndex < 0)
+            {
+                return false;
+            }
+
+            bool[] disabledOptions = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, optionIndex);
+            if (disabledOptions[optionIndex] == disabled)
+            {
+                return false;
+            }
+
+            int enabledCount = CountEnabledOptions(disabledOptions);
+            if (disabled && enabledCount <= 1)
+            {
+                DebugLogger.PrintWarning($"Rejected enum disable for '{settingKey}:{optionValue}' because at least one option must remain enabled.");
+                return false;
+            }
+
+            disabledOptions[optionIndex] = disabled;
+            _enumDisabledOptions[settingKey] = disabledOptions;
+
+            int currentIndex = GetEnumIndex(settingKey);
+            if (disabled && currentIndex == optionIndex)
+            {
+                int fallbackIndex = GetNextEnabledEnumIndex(currentIndex, disabledOptions);
+                _enumIndices[settingKey] = fallbackIndex;
+                if (_enumPersistence.TryGetValue(settingKey, out bool persistCurrent) && persistCurrent)
+                {
+                    SaveEnumState(settingKey, fallbackIndex);
+                }
+            }
+
+            if (_enumPersistence.TryGetValue(settingKey, out bool persist) && persist)
+            {
+                SaveEnumDisabledOptions(settingKey, EncodeEnumDisabledOptions(disabledOptions));
+            }
+
+            return true;
+        }
+
+        public static string GetEnumDisabledOptionsEncoded(string settingKey)
+        {
+            if (!_enumOptions.TryGetValue(settingKey, out string[] options) || options.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, GetEnumIndex(settingKey));
+            return EncodeEnumDisabledOptions(disabled);
+        }
+
+        public static string GetAllEnumDisabledOptionsSummary()
+        {
+            if (_enumOptions.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            List<string> segments = new();
+            foreach (KeyValuePair<string, string[]> entry in _enumOptions)
+            {
+                if (entry.Value == null || entry.Value.Length == 0)
+                {
+                    continue;
+                }
+
+                bool[] disabled = GetOrInitializeEnumDisabledOptions(entry.Key, entry.Value.Length, GetEnumIndex(entry.Key));
+                List<string> disabledNames = new();
+                for (int i = 0; i < entry.Value.Length; i++)
+                {
+                    if (disabled[i])
+                    {
+                        disabledNames.Add(entry.Value[i]);
+                    }
+                }
+
+                string summary = disabledNames.Count == 0 ? "none" : string.Join(",", disabledNames);
+                segments.Add($"{entry.Key}[{summary}]");
+            }
+
+            return string.Join(" | ", segments);
+        }
+
+        public static int GetEnabledEnumOptionCount(string settingKey)
+        {
+            if (!_enumOptions.TryGetValue(settingKey, out string[] options) || options.Length == 0)
+            {
+                return 0;
+            }
+
+            bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, GetEnumIndex(settingKey));
+            return CountEnabledOptions(disabled);
+        }
+
+        public static bool HasMultipleEnabledEnumOptions(string settingKey) =>
+            GetEnabledEnumOptionCount(settingKey) > 1;
 
         public static void SetEnumIndex(string settingKey, int index, string source = null)
         {
-            if (!_enumTypes.Contains(settingKey)) return;
-            if (_enumOptions.TryGetValue(settingKey, out string[] opts) && opts.Length > 0)
-                index = Math.Clamp(index, 0, opts.Length - 1);
+            if (!_enumTypes.Contains(settingKey))
+            {
+                return;
+            }
+
+            if (_enumOptions.TryGetValue(settingKey, out string[] options) && options.Length > 0)
+            {
+                bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, options.Length, index);
+                int fallback = _enumIndices.TryGetValue(settingKey, out int current) ? current : 0;
+                index = ResolveEnumIndexForSelection(options.Length, index, fallback, disabled);
+            }
+
             _enumIndices[settingKey] = index;
             if (_enumPersistence.TryGetValue(settingKey, out bool persist) && persist)
+            {
                 SaveEnumState(settingKey, index);
+            }
         }
 
         public static void CycleEnum(string settingKey)
         {
-            if (!_enumTypes.Contains(settingKey)) return;
+            if (!_enumTypes.Contains(settingKey))
+            {
+                return;
+            }
+
             int current = GetEnumIndex(settingKey);
-            int count = _enumOptions.TryGetValue(settingKey, out string[] opts) ? opts.Length : 1;
-            int next = count > 1 ? (current + 1) % count : 0;
+            int optionCount = _enumOptions.TryGetValue(settingKey, out string[] options) ? options.Length : 0;
+            if (optionCount <= 1)
+            {
+                return;
+            }
+
+            bool[] disabled = GetOrInitializeEnumDisabledOptions(settingKey, optionCount, current);
+            int next = GetNextEnabledEnumIndex(current, disabled);
+            if (next == current)
+            {
+                return;
+            }
+
             SetEnumIndex(settingKey, next, "ControlStateManager.CycleEnum");
+        }
+
+        private static int FindEnumOptionIndex(string settingKey, string optionValue)
+        {
+            if (string.IsNullOrWhiteSpace(optionValue) ||
+                !_enumOptions.TryGetValue(settingKey, out string[] options) ||
+                options == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (string.Equals(options[i], optionValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool[] GetOrInitializeEnumDisabledOptions(string settingKey, int optionCount, int preferredEnabledIndex, string encoded = null)
+        {
+            if (optionCount <= 0)
+            {
+                return System.Array.Empty<bool>();
+            }
+
+            bool[] disabled;
+            if (!string.IsNullOrWhiteSpace(encoded))
+            {
+                disabled = DecodeEnumDisabledOptions(encoded, optionCount);
+            }
+            else if (_enumDisabledOptions.TryGetValue(settingKey, out bool[] existing))
+            {
+                disabled = new bool[optionCount];
+                int copyCount = Math.Min(optionCount, existing.Length);
+                for (int i = 0; i < copyCount; i++)
+                {
+                    disabled[i] = existing[i];
+                }
+            }
+            else
+            {
+                disabled = new bool[optionCount];
+            }
+
+            NormalizeEnumDisabledOptions(disabled, preferredEnabledIndex);
+            _enumDisabledOptions[settingKey] = disabled;
+            return disabled;
+        }
+
+        private static void NormalizeEnumDisabledOptions(bool[] disabled, int preferredEnabledIndex)
+        {
+            if (disabled == null || disabled.Length == 0)
+            {
+                return;
+            }
+
+            if (CountEnabledOptions(disabled) > 0)
+            {
+                return;
+            }
+
+            int fallbackIndex = Math.Clamp(preferredEnabledIndex, 0, disabled.Length - 1);
+            disabled[fallbackIndex] = false;
+        }
+
+        private static int CountEnabledOptions(bool[] disabled)
+        {
+            if (disabled == null || disabled.Length == 0)
+            {
+                return 0;
+            }
+
+            int enabled = 0;
+            for (int i = 0; i < disabled.Length; i++)
+            {
+                if (!disabled[i])
+                {
+                    enabled++;
+                }
+            }
+
+            return enabled;
+        }
+
+        private static int ResolveEnumIndexForSelection(int optionCount, int requestedIndex, int fallbackIndex, bool[] disabledOptions)
+        {
+            if (optionCount <= 0)
+            {
+                return 0;
+            }
+
+            int clampedRequested = Math.Clamp(requestedIndex, 0, optionCount - 1);
+            int clampedFallback = Math.Clamp(fallbackIndex, 0, optionCount - 1);
+            if (disabledOptions == null || disabledOptions.Length != optionCount)
+            {
+                return clampedRequested;
+            }
+
+            if (!disabledOptions[clampedRequested])
+            {
+                return clampedRequested;
+            }
+
+            if (!disabledOptions[clampedFallback])
+            {
+                return clampedFallback;
+            }
+
+            for (int i = 0; i < optionCount; i++)
+            {
+                if (!disabledOptions[i])
+                {
+                    return i;
+                }
+            }
+
+            disabledOptions[clampedRequested] = false;
+            return clampedRequested;
+        }
+
+        private static int GetNextEnabledEnumIndex(int currentIndex, bool[] disabledOptions)
+        {
+            if (disabledOptions == null || disabledOptions.Length == 0)
+            {
+                return 0;
+            }
+
+            int count = disabledOptions.Length;
+            int current = Math.Clamp(currentIndex, 0, count - 1);
+
+            for (int offset = 1; offset <= count; offset++)
+            {
+                int candidate = (current + offset) % count;
+                if (!disabledOptions[candidate])
+                {
+                    return candidate;
+                }
+            }
+
+            return current;
+        }
+
+        private static bool[] DecodeEnumDisabledOptions(string encoded, int optionCount)
+        {
+            bool[] disabled = new bool[optionCount];
+            if (string.IsNullOrWhiteSpace(encoded))
+            {
+                return disabled;
+            }
+
+            int len = Math.Min(optionCount, encoded.Length);
+            for (int i = 0; i < len; i++)
+            {
+                disabled[i] = encoded[i] == '1';
+            }
+
+            return disabled;
+        }
+
+        private static string EncodeEnumDisabledOptions(bool[] disabled)
+        {
+            if (disabled == null || disabled.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            char[] chars = new char[disabled.Length];
+            for (int i = 0; i < disabled.Length; i++)
+            {
+                chars[i] = disabled[i] ? '1' : '0';
+            }
+
+            return new string(chars);
         }
 
         private static void SaveEnumState(string settingKey, int index)
         {
             DatabaseConfig.UpdateSetting("ControlKey", "SwitchStartState", settingKey, index);
+        }
+
+        private static void SaveEnumDisabledOptions(string settingKey, string encoded)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            try
+            {
+                if (!ControlKeyData.ColumnExists(EnumDisabledOptionsColumn))
+                {
+                    return;
+                }
+
+                const string sql = "UPDATE ControlKey SET EnumDisabledOptions = @encoded WHERE SettingKey = @key;";
+                var parameters = new Dictionary<string, object>
+                {
+                    ["@encoded"] = encoded ?? string.Empty,
+                    ["@key"] = settingKey
+                };
+                DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to save enum disabled options for '{settingKey}': {ex.Message}");
+            }
         }
 
         // ── Switch state API ──────────────────────────────────────────────────
@@ -341,7 +760,10 @@ namespace op.io
             try
             {
                 // Fetch all control keys with SwitchStartState from the database
-                const string sql = "SELECT SettingKey, SwitchStartState, InputType, InputKey FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');";
+                bool hasEnumDisabledColumn = ControlKeyData.ColumnExists(EnumDisabledOptionsColumn);
+                string sql = hasEnumDisabledColumn
+                    ? "SELECT SettingKey, SwitchStartState, InputType, InputKey, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');"
+                    : "SELECT SettingKey, SwitchStartState, InputType, InputKey, '' AS EnumDisabledOptions FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');";
                 var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
@@ -366,7 +788,10 @@ namespace op.io
                         if (isEnum)
                         {
                             bool persist = !string.Equals(inputTypeLabel, "NoSaveEnum", StringComparison.OrdinalIgnoreCase);
-                            LoadEnumState(settingKey, switchState, persist);
+                            string encodedDisabled = row.TryGetValue(EnumDisabledOptionsColumn, out object disabledObj)
+                                ? disabledObj?.ToString() ?? string.Empty
+                                : string.Empty;
+                            LoadEnumState(settingKey, switchState, persist, encodedDisabled);
                             DebugLogger.PrintDatabase($"Loaded enum state: {settingKey} = index {switchState} ({GetEnumValue(settingKey)})");
                             continue;
                         }

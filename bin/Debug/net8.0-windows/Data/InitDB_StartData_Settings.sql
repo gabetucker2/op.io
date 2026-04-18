@@ -33,5 +33,6 @@ INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('DebugLogRedFlagMode', '
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('KnockbackMassScale', '4.0');
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('RecoilMassScale', '50.0');
 INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('PhysicsFrictionRate', '2');  -- velocity decay: vel *= clamp(1 - rate * dt, 0, 1)
+INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('BodyRadiusScalar', '14.43'); -- circle body radius: radius = sqrt(mass) * BodyRadiusScalar
 
 

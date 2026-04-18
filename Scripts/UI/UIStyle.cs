@@ -14,7 +14,7 @@ namespace op.io
         public const int DragBarHeight = 32;
         public const int MinBlockSize = 10;
         public const float DropEdgeThreshold = 0.28f;
-        public const int ResizeEdgeThickness = 8;
+        public const int ResizeEdgeThickness = 5;
         public const int BlockBorderThickness = 1;
         public const int DragOutlineThickness = 2;
 
@@ -82,6 +82,19 @@ namespace op.io
         public static Color ResizeEdgeHoverColor => ColorPalette.ResizeEdgeHover;
         public static Color ResizeEdgeActiveColor => ColorPalette.ResizeEdgeActive;
         public static Color DragBarHoverTint => ColorPalette.DragBarHoverTint;
+
+        public static bool AreTooltipsEnabled
+        {
+            get
+            {
+                if (!ControlStateManager.ContainsSwitchState(ControlKeyMigrations.DisableToolTipsKey))
+                {
+                    return true;
+                }
+
+                return !ControlStateManager.GetSwitchState(ControlKeyMigrations.DisableToolTipsKey);
+            }
+        }
 
         public static void EnsureFontsLoaded(ContentManager content)
         {

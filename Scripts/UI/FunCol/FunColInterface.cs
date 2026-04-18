@@ -530,7 +530,7 @@ namespace op.io.UI.FunCol
                 sb.Draw(pixel, new Rectangle(headerBounds.X, headerBounds.Bottom - 1, headerBounds.Width, 1), UIStyle.BlockBorder);
 
             // Tooltip for hovered column (opt-in via ShowHeaderTooltips)
-            if (ShowHeaderTooltips && _headerHoveredColumn >= 0 && _headerHoveredColumn < n &&
+            if (UIStyle.AreTooltipsEnabled && ShowHeaderTooltips && _headerHoveredColumn >= 0 && _headerHoveredColumn < n &&
                 font.IsAvailable && pixel != null)
             {
                 FunctionFieldFeature feat = _features[_headerHoveredColumn];

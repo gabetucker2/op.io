@@ -76,7 +76,7 @@ namespace op.io
             {
                 _activeZoneKey = hitKey;
                 if (hitKey != null)
-                    InteractBlock.SetActiveDynamicContent(hitKey);
+                    InteractBlock.SetActiveDynamicContent(hitKey, "ZoneBlockDetector.Update (ZoneBlock overlap)");
                 else
                     InteractBlock.ClearActiveDynamicContent();
             }

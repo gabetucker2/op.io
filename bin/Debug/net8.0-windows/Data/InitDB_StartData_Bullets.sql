@@ -12,7 +12,7 @@ INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('PenetrationDamping',    '
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRadiusScalar',    '6');    -- bullet radius scalar: radius = sqrt(mass) * BulletRadiusScalar
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BarrelHeightScalar',   '0.075'); -- barrel height scalar: height = bulletSpeed * BarrelHeightScalar
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletKnockbackScalar','0.5');  -- multiplier applied to bullet recoil knockback (< 1 attenuates)
-INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRecoilScalar',  '0.625'); -- multiplier: recoil = mass × (1 + knockback) × BulletRecoilScalar
+INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRecoilScalar',  '0.3125'); -- multiplier: recoil = mass × (1 + knockback) × BulletRecoilScalar
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletFarmKnockbackScalar','0.15'); -- scalar for bullet momentum transfer to farm objects (0 = no push; 1 = full physics transfer)
 INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('OwnerImmunityDuration',   '0.3');   -- seconds after spawn during which a bullet cannot collide with or damage its owner
 

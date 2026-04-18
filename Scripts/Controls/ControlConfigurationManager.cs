@@ -34,6 +34,7 @@ namespace op.io
             public bool MetaControl { get; set; }
             public int RenderOrder { get; set; }
             public bool LockMode { get; set; }
+            public string EnumDisabledOptions { get; set; }
         }
 
         public static IReadOnlyList<string> ListConfigurations()
@@ -297,6 +298,22 @@ namespace op.io
         private static void EnsureTables()
         {
             BlockDataStore.EnsureTables(null, DockBlockKind.ControlSetups, DockBlockKind.Controls);
+
+            const string enumDisabledColumn = "EnumDisabledOptions";
+            if (!ControlKeyData.ColumnExists(enumDisabledColumn))
+            {
+                ControlKeyData.AddColumn(enumDisabledColumn, "TEXT NOT NULL DEFAULT ''");
+            }
+
+            try
+            {
+                const string normalizeSql = "UPDATE ControlKey SET EnumDisabledOptions = COALESCE(EnumDisabledOptions, '');";
+                DatabaseQuery.ExecuteNonQuery(normalizeSql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to normalize {enumDisabledColumn} in control configurations: {ex.Message}");
+            }
         }
 
         private static string NormalizeName(string value)
@@ -309,7 +326,7 @@ namespace op.io
             var payload = new ControlConfiguration();
 
             const string sql = @"
-SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode
+SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
 FROM ControlKey
 ORDER BY ControlOrder ASC, SettingKey ASC;";
 
@@ -330,7 +347,10 @@ ORDER BY ControlOrder ASC, SettingKey ASC;";
                     SwitchStartState = row.TryGetValue("SwitchStartState", out object switchObj) && switchObj != null && switchObj != DBNull.Value ? Convert.ToInt32(switchObj) : 0,
                     MetaControl = row.TryGetValue("MetaControl", out object metaObj) && metaObj != null && metaObj != DBNull.Value && Convert.ToInt32(metaObj) != 0,
                     RenderOrder = row.TryGetValue("ControlOrder", out object orderObj) ? Convert.ToInt32(orderObj) : 0,
-                    LockMode = row.TryGetValue("LockMode", out object lockObj) && lockObj != null && lockObj != DBNull.Value && Convert.ToInt32(lockObj) != 0
+                    LockMode = row.TryGetValue("LockMode", out object lockObj) && lockObj != null && lockObj != DBNull.Value && Convert.ToInt32(lockObj) != 0,
+                    EnumDisabledOptions = row.TryGetValue("EnumDisabledOptions", out object disabledObj)
+                        ? disabledObj?.ToString() ?? string.Empty
+                        : string.Empty
                 });
             }
 
@@ -370,15 +390,16 @@ ORDER BY ControlOrder ASC, SettingKey ASC;";
             }
 
             const string sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, RenderOrder, LockMode)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @renderOrder, @lockMode)
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, RenderOrder, LockMode, EnumDisabledOptions)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @renderOrder, @lockMode, @enumDisabledOptions)
 ON CONFLICT(SettingKey) DO UPDATE SET
     InputKey = excluded.InputKey,
     InputType = excluded.InputType,
     MetaControl = excluded.MetaControl,
     SwitchStartState = excluded.SwitchStartState,
     RenderOrder = excluded.RenderOrder,
-    LockMode = excluded.LockMode;";
+    LockMode = excluded.LockMode,
+    EnumDisabledOptions = excluded.EnumDisabledOptions;";
 
             foreach (ControlBindingSnapshot binding in bindings)
             {
@@ -395,7 +416,8 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     ["@metaControl"] = binding.MetaControl ? 1 : 0,
                     ["@switchStartState"] = binding.SwitchStartState ?? 0,
                     ["@renderOrder"] = Math.Max(1, binding.RenderOrder),
-                    ["@lockMode"] = binding.LockMode ? 1 : 0
+                    ["@lockMode"] = binding.LockMode ? 1 : 0,
+                    ["@enumDisabledOptions"] = binding.EnumDisabledOptions ?? string.Empty
                 };
 
                 DatabaseQuery.ExecuteNonQuery(sql, parameters);
@@ -523,6 +545,12 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     ControlStateManager.RegisterSwitchPersistence(binding.SettingKey, persist);
                     ControlStateManager.SetSwitchState(binding.SettingKey, switchOn, "ControlConfigurationManager.ApplyRuntimeBindings");
                 }
+                else if (IsEnumType(parsedType))
+                {
+                    bool persist = parsedType != InputType.NoSaveEnum;
+                    int enumIndex = binding.SwitchStartState ?? 0;
+                    ControlStateManager.LoadEnumState(binding.SettingKey, enumIndex, persist, binding.EnumDisabledOptions);
+                }
             }
         }
 
@@ -635,6 +663,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.HoldInputsKey, InputKey = "M", InputType = "NoSaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 16, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.PreviousConfigurationKey, InputKey = "Shift + [", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 17, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.NextConfigurationKey, InputKey = "Shift + ]", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 18, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.DisableToolTipsKey, InputKey = "Ctrl + T", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 20, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollInKey, InputKey = "ScrollUp", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 28, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollOutKey, InputKey = "ScrollDown", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 29, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.ScrollMinDistanceKey, InputKey = "", InputType = "Float", FloatStartState = 200f, MetaControl = true, RenderOrder = 30, LockMode = false },
@@ -809,6 +838,9 @@ ON CONFLICT(SettingKey) DO UPDATE SET
 
         private static bool IsSwitchType(InputType inputType) =>
             inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
+
+        private static bool IsEnumType(InputType inputType) =>
+            inputType == InputType.SaveEnum || inputType == InputType.NoSaveEnum;
 
         private static bool IsPersistentSwitch(InputType inputType) => inputType == InputType.SaveSwitch;
     }

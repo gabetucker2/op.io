@@ -20,9 +20,13 @@ namespace op.io
         [JsonPropertyName("barrels")]
         public List<BarrelBuildData> Barrels { get; set; } = [];
 
-        /// <summary>Body stat block (health, speed, armor, etc.).</summary>
+        /// <summary>Body stat block (health, speed, armor, etc.). Legacy single-body field.</summary>
         [JsonPropertyName("body")]
         public BodyBuildData Body { get; set; } = new();
+
+        /// <summary>Ordered list of body attribute sets (index 0 = first active body).</summary>
+        [JsonPropertyName("bodies")]
+        public List<BodyBuildData> Bodies { get; set; } = [];
 
         /// <summary>Unit-level metadata (name, rewards, switch speeds, etc.).</summary>
         [JsonPropertyName("unit")]
@@ -93,6 +97,7 @@ namespace op.io
     /// <summary>JSON-serializable mirror of <see cref="Attributes_Body"/>.</summary>
     public sealed class BodyBuildData
     {
+        [JsonPropertyName("name")]                     public string Name                    { get; set; }
         [JsonPropertyName("mass")]                     public float Mass                     { get; set; }
         [JsonPropertyName("healthRegen")]              public float HealthRegen              { get; set; }
         [JsonPropertyName("healthRegenDelay")]         public float HealthRegenDelay         { get; set; }
@@ -128,8 +133,9 @@ namespace op.io
             BodyActionBuff            = BodyActionBuff,
         };
 
-        public static BodyBuildData FromAttributes(Attributes_Body a) => new()
+        public static BodyBuildData FromAttributes(Attributes_Body a, string name = null) => new()
         {
+            Name                      = name,
             Mass                      = a.Mass,
             HealthRegen               = a.HealthRegen,
             HealthRegenDelay          = a.HealthRegenDelay,
@@ -212,6 +218,8 @@ namespace op.io
             };
             foreach (var slot in agent.Barrels)
                 build.Barrels.Add(BarrelBuildData.FromAttributes(slot.Attrs, slot.Name));
+            foreach (var slot in agent.Bodies)
+                build.Bodies.Add(BodyBuildData.FromAttributes(slot.Attrs, slot.Name));
             return build;
         }
 
@@ -231,7 +239,23 @@ namespace op.io
                     agent.Barrels[i].Name = barrelData.Name;
             }
 
-            agent.BodyAttributes   = build.Body.ToAttributes();
+            // Restore bodies — prefer the Bodies list; fall back to legacy single Body field.
+            if (build.Bodies != null && build.Bodies.Count > 0)
+            {
+                agent.ClearBodies();
+                for (int i = 0; i < build.Bodies.Count; i++)
+                {
+                    var bodyData = build.Bodies[i];
+                    agent.AddBody(bodyData.ToAttributes());
+                    if (!string.IsNullOrEmpty(bodyData.Name))
+                        agent.Bodies[i].Name = bodyData.Name;
+                }
+            }
+            else
+            {
+                agent.BodyAttributes = build.Body.ToAttributes();
+            }
+
             agent.UnitAttributes   = build.Unit.ToAttributes(); // setter syncs Name → GameObject.Name
             agent.DeathPointReward = agent.UnitAttributes.DeathPointReward;
             if (!string.IsNullOrWhiteSpace(build.Unit.Name))

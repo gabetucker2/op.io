@@ -21,6 +21,18 @@ namespace op.io
             }
         }
 
+        private static float? _cachedBodyRadiusScalar;
+        public static float BodyRadiusScalar
+        {
+            get
+            {
+                if (!_cachedBodyRadiusScalar.HasValue)
+                    _cachedBodyRadiusScalar = DatabaseFetch.GetValue<float>(
+                        "PhysicsSettings", "Value", "SettingKey", "BodyRadiusScalar");
+                return _cachedBodyRadiusScalar.Value;
+            }
+        }
+
         private static long ContactKey(int idA, int idB)
         {
             int lo = idA < idB ? idA : idB;

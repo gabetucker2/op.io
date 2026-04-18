@@ -80,10 +80,12 @@ namespace op.io
             string structurePathSettings = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_Structure_Settings.sql");
             string structurePathGOs      = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_Structure_GOs.sql");
             string structurePathBarrels  = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_Structure_Barrels.sql");
+            string structurePathBodies   = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_Structure_Bodies.sql");
 
             SQLScriptExecutor.RunSQLScript(connection, structurePathSettings);
             SQLScriptExecutor.RunSQLScript(connection, structurePathGOs);
             SQLScriptExecutor.RunSQLScript(connection, structurePathBarrels);
+            SQLScriptExecutor.RunSQLScript(connection, structurePathBodies);
 
             DebugLogger.PrintDatabase("Database structure scripts loaded successfully.");
         }
@@ -164,6 +166,9 @@ namespace op.io
                     ("DebugMode",
                         "Toggle debug visuals such as the physics collision circle.\n• ON: Debug visuals are shown.\n• OFF: Debug visuals are hidden.",
                         "Switch"),
+                    ("DisableToolTips",
+                        "When enabled, all UI tooltips are suppressed.\n• ON: Tooltips are hidden everywhere.\n• OFF: Tooltips are shown normally.",
+                        "Switch"),
                     ("TransparentTabBlocking",
                         "When enabled, the transparent block intercepts clicks instead of passing them to the game.\n• ON: Transparent blocks intercept mouse clicks.\n• OFF: Clicks pass through transparent blocks to the game.",
                         "Switch"),
@@ -240,6 +245,7 @@ namespace op.io
             string dataPathMapObjects = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_MapObjects.sql");
             string dataPathFarms      = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_Farms.sql");
             string dataPathBarrels    = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_Barrels.sql");
+            string dataPathBodies     = Path.Combine(DatabaseConfig.DatabaseDirectory, "InitDB_StartData_Bodies.sql");
 
             SQLScriptExecutor.RunSQLScript(connection, dataPathSettings);
             SQLScriptExecutor.RunSQLScript(connection, dataPathControls);
@@ -251,6 +257,7 @@ namespace op.io
             SQLScriptExecutor.RunSQLScript(connection, dataPathMapObjects);
             SQLScriptExecutor.RunSQLScript(connection, dataPathFarms);
             SQLScriptExecutor.RunSQLScript(connection, dataPathBarrels);
+            SQLScriptExecutor.RunSQLScript(connection, dataPathBodies);
         }
 
         private static void VerifyTablesExistence(SQLiteConnection connection)

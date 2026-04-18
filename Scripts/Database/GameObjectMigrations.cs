@@ -60,9 +60,12 @@ namespace op.io
                 EnsureDropGameObjectsTypeColumn();
                 EnsureBarrelHeightScalarSetting();
                 EnsureBulletKnockbackScalarSetting();
+                EnsureBulletRecoilScalarSetting();
                 EnsureBulletFarmKnockbackScalarSetting();
                 EnsureBulletEffectorColumns();
                 EnsureBarrelBulletHealthColumn();
+                EnsureBodyRadiusScalarSetting();
+                EnsureDeathFadeFxSettings();
                 _applied = true;
             }
             catch (Exception ex)
@@ -863,6 +866,47 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
             }
         }
 
+        private static void EnsureBulletRecoilScalarSetting()
+        {
+            const string key = "BulletRecoilScalar";
+            const float updatedDefault = 0.3125f;
+
+            if (!SettingKeyExists(key, "BulletPhysics"))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO BulletPhysics (SettingKey, Value) VALUES ('BulletRecoilScalar', '0.3125');");
+                DebugLogger.PrintDatabase("EnsureBulletRecoilScalarSetting: inserted BulletRecoilScalar = 0.3125.");
+                return;
+            }
+
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".bullet_recoil_scalar_halved_v1_applied");
+            if (System.IO.File.Exists(marker))
+            {
+                return;
+            }
+
+            try
+            {
+                float current = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", key);
+                if (MathF.Abs(current - 0.625f) <= 0.0001f)
+                {
+                    DatabaseQuery.ExecuteNonQuery(
+                        "UPDATE BulletPhysics SET Value = '0.3125' WHERE SettingKey = 'BulletRecoilScalar';");
+                    DebugLogger.PrintDatabase("EnsureBulletRecoilScalarSetting: halved BulletRecoilScalar from 0.625 to 0.3125.");
+                }
+                else
+                {
+                    DebugLogger.PrintDatabase($"EnsureBulletRecoilScalarSetting: skipped update (current={current:0.#######}, target={updatedDefault:0.#######}).");
+                }
+
+                System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureBulletRecoilScalarSetting failed: {ex.Message}");
+            }
+        }
+
         private static void EnsureBulletFarmKnockbackScalarSetting()
         {
             if (!SettingKeyExists("BulletFarmKnockbackScalar", "BulletPhysics"))
@@ -895,6 +939,38 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
             if (ColumnExists("BarrelPrototypes", "BulletHealth")) return;
             DatabaseQuery.ExecuteNonQuery("ALTER TABLE BarrelPrototypes ADD COLUMN BulletHealth REAL DEFAULT -1;");
             DebugLogger.Print("Migration: added BulletHealth column to BarrelPrototypes.");
+        }
+
+        private static void EnsureBodyRadiusScalarSetting()
+        {
+            if (!SettingKeyExists("BodyRadiusScalar", "PhysicsSettings"))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('BodyRadiusScalar', '14.43');");
+                DebugLogger.PrintDatabase("EnsureBodyRadiusScalarSetting: inserted BodyRadiusScalar = 14.43.");
+            }
+        }
+
+        private static void EnsureDeathFadeFxSettings()
+        {
+            (string key, string value)[] settings =
+            [
+                ("DeathFadeScaleMultiplier", "1.5"),
+                ("DeathFadeSpinMinDegPerSecond", "90"),
+                ("DeathFadeSpinMaxDegPerSecond", "240"),
+            ];
+
+            foreach ((string key, string value) in settings)
+            {
+                if (SettingKeyExists(key, "FXSettings"))
+                {
+                    continue;
+                }
+
+                DatabaseQuery.ExecuteNonQuery(
+                    $"INSERT INTO FXSettings (SettingKey, Value) VALUES ('{key}', '{value}');");
+                DebugLogger.PrintDatabase($"EnsureDeathFadeFxSettings: inserted {key} = {value}.");
+            }
         }
 
         private static bool TableExists(string tableName)

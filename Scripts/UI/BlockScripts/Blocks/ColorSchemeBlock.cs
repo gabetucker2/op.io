@@ -73,17 +73,24 @@ namespace op.io.UI.BlockScripts.Blocks
         private static float _lineHeight;
         private static string _hoveredRowKey;
         private static string _tooltipRowKey;
+        private static string _tooltipRowLabel;
 
         public static string GetHoveredRowKey() => _tooltipRowKey;
 
         public static string GetHoveredRowLabel()
         {
+            if (!string.IsNullOrWhiteSpace(_tooltipRowLabel))
+            {
+                return _tooltipRowLabel;
+            }
+
             if (string.IsNullOrEmpty(_tooltipRowKey)) return null;
             return TryGetRow(_tooltipRowKey, out ColorRow row) ? row.Label : _tooltipRowKey;
         }
 
         private static ColorEditorState _editor;
         private static readonly UIDropdown _schemeDropdown = new();
+        private const string SchemeDropdownTooltipKey = "Dropdown_ColorSchemeOption";
         private static Rectangle _schemeToolbarBounds;
         private static Rectangle _saveSchemeBounds;
         private static Rectangle _newSchemeBounds;
@@ -241,12 +248,17 @@ namespace op.io.UI.BlockScripts.Blocks
 
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             _hoveredRowKey = !blockLocked ? hitRow : null;
+            bool hasDropdownTooltip = TryGetHoveredSchemeDropdownTooltip(mouseState.Position, out string dropdownTooltipKey, out string dropdownTooltipLabel);
+
             // Check scheme buttons for tooltip keys
-            _tooltipRowKey = hitRow
+            _tooltipRowKey = hasDropdownTooltip
+                ? dropdownTooltipKey
+                : (hitRow
                 ?? (_saveSchemeBounds != Rectangle.Empty && _saveSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeSave" : null)
                 ?? (_newSchemeBounds != Rectangle.Empty && _newSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeNew" : null)
                 ?? (_renameSchemeBounds != Rectangle.Empty && _renameSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeRename" : null)
-                ?? (_deleteSchemeBounds != Rectangle.Empty && _deleteSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeDelete" : null);
+                ?? (_deleteSchemeBounds != Rectangle.Empty && _deleteSchemeBounds.Contains(mouseState.Position) ? "Btn_SchemeDelete" : null));
+            _tooltipRowLabel = hasDropdownTooltip ? dropdownTooltipLabel : hitRow;
 
             if (_dragState.IsDragging)
             {
@@ -449,11 +461,32 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             IReadOnlyList<string> schemes = ColorScheme.GetAvailableSchemeNames();
-            IEnumerable<UIDropdown.Option> options = schemes.Select(name => new UIDropdown.Option(name, name));
+            IEnumerable<UIDropdown.Option> options = schemes.Select(name => new UIDropdown.Option(name, name, false, SchemeDropdownTooltipKey, name));
             string desired = !string.IsNullOrWhiteSpace(_selectedSchemeName) ? _selectedSchemeName : ColorScheme.ActiveSchemeName;
             _schemeDropdown.SetOptions(options, desired);
             _selectedSchemeName = _schemeDropdown.HasOptions ? (_schemeDropdown.SelectedId ?? ColorScheme.ActiveSchemeName) : ColorScheme.ActiveSchemeName;
             _schemeListDirty = false;
+        }
+
+        private static bool TryGetHoveredSchemeDropdownTooltip(Point pointer, out string tooltipKey, out string tooltipLabel)
+        {
+            tooltipKey = null;
+            tooltipLabel = null;
+            if (_schemeDropdown.Bounds == Rectangle.Empty || !_schemeDropdown.IsPointerOverDropdown(pointer))
+            {
+                return false;
+            }
+
+            tooltipKey = _schemeDropdown.GetHoveredOptionTooltipKey();
+            tooltipLabel = _schemeDropdown.GetHoveredOptionTooltipLabel();
+            if (!string.IsNullOrWhiteSpace(tooltipKey))
+            {
+                return true;
+            }
+
+            tooltipKey = SchemeDropdownTooltipKey;
+            tooltipLabel = !string.IsNullOrWhiteSpace(_selectedSchemeName) ? _selectedSchemeName : _schemeDropdown.SelectedId;
+            return true;
         }
 
         private static void UpdateLayout(Rectangle contentBounds)

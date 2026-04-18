@@ -7,10 +7,26 @@ namespace op.io
     public static class GameUpdater
     {
         private static readonly List<GameObject> _dyingObjects = new();
+        private static readonly Random _deathFadeRandom = new();
 
         private static float? _deathFadeOut;
         private static float DeathFadeOut =>
             _deathFadeOut ??= DatabaseFetch.GetAnimSetting("DeathFadeAnim", 0f, 0f, 0.5f).FadeOut;
+
+        private static float? _deathFadeScaleMultiplier;
+        private static float DeathFadeScaleMultiplier =>
+            _deathFadeScaleMultiplier ??= DatabaseFetch.GetSetting<float>(
+                "FXSettings", "Value", "SettingKey", "DeathFadeScaleMultiplier", 1.5f);
+
+        private static float? _deathFadeSpinMinDegPerSecond;
+        private static float DeathFadeSpinMinDegPerSecond =>
+            _deathFadeSpinMinDegPerSecond ??= DatabaseFetch.GetSetting<float>(
+                "FXSettings", "Value", "SettingKey", "DeathFadeSpinMinDegPerSecond", 90f);
+
+        private static float? _deathFadeSpinMaxDegPerSecond;
+        private static float DeathFadeSpinMaxDegPerSecond =>
+            _deathFadeSpinMaxDegPerSecond ??= DatabaseFetch.GetSetting<float>(
+                "FXSettings", "Value", "SettingKey", "DeathFadeSpinMaxDegPerSecond", 240f);
 
         public static void Update(GameTime gameTime)
         {
@@ -66,6 +82,8 @@ namespace op.io
                 {
                     go.IsDying = true;
                     go.DeathFadeTimer = fadeOut;
+                    go.DeathFadeScale = 1f;
+                    go.DeathFadeSpinVelocity = GetRandomDeathFadeSpinVelocity();
                     go.Opacity = 1f;
                     if (go.DeathImpulse != Vector2.Zero)
                         go.PhysicsVelocity = go.DeathImpulse;
@@ -84,12 +102,16 @@ namespace op.io
         {
             if (_dyingObjects.Count == 0) return;
             float fadeOut = DeathFadeOut;
+            float targetScale = MathF.Max(0f, DeathFadeScaleMultiplier);
             for (int i = _dyingObjects.Count - 1; i >= 0; i--)
             {
                 GameObject go = _dyingObjects[i];
                 go.Update(); // keep physics velocity applied during fade
                 go.DeathFadeTimer -= Core.DELTATIME;
-                go.Opacity = MathHelper.Clamp(go.DeathFadeTimer / MathF.Max(fadeOut, 0.001f), 0f, 1f);
+                float remainingRatio = MathHelper.Clamp(go.DeathFadeTimer / MathF.Max(fadeOut, 0.001f), 0f, 1f);
+                go.Opacity = remainingRatio;
+                float fadeProgress = 1f - remainingRatio;
+                go.DeathFadeScale = MathHelper.Lerp(1f, targetScale, fadeProgress);
                 if (go.DeathFadeTimer <= 0f)
                 {
                     _dyingObjects.RemoveAt(i);
@@ -97,6 +119,30 @@ namespace op.io
                     DebugLogger.PrintGO($"Death fade complete, disposed GameObject ID={go.ID}.");
                 }
             }
+        }
+
+        private static float GetRandomDeathFadeSpinVelocity()
+        {
+            float minDeg = MathF.Abs(DeathFadeSpinMinDegPerSecond);
+            float maxDeg = MathF.Abs(DeathFadeSpinMaxDegPerSecond);
+            if (maxDeg < minDeg)
+            {
+                (minDeg, maxDeg) = (maxDeg, minDeg);
+            }
+
+            float magnitudeDeg = minDeg;
+            if (maxDeg > minDeg)
+            {
+                magnitudeDeg = MathHelper.Lerp(minDeg, maxDeg, (float)_deathFadeRandom.NextDouble());
+            }
+
+            if (magnitudeDeg <= 0f)
+            {
+                return 0f;
+            }
+
+            float sign = _deathFadeRandom.NextDouble() < 0.5d ? -1f : 1f;
+            return MathHelper.ToRadians(magnitudeDeg) * sign;
         }
 
         private static void RegenerateStats(float dt)

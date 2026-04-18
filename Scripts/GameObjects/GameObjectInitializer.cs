@@ -254,6 +254,18 @@ namespace op.io
                             foreach (var barrel in barrels)
                                 agent.AddBarrel(barrel);
                         }
+
+                        var bodies = BodyLoader.LoadBodiesForAgent(agent.ID);
+                        if (bodies.Count > 0)
+                        {
+                            agent.ClearBodies();
+                            for (int bi = 0; bi < bodies.Count; bi++)
+                            {
+                                agent.AddBody(bodies[bi].Attrs);
+                                if (!string.IsNullOrEmpty(bodies[bi].Name))
+                                    agent.Bodies[bi].Name = bodies[bi].Name;
+                            }
+                        }
                     }
 
                     Core.Instance.GameObjects.AddRange(agents);

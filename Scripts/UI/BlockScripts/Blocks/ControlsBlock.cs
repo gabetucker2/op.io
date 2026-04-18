@@ -27,10 +27,11 @@ namespace op.io.UI.BlockScripts.Blocks
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
         private static string _tooltipRowKey;
+        private static string _tooltipRowLabel;
 
         public static string GetHoveredRowKey() => _tooltipRowKey;
 
-        public static string GetHoveredRowLabel() => _tooltipRowKey;
+        public static string GetHoveredRowLabel() => _tooltipRowLabel ?? _tooltipRowKey;
         private static float _lineHeightCache;
         private static readonly BlockScrollPanel _scrollPanel = new();
         private static string _pressedDragRowKey;   // row where col 3 (drag handle) was pressed
@@ -40,8 +41,11 @@ namespace op.io.UI.BlockScripts.Blocks
         // ── Per-row FunColInterfaces (Green=name, Blue=key, Red=type, Orange=value) ──
         private static readonly Dictionary<string, FunColInterface> _rowFunCols =
             new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, UIDropdown> _enumDropdowns =
+            new(StringComparer.OrdinalIgnoreCase);
         // Static drag-ghost funCol reused when rendering the dragging row ghost
         private static FunColInterface _dragGhostFunCol;
+        private static string _openEnumDropdownKey;
         private static bool _rebindOverlayVisible;
         private static string _rebindAction;
         private static string _rebindCurrentInput;
@@ -65,6 +69,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ValueHighlightPadding = 2;
         private const int DragStartThreshold = 6;
         private const int ControlsHeaderHeight = 16;
+        private const string EnumOptionTooltipKeyEnabled = "Dropdown_ControlEnumOptionEnabled";
+        private const string EnumOptionTooltipKeyDisabled = "Dropdown_ControlEnumOptionDisabled";
 
         // ── Float widget constants ────────────────────────────────────────────
         private const int FloatArrowW  = 16;
@@ -78,12 +84,15 @@ namespace op.io.UI.BlockScripts.Blocks
         private static string _floatInputBuffer = string.Empty;
         private static readonly KeyRepeatTracker _floatInputTracker = new();
         private static KeyboardState _prevFloatKeyboard;
+        private static KeyboardState _previousKeyboardState;
 
         internal static void InvalidateCache()
         {
             _keybindCacheLoaded = false;
             _keybindCache.Clear();
             _rowFunCols.Clear();
+            _enumDropdowns.Clear();
+            _openEnumDropdownKey = null;
             _dragGhostFunCol = null;
         }
 
@@ -111,6 +120,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState)
         {
             bool blockLocked = BlockManager.IsBlockLocked(DockBlockKind.Controls);
+            KeyboardState keyboardState = Keyboard.GetState();
 
             if (!FontManager.TryGetControlsFonts(out UIStyle.UIFont boldFont, out UIStyle.UIFont regularFont))
             {
@@ -164,10 +174,20 @@ namespace op.io.UI.BlockScripts.Blocks
                     .Update(row.Bounds, mouseState, dt, suppressHover || blockLocked);
             }
 
-            bool allowInteraction = !blockLocked && pointerInsideList;
+            UpdateEnumDropdownBounds();
+            SyncEnumDropdowns();
+            bool enumDropdownStateChanged = UpdateEnumDropdownInteractions(mouseState, previousMouseState, keyboardState, blockLocked);
+            if (enumDropdownStateChanged)
+            {
+                SyncEnumDropdowns();
+            }
+
+            bool hasEnumDropdownTooltip = TryGetHoveredEnumDropdownTooltip(mouseState.Position, out string enumDropdownTooltipKey, out string enumDropdownTooltipLabel);
+            bool allowInteraction = !blockLocked && (pointerInsideList || hasEnumDropdownTooltip);
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             _hoveredRowKey = allowInteraction ? hitRow : null;
-            _tooltipRowKey = hitRow;
+            _tooltipRowKey = hasEnumDropdownTooltip ? enumDropdownTooltipKey : hitRow;
+            _tooltipRowLabel = hasEnumDropdownTooltip ? enumDropdownTooltipLabel : hitRow;
 
             if (!allowInteraction)
             {
@@ -210,12 +230,12 @@ namespace op.io.UI.BlockScripts.Blocks
                     }
                     else if (hoveredCol == 3)
                     {
-                        // Col 3 (Orange): value — toggle switch state or cycle enum
+                        // Col 3 (Orange): value — toggle switch state (enum rows use dropdown selection)
                         int rowIdx3 = GetRowIndex(_hoveredRowKey);
                         if (rowIdx3 >= 0)
                         {
                             var vRow = _keybindCache[rowIdx3];
-                            if (IsSwitchType(vRow.InputType) || IsPersistentSwitch(vRow.InputType) || IsEnumType(vRow.InputType))
+                            if (IsSwitchType(vRow.InputType) || IsPersistentSwitch(vRow.InputType))
                                 TryToggleInputType(_hoveredRowKey, boldFont, clickedIndicator: true);
                         }
                     }
@@ -280,9 +300,8 @@ namespace op.io.UI.BlockScripts.Blocks
             // Float textbox keyboard input
             if (_editingFloatKey != null && !blockLocked)
             {
-                KeyboardState ks = Keyboard.GetState();
                 double elapsedSec = gameTime.ElapsedGameTime.TotalSeconds;
-                foreach (Keys k in _floatInputTracker.GetKeysWithRepeat(ks, _prevFloatKeyboard, elapsedSec))
+                foreach (Keys k in _floatInputTracker.GetKeysWithRepeat(keyboardState, _prevFloatKeyboard, elapsedSec))
                 {
                     if (k == Keys.Enter)
                     {
@@ -302,11 +321,11 @@ namespace op.io.UI.BlockScripts.Blocks
                             _floatInputBuffer = _floatInputBuffer[..^1];
                         continue;
                     }
-                    char? c = FloatKeyToChar(k, ks, _floatInputBuffer);
+                    char? c = FloatKeyToChar(k, keyboardState, _floatInputBuffer);
                     if (c.HasValue && _floatInputBuffer.Length < 8)
                         _floatInputBuffer += c.Value;
                 }
-                _prevFloatKeyboard = ks;
+                _prevFloatKeyboard = keyboardState;
             }
 
             // Update header hover so DrawHeader can show column tooltips + hide toggle
@@ -324,6 +343,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 BlockDataStore.SetRowData(DockBlockKind.Controls, "FunColColumnWeights", encoded);
                 PropagateWeightsToRowFunCols(headerFunCol.GetWeights());
             }
+
+            _previousKeyboardState = keyboardState;
         }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds)
@@ -392,6 +413,8 @@ namespace op.io.UI.BlockScripts.Blocks
                     DrawRowWithFunCol(spriteBatch, row, rowBounds, boldFont);
                     if (IsFloatType(row.InputType))
                         DrawFloatWidget(spriteBatch, row, rowBounds, boldFont, blockLocked);
+                    if (IsEnumType(row.InputType))
+                        DrawEnumDropdown(spriteBatch, row, blockLocked);
                 }
             }
 
@@ -416,6 +439,7 @@ namespace op.io.UI.BlockScripts.Blocks
             hfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
             var headerStrip = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, hdrH);
             hfc.DrawHeader(spriteBatch, headerStrip, boldFont, _pixelTexture);
+            DrawEnumDropdownOptionOverlays(spriteBatch, blockLocked);
         }
 
         private static void EnsureKeybindCache()
@@ -497,6 +521,7 @@ namespace op.io.UI.BlockScripts.Blocks
                         IsDragging = false,
                         TypeToggleBounds = Rectangle.Empty,
                         KeyValueBounds = Rectangle.Empty,
+                        EnumValueBounds = Rectangle.Empty,
                         TriggerAutoFire = triggerAuto,
                         ToggleLocked = toggleLocked
                     });
@@ -689,6 +714,255 @@ namespace op.io.UI.BlockScripts.Blocks
             fc.SuppressTooltipWarnings = true;
             _rowFunCols[action] = fc;
             return fc;
+        }
+
+        private static UIDropdown GetOrCreateEnumDropdown(string settingKey)
+        {
+            if (_enumDropdowns.TryGetValue(settingKey, out UIDropdown existing))
+            {
+                return existing;
+            }
+
+            var dropdown = new UIDropdown
+            {
+                ShowOptionDisableToggles = true,
+                PreventSelectingDisabledOptions = true
+            };
+            _enumDropdowns[settingKey] = dropdown;
+            return dropdown;
+        }
+
+        private static void SyncEnumDropdowns()
+        {
+            HashSet<string> enumKeys = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (!IsEnumType(row.InputType))
+                {
+                    continue;
+                }
+
+                enumKeys.Add(row.Action);
+                UIDropdown dropdown = GetOrCreateEnumDropdown(row.Action);
+                dropdown.Bounds = row.EnumValueBounds;
+
+                string[] options = ControlStateManager.GetEnumOptions(row.Action);
+                IEnumerable<UIDropdown.Option> dropdownOptions = options.Select(option =>
+                {
+                    bool isDisabled = ControlStateManager.IsEnumOptionDisabled(row.Action, option);
+                    string tooltipKey = isDisabled ? EnumOptionTooltipKeyDisabled : EnumOptionTooltipKeyEnabled;
+                    return new UIDropdown.Option(option, option, isDisabled, tooltipKey, option);
+                });
+                string selected = ControlStateManager.GetEnumValue(row.Action);
+                dropdown.SetOptions(dropdownOptions, selected);
+            }
+
+            List<string> staleKeys = new();
+            foreach (string existingKey in _enumDropdowns.Keys)
+            {
+                if (!enumKeys.Contains(existingKey))
+                {
+                    staleKeys.Add(existingKey);
+                }
+            }
+
+            foreach (string stale in staleKeys)
+            {
+                _enumDropdowns.Remove(stale);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_openEnumDropdownKey) && !_enumDropdowns.ContainsKey(_openEnumDropdownKey))
+            {
+                _openEnumDropdownKey = null;
+            }
+        }
+
+        private static void UpdateEnumDropdownBounds()
+        {
+            for (int i = 0; i < _keybindCache.Count; i++)
+            {
+                KeybindDisplayRow row = _keybindCache[i];
+                if (!IsEnumType(row.InputType) || row.Bounds == Rectangle.Empty || !_rowFunCols.TryGetValue(row.Action, out FunColInterface rowFunCol))
+                {
+                    row.EnumValueBounds = Rectangle.Empty;
+                    _keybindCache[i] = row;
+                    continue;
+                }
+
+                Rectangle valueBounds = rowFunCol.GetColumnBounds(3, row.Bounds);
+                if (valueBounds == Rectangle.Empty)
+                {
+                    row.EnumValueBounds = Rectangle.Empty;
+                    _keybindCache[i] = row;
+                    continue;
+                }
+
+                const int horizontalPad = 3;
+                const int verticalPad = 2;
+                int width = Math.Max(0, valueBounds.Width - (horizontalPad * 2));
+                int height = Math.Max(0, valueBounds.Height - (verticalPad * 2));
+                row.EnumValueBounds = width <= 0 || height <= 0
+                    ? Rectangle.Empty
+                    : new Rectangle(valueBounds.X + horizontalPad, valueBounds.Y + verticalPad, width, height);
+                _keybindCache[i] = row;
+            }
+        }
+
+        private static bool UpdateEnumDropdownInteractions(
+            MouseState mouseState,
+            MouseState previousMouseState,
+            KeyboardState keyboardState,
+            bool blockLocked)
+        {
+            if (blockLocked)
+            {
+                CloseAllEnumDropdowns();
+                _openEnumDropdownKey = null;
+                return false;
+            }
+
+            bool enumStateChanged = false;
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (!IsEnumType(row.InputType) || !_enumDropdowns.TryGetValue(row.Action, out UIDropdown dropdown))
+                {
+                    continue;
+                }
+
+                bool isDisabled = blockLocked || _dragState.IsDragging || row.ToggleLocked || row.EnumValueBounds == Rectangle.Empty;
+                dropdown.Update(
+                    mouseState,
+                    previousMouseState,
+                    keyboardState,
+                    _previousKeyboardState,
+                    out string selectedId,
+                    out string toggledId,
+                    out bool toggledDisabledState,
+                    isDisabled);
+
+                if (!string.IsNullOrWhiteSpace(toggledId))
+                {
+                    if (ControlStateManager.TrySetEnumOptionDisabled(row.Action, toggledId, toggledDisabledState, "ControlsBlock.EnumOptionDisableToggle"))
+                    {
+                        enumStateChanged = true;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(selectedId))
+                {
+                    if (ControlStateManager.TrySetEnumValue(row.Action, selectedId, "ControlsBlock.EnumDropdownSelection"))
+                    {
+                        enumStateChanged = true;
+                    }
+                }
+
+                if (dropdown.IsOpen)
+                {
+                    if (!string.Equals(_openEnumDropdownKey, row.Action, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CloseAllEnumDropdowns(row.Action);
+                    }
+
+                    _openEnumDropdownKey = row.Action;
+                }
+                else if (string.Equals(_openEnumDropdownKey, row.Action, StringComparison.OrdinalIgnoreCase))
+                {
+                    _openEnumDropdownKey = null;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_openEnumDropdownKey) &&
+                (!_enumDropdowns.TryGetValue(_openEnumDropdownKey, out UIDropdown openDropdown) || !openDropdown.IsOpen))
+            {
+                _openEnumDropdownKey = null;
+            }
+
+            return enumStateChanged;
+        }
+
+        private static void CloseAllEnumDropdowns(string exemptSettingKey = null)
+        {
+            foreach (KeyValuePair<string, UIDropdown> entry in _enumDropdowns)
+            {
+                if (!string.IsNullOrWhiteSpace(exemptSettingKey) &&
+                    string.Equals(entry.Key, exemptSettingKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                entry.Value.Close();
+            }
+        }
+
+        private static bool TryGetHoveredEnumDropdownTooltip(Point pointer, out string tooltipKey, out string tooltipLabel)
+        {
+            tooltipKey = null;
+            tooltipLabel = null;
+
+            if (string.IsNullOrWhiteSpace(_openEnumDropdownKey) ||
+                !_enumDropdowns.TryGetValue(_openEnumDropdownKey, out UIDropdown dropdown) ||
+                !dropdown.IsOpen ||
+                !dropdown.IsPointerOverDropdown(pointer))
+            {
+                return false;
+            }
+
+            tooltipKey = dropdown.GetHoveredOptionTooltipKey();
+            tooltipLabel = dropdown.GetHoveredOptionTooltipLabel();
+            if (!string.IsNullOrWhiteSpace(tooltipKey))
+            {
+                return true;
+            }
+
+            if (dropdown.TryGetHoveredOption(out UIDropdown.Option hoveredOption))
+            {
+                tooltipKey = hoveredOption.IsDisabled ? EnumOptionTooltipKeyDisabled : EnumOptionTooltipKeyEnabled;
+                return true;
+            }
+
+            tooltipKey = EnumOptionTooltipKeyEnabled;
+            return true;
+        }
+
+        private static void DrawEnumDropdown(SpriteBatch spriteBatch, KeybindDisplayRow row, bool blockLocked)
+        {
+            if (!IsEnumType(row.InputType) ||
+                !_enumDropdowns.TryGetValue(row.Action, out UIDropdown dropdown) ||
+                row.EnumValueBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            dropdown.Bounds = row.EnumValueBounds;
+            bool isDisabled = blockLocked || _dragState.IsDragging || row.ToggleLocked;
+            if (isDisabled)
+            {
+                dropdown.Close();
+            }
+
+            dropdown.Draw(spriteBatch, drawOptions: false, isDisabled: isDisabled);
+        }
+
+        private static void DrawEnumDropdownOptionOverlays(SpriteBatch spriteBatch, bool blockLocked)
+        {
+            if (spriteBatch == null || blockLocked || _dragState.IsDragging)
+            {
+                return;
+            }
+
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                if (!IsEnumType(row.InputType) || row.ToggleLocked || row.EnumValueBounds == Rectangle.Empty)
+                {
+                    continue;
+                }
+
+                if (_enumDropdowns.TryGetValue(row.Action, out UIDropdown dropdown))
+                {
+                    dropdown.DrawOptionsOverlay(spriteBatch);
+                }
+            }
         }
 
         private static FunColInterface _headerFunCol;
@@ -1371,6 +1645,8 @@ namespace op.io.UI.BlockScripts.Blocks
             _dragState.Reset();
             _pressedDragRowKey   = null;
             _pressedRebindRowKey = null;
+            CloseAllEnumDropdowns();
+            _openEnumDropdownKey = null;
 
             _rebindOverlayVisible = true;
             _rebindAction = row.Action;

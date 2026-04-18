@@ -441,9 +441,21 @@ namespace op.io
             yield return new Row("Position", $"{_target.Position.X:0.0}, {_target.Position.Y:0.0}");
             float rotationDeg = MathHelper.ToDegrees(_target.Rotation);
             yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
-            yield return new Row("Size",     $"{_target.Width} x {_target.Height}");
+
+            if (_target.Shape != null && _target.Shape.ShapeType == "Circle")
+            {
+                float radius = AttributeDerived.BodyRadius(_target.Mass, CollisionResolver.BodyRadiusScalar);
+                yield return new Row("Radius", $"{radius:0.##} px",
+                                     isHidden: true, affectsList: AttributeDerived.AffectsBodyRadius);
+            }
+            else
+            {
+                yield return new Row("Size", $"{_target.Width} x {_target.Height}");
+            }
+
             yield return new Row("Shape",    BuildShapeText());
-            yield return new Row("Mass",       $"{_target.Mass:0.##}");
+            if (_target.Source is not Agent)
+                yield return new Row("Mass",   $"{_target.Mass:0.##}");
             yield return new Row("Draw Layer", $"{_target.DrawLayer}");
             yield return new Row("Fill",       _target.FillColor, ToHex(_target.FillColor));
             yield return new Row("Outline",    _target.OutlineColor, ToHex(_target.OutlineColor));

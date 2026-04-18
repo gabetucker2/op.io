@@ -156,6 +156,7 @@ namespace op.io
                 Agent agent = archetype.ToAgent();
                 agent.Mass = bodyAttributes.Mass; // override GO mass with body attribute mass
                 agent.MaxXP = maxXP;
+                agent.UpdateCircleDimensions(bodyAttributes.Mass);
                 return agent;
             }
             catch (Exception ex)

@@ -268,6 +268,7 @@ namespace op.io.UI.BlockScripts.Blocks
                     "BlockMenuOpen"     => nextBool ? "Block menu opened."      : "Block menu closed.",
                     "InputBlocked"      => nextBool ? "All input blocked by modal overlay." : "Input unblocked.",
                     "DraggingLayout"    => nextBool ? "Block drag started."     : "Block drag ended.",
+                    "SuperimposeLocked" => nextBool ? "Superimpose lock engaged." : "Superimpose lock released.",
                     "CursorOnGameBlock" => nextBool ? "Cursor entered game area." : "Cursor left game area.",
                     "AnyGUIInteracting" => nextBool ? "Cursor pressed on a UI block — gameplay inputs suppressed." : "GUI interaction ended — gameplay inputs restored.",
                     "FreezeGameInputs"  => nextBool ? "Gameplay inputs frozen." : "Gameplay inputs resumed.",
@@ -280,6 +281,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 "HoveredBlock"       => $"Cursor moved to {next}.",
                 "HoveredDragBar"     => next == "None" ? "Left drag bar." : $"Hovering drag bar of {next}.",
+                "SuperimposeLockTarget" => next == "None" ? "No superimpose target locked." : $"Superimpose target locked to {next}.",
                 "FocusedBlock"       => next == "None" ? "Keyboard focus cleared." : $"Keyboard focus moved to {next}.",
                 "GUIInteractingWith" => next == "None" ? "Interaction ended." : $"Interacting with {next}.",
                 _ => $"{prev} → {next}"

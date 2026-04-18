@@ -99,7 +99,8 @@ namespace op.io
                 return;
             }
 
-            spriteBatch.Draw(_texture, GO.Position, null, Color.White * GO.Opacity, GO.Rotation, _origin, 1f, SpriteEffects.None, 0f);
+            float scale = MathF.Max(0f, GO.DeathFadeScale);
+            spriteBatch.Draw(_texture, GO.Position, null, Color.White * GO.Opacity, GO.Rotation, _origin, scale, SpriteEffects.None, 0f);
         }
 
         public void DrawFlash(SpriteBatch spriteBatch, GameObject GO)

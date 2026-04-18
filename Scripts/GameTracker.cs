@@ -17,12 +17,19 @@ namespace op.io
 
         // UI state — read live from BlockManager
         public static bool DockingMode          => BlockManager.DockingModeEnabled;
+        public static bool DisableToolTips      => ControlStateManager.ContainsSwitchState(ControlKeyMigrations.DisableToolTipsKey) &&
+                                                   ControlStateManager.GetSwitchState(ControlKeyMigrations.DisableToolTipsKey);
         public static bool BlockMenuOpen        => BlockManager.IsBlockMenuOpen();
         public static bool InputBlocked         => BlockManager.IsInputBlocked();
         public static bool DraggingLayout       => BlockManager.IsDraggingLayout;
+        public static bool SuperimposeLocked    => BlockManager.IsSuperimposeLocked;
         public static bool CursorOnGameBlock    => BlockManager.IsCursorWithinGameBlock();
+        public static bool NativeWindowResizeEdges => ScreenManager.NativeWindowResizeEdgesEnabled;
+        public static bool CustomDockingResizeEdges => ScreenManager.CustomDockingResizeEdgesEnabled;
+        public static bool DraggingWindowResize => BlockManager.IsDraggingWindowResize;
         public static string HoveredBlock       => BlockManager.GetHoveredBlockKind();
         public static string HoveredDragBar     => BlockManager.GetHoveredDragBarKind();
+        public static string SuperimposeLockTarget => BlockManager.GetSuperimposeLockTargetKind();
         public static string FocusedBlock       => BlockManager.GetFocusedBlockKind()?.ToString() ?? "None";
         public static bool   AnyGUIInteracting  => BlockManager.IsAnyGuiInteracting;
         public static string GUIInteractingWith => BlockManager.GetInteractingBlockKind();
@@ -33,6 +40,7 @@ namespace op.io
         /// at runtime.
         /// </summary>
         public static string BlockType => BlockManager.GetFocusedBlockCategory();
+        public static string EnumDisabledOptions => ControlStateManager.GetAllEnumDisabledOptionsSummary();
 
         // ── Constants (from MathBlock) ────────────────────────────────────────
         // Bullet Physics (DB-driven)
@@ -60,6 +68,10 @@ namespace op.io
         // Code-defined constants
         public static string AngularAccelFactor     => "4";
         public static string BarrelSwitchSpeed      => "15 /s";
+        public static int    ActiveBodyIndex       => Core.Instance?.Player?.ActiveBodyIndex ?? 0;
+        public static string ActiveBodyName        => Core.Instance?.Player is Agent p && p.BodyCount > 0
+            ? (p.Bodies[p.ActiveBodyIndex].Name ?? $"Body {p.ActiveBodyIndex + 1}")
+            : "None";
 
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {

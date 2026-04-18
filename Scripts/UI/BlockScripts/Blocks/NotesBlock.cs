@@ -76,6 +76,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly StringBuilder MeasureBuffer = new();
         private static readonly StringBuilder NoteContent = new();
         private static readonly UIDropdown NoteDropdown = new();
+        private const string NoteDropdownTooltipKey = "Dropdown_NoteOption";
         private static readonly KeyRepeatTracker TextInputRepeater = new();
         private static readonly KeyRepeatTracker SavePromptRepeater = new();
 
@@ -111,6 +112,12 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static string GetHoveredRowKey()
         {
+            string dropdownTooltip = GetHoveredDropdownTooltip(out _);
+            if (!string.IsNullOrWhiteSpace(dropdownTooltip))
+            {
+                return dropdownTooltip;
+            }
+
             Point pos = LastMouseState.Position;
             for (int i = 0; i < CommandOrder.Length; i++)
             {
@@ -127,6 +134,32 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
             }
             return null;
+        }
+
+        public static string GetHoveredRowLabel()
+        {
+            _ = GetHoveredDropdownTooltip(out string label);
+            return label;
+        }
+
+        private static string GetHoveredDropdownTooltip(out string label)
+        {
+            label = null;
+            Point pos = LastMouseState.Position;
+            if (NoteDropdownBounds == Rectangle.Empty || !NoteDropdown.IsPointerOverDropdown(pos))
+            {
+                return null;
+            }
+
+            string tooltipKey = NoteDropdown.GetHoveredOptionTooltipKey();
+            label = NoteDropdown.GetHoveredOptionTooltipLabel();
+            if (!string.IsNullOrWhiteSpace(tooltipKey))
+            {
+                return tooltipKey;
+            }
+
+            label ??= !string.IsNullOrWhiteSpace(ActiveNoteName) ? ActiveNoteName : NoteDropdown.SelectedId;
+            return NoteDropdownTooltipKey;
         }
         private static int OverlayHoverIndex = -1;
         private static SavePromptState SavePrompt;
@@ -1581,12 +1614,12 @@ namespace op.io.UI.BlockScripts.Blocks
             foreach (NoteFileEntry entry in NoteFiles)
             {
                 string label = string.IsNullOrWhiteSpace(entry.DisplayName) ? "Note" : entry.DisplayName;
-                options.Add(new UIDropdown.Option(entry.DisplayName, label));
+                options.Add(new UIDropdown.Option(entry.DisplayName, label, false, NoteDropdownTooltipKey, label));
             }
 
             if (HasActiveNote && !options.Any(o => string.Equals(o.Id, ActiveNoteName, StringComparison.OrdinalIgnoreCase)))
             {
-                options.Insert(0, new UIDropdown.Option(ActiveNoteName, ActiveNoteName));
+                options.Insert(0, new UIDropdown.Option(ActiveNoteName, ActiveNoteName, false, NoteDropdownTooltipKey, ActiveNoteName));
             }
 
             string desired = HasActiveNote

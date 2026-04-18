@@ -63,8 +63,6 @@ namespace op.io
                 {
                     ShowWindow(hwnd, SW_SHOWNOACTIVATE);
                 }
-
-                RestoreGameWindowFocus();
             }
 
             PrintQueuedMessages();

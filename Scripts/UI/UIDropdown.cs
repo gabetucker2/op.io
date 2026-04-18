@@ -14,19 +14,93 @@ namespace op.io
     /// </summary>
     internal sealed class UIDropdown
     {
-        internal readonly record struct Option(string Id, string Label);
+        internal readonly record struct Option(
+            string Id,
+            string Label,
+            bool IsDisabled = false,
+            string TooltipKey = null,
+            string TooltipLabel = null);
 
         private readonly List<Option> _options = new();
         private Texture2D _pixel;
         private bool _isOpen;
         private int _hoveredIndex = -1;
+        private int _hoveredToggleIndex = -1;
+        private const int ToggleCheckboxHorizontalPadding = 8;
+        private const int ToggleCheckboxSize = 12;
+        private const int ToggleCheckboxVerticalPadding = 0;
+        private const int ToggleCheckboxLabelGap = 8;
 
         public Rectangle Bounds { get; set; }
         public string SelectedId { get; private set; }
         public int MaxVisibleOptions { get; set; } = 6;
+        public bool ShowOptionDisableToggles { get; set; } = false;
+        public bool PreventSelectingDisabledOptions { get; set; } = true;
 
         public bool HasOptions => _options.Count > 0;
         public bool IsOpen => _isOpen;
+
+        public bool IsPointerOverDropdown(Point pointer)
+        {
+            if (Bounds.Contains(pointer))
+            {
+                return true;
+            }
+
+            if (_isOpen)
+            {
+                Rectangle listBounds = GetListBounds();
+                if (listBounds.Contains(pointer))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool TryGetHoveredOption(out Option option)
+        {
+            option = default;
+            if (!_isOpen)
+            {
+                return false;
+            }
+
+            int index = _hoveredIndex >= 0 ? _hoveredIndex : _hoveredToggleIndex;
+            if (index < 0 || index >= _options.Count || index >= Math.Max(1, MaxVisibleOptions))
+            {
+                return false;
+            }
+
+            option = _options[index];
+            return !string.IsNullOrWhiteSpace(option.Id);
+        }
+
+        public string GetHoveredOptionTooltipKey()
+        {
+            if (!TryGetHoveredOption(out Option option))
+            {
+                return null;
+            }
+
+            return string.IsNullOrWhiteSpace(option.TooltipKey) ? null : option.TooltipKey;
+        }
+
+        public string GetHoveredOptionTooltipLabel()
+        {
+            if (!TryGetHoveredOption(out Option option))
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(option.TooltipLabel))
+            {
+                return option.TooltipLabel;
+            }
+
+            return string.IsNullOrWhiteSpace(option.Label) ? option.Id : option.Label;
+        }
 
         public void SetOptions(IEnumerable<Option> options, string selectedId = null)
         {
@@ -41,7 +115,8 @@ namespace op.io
                     }
 
                     string label = string.IsNullOrWhiteSpace(option.Label) ? option.Id : option.Label;
-                    _options.Add(new Option(option.Id, label));
+                    string tooltipLabel = string.IsNullOrWhiteSpace(option.TooltipLabel) ? label : option.TooltipLabel;
+                    _options.Add(new Option(option.Id, label, option.IsDisabled, option.TooltipKey, tooltipLabel));
                 }
             }
 
@@ -49,29 +124,61 @@ namespace op.io
             {
                 SelectedId = null;
                 _isOpen = false;
+                _hoveredIndex = -1;
+                _hoveredToggleIndex = -1;
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(selectedId))
             {
                 Option match = _options.FirstOrDefault(o => string.Equals(o.Id, selectedId, StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrWhiteSpace(match.Id))
+                if (!string.IsNullOrWhiteSpace(match.Id) && (!PreventSelectingDisabledOptions || !match.IsDisabled))
                 {
                     SelectedId = match.Id;
                     return;
                 }
             }
 
-            SelectedId = _options[0].Id;
+            Option selected = _options.FirstOrDefault(option => !option.IsDisabled || !PreventSelectingDisabledOptions);
+            SelectedId = !string.IsNullOrWhiteSpace(selected.Id)
+                ? selected.Id
+                : _options[0].Id;
         }
 
         public bool Update(MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState, out string selectionChangedId, bool isDisabled = false)
         {
+            _ = Update(
+                mouseState,
+                previousMouseState,
+                keyboardState,
+                previousKeyboardState,
+                out selectionChangedId,
+                out _,
+                out _,
+                isDisabled);
+
+            return selectionChangedId != null;
+        }
+
+        public bool Update(
+            MouseState mouseState,
+            MouseState previousMouseState,
+            KeyboardState keyboardState,
+            KeyboardState previousKeyboardState,
+            out string selectionChangedId,
+            out string toggleChangedId,
+            out bool toggledDisabledState,
+            bool isDisabled = false)
+        {
             selectionChangedId = null;
+            toggleChangedId = null;
+            toggledDisabledState = false;
 
             if (Bounds == Rectangle.Empty || !HasOptions || isDisabled)
             {
                 _isOpen = false;
+                _hoveredIndex = -1;
+                _hoveredToggleIndex = -1;
                 return false;
             }
 
@@ -83,13 +190,33 @@ namespace op.io
             {
                 Rectangle listBounds = GetListBounds();
                 _hoveredIndex = HitTestOption(pointer, listBounds);
+                _hoveredToggleIndex = HitTestToggle(pointer, listBounds);
+
+                if (leftRelease && _hoveredToggleIndex >= 0)
+                {
+                    Option toggled = _options[_hoveredToggleIndex];
+                    if (!string.IsNullOrWhiteSpace(toggled.Id))
+                    {
+                        toggleChangedId = toggled.Id;
+                        toggledDisabledState = !toggled.IsDisabled;
+                        return true;
+                    }
+                }
 
                 if (leftRelease && _hoveredIndex >= 0)
                 {
-                    SelectedId = _options[_hoveredIndex].Id;
-                    selectionChangedId = SelectedId;
+                    Option selected = _options[_hoveredIndex];
+                    bool canSelect = !PreventSelectingDisabledOptions || !selected.IsDisabled;
+                    if (canSelect)
+                    {
+                        SelectedId = selected.Id;
+                        selectionChangedId = SelectedId;
+                    }
+
+                    // Any non-toggle option click closes the dropdown, even when the
+                    // option cannot be selected (for example disabled options).
                     _isOpen = false;
-                    return true;
+                    return canSelect;
                 }
 
                 if (leftClick && !listBounds.Contains(pointer) && !Bounds.Contains(pointer))
@@ -105,13 +232,14 @@ namespace op.io
             else
             {
                 _hoveredIndex = -1;
+                _hoveredToggleIndex = -1;
                 if (leftRelease && Bounds.Contains(pointer))
                 {
                     _isOpen = true;
                 }
             }
 
-            return selectionChangedId != null;
+            return selectionChangedId != null || toggleChangedId != null;
         }
 
         public void Draw(SpriteBatch spriteBatch, bool drawOptions = true, bool isDisabled = false)
@@ -173,7 +301,13 @@ namespace op.io
         private string GetSelectedLabel()
         {
             Option match = _options.FirstOrDefault(o => string.Equals(o.Id, SelectedId, StringComparison.OrdinalIgnoreCase));
-            return string.IsNullOrWhiteSpace(match.Label) ? (match.Id ?? string.Empty) : match.Label;
+            if (string.IsNullOrWhiteSpace(match.Id))
+            {
+                return string.Empty;
+            }
+
+            string label = string.IsNullOrWhiteSpace(match.Label) ? match.Id : match.Label;
+            return match.IsDisabled ? $"{label} (Disabled)" : label;
         }
 
         private void DrawOptions(SpriteBatch spriteBatch, UIStyle.UIFont font)
@@ -194,16 +328,41 @@ namespace op.io
             for (int i = 0; i < count; i++)
             {
                 Rectangle optionBounds = new(listBounds.X, y, listBounds.Width, optionHeight);
-                bool hovered = _hoveredIndex == i;
+                bool hovered = _hoveredIndex == i || _hoveredToggleIndex == i;
                 if (hovered)
                 {
                     FillRect(spriteBatch, optionBounds, ColorPalette.RowHover);
                 }
 
-                string optionLabel = string.IsNullOrWhiteSpace(_options[i].Label) ? _options[i].Id : _options[i].Label;
+                Option option = _options[i];
+                string optionLabel = string.IsNullOrWhiteSpace(option.Label) ? option.Id : option.Label;
                 Vector2 size = font.MeasureString(optionLabel);
-                Vector2 pos = new(optionBounds.X + 10, optionBounds.Y + (optionHeight - size.Y) / 2f);
-                font.DrawString(spriteBatch, optionLabel, pos, UIStyle.TextColor);
+                Rectangle labelBounds = GetOptionLabelBounds(optionBounds);
+                Vector2 pos = new(labelBounds.X + 2, optionBounds.Y + (optionHeight - size.Y) / 2f);
+                Color optionColor = option.IsDisabled ? UIStyle.MutedTextColor : UIStyle.TextColor;
+                font.DrawString(spriteBatch, optionLabel, pos, optionColor);
+
+                if (option.IsDisabled)
+                {
+                    int strikeStartX = (int)MathF.Round(pos.X);
+                    int strikeY = optionBounds.Y + (optionHeight / 2);
+                    int strikeWidth = Math.Max(0, Math.Min((int)MathF.Ceiling(size.X), Math.Max(0, labelBounds.Width - 4)));
+                    if (strikeWidth > 0)
+                    {
+                        FillRect(spriteBatch, new Rectangle(strikeStartX, strikeY, strikeWidth, 1), UIStyle.MutedTextColor * 0.95f);
+                    }
+                }
+
+                if (ShowOptionDisableToggles)
+                {
+                    Rectangle toggleBounds = GetOptionToggleBounds(optionBounds);
+                    if (toggleBounds != Rectangle.Empty)
+                    {
+                        bool toggleHovered = _hoveredToggleIndex == i;
+                        DrawDisableCheckbox(spriteBatch, font, toggleBounds, option.IsDisabled, toggleHovered);
+                    }
+                }
+
                 y += optionHeight;
             }
         }
@@ -238,6 +397,66 @@ namespace op.io
             return index >= 0 && index < _options.Count && index < MaxVisibleOptions ? index : -1;
         }
 
+        private int HitTestToggle(Point pointer, Rectangle listBounds)
+        {
+            if (!ShowOptionDisableToggles || !listBounds.Contains(pointer))
+            {
+                return -1;
+            }
+
+            int optionHeight = GetOptionHeight(UIStyle.FontBody);
+            int index = (pointer.Y - listBounds.Y) / optionHeight;
+            if (index < 0 || index >= _options.Count || index >= MaxVisibleOptions)
+            {
+                return -1;
+            }
+
+            Rectangle optionBounds = new(
+                listBounds.X,
+                listBounds.Y + (index * optionHeight),
+                listBounds.Width,
+                optionHeight);
+            Rectangle toggleBounds = GetOptionToggleBounds(optionBounds);
+            return toggleBounds.Contains(pointer) ? index : -1;
+        }
+
+        private Rectangle GetOptionLabelBounds(Rectangle optionBounds)
+        {
+            if (!ShowOptionDisableToggles)
+            {
+                return optionBounds;
+            }
+
+            Rectangle toggleBounds = GetOptionToggleBounds(optionBounds);
+            if (toggleBounds == Rectangle.Empty)
+            {
+                return optionBounds;
+            }
+
+            int width = Math.Max(0, toggleBounds.X - optionBounds.X - ToggleCheckboxLabelGap);
+            return new Rectangle(optionBounds.X, optionBounds.Y, width, optionBounds.Height);
+        }
+
+        private Rectangle GetOptionToggleBounds(Rectangle optionBounds)
+        {
+            if (!ShowOptionDisableToggles || optionBounds == Rectangle.Empty)
+            {
+                return Rectangle.Empty;
+            }
+
+            int width = ToggleCheckboxSize;
+            int height = ToggleCheckboxSize;
+            int x = optionBounds.Right - width - ToggleCheckboxHorizontalPadding;
+            int y = optionBounds.Y + ((optionBounds.Height - height) / 2) + ToggleCheckboxVerticalPadding;
+
+            if (height <= 0 || x <= optionBounds.X)
+            {
+                return Rectangle.Empty;
+            }
+
+            return new Rectangle(x, y, width, height);
+        }
+
         private void DrawCaret(SpriteBatch spriteBatch, UIStyle.UIFont font)
         {
             if (_pixel == null)
@@ -249,6 +468,31 @@ namespace op.io
             Vector2 size = font.MeasureString(caretGlyph);
             Vector2 pos = new(Bounds.Right - size.X - 10, Bounds.Y + (Bounds.Height - size.Y) / 2f);
             font.DrawString(spriteBatch, caretGlyph, pos, UIStyle.MutedTextColor);
+        }
+
+        private void DrawDisableCheckbox(SpriteBatch spriteBatch, UIStyle.UIFont font, Rectangle bounds, bool isDisabled, bool hovered)
+        {
+            if (bounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            Color fill = hovered ? ColorPalette.RowHover : UIStyle.BlockBackground;
+            Color border = hovered ? UIStyle.AccentColor : UIStyle.BlockBorder;
+            FillRect(spriteBatch, bounds, fill);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+
+            if (!isDisabled || !font.IsAvailable)
+            {
+                return;
+            }
+
+            const string glyph = "X";
+            Vector2 size = font.MeasureString(glyph);
+            Vector2 pos = new(
+                bounds.X + (bounds.Width - size.X) / 2f,
+                bounds.Y + (bounds.Height - size.Y) / 2f - 1f);
+            font.DrawString(spriteBatch, glyph, pos, UIStyle.MutedTextColor);
         }
 
         private void FillRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)

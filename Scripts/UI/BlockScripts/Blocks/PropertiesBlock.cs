@@ -85,6 +85,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Position"]              = "Current world-space coordinates of this object",
             ["Rotation"]              = "Current facing angle in degrees",
             ["Size"]                  = "Width and height of this object's collision bounds",
+            ["Radius"]                = "Circle body radius in pixels, derived from mass",
             ["Shape"]                 = "Geometry type used for the physics body",
             ["Mass"]                  = "Physical mass affecting physics and derived combat stats",
             ["Draw Layer"]            = "Render order layer; higher values draw on top (0=default, 100=bullets, 200=units)",
@@ -154,6 +155,7 @@ namespace op.io.UI.BlockScripts.Blocks
         // "Derived from" text for hidden (derived) attribute rows (displayed as second tooltip).
         private static readonly Dictionary<string, string> _hiddenAttrDerivedFrom = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["Radius"]          = "Derived from: Mass",
             ["Max Health"]      = "Derived from: Mass",
             ["Body Knockback"]  = "Derived from: Mass",
             ["Rotation Speed"]  = "Derived from: Control",
@@ -174,6 +176,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static readonly Dictionary<string, string> _hiddenAttrEquation = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["Radius"]                 = "= √mass × BodyRadiusScalar",
             ["Max Health"]             = "= mass × 33.33",
             ["Body Knockback"]         = "= mass × KnockbackMassScale",
             ["Rotation Speed"]         = "= BaseRotDelay / control",
@@ -792,7 +795,7 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 Vector2 center = new(bounds.Center.X, bounds.Center.Y);
                 Vector2 origin = new(icon.Width / 2f, icon.Height / 2f);
-                int innerPad = Math.Max(2, bounds.Width / 5);
+                int innerPad = Math.Max(1, bounds.Width / 7);
                 float scale  = Math.Min(
                     (bounds.Width  - innerPad * 2f) / icon.Width,
                     (bounds.Height - innerPad * 2f) / icon.Height);

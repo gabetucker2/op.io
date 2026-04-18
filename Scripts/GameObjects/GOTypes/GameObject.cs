@@ -63,6 +63,9 @@ namespace op.io
         // Death fade animation state
         public bool    IsDying        { get; set; } = false;
         public float   DeathFadeTimer { get; set; } = 0f;
+        public float   DeathFadeScale { get; set; } = 1f;
+        // Signed angular velocity (radians/second) applied while death fading.
+        public float   DeathFadeSpinVelocity { get; set; } = 0f;
         // Velocity of the object that dealt the killing blow — overrides the object's
         // own velocity at the start of the death fade so it drifts in the attacker's direction.
         public Vector2 DeathImpulse   { get; set; } = Vector2.Zero;
@@ -287,7 +290,11 @@ namespace op.io
                 return;
             }
 
-            if (FarmAttributes.HasValue)
+            if (IsDying)
+            {
+                Rotation += DeathFadeSpinVelocity * Core.DELTATIME;
+            }
+            else if (FarmAttributes.HasValue)
             {
                 // Acceleration-based spin: AngularVelocity ramps toward a target direction that
                 // periodically reverses. FloatSpeed controls reversal frequency; FarmFloatPhase
