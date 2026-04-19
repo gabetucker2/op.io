@@ -1,0 +1,6 @@
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows-verify\Debug\net8.0-windows\op.io.csproj.AssemblyReference.cache
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows-verify\Debug\net8.0-windows\op.io.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows-verify\Debug\net8.0-windows\op.io.AssemblyInfoInputs.cache
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows-verify\Debug\net8.0-windows\op.io.AssemblyInfo.cs
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows-verify\Debug\net8.0-windows\op.io.csproj.CoreCompileInputs.cache
+C:\Users\gabeq\OneDrive\Desktop\Coding_Projects\op.io\obj\Debug\net8.0-windows-verify\Debug\net8.0-windows\op.io.sourcelink.json

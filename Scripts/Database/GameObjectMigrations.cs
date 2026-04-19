@@ -27,6 +27,7 @@ namespace op.io
                 EnsureBarrelPrototypesExist();
                 EnsureBulletRangeRenamedToDragFactor();
                 EnsurePlayerBarrelAssignments();
+                EnsurePlayerStarterBarrelDamageBuff();
                 EnsureAgentsRegenDelayColumns();
                 EnsurePlayerMaxShield();
                 EnsureHealthBarColors();
@@ -51,6 +52,7 @@ namespace op.io
                 EnsureAgentsAgility();
                 EnsureAgentsSpeedControl();
                 EnsureAgentsBodyActionBuff();
+                EnsureBodySightColumns();
                 EnsureDropAgentsHiddenColumns();
                 EnsureDropBarrelHiddenColumns();
                 EnsurePlayerBodyCollisionDamage();
@@ -66,6 +68,8 @@ namespace op.io
                 EnsureBarrelBulletHealthColumn();
                 EnsureBodyRadiusScalarSetting();
                 EnsureDeathFadeFxSettings();
+                EnsureXPClumpFxSettings();
+                EnsureXPClumpBackendTooltips();
                 _applied = true;
             }
             catch (Exception ex)
@@ -381,6 +385,31 @@ namespace op.io
             DebugLogger.PrintDatabase("EnsurePlayerBarrelAssignments: assigned Medium (slot 0) and Heavy (slot 1) to player.");
         }
 
+        private static void EnsurePlayerStarterBarrelDamageBuff()
+        {
+            // Buff the player's starter barrels by +50% from legacy defaults:
+            // Medium 4 -> 6 and Heavy 15 -> 22.5 (with support for older Heavy=10 -> 15 data).
+            DatabaseQuery.ExecuteNonQuery(@"
+UPDATE BarrelPrototypes
+SET BulletDamage = CASE
+    WHEN BulletDamage = 4 THEN 6
+    WHEN BulletDamage = 10 THEN 15
+    WHEN BulletDamage = 15 THEN 22.5
+    ELSE BulletDamage
+END
+WHERE ID IN (
+    SELECT bp.ID
+    FROM BarrelPrototypes bp
+    INNER JOIN AgentBarrels ab ON ab.BarrelPrototypeID = bp.ID
+    INNER JOIN Agents a ON a.ID = ab.AgentID
+    WHERE a.IsPlayer = 1
+      AND ab.SlotIndex IN (0, 1)
+)
+AND BulletDamage IN (4, 10, 15);");
+
+            DebugLogger.PrintDatabase("EnsurePlayerStarterBarrelDamageBuff: ensured player slot 0/1 barrel damage is buffed by +50% from legacy defaults.");
+        }
+
         private static void EnsureAgentsMaxXP()
         {
             if (ColumnExists("Agents", "MaxXP")) return;
@@ -672,6 +701,63 @@ namespace op.io
             if (ColumnExists("Agents", "BodyActionBuff")) return;
             DatabaseQuery.ExecuteNonQuery("ALTER TABLE Agents ADD COLUMN BodyActionBuff REAL DEFAULT 0.0;");
             DebugLogger.PrintDatabase("EnsureAgentsBodyActionBuff: added BodyActionBuff column (default 0.0).");
+        }
+
+        /// <summary>
+        /// Adds Sight to agent and body-prototype rows, then performs a one-time
+        /// backfill so the player defaults to Sight=50 on databases created before
+        /// the Sight attribute existed.
+        /// </summary>
+        private static void EnsureBodySightColumns()
+        {
+            if (!ColumnExists("Agents", "Sight"))
+            {
+                DatabaseQuery.ExecuteNonQuery("ALTER TABLE Agents ADD COLUMN Sight REAL DEFAULT 0.0;");
+                DebugLogger.PrintDatabase("EnsureBodySightColumns: added Agents.Sight column (default 0.0).");
+            }
+
+            if (TableExists("BodyPrototypes") && !ColumnExists("BodyPrototypes", "Sight"))
+            {
+                DatabaseQuery.ExecuteNonQuery("ALTER TABLE BodyPrototypes ADD COLUMN Sight REAL DEFAULT 0.0;");
+                DebugLogger.PrintDatabase("EnsureBodySightColumns: added BodyPrototypes.Sight column (default 0.0).");
+            }
+
+            // One-time backfill for legacy DBs so player vision is immediately usable.
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".body_sight_default_player_50_applied");
+            if (System.IO.File.Exists(marker))
+            {
+                return;
+            }
+
+            try
+            {
+                DatabaseQuery.ExecuteNonQuery(@"
+UPDATE Agents
+SET Sight = 50.0
+WHERE IsPlayer = 1
+  AND COALESCE(Sight, 0.0) = 0.0;");
+
+                if (TableExists("BodyPrototypes") && TableExists("AgentBodies"))
+                {
+                    DatabaseQuery.ExecuteNonQuery(@"
+UPDATE BodyPrototypes
+SET Sight = 50.0
+WHERE ID IN (
+    SELECT DISTINCT ab.BodyPrototypeID
+    FROM AgentBodies ab
+    INNER JOIN Agents a ON a.ID = ab.AgentID
+    WHERE a.IsPlayer = 1
+)
+AND COALESCE(Sight, 0.0) = 0.0;");
+                }
+
+                System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+                DebugLogger.PrintDatabase("EnsureBodySightColumns: applied one-time player Sight backfill (50.0).");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureBodySightColumns failed: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -970,6 +1056,163 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
                 DatabaseQuery.ExecuteNonQuery(
                     $"INSERT INTO FXSettings (SettingKey, Value) VALUES ('{key}', '{value}');");
                 DebugLogger.PrintDatabase($"EnsureDeathFadeFxSettings: inserted {key} = {value}.");
+            }
+        }
+
+        private static void EnsureXPClumpFxSettings()
+        {
+            (string key, string value)[] settings =
+            [
+                ("XPClumpPickupPerSecond", "12"),
+                ("XPClumpDeadZoneRadius", "240"),
+                ("XPClumpPullZoneRadius", "240"),
+                ("XPClumpAbsorbZoneRadius", "85"),
+                ("XPClumpDeadZoneStartSeconds", "20"),
+                ("XPClumpDeadZoneDespawnSeconds", "10"),
+                ("XPClumpPullSpeedMin", "0"),
+                ("XPClumpPullSpeedMax", "250"),
+                ("XPClumpPullVelocityLerpPerSecond", "4"),
+                ("XPClumpRadius", "6"),
+                ("XPClumpSpawnSpreadRadius", "18"),
+                ("XPClumpSpawnInitialSpeed", "24"),
+                ("XPClumpMaxSpeed", "320"),
+                ("XPClumpVelocityDampingPerSecond", "1.8"),
+                ("XPClumpClusterRadius", "110"),
+                ("XPClumpClusterAttractForce", "45"),
+                ("XPClumpClusterHomeostasisDistance", "8"),
+                ("XPClumpClusterRepelForce", "95"),
+                ("XPClumpVisualMergeRadius", "24"),
+                ("XPClumpVisualMergeGrowth", "0.19"),
+                ("XPClumpVisualMergeMaxScale", "4.5"),
+                ("XPClumpVisualMergeScaleLerpPerSecond", "8"),
+                ("XPClumpAbsorbConsumeDistance", "10"),
+                ("XPClumpAbsorbFadeSeconds", "0.42"),
+                ("XPClumpAbsorbConsumeGrowMaxScale", "2.6"),
+                ("XPClumpConsumeGrowthExponent", "2.2"),
+                ("XPClumpAbsorbOrbitMaxAngularSpeedDeg", "170"),
+                ("XPClumpAbsorbOrbitAngularBlendPerSecond", "3.2"),
+                ("XPClumpAbsorbOrbitAngularDampingPerSecond", "3.6"),
+                ("XPClumpAbsorbOrbitCollapseSpeed", "72"),
+                ("XPClumpAbsorbConsumeCollapseSpeed", "120"),
+                ("XPClumpAbsorbOrbitFollowGain", "6.2"),
+                ("XPClumpAbsorbVelocityLerpPerSecond", "8"),
+                ("XPClumpAbsorbOrbitTangentialVelocityWeight", "0.35"),
+                ("XPClumpAbsorbOrbitInitialRadiusFactor", "0.35"),
+                ("XPClumpAbsorbOrbitMinRadiusFactor", "0.05"),
+                ("XPClumpAbsorbOrbitMinRadiusAbsolute", "0.35"),
+                ("XPClumpAbsorbOrbitCollapseBoostLow", "1.15"),
+                ("XPClumpAbsorbOrbitCollapseBoostHigh", "1.0"),
+                ("XPClumpAbsorbOrbitInwardCollapseFactor", "0.12"),
+                ("XPClumpAbsorbOrbitMaxInwardSpeedMin", "40"),
+                ("XPClumpAbsorbOrbitMaxInwardSpeedPullScale", "1.5"),
+                ("XPClumpAbsorbConsumeExtraInwardFactor", "0.35"),
+                ("XPClumpCoreHighlightScale", "0.45"),
+                ("XPClumpCoreHighlightAlphaScale", "0.24"),
+                ("XPClumpGlowScale", "1.9"),
+                ("XPClumpGlowAlphaScale", "0.58"),
+                ("XPClumpShadowScale", "1.55"),
+                ("XPClumpShadowAlphaScale", "0.4"),
+                ("XPClumpDeadPulseSpeedMin", "3.8"),
+                ("XPClumpDeadPulseSpeedMax", "12.0"),
+                ("XPClumpDeadPulseLowAlphaStart", "0.55"),
+                ("XPClumpDeadPulseLowAlphaEnd", "0.03"),
+                ("XPDropUnstableHealthThresholdRatio", "0.33333334"),
+                ("XPDropUnstableJitterAccel", "1500"),
+                ("XPDropUnstableCenterPullAccel", "300"),
+                ("XPDropUnstableVelocityDampingPerSecond", "2.7"),
+                ("XPDropUnstableMaxSpeed", "360"),
+                ("XPDropUnstableAlphaMin", "0.2"),
+                ("XPDropUnstableAlphaMax", "0.95"),
+                ("XPDropUnstableAlphaPulseHz", "10.5"),
+                ("XPDropUnstableRadiusScale", "0.49"),
+                ("XPDropUnstableRenderScale", "1.0"),
+                ("XPDropUnstableFadeOutSeconds", "0.55"),
+                ("XPDropUnstableShowLerpPerSecond", "12"),
+                ("XPDropUnstableVisibilityEpsilon", "0.001"),
+                ("XPDropUnstableBurstRatePerSecond", "2.6"),
+                ("XPDropUnstableRandomKickFactorMin", "1.0"),
+                ("XPDropUnstableRandomKickFactorMax", "2.15"),
+                ("XPDropUnstableTangentialKickBaseFactor", "0.34"),
+                ("XPDropUnstableTangentialKickPressureFactor", "0.62"),
+                ("XPDropUnstableCenterPullBaseFactor", "0.18"),
+                ("XPDropUnstableCenterPullPressureFactor", "0.5"),
+                ("XPDropUnstableBurstFactorMin", "1.3"),
+                ("XPDropUnstableBurstFactorMax", "2.35"),
+                ("XPDropUnstableBoundaryBounceFactor", "2.2"),
+                ("XPDropUnstableBoundaryTangentialFactor", "0.35"),
+                ("XPDropUnstableAlphaNoiseAmplitude", "0.9"),
+                ("XPDropUnstableAlphaPulseWeight", "0.62"),
+                ("XPDropUnstableAlphaPressureWeight", "0.28"),
+                ("XPDropUnstableAlphaLerpPerSecond", "14"),
+            ];
+
+            foreach ((string key, string value) in settings)
+            {
+                if (SettingKeyExists(key, "FXSettings"))
+                {
+                    continue;
+                }
+
+                DatabaseQuery.ExecuteNonQuery(
+                    $"INSERT INTO FXSettings (SettingKey, Value) VALUES ('{key}', '{value}');");
+                DebugLogger.PrintDatabase($"EnsureXPClumpFxSettings: inserted {key} = {value}.");
+            }
+
+            // Retune legacy unstable-clump defaults to the new behavior without
+            // overriding user-customized values.
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.33333334' WHERE SettingKey = 'XPDropUnstableHealthThresholdRatio' AND Value = '0.2';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '1500'      WHERE SettingKey = 'XPDropUnstableJitterAccel' AND Value = '640';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '300'       WHERE SettingKey = 'XPDropUnstableCenterPullAccel' AND Value = '460';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '2.7'       WHERE SettingKey = 'XPDropUnstableVelocityDampingPerSecond' AND Value = '5.8';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '360'       WHERE SettingKey = 'XPDropUnstableMaxSpeed' AND Value = '170';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '10.5'      WHERE SettingKey = 'XPDropUnstableAlphaPulseHz' AND Value = '7.6';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.49'      WHERE SettingKey = 'XPDropUnstableRadiusScale' AND Value IN ('0.93', '0.98');");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '1.0'       WHERE SettingKey = 'XPDropUnstableRenderScale' AND Value IN ('0.9', '1.2');");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '2.6'       WHERE SettingKey = 'XPClumpAbsorbConsumeGrowMaxScale' AND Value = '1.95';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.42'      WHERE SettingKey = 'XPClumpAbsorbFadeSeconds' AND Value = '0.14';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '1.55'      WHERE SettingKey = 'XPClumpShadowScale' AND Value = '1.35';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.4'       WHERE SettingKey = 'XPClumpShadowAlphaScale' AND Value = '0.32';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '20'        WHERE SettingKey = 'XPClumpDeadZoneStartSeconds' AND Value = '60';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '10'        WHERE SettingKey = 'XPClumpDeadZoneDespawnSeconds' AND Value = '20';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '45'        WHERE SettingKey = 'XPClumpClusterAttractForce' AND Value = '70';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '3.8'       WHERE SettingKey = 'XPClumpDeadPulseSpeedMin' AND Value = '2.2';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '12.0'      WHERE SettingKey = 'XPClumpDeadPulseSpeedMax' AND Value IN ('7', '7.0');");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.55'      WHERE SettingKey = 'XPClumpDeadPulseLowAlphaStart' AND Value = '0.82';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.03'      WHERE SettingKey = 'XPClumpDeadPulseLowAlphaEnd' AND Value = '0.15';");
+        }
+
+        private static void EnsureXPClumpBackendTooltips()
+        {
+            if (!TableExists("UITooltips"))
+            {
+                return;
+            }
+
+            (string key, string text)[] entries =
+            [
+                ("FogOfWarEnabled", "Whether fog-of-war currently has a viewing unit context available."),
+                ("FogOfWarActive", "Whether fog-of-war is actively rendering this frame."),
+                ("FogVisionSourceCount", "How many sight sources are currently revealing vision territory."),
+                ("PlayerSightRadius", "The player's active sight radius in world units."),
+                ("XPClumpCount", "Number of active free clumps currently in the world."),
+                ("XPUnstableClumpCount", "Number of low-health unstable clumps currently visualized on destructible drop sources."),
+                ("PendingFarmXPDrops", "Number of destructible drop sources currently fading out that still have queued free clumps to spawn."),
+                ("XPClumpsAbsorbedThisSecond", "How many XP clumps have been absorbed across all units during the current one-second pickup window."),
+                ("XPClumpPickupPerSecond", "Maximum number of XP clumps a single unit may absorb per second."),
+                ("XPClumpDeadZoneRadius", "Distance from a clump where units are considered outside active pickup influence."),
+                ("XPClumpPullZoneRadius", "Distance from a clump where units begin applying pull-zone attraction."),
+                ("XPClumpAbsorbZoneRadius", "Distance from a clump where orbit-lock and absorption behavior begins."),
+            ];
+
+            foreach ((string key, string text) in entries)
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
+                    new Dictionary<string, object>
+                    {
+                        ["@key"] = key,
+                        ["@text"] = text
+                    });
             }
         }
 

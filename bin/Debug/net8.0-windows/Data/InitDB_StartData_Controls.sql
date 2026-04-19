@@ -37,6 +37,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CameraSnapToPlay
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Respawn',                  'Respawn the player after death.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ScrollIncrement',          'Scroll wheel units per zoom step (default 120 = one notch).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ShowHiddenAttrs',          'Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Grid',                     'Toggle the world grid overlay. Draws 1-unit grey grid lines with 5x5 coordinate plotting.');
 
 -- Backend block
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FreezeGameInputs',   'Gameplay inputs are currently suspended. Keyboard and mouse actions will not affect the game while this is true.');
@@ -52,7 +53,14 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoveredBlock',  
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoveredDragBar',     'Name of the UI block whose drag bar the cursor is currently hovering over, or None.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FocusedBlock',       'The block that last captured keyboard focus. Keyboard shortcuts routed to block content use this. None if no block has focus.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BlockType',          'Category of the focused block: Standard, Overlay, or Dynamic.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DoubleTapSuppressionSeconds', 'Seconds used as the DoubleTapToggle window. Single-toggle bindings on the same primary input are suppressed during this window after the first tap.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DoubleTapSuppressionSeconds', 'Seconds used as the DoubleTapToggle window. Non-DoubleTap switch/toggle bindings that share the same primary input are suppressed during this window after the first tap.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpCount',       'Number of active farm XP clumps currently in the world.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PendingFarmXPDrops', 'Number of farms currently fading out that still have queued XP clumps to spawn.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpsAbsorbedThisSecond', 'How many XP clumps have been absorbed across all units during the current one-second pickup window.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpPickupPerSecond', 'Maximum number of XP clumps a single unit may absorb per second.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpDeadZoneRadius', 'Distance from a clump where units are considered outside active pickup influence.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpPullZoneRadius', 'Distance from a clump where units begin applying pull-zone attraction.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpAbsorbZoneRadius', 'Distance from a clump where orbit-lock and absorption behavior begins.');
 
 -- Backend block — physics & bullet constants
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AirResistanceScalar',   'Drag scalar applied to bullets: drag = AirResistanceScalar × bulletVolume / bulletDragFactor.');
@@ -130,6 +138,8 @@ INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartSt
     VALUES ('DisableToolTips', 'Ctrl + T', 'SaveSwitch', 0, 1, 0, 'Interface', 3, 0);
 INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
     VALUES ('CameraLockMode', 'C', 'SaveEnum', 0, 1, 0, 'Camera', 2, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
+    VALUES ('Grid', 'G', 'SaveSwitch', 0, 0, 0, 'Interface', 3, 0);
 
 ---------------------------------------------------------------------------------------------------------------------------
 

@@ -163,7 +163,8 @@ namespace op.io
                 return;
             }
 
-            ShowWindow(hwnd, SW_SHOW);
+            // Show without stealing foreground focus; gameplay focus is re-armed on explicit click.
+            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
             _startupWindowHidden = false;
             _startupWindowHandle = hwnd;
         }
@@ -610,7 +611,7 @@ namespace op.io
         private const int GCLP_HICON = -14;
         private const int GCLP_HICONSM = -34;
         private const int SW_HIDE = 0;
-        private const int SW_SHOW = 5;
+        private const int SW_SHOWNOACTIVATE = 4;
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);

@@ -67,7 +67,7 @@ namespace op.io
 
         public static void LockHovered()
         {
-            if (!_inspectModeEnabled || _hovered == null || !_hovered.IsValid)
+            if (!_inspectModeEnabled || _hovered == null || !_hovered.IsValid || !GameObjectInspector.IsInspectableObject(_hovered.Source))
             {
                 return;
             }
@@ -77,7 +77,7 @@ namespace op.io
 
         public static void LockTarget(InspectableObjectInfo target)
         {
-            if (target == null || !target.IsValid)
+            if (target == null || !target.IsValid || !GameObjectInspector.IsInspectableObject(target.Source))
             {
                 return;
             }
@@ -94,12 +94,34 @@ namespace op.io
         {
             InspectableObjectInfo active = _locked ?? _hovered;
             active?.Refresh();
+
+            if (active == null || !active.IsValid || !GameObjectInspector.IsInspectableObject(active.Source))
+            {
+                if (ReferenceEquals(active, _locked))
+                {
+                    _locked = null;
+                }
+
+                if (ReferenceEquals(active, _hovered))
+                {
+                    _hovered = null;
+                }
+
+                return null;
+            }
+
             return active;
         }
 
         public static InspectableObjectInfo GetLockedTarget()
         {
             _locked?.Refresh();
+            if (_locked == null || !_locked.IsValid || !GameObjectInspector.IsInspectableObject(_locked.Source))
+            {
+                _locked = null;
+                return null;
+            }
+
             return _locked;
         }
 
@@ -111,6 +133,10 @@ namespace op.io
             }
 
             _locked.Refresh();
+            if (!_locked.IsValid || !GameObjectInspector.IsInspectableObject(_locked.Source))
+            {
+                _locked = null;
+            }
         }
 
         public static bool IsTargetLocked(InspectableObjectInfo target)

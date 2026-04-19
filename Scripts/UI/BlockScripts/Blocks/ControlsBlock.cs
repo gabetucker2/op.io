@@ -34,11 +34,13 @@ namespace op.io.UI.BlockScripts.Blocks
         private static readonly List<CategoryLayoutRow> _categoryLayoutRows = new();
         private static readonly List<CategoryLayoutRow> _categoryDragRows = new();
         private static readonly List<KeybindDisplayRow> _rowDragCategoryRows = new();
+        private static readonly HashSet<string> _collapsedCategoryKeys = new(StringComparer.OrdinalIgnoreCase);
         private static Rectangle _activeRowDragBounds;
         private static string _activeRowDragCategoryKey;
         private static Texture2D _pixelTexture;
         private static string _hoveredRowKey;
         private static string _hoveredCategoryKey;
+        private static string _hoveredCategoryToggleKey;
         private static string _tooltipRowKey;
         private static string _tooltipRowLabel;
 
@@ -86,6 +88,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int CategorySectionGap = 4;
         private const int CategoryLabelLeftPad = 5;
         private const int CategoryLabelTopPad = 1;
+        private const int CategoryToggleBtnSize = 10;
+        private const int CategoryToggleBtnPad = 3;
         private const string EnumOptionTooltipKeyEnabled = "Dropdown_ControlEnumOptionEnabled";
         private const string EnumOptionTooltipKeyDisabled = "Dropdown_ControlEnumOptionDisabled";
 
@@ -116,7 +120,9 @@ namespace op.io.UI.BlockScripts.Blocks
             _activeRowDragBounds = Rectangle.Empty;
             _activeRowDragCategoryKey = null;
             _hoveredCategoryKey = null;
+            _hoveredCategoryToggleKey = null;
             _pressedCategoryDragKey = null;
+            _collapsedCategoryKeys.Clear();
             _rowDragState.Reset();
             _categoryDragState.Reset();
         }
@@ -201,6 +207,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 _rowDragCategoryRows.Clear();
                 _activeRowDragBounds = Rectangle.Empty;
                 _activeRowDragCategoryKey = null;
+                _hoveredCategoryToggleKey = null;
             }
 
             // Update per-row FunColInterfaces (suppress hover animation during drag)
@@ -224,8 +231,10 @@ namespace op.io.UI.BlockScripts.Blocks
             bool allowInteraction = !blockLocked && (pointerInsideList || hasEnumDropdownTooltip);
             string hitRow = pointerInsideList ? HitTestRow(mouseState.Position) : null;
             string hitCategory = pointerInsideList ? HitTestCategoryHeader(mouseState.Position) : null;
+            string hitCategoryToggle = pointerInsideList ? HitTestCategoryToggle(mouseState.Position, blockLocked, pointerInsideList) : null;
             _hoveredRowKey = allowInteraction ? hitRow : null;
-            _hoveredCategoryKey = allowInteraction && string.IsNullOrWhiteSpace(hitRow) ? hitCategory : null;
+            _hoveredCategoryToggleKey = allowInteraction && string.IsNullOrWhiteSpace(hitRow) ? hitCategoryToggle : null;
+            _hoveredCategoryKey = allowInteraction && string.IsNullOrWhiteSpace(hitRow) && string.IsNullOrWhiteSpace(_hoveredCategoryToggleKey) ? hitCategory : null;
             _tooltipRowKey = hasEnumDropdownTooltip ? enumDropdownTooltipKey : hitRow;
             _tooltipRowLabel = hasEnumDropdownTooltip ? enumDropdownTooltipLabel : hitRow;
 
@@ -234,6 +243,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 _pressedDragRowKey   = null;
                 _pressedCategoryDragKey = null;
                 _pressedRebindRowKey = null;
+                _hoveredCategoryToggleKey = null;
             }
 
             // Determine which column is hovered on the hovered row
@@ -278,7 +288,16 @@ namespace op.io.UI.BlockScripts.Blocks
             }
             else
             {
-                if (allowInteraction && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
+                if (allowInteraction && leftClickStarted && !string.IsNullOrWhiteSpace(_hoveredCategoryToggleKey))
+                {
+                    ToggleCategoryCollapsed(_hoveredCategoryToggleKey);
+                    _pressedDragRowKey = null;
+                    _pressedCategoryDragKey = null;
+                    _pressedRebindRowKey = null;
+                    CloseAllEnumDropdowns();
+                    _openEnumDropdownKey = null;
+                }
+                else if (allowInteraction && leftClickStarted && !string.IsNullOrEmpty(_hoveredRowKey))
                 {
                     if (hoveredCol == 2)
                     {
@@ -446,6 +465,8 @@ namespace op.io.UI.BlockScripts.Blocks
             {
                 listBounds = contentBounds;
             }
+            Point pointerPosition = Mouse.GetState().Position;
+            bool pointerInsideList = listBounds.Contains(pointerPosition);
 
             EnsurePixelTexture();
 
@@ -486,7 +507,7 @@ namespace op.io.UI.BlockScripts.Blocks
                         string.Equals(category.CategoryKey, _categoryDragState.DraggingKey, StringComparison.OrdinalIgnoreCase);
                     if (!isDraggingCategory)
                     {
-                        DrawCategoryHeader(spriteBatch, category, blockLocked, boldFont);
+                        DrawCategoryHeader(spriteBatch, category, blockLocked, boldFont, pointerInsideList);
                     }
                 }
             }
@@ -960,13 +981,19 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             return orderChanged;
         }
 
-        private static void DrawCategoryHeader(SpriteBatch spriteBatch, CategoryLayoutRow category, bool blockLocked, UIStyle.UIFont boldFont)
+        private static void DrawCategoryHeader(
+            SpriteBatch spriteBatch,
+            CategoryLayoutRow category,
+            bool blockLocked,
+            UIStyle.UIFont boldFont,
+            bool pointerInsideList)
         {
             if (spriteBatch == null || _pixelTexture == null || category.HeaderBounds == Rectangle.Empty)
             {
                 return;
             }
 
+            bool categoryCollapsed = IsCategoryCollapsed(category.CategoryKey);
             bool hovered = !blockLocked &&
                 !IsAnyDragActive &&
                 !string.IsNullOrWhiteSpace(_hoveredCategoryKey) &&
@@ -981,12 +1008,48 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                 string label = string.IsNullOrWhiteSpace(category.Label)
                     ? category.CategoryKey
                     : category.Label;
+                int labelX = category.HeaderBounds.X + CategoryLabelLeftPad + CategoryToggleBtnSize + CategoryToggleBtnPad + 2;
                 boldFont.DrawString(
                     spriteBatch,
                     label,
-                    new Vector2(category.HeaderBounds.X + CategoryLabelLeftPad, category.HeaderBounds.Y + CategoryLabelTopPad),
+                    new Vector2(labelX, category.HeaderBounds.Y + CategoryLabelTopPad),
                     UIStyle.TextColor);
             }
+
+            bool showToggle = ShouldShowCategoryToggle(category.CategoryKey, blockLocked, pointerInsideList, hoveredHeader: category.HeaderBounds.Contains(Mouse.GetState().Position));
+            if (!showToggle)
+            {
+                return;
+            }
+
+            Rectangle toggleBounds = GetCategoryToggleButtonRect(category.HeaderBounds);
+            bool toggleHovered = !blockLocked && !IsAnyDragActive && toggleBounds.Contains(Mouse.GetState().Position);
+            Color toggleFill = categoryCollapsed
+                ? (toggleHovered ? ColorPalette.IndicatorInactive * 0.9f : ColorPalette.IndicatorInactive * 0.67f)
+                : (toggleHovered ? ColorPalette.IndicatorActive * 0.9f : ColorPalette.IndicatorActive * 0.67f);
+            FillRect(spriteBatch, toggleBounds, toggleFill);
+            DrawRectOutline(spriteBatch, toggleBounds, ColorPalette.TextMuted * 0.55f, 1);
+        }
+
+        private static Rectangle GetCategoryToggleButtonRect(Rectangle headerBounds)
+        {
+            int by = headerBounds.Y + (headerBounds.Height - CategoryToggleBtnSize) / 2;
+            return new Rectangle(headerBounds.X + CategoryToggleBtnPad, by, CategoryToggleBtnSize, CategoryToggleBtnSize);
+        }
+
+        private static bool ShouldShowCategoryToggle(string categoryKey, bool blockLocked, bool pointerInsideList, bool hoveredHeader)
+        {
+            if (!_funColCategoryModeEnabled || blockLocked || IsAnyDragActive || !BlockManager.DockingModeEnabled)
+            {
+                return false;
+            }
+
+            if (IsCategoryCollapsed(categoryKey))
+            {
+                return pointerInsideList;
+            }
+
+            return hoveredHeader;
         }
 
         private static void DrawDraggingCategory(SpriteBatch spriteBatch, Rectangle contentBounds, UIStyle.UIFont boldFont, bool blockLocked)
@@ -1017,10 +1080,12 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                     Bounds = dragBounds,
                     HeaderBounds = headerBounds,
                     RowsBounds = Rectangle.Empty,
+                    IsCollapsed = false,
                     IsDragging = true
                 },
                 blockLocked,
-                boldFont);
+                boldFont,
+                pointerInsideList: false);
 
             float y = headerBounds.Bottom;
             int rowHeight = (int)MathF.Ceiling(_lineHeightCache);
@@ -1055,8 +1120,18 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                 return _keybindCache.Count * _lineHeightCache;
             }
 
+            float totalRowsHeight = 0f;
+            foreach (KeybindDisplayRow row in _keybindCache)
+            {
+                string categoryKey = ControlRowCategoryCatalog.NormalizeCategoryKey(row.CategoryKey, row.Action);
+                if (!IsCategoryCollapsed(categoryKey))
+                {
+                    totalRowsHeight += _lineHeightCache;
+                }
+            }
+
             float headerHeight = GetCategoryHeaderHeight();
-            float total = (_keybindCache.Count * _lineHeightCache) + (categoryCount * headerHeight);
+            float total = totalRowsHeight + (categoryCount * headerHeight);
             if (categoryCount > 1)
             {
                 total += (categoryCount - 1) * CategorySectionGap;
@@ -1155,11 +1230,14 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                 return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
             });
 
+            _collapsedCategoryKeys.RemoveWhere(key => !orderedCategories.Contains(key, StringComparer.OrdinalIgnoreCase));
+
             int headerHeightPx = (int)MathF.Ceiling(GetCategoryHeaderHeight());
             for (int categoryIndex = 0; categoryIndex < orderedCategories.Count; categoryIndex++)
             {
                 string categoryKey = orderedCategories[categoryIndex];
                 List<int> categoryRows = rowsByCategory[categoryKey];
+                bool categoryCollapsed = IsCategoryCollapsed(categoryKey);
 
                 Rectangle headerBounds = new(
                     contentBounds.X,
@@ -1170,23 +1248,37 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                 y += GetCategoryHeaderHeight();
                 int rowStartY = (int)MathF.Round(y);
 
-                foreach (int rowIndex in categoryRows)
+                if (categoryCollapsed)
                 {
-                    KeybindDisplayRow row = _keybindCache[rowIndex];
-                    row.Bounds = new Rectangle(contentBounds.X, (int)MathF.Round(y), contentBounds.Width, rowHeight);
-                    _keybindCache[rowIndex] = row;
-                    y += _lineHeightCache;
+                    foreach (int rowIndex in categoryRows)
+                    {
+                        KeybindDisplayRow row = _keybindCache[rowIndex];
+                        row.Bounds = Rectangle.Empty;
+                        _keybindCache[rowIndex] = row;
+                    }
+                }
+                else
+                {
+                    foreach (int rowIndex in categoryRows)
+                    {
+                        KeybindDisplayRow row = _keybindCache[rowIndex];
+                        row.Bounds = new Rectangle(contentBounds.X, (int)MathF.Round(y), contentBounds.Width, rowHeight);
+                        _keybindCache[rowIndex] = row;
+                        y += _lineHeightCache;
+                    }
                 }
 
                 int rowBottomY = (int)MathF.Round(y);
-                Rectangle rowBounds = categoryRows.Count > 0
+                Rectangle rowBounds = !categoryCollapsed && categoryRows.Count > 0
                     ? new Rectangle(contentBounds.X, rowStartY, contentBounds.Width, Math.Max(rowHeight, rowBottomY - rowStartY))
                     : Rectangle.Empty;
                 Rectangle categoryBounds = new Rectangle(
                     contentBounds.X,
                     headerBounds.Y,
                     contentBounds.Width,
-                    Math.Max(headerBounds.Height, rowBottomY - headerBounds.Y));
+                    categoryCollapsed
+                        ? headerBounds.Height
+                        : Math.Max(headerBounds.Height, rowBottomY - headerBounds.Y));
 
                 _categoryLayoutRows.Add(new CategoryLayoutRow
                 {
@@ -1195,6 +1287,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                     Bounds = categoryBounds,
                     HeaderBounds = headerBounds,
                     RowsBounds = rowBounds,
+                    IsCollapsed = categoryCollapsed,
                     IsDragging = false
                 });
 
@@ -1210,6 +1303,33 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             int deltaX = Math.Abs(position.X - _pressStartPosition.X);
             int deltaY = Math.Abs(position.Y - _pressStartPosition.Y);
             return deltaX >= DragStartThreshold || deltaY >= DragStartThreshold;
+        }
+
+        private static bool IsCategoryCollapsed(string categoryKey)
+        {
+            if (!_funColCategoryModeEnabled || string.IsNullOrWhiteSpace(categoryKey))
+            {
+                return false;
+            }
+
+            return _collapsedCategoryKeys.Contains(categoryKey);
+        }
+
+        private static void ToggleCategoryCollapsed(string categoryKey)
+        {
+            if (!_funColCategoryModeEnabled || string.IsNullOrWhiteSpace(categoryKey))
+            {
+                return;
+            }
+
+            if (_collapsedCategoryKeys.Contains(categoryKey))
+            {
+                _collapsedCategoryKeys.Remove(categoryKey);
+            }
+            else
+            {
+                _collapsedCategoryKeys.Add(categoryKey);
+            }
         }
 
         private static bool ShouldHighlightRow(KeybindDisplayRow row, bool blockLocked)
@@ -1641,6 +1761,36 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             foreach (CategoryLayoutRow category in _categoryLayoutRows)
             {
                 if (category.HeaderBounds != Rectangle.Empty && category.HeaderBounds.Contains(position))
+                {
+                    return category.CategoryKey;
+                }
+            }
+
+            return null;
+        }
+
+        private static string HitTestCategoryToggle(Point position, bool blockLocked, bool pointerInsideList)
+        {
+            if (!_funColCategoryModeEnabled)
+            {
+                return null;
+            }
+
+            foreach (CategoryLayoutRow category in _categoryLayoutRows)
+            {
+                if (category.HeaderBounds == Rectangle.Empty)
+                {
+                    continue;
+                }
+
+                bool hoveredHeader = category.HeaderBounds.Contains(position);
+                if (!ShouldShowCategoryToggle(category.CategoryKey, blockLocked, pointerInsideList, hoveredHeader))
+                {
+                    continue;
+                }
+
+                Rectangle toggleBounds = GetCategoryToggleButtonRect(category.HeaderBounds);
+                if (toggleBounds.Contains(position))
                 {
                     return category.CategoryKey;
                 }
@@ -2771,6 +2921,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             public Rectangle Bounds;
             public Rectangle HeaderBounds;
             public Rectangle RowsBounds;
+            public bool IsCollapsed;
             public bool IsDragging;
         }
 

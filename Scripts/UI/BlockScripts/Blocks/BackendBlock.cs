@@ -265,6 +265,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return variableName switch
                 {
                     "DockingMode"       => nextBool ? "Docking mode enabled."  : "Docking mode disabled.",
+                    "Grid"              => nextBool ? "World grid overlay enabled." : "World grid overlay disabled.",
                     "BlockMenuOpen"     => nextBool ? "Block menu opened."      : "Block menu closed.",
                     "InputBlocked"      => nextBool ? "All input blocked by modal overlay." : "Input unblocked.",
                     "DraggingLayout"    => nextBool ? "Block drag started."     : "Block drag ended.",

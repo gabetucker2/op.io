@@ -143,12 +143,20 @@ namespace op.io
             return best;
         }
 
+        public static bool IsInspectableObject(GameObject gameObject)
+        {
+            return IsInspectable(gameObject);
+        }
+
         private static bool IsInspectable(GameObject gameObject)
         {
             return gameObject != null &&
                 gameObject.Shape != null &&
                 !gameObject.Shape.IsPrototype &&
-                !gameObject.Shape.SkipHover;
+                !gameObject.Shape.SkipHover &&
+                FogOfWarManager.IsWorldPositionVisible(
+                    gameObject.Position,
+                    MathF.Max(gameObject.BoundingRadius, 2f));
         }
 
         private static bool IsPointInside(GameObject gameObject, Vector2 point, out float score)

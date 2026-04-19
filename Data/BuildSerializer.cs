@@ -112,6 +112,7 @@ namespace op.io
         [JsonPropertyName("bulletDamageResistance")]   public float BulletDamageResistance   { get; set; }
         [JsonPropertyName("speed")]                    public float Speed                    { get; set; }
         [JsonPropertyName("control")]                  public float Control                  { get; set; }
+        [JsonPropertyName("sight")]                    public float Sight                    { get; set; }
         [JsonPropertyName("bodyActionBuff")]           public float BodyActionBuff           { get; set; }
 
         public Attributes_Body ToAttributes() => new()
@@ -130,6 +131,7 @@ namespace op.io
             BulletDamageResistance    = BulletDamageResistance,
             Speed                     = Speed,
             Control                   = Control,
+            Sight                     = Sight,
             BodyActionBuff            = BodyActionBuff,
         };
 
@@ -150,6 +152,7 @@ namespace op.io
             BulletDamageResistance    = a.BulletDamageResistance,
             Speed                     = a.Speed,
             Control                   = a.Control,
+            Sight                     = a.Sight,
             BodyActionBuff            = a.BodyActionBuff,
         };
     }

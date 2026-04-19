@@ -273,7 +273,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
-            Point pos = current.Position;
+            Point pos = ToLayoutSpace(current.Position);
             DockBlock topBlock = GetTopmostVisibleBlockAt(pos, includeGameBlock: false);
             if (topBlock == null)
             {
@@ -8613,6 +8613,14 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 state.XButton2);
         }
 
+        private static Point ToLayoutSpace(Point screenPosition)
+        {
+            float invScale = _uiScale > 0f ? 1f / _uiScale : 1f;
+            return new Point(
+                (int)MathF.Round(screenPosition.X * invScale),
+                (int)MathF.Round(screenPosition.Y * invScale));
+        }
+
         private static void DrawEmptyState(SpriteBatch spriteBatch, Rectangle viewport)
         {
             UIStyle.UIFont font = UIStyle.FontHBody;
@@ -8813,13 +8821,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             Point cursor = Mouse.GetState().Position;
             if (!bounds.Contains(cursor)) return false;
 
-            // Cursor is within game block bounds — but if an overlay covers it, the game is not the active target.
-            foreach (DockBlock block in _orderedBlocks)
-            {
-                if (!block.IsVisible || !block.IsOverlay) continue;
-                if (block.Bounds.Contains(cursor)) return false;
-            }
-            return true;
+            Point layoutCursor = ToLayoutSpace(cursor);
+            DockBlock topBlock = GetTopmostVisibleBlockAt(layoutCursor);
+            return topBlock != null && topBlock.Kind == DockBlockKind.Game;
         }
 
         private static string GetBlockHotkeyLabel()

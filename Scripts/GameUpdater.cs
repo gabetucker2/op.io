@@ -61,7 +61,7 @@ namespace op.io
             Dictionary<int, Agent> agentById = null;
             foreach (var go in dead)
             {
-                // Award XP to the agent who landed the killing blow.
+                Agent killer = null;
                 if (go.LastDamagedByAgentID >= 0)
                 {
                     if (agentById == null)
@@ -70,8 +70,19 @@ namespace op.io
                         foreach (var obj in gameObjects)
                             if (obj is Agent a) agentById[a.ID] = a;
                     }
-                    if (agentById.TryGetValue(go.LastDamagedByAgentID, out Agent killer))
-                        killer.CurrentXP += go.DeathPointReward;
+
+                    agentById.TryGetValue(go.LastDamagedByAgentID, out killer);
+                }
+
+                // Destructible non-agent kills now spill into XP drops (free clumps)
+                // during the death fade instead of direct XP on the kill frame.
+                if (go is not Agent && killer != null && go.DeathPointReward > 0f)
+                {
+                    XPClumpManager.BeginDeathDrop(go, killer.ID, go.DeathPointReward, DeathFadeOut);
+                }
+                else if (killer != null && go.DeathPointReward > 0f)
+                {
+                    killer.CurrentXP += go.DeathPointReward;
                 }
 
                 gameObjects.Remove(go);
@@ -92,6 +103,7 @@ namespace op.io
                 }
                 else
                 {
+                    XPClumpManager.CompleteDeathDrop(go);
                     go.Dispose();
                     DebugLogger.PrintGO($"Destroyed GameObject ID={go.ID} (Name={go.Name}, Reward={go.DeathPointReward} XP).");
                 }
@@ -106,8 +118,12 @@ namespace op.io
             for (int i = _dyingObjects.Count - 1; i >= 0; i--)
             {
                 GameObject go = _dyingObjects[i];
+                float previousTimer = go.DeathFadeTimer;
                 go.Update(); // keep physics velocity applied during fade
                 go.DeathFadeTimer -= Core.DELTATIME;
+                float elapsedBefore = MathF.Max(0f, fadeOut - previousTimer);
+                float elapsedAfter = MathF.Max(0f, fadeOut - go.DeathFadeTimer);
+                XPClumpManager.UpdateDeathDrop(go, elapsedBefore, elapsedAfter);
                 float remainingRatio = MathHelper.Clamp(go.DeathFadeTimer / MathF.Max(fadeOut, 0.001f), 0f, 1f);
                 go.Opacity = remainingRatio;
                 float fadeProgress = 1f - remainingRatio;
@@ -115,6 +131,7 @@ namespace op.io
                 if (go.DeathFadeTimer <= 0f)
                 {
                     _dyingObjects.RemoveAt(i);
+                    XPClumpManager.CompleteDeathDrop(go);
                     go.Dispose();
                     DebugLogger.PrintGO($"Death fade complete, disposed GameObject ID={go.ID}.");
                 }
@@ -197,6 +214,7 @@ namespace op.io
 
             // Prime previous input snapshots so the first frame doesn't register phantom releases.
             InputTypeManager.BeginFrame();
+            InputManager.TickWindowFocusState();
 
             // Centralized switch polling
             SwitchStateScanner.Tick();
@@ -313,12 +331,23 @@ namespace op.io
             PhysicsManager.Update(Core.Instance.GameObjects);
             FrameProfiler.EndSample("PhysicsManager.Update");
 
-            // Remove dead destructible objects and award XP to the last bullet-owner who dealt damage.
+            // Update unstable-clump low-health previews before death processing so
+            // death handling can smoothly transition those previews into free clumps.
+            FrameProfiler.BeginSample("XPClumpManager.UpdateUnstableDropPreviews", "XPClumpManager");
+            XPClumpManager.UpdateUnstableDropPreviews(Core.Instance.GameObjects, Core.DELTATIME);
+            FrameProfiler.EndSample("XPClumpManager.UpdateUnstableDropPreviews");
+
+            // Remove dead destructible objects. Non-agent destructibles now spill XP drops
+            // as free clumps during death fade; agent rewards still grant directly.
             // CollisionResolver no longer removes objects inline, so this is the single death authority.
             FrameProfiler.BeginSample("ProcessDeaths", "GameUpdater");
             ProcessDeaths();
             UpdateDyingObjects();
             FrameProfiler.EndSample("ProcessDeaths");
+
+            FrameProfiler.BeginSample("XPClumpManager.Update", "XPClumpManager");
+            XPClumpManager.Update(Core.DELTATIME);
+            FrameProfiler.EndSample("XPClumpManager.Update");
 
             // Flush accumulated damage notifications and advance active damage numbers
             FrameProfiler.BeginSample("DamageNumberManager", "DamageNumberManager");

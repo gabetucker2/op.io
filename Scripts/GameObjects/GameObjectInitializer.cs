@@ -13,6 +13,7 @@ namespace op.io
 
             Core.Instance.GameObjects = new List<GameObject>();
             Core.Instance.StaticObjects = new List<GameObject>();
+            XPClumpManager.Reset();
 
             GameObjectManager.SeedNextID();
 
@@ -198,6 +199,7 @@ namespace op.io
 
         private static void ApplyFarmStats(GameObject farmObject, FarmData data)
         {
+            farmObject.IsFarmObject               = true;
             farmObject.MaxHealth                  = data.MaxHealth;
             farmObject.CurrentHealth              = data.MaxHealth;
             farmObject.HealthRegen                = data.HealthRegen;

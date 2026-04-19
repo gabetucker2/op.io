@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -21,6 +22,10 @@ namespace op.io
         private static bool _holdLatchEnabled;
         private static float _holdLatchRotation;
         internal static bool IsHoldLatchActive => _holdLatchEnabled;
+        private static bool _requiresFocusClick = true;
+        private static bool _focusLatchInitialized;
+        private static bool _windowWasActiveLastTick;
+        private static MouseState _previousFocusLatchMouseState;
         private static bool _isControlKeyLoaded = false;
         private static float _cursorFollowDeadzonePixels = -1f;
         private static readonly Dictionary<string, Keys[]> _modifierAliases = new(StringComparer.OrdinalIgnoreCase)
@@ -260,6 +265,49 @@ namespace op.io
             }
 
             return string.Empty;
+        }
+
+        public static bool WaitingForFocusClick => _requiresFocusClick;
+
+        public static bool HasWindowGameplayFocus =>
+            Core.Instance != null &&
+            IsGameWindowForegroundActive() &&
+            !_requiresFocusClick;
+
+        public static void TickWindowFocusState()
+        {
+            MouseState currentMouse = Mouse.GetState();
+            bool isActive = IsGameWindowForegroundActive();
+
+            if (!_focusLatchInitialized)
+            {
+                _focusLatchInitialized = true;
+                _windowWasActiveLastTick = isActive;
+                _previousFocusLatchMouseState = currentMouse;
+                _requiresFocusClick = true;
+            }
+
+            if (!isActive)
+            {
+                _requiresFocusClick = true;
+            }
+            else
+            {
+                if (!_windowWasActiveLastTick)
+                {
+                    _requiresFocusClick = true;
+                }
+
+                if (_requiresFocusClick &&
+                    DidMouseClickStart(currentMouse, _previousFocusLatchMouseState) &&
+                    IsCursorWithinGameWindowClient(currentMouse))
+                {
+                    _requiresFocusClick = false;
+                }
+            }
+
+            _windowWasActiveLastTick = isActive;
+            _previousFocusLatchMouseState = currentMouse;
         }
 
         public static int GetBindingTokenCount(string settingKey)
@@ -793,9 +841,7 @@ namespace op.io
 
                 if (IsLatchedHold(SettingKey, InputType))
                 {
-                    // Keep global freeze bookkeeping in sync even though the latch bypasses suppression checks.
-                    _ = ShouldAllowBinding(IsMetaControl, primaryIsMouse);
-                    return true;
+                    return ShouldAllowBinding(IsMetaControl, primaryIsMouse);
                 }
 
                 if (_holdLatchEnabled && !IsMetaControl && InputType == InputType.Hold)
@@ -941,7 +987,12 @@ namespace op.io
                 if (hasModifiers)
                 {
                     bool allTokensHeld = Tokens.All(t => t.IsHeld());
-                    return InputTypeManager.EvaluateComboSwitch(SettingKey, allTokensHeld, GetAllKeys(Tokens));
+                    return InputTypeManager.EvaluateComboSwitch(
+                        SettingKey,
+                        allTokensHeld,
+                        GetAllKeys(Tokens),
+                        primary.MouseButton,
+                        primary.Keys);
                 }
 
                 if (modifiersHeld)
@@ -1018,6 +1069,14 @@ namespace op.io
 
         private static bool ShouldAllowBinding(bool isMetaControl, bool isMouseBinding = false)
         {
+            TickWindowFocusState();
+
+            if (_requiresFocusClick)
+            {
+                Freeze(true, "Focus mode: waiting for in-window click");
+                return false;
+            }
+
             if (isMetaControl)
             {
                 return true;
@@ -1038,8 +1097,7 @@ namespace op.io
             bool draggingLayout    = mouseInteracting && BlockManager.IsDraggingLayout;
             bool guiInteracting    = mouseInteracting && !draggingLayout && BlockManager.IsAnyGuiInteracting;
 
-            // Focus mode suppresses when window is inactive.
-            bool focusLost = isFocus && Core.Instance != null && !Core.Instance.IsActive;
+            bool focusLost = TryGetFocusModeSuppressionReason(isFocus, out string focusReason);
 
             // MouseLeave (and any unrecognised) mode suppresses when cursor leaves the game block.
             bool cursorOutside = !isNone && !isLimited && !isFocus && !BlockManager.IsCursorWithinGameBlock();
@@ -1051,6 +1109,7 @@ namespace op.io
                 inspectMode:    InspectModeState.IsNonMetaSuppressed,
                 inputBlocked:   BlockManager.IsInputBlocked(),
                 focusLost:      focusLost,
+                focusReason:    focusReason,
                 draggingLayout: draggingLayout,
                 guiInteracting: guiInteracting,
                 cursorOutside:  cursorOutside,
@@ -1067,6 +1126,7 @@ namespace op.io
             bool   inspectMode,
             bool   inputBlocked,
             bool   focusLost,
+            string focusReason,
             bool   draggingLayout,
             bool   guiInteracting,
             bool   cursorOutside,
@@ -1079,7 +1139,7 @@ namespace op.io
             if (inputBlocked)
                 return Freeze(true, $"BlockManager.IsInputBlocked (interacting: {BlockManager.GetInteractingBlockKind() ?? "none"})");
             if (focusLost)
-                return Freeze(true, "Focus mode: window not focused");
+                return Freeze(true, focusReason);
             if (draggingLayout)
                 return Freeze(true, $"{modeLabel}: mouse suppressed (dragging layout)");
             if (guiInteracting)
@@ -1102,6 +1162,76 @@ namespace op.io
             return !string.Equals(mode, "None", StringComparison.OrdinalIgnoreCase);
         }
 
+        private static bool TryGetFocusModeSuppressionReason(bool isFocusMode, out string reason)
+        {
+            reason = string.Empty;
+            if (!isFocusMode || Core.Instance == null)
+            {
+                return false;
+            }
+
+            if (!IsGameWindowForegroundActive())
+            {
+                reason = "Focus mode: window not focused";
+                return true;
+            }
+
+            if (_requiresFocusClick)
+            {
+                reason = "Focus mode: waiting for focus click";
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool DidMouseClickStart(MouseState current, MouseState previous)
+        {
+            return (current.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released) ||
+                   (current.RightButton == ButtonState.Pressed && previous.RightButton == ButtonState.Released) ||
+                   (current.MiddleButton == ButtonState.Pressed && previous.MiddleButton == ButtonState.Released) ||
+                   (current.XButton1 == ButtonState.Pressed && previous.XButton1 == ButtonState.Released) ||
+                   (current.XButton2 == ButtonState.Pressed && previous.XButton2 == ButtonState.Released);
+        }
+
+        private static bool IsCursorWithinGameWindowClient(MouseState mouseState)
+        {
+            var window = Core.Instance?.Window;
+            if (window == null)
+            {
+                return false;
+            }
+
+            Rectangle client = window.ClientBounds;
+            if (client.Width <= 0 || client.Height <= 0)
+            {
+                return false;
+            }
+
+            return mouseState.X >= 0 &&
+                   mouseState.Y >= 0 &&
+                   mouseState.X < client.Width &&
+                   mouseState.Y < client.Height;
+        }
+
+        private static bool IsGameWindowForegroundActive()
+        {
+            var window = Core.Instance?.Window;
+            if (window == null)
+            {
+                return false;
+            }
+
+            IntPtr windowHandle = window.Handle;
+            if (windowHandle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            IntPtr foregroundHandle = GetForegroundWindow();
+            return foregroundHandle != IntPtr.Zero && foregroundHandle == windowHandle;
+        }
+
         private static string GetGameInputFreezeMode()
         {
             if (ControlStateManager.ContainsEnumState(AllowGameInputFreezeKey))
@@ -1113,6 +1243,9 @@ namespace op.io
 
             return "Focus";
         }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
 
         public static void SetTriggerOverride(string settingKey, bool isActive)
         {

@@ -62,6 +62,9 @@ namespace op.io
         public float Speed               { get; set; }  // Movement speed multiplier
         public float Control             { get; set; }  // Controls rotation and acceleration responsiveness
 
+        // Vision group
+        public float Sight               { get; set; }  // Sight radius in world units (0 = no vision contribution)
+
         // Action buff
         public float BodyActionBuff      { get; set; }
 
@@ -158,9 +161,9 @@ namespace op.io
             => bulletMass * (1f + bulletKnockback) * bulletRecoilScalar;
 
         /// <summary>
-        /// Bullet penetration HP. Formula: mass × (10/3) so default mass=3 → HP=10.
+        /// Bullet penetration HP. Formula: mass × (20/3) so default mass=3 → HP=20.
         /// </summary>
-        public const float BulletHealthPerMass = 10f / 3f;
+        public const float BulletHealthPerMass = 20f / 3f;
         public static float BulletHealth(float bulletMass)
             => bulletMass * BulletHealthPerMass;
 

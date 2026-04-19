@@ -1283,7 +1283,12 @@ namespace op.io
             return EvaluateDoubleTapTapInternal(settingKey, tapDetected: true, primaryMouseToken, primaryKeyTokens);
         }
 
-        public static bool EvaluateComboSwitch(string settingKey, bool allTokensHeld, IEnumerable<Keys> chordKeys)
+        public static bool EvaluateComboSwitch(
+            string settingKey,
+            bool allTokensHeld,
+            IEnumerable<Keys> chordKeys,
+            string primaryMouseToken,
+            IEnumerable<Keys> primaryKeyTokens)
         {
             if (string.IsNullOrWhiteSpace(settingKey))
             {
@@ -1337,6 +1342,11 @@ namespace op.io
 
             float lastSwitch = _bindingLastSwitchTime[settingKey];
             if ((Core.GAMETIME - lastSwitch) < _cachedSwitchCooldown.Value)
+            {
+                return _bindingSwitchStates[settingKey];
+            }
+
+            if (IsPrimaryTokenSuppressed(primaryMouseToken, primaryKeyTokens))
             {
                 return _bindingSwitchStates[settingKey];
             }
@@ -1450,6 +1460,35 @@ namespace op.io
             }
 
             _singleToggleSuppressionUntil.Remove(suppressionKey);
+            return false;
+        }
+
+        private static bool IsPrimaryTokenSuppressed(string primaryMouseToken, IEnumerable<Keys> primaryKeyTokens)
+        {
+            if (!string.IsNullOrWhiteSpace(primaryMouseToken) &&
+                IsSingleToggleSuppressed(BuildMouseSuppressionToken(primaryMouseToken)))
+            {
+                return true;
+            }
+
+            if (primaryKeyTokens == null)
+            {
+                return false;
+            }
+
+            foreach (Keys key in primaryKeyTokens)
+            {
+                if (key == Keys.None)
+                {
+                    continue;
+                }
+
+                if (IsSingleToggleSuppressed(BuildKeySuppressionToken(key)))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 

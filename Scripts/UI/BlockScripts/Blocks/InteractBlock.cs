@@ -1095,6 +1095,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 new("Bullet Dmg Resist", $"{a.BulletDamageResistance:0.##}"),
                 new("Speed",             $"{a.Speed:0.##}"),
                 new("Control",           $"{a.Control:0.##}"),
+                new("Sight",             $"{a.Sight:0.##}"),
                 new("Rotation Speed",    $"{(float)(180.0 / AttributeDerived.RotationDelay(control)):0.##} deg/s",
                     isHidden: true, affectsList: AttributeDerived.AffectsRotationSpeed),
                 new("Accel. Speed",      $"{(1f / AttributeDerived.AccelerationDelay(control)):0.##} /s",

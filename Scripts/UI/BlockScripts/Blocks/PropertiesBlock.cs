@@ -77,6 +77,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Name"]                  = "Display name of this game object",
             ["Type"]                  = "Game object type or category",
             ["ID"]                    = "Unique identifier for this object in the game world",
+            ["Source Barrel"]         = "The owner/barrel slot that fired this bullet",
             // Destructible
             ["Death XP Reward"]       = "XP points awarded to the attacker when this object is destroyed",
             ["Current Health"]        = "Current health relative to maximum health",
@@ -104,6 +105,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Bullet Dmg Resist"]     = "Resistance reducing bullet damage received",
             ["Speed"]                 = "Base movement speed of this agent",
             ["Control"]               = "Maneuverability stat affecting rotation and acceleration",
+            ["Sight"]                 = "Fog-of-war vision radius in world units (0 disables vision reveal)",
             ["Action Buff"]           = "Buff multiplier applied to action-based abilities",
             // Hidden Body Attributes (Agent)
             ["Max Health"]            = "Maximum health capacity of this unit",
@@ -183,7 +185,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Accel. Speed"]           = "= BaseAccelDelay / control",
             ["Bullet Knockback"]       = "= bulletPenetration × BulletKnockbackScalar",
             ["Bullet Recoil"]          = "= bulletMass × (1 + bulletKnockback) × BulletRecoilScalar",
-            ["Bullet Health"]          = "= bulletMass × 3.33",
+            ["Bullet Health"]          = "= bulletMass × 6.67",
             ["Bullet Radius"]          = "= √bulletMass × BulletRadiusScalar",
             ["Bullet Drag"]            = "= airResistance × π × radius² / dragFactor",
             ["Bullet Health Regen"]    = "= bulletMass × 0",

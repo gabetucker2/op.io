@@ -30,6 +30,7 @@ namespace op.io
         internal const string CtrlBufferKey         = "CtrlBuffer";
         internal const string ShowHiddenAttrsKey    = "ShowHiddenAttrs";
         internal const string DisableToolTipsKey    = "DisableToolTips";
+        internal const string GridKey               = "Grid";
         internal const string BodyLeftKey           = "BodyLeft";
         internal const string BodyRightKey          = "BodyRight";
         private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, AutoTurnInspectModeOffKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey, NextConfigurationKey, PreviousConfigurationKey, TabSwitchRequiresBlockModeKey, RespawnKey, CameraLockModeKey, CameraSnapToPlayerKey, ScrollInKey, ScrollOutKey, ScrollMinDistanceKey, ScrollMaxDistanceKey, ScrollIncrementKey, CtrlBufferKey, ShowHiddenAttrsKey, DisableToolTipsKey];
@@ -76,6 +77,7 @@ namespace op.io
                 EnsureAllowGameInputFreezeIsEnum();
                 EnsureTabSwitchRequiresBlockModeControl();
                 EnsureDisableToolTipsControl();
+                EnsureGridControl();
                 EnsureRespawnControl();
                 EnsureCameraLockModeControl();
                 EnsureCameraSnapToPlayerControl();
@@ -441,6 +443,23 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             ControlKeyData.SetInputType(DisableToolTipsKey, "SaveSwitch");
             ControlKeyData.EnsureInputKey(DisableToolTipsKey, "Ctrl + T");
             ControlKeyData.EnsureSwitchStartState(DisableToolTipsKey, 0);
+        }
+
+        private static void EnsureGridControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = GridKey,
+                InputKey = "G",
+                InputType = "SaveSwitch",
+                SwitchStartState = 0,
+                MetaControl = false,
+                RenderOrder = 21
+            });
+
+            ControlKeyData.SetInputType(GridKey, "SaveSwitch");
+            ControlKeyData.EnsureInputKey(GridKey, "G");
+            ControlKeyData.EnsureSwitchStartState(GridKey, 0);
         }
 
         private static void EnsureDockingModeDefaultOff()
@@ -1087,6 +1106,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 (ScrollIncrementKey,               "Scroll wheel units per zoom step (default 120 = one notch)."),
                 (CtrlBufferKey,                     "Seconds after releasing Ctrl that a Ctrl+key combo still registers (e.g. release Ctrl then press Space within this window)."),
                 (ShowHiddenAttrsKey,                "Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately."),
+                (GridKey,                           "Toggle the world grid overlay. Draws 1-unit grey grid lines with 5x5 coordinate plotting."),
                 (DisableToolTipsKey,                "When enabled, tooltips are hidden throughout the UI."),
                 ("EnumDisabledOptions",             "Lists disabled enum options by control key in the format ControlKey[option,option]."),
             };

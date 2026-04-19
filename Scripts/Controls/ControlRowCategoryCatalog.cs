@@ -145,6 +145,7 @@ namespace op.io
                 [ControlKeyMigrations.TabSwitchRequiresBlockModeKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.DisableToolTipsKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.ShowHiddenAttrsKey] = InterfaceCategoryKey,
+                [ControlKeyMigrations.GridKey] = InterfaceCategoryKey,
 
                 // System
                 ["Exit"] = SystemCategoryKey,

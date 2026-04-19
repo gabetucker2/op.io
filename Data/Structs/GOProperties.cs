@@ -301,6 +301,7 @@ namespace op.io
             // ── Movement group ────────────────────────────────────────────────────
             yield return new Row("Speed",              $"{a.Speed:0.##}");
             yield return new Row("Control",            $"{a.Control:0.##}");
+            yield return new Row("Sight",              $"{a.Sight:0.##}");
             yield return new Row("Rotation Speed",     $"{(float)(180.0 / AttributeDerived.RotationDelay(control)):0.##} deg/s",
                                  isHidden: true, affectsList: AttributeDerived.AffectsRotationSpeed);
             yield return new Row("Accel. Speed",       $"{(1f / AttributeDerived.AccelerationDelay(control)):0.##} /s",
@@ -364,6 +365,10 @@ namespace op.io
         {
             yield return new Row("Name", string.IsNullOrWhiteSpace(_target.Name) ? "-" : _target.Name);
             yield return new Row("ID", _target.Id.ToString());
+            if (_target.Source is Bullet bullet)
+            {
+                yield return new Row("Source Barrel", BuildBulletSourceBarrelLabel(bullet));
+            }
             yield return BuildFlagsRow();
         }
 
@@ -530,6 +535,39 @@ namespace op.io
                 parts.Add("ZoneBlock");
             }
             return new Row("Flags", parts.ToArray());
+        }
+
+        private static string BuildBulletSourceBarrelLabel(Bullet bullet)
+        {
+            if (bullet == null)
+            {
+                return "Unknown";
+            }
+
+            string barrelLabel = !string.IsNullOrWhiteSpace(bullet.SourceBarrelName)
+                ? bullet.SourceBarrelName
+                : (bullet.SourceBarrelIndex >= 0 ? $"Barrel {bullet.SourceBarrelIndex + 1}" : "Unknown barrel");
+
+            string ownerLabel = bullet.OwnerID >= 0 ? $"Owner {bullet.OwnerID}" : "Unknown owner";
+            if (bullet.OwnerID >= 0)
+            {
+                List<GameObject> registeredObjects = GameObjectRegister.GetRegisteredGameObjects();
+                if (registeredObjects != null)
+                {
+                    for (int i = 0; i < registeredObjects.Count; i++)
+                    {
+                        if (registeredObjects[i] is Agent owner && owner.ID == bullet.OwnerID)
+                        {
+                            ownerLabel = string.IsNullOrWhiteSpace(owner.Name)
+                                ? $"Owner {owner.ID}"
+                                : owner.Name;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return $"{barrelLabel} ({ownerLabel})";
         }
 
         // ── Reflection helper — still used for FarmAttributes ────────────────────

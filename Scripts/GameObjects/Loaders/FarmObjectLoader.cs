@@ -87,6 +87,7 @@ namespace op.io
                 farmObject.LoadContent(Core.Instance.GraphicsDevice);
 
                 FarmData data = archetype.FarmData;
+                farmObject.IsFarmObject               = true;
                 farmObject.MaxHealth                  = data.MaxHealth;
                 farmObject.CurrentHealth              = data.MaxHealth;
                 farmObject.HealthRegen                = data.HealthRegen;

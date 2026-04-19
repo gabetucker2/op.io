@@ -19,6 +19,8 @@ namespace op.io
         public static bool DockingMode          => BlockManager.DockingModeEnabled;
         public static bool DisableToolTips      => ControlStateManager.ContainsSwitchState(ControlKeyMigrations.DisableToolTipsKey) &&
                                                    ControlStateManager.GetSwitchState(ControlKeyMigrations.DisableToolTipsKey);
+        public static bool Grid                 => ControlStateManager.ContainsSwitchState(ControlKeyMigrations.GridKey) &&
+                                                   ControlStateManager.GetSwitchState(ControlKeyMigrations.GridKey);
         public static bool BlockMenuOpen        => BlockManager.IsBlockMenuOpen();
         public static bool InputBlocked         => BlockManager.IsInputBlocked();
         public static bool DraggingLayout       => BlockManager.IsDraggingLayout;
@@ -33,6 +35,8 @@ namespace op.io
         public static string FocusedBlock       => BlockManager.GetFocusedBlockKind()?.ToString() ?? "None";
         public static bool   AnyGUIInteracting  => BlockManager.IsAnyGuiInteracting;
         public static string GUIInteractingWith => BlockManager.GetInteractingBlockKind();
+        public static bool WaitingForFocusClick => InputManager.WaitingForFocusClick;
+        public static bool WindowGameplayFocus  => InputManager.HasWindowGameplayFocus;
         public static float DoubleTapSuppressionSeconds => InputTypeManager.DoubleTapSuppressionSeconds;
 
         /// <summary>
@@ -57,6 +61,15 @@ namespace op.io
         public static float BulletRecoilScalar          => BulletManager.BulletRecoilScalar;
         public static float BulletFarmKnockbackScalar   => BulletManager.BulletFarmKnockbackScalar;
         public static float OwnerImmunityDuration       => BulletManager.OwnerImmunityDuration;
+        // XP clump runtime telemetry
+        public static int   XPClumpCount                => XPClumpManager.ActiveClumpCount;
+        public static int   XPUnstableClumpCount        => XPClumpManager.ActiveUnstableClumpCount;
+        public static int   PendingFarmXPDrops          => XPClumpManager.PendingDropCount;
+        public static int   XPClumpsAbsorbedThisSecond  => XPClumpManager.AbsorbedThisSecond;
+        public static int   XPClumpPickupPerSecond      => XPClumpManager.PickupPerSecond;
+        public static float XPClumpDeadZoneRadius       => XPClumpManager.DeadZoneRadius;
+        public static float XPClumpPullZoneRadius       => XPClumpManager.PullZoneRadius;
+        public static float XPClumpAbsorbZoneRadius     => XPClumpManager.AbsorbZoneRadius;
         // Bullet Defaults (DB-driven)
         public static float DefaultBulletSpeed      => BulletManager.DefaultBulletSpeed;
         public static float DefaultBulletLifespan   => BulletManager.DefaultBulletLifespan;
@@ -73,6 +86,10 @@ namespace op.io
         public static string ActiveBodyName        => Core.Instance?.Player is Agent p && p.BodyCount > 0
             ? (p.Bodies[p.ActiveBodyIndex].Name ?? $"Body {p.ActiveBodyIndex + 1}")
             : "None";
+        public static float  PlayerSightRadius     => FogOfWarManager.PlayerSightRadius;
+        public static bool   FogOfWarEnabled       => FogOfWarManager.IsFogEnabled;
+        public static bool   FogOfWarActive        => FogOfWarManager.IsFogActive;
+        public static int    FogVisionSourceCount  => FogOfWarManager.ActiveVisionSourceCount;
 
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {

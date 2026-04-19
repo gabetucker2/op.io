@@ -21,6 +21,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private enum ControlSetupCommand
         {
+            Load,
             Save,
             New,
             Rename,
@@ -36,6 +37,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int CommandBarHeight = 36;
         private const int ButtonHeight = BlockButtonRowLayout.DefaultButtonHeight;
         private const int ButtonWidth = BlockButtonRowLayout.DefaultButtonWidth;
+        private const int LoadButtonWidth = 52;
         private const int ButtonSpacing = BlockButtonRowLayout.DefaultButtonSpacing;
         private const int ContentSpacing = 12;
         private const int OverlayPadding = 10;
@@ -72,6 +74,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static Rectangle CommandBarBounds;
         private static Rectangle FeedbackBarBounds;
+        private static Rectangle LoadButtonBounds;
         private static Rectangle DropdownBounds;
         private static Rectangle OverlayBounds;
         private static Rectangle ContentBounds;
@@ -99,6 +102,11 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             Point pos = LastMouseState.Position;
+            if (LoadButtonBounds != Rectangle.Empty && LoadButtonBounds.Contains(pos))
+            {
+                return "Btn_SetupLoad";
+            }
+
             for (int i = 0; i < CommandOrder.Length; i++)
             {
                 if (CommandBounds[i] != Rectangle.Empty && CommandBounds[i].Contains(pos))
@@ -204,7 +212,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 bool dropdownChanged = SetupDropdown.Update(mouseState, previousMouseState, keyboardState, PreviousKeyboardState, out string selectedSetup, isDisabled: blockLocked);
                 if (dropdownChanged && !string.IsNullOrWhiteSpace(selectedSetup))
                 {
-                    if (SelectSetup(selectedSetup, applyLayout: true))
+                    if (SelectSetup(selectedSetup, applyLayout: false))
                     {
                         PreviousKeyboardState = keyboardState;
                         return;
@@ -308,18 +316,23 @@ namespace op.io.UI.BlockScripts.Blocks
             int totalButtonsWidth = CommandOrder.Length * ButtonWidth + Math.Max(0, (CommandOrder.Length - 1) * ButtonSpacing);
             int dropdownHeight = ButtonHeight;
             int dropdownY = CommandBarBounds.Y + (CommandBarHeight - dropdownHeight) / 2;
+            int loadButtonY = dropdownY;
 
-            int availableDropdown = CommandBarBounds.Width - (ButtonSpacing * 3 + totalButtonsWidth);
+            int loadButtonX = CommandBarBounds.X + ButtonSpacing;
+            LoadButtonBounds = new Rectangle(loadButtonX, loadButtonY, LoadButtonWidth, ButtonHeight);
+
+            int availableDropdown = CommandBarBounds.Width - (ButtonSpacing * 4 + LoadButtonWidth + totalButtonsWidth);
             int dropdownWidth = Math.Max(0, availableDropdown);
 
-            int dropdownX = CommandBarBounds.X + ButtonSpacing;
+            int dropdownX = LoadButtonBounds.Right + ButtonSpacing;
             DropdownBounds = dropdownWidth > 0
                 ? new Rectangle(dropdownX, dropdownY, dropdownWidth, dropdownHeight)
                 : Rectangle.Empty;
 
             Array.Fill(CommandBounds, Rectangle.Empty);
             int buttonX = dropdownX + (dropdownWidth > 0 ? dropdownWidth + ButtonSpacing : 0);
-            Rectangle buttonRow = new(buttonX, CommandBarBounds.Y, Math.Max(0, CommandBarBounds.Right - buttonX), CommandBarHeight);
+            int buttonRowRight = CommandBarBounds.Right - ButtonSpacing;
+            Rectangle buttonRow = new(buttonX, CommandBarBounds.Y, Math.Max(0, buttonRowRight - buttonX), CommandBarHeight);
             IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildUniformRow(
                 buttonRow,
                 CommandOrder.Length,
@@ -355,6 +368,20 @@ namespace op.io.UI.BlockScripts.Blocks
             if (!leftClickStarted)
             {
                 return false;
+            }
+
+            if (LoadButtonBounds != Rectangle.Empty && LoadButtonBounds.Contains(mousePoint))
+            {
+                if (IsLoadButtonDisabled())
+                {
+                    HandleDisabledCommand(ControlSetupCommand.Load);
+                }
+                else
+                {
+                    LoadSelectedSetup();
+                }
+
+                return true;
             }
 
             for (int i = 0; i < CommandOrder.Length; i++)
@@ -398,6 +425,9 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             switch (command)
             {
+                case ControlSetupCommand.Load:
+                    SetFeedbackMessage("Select a setup to load.");
+                    break;
                 case ControlSetupCommand.Save:
                     SetFeedbackMessage("Create a setup before saving.");
                     break;
@@ -462,11 +492,24 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             BlockToolbarRenderer.Draw(spriteBatch, PixelTexture, CommandBarBounds);
 
+            DrawLoadButton(spriteBatch, blockLocked);
             DrawSetupDropdown(spriteBatch, font, blockLocked);
             for (int i = 0; i < CommandOrder.Length; i++)
             {
                 DrawButton(spriteBatch, font, CommandOrder[i], CommandBounds[i], blockLocked);
             }
+        }
+
+        private static void DrawLoadButton(SpriteBatch spriteBatch, bool blockLocked)
+        {
+            if (LoadButtonBounds == Rectangle.Empty || spriteBatch == null)
+            {
+                return;
+            }
+
+            bool disabled = blockLocked || IsLoadButtonDisabled();
+            bool hovered = !disabled && UIButtonRenderer.IsHovered(LoadButtonBounds, LastMouseState.Position);
+            UIButtonRenderer.Draw(spriteBatch, LoadButtonBounds, "Load", UIButtonRenderer.ButtonStyle.Blue, hovered, disabled);
         }
 
         private static void DrawButton(SpriteBatch spriteBatch, UIStyle.UIFont font, ControlSetupCommand command, Rectangle bounds, bool blockLocked)
@@ -1017,6 +1060,23 @@ namespace op.io.UI.BlockScripts.Blocks
             return true;
         }
 
+        private static void LoadSelectedSetup()
+        {
+            string target = SetupDropdown.SelectedId;
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                target = SelectedSetupName;
+            }
+
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                SetFeedbackMessage("Select a setup to load.");
+                return;
+            }
+
+            SelectSetup(target, applyLayout: true);
+        }
+
         public static bool TryApplyNextSetup(bool allowWhileLocked = false) => TryApplyAdjacentSetup(1, allowWhileLocked);
 
         public static bool TryApplyPreviousSetup(bool allowWhileLocked = false) => TryApplyAdjacentSetup(-1, allowWhileLocked);
@@ -1116,6 +1176,11 @@ namespace op.io.UI.BlockScripts.Blocks
             };
         }
 
+        private static bool IsLoadButtonDisabled()
+        {
+            return SetupEntries.Count == 0 || string.IsNullOrWhiteSpace(SelectedSetupName);
+        }
+
         /// <summary>
         /// Returns true when <paramref name="pos"/> is over an enabled interactive element so the
         /// BlockManager's priority-queue can decide whether to grant the left-click to the UI or
@@ -1128,6 +1193,11 @@ namespace op.io.UI.BlockScripts.Blocks
             if (NamePrompt.IsOpen)
             {
                 return true;
+            }
+
+            if (LoadButtonBounds.Contains(pos) && IsLoadButtonDisabled())
+            {
+                return false;
             }
 
             for (int i = 0; i < CommandOrder.Length; i++)

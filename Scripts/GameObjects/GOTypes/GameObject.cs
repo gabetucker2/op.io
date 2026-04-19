@@ -19,6 +19,7 @@ namespace op.io
         public bool DynamicPhysics { get; set; }
         public bool IsInteract { get; set; }
         public bool IsZoneBlock { get; set; }
+        public bool IsFarmObject { get; set; }
 
         /// <summary>
         /// The key identifying which Dynamic block content this ZoneBlock triggers

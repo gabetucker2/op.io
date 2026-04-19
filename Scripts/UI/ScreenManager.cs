@@ -257,6 +257,26 @@ namespace op.io
             bool sourceWindowed = IsWindowedMode(game.WindowMode);
             bool targetWindowed = IsWindowedMode(targetMode);
             bool wasMaximized = sourceWindowed && IsWindowMaximized(windowHandle);
+            bool preserveOuterBounds = sourceWindowed && targetWindowed && !wasMaximized;
+            Rectangle previousOuterBounds = Rectangle.Empty;
+            if (preserveOuterBounds && GetWindowRect(windowHandle, out NativeRect outerRect))
+            {
+                int outerWidth = outerRect.Right - outerRect.Left;
+                int outerHeight = outerRect.Bottom - outerRect.Top;
+                if (outerWidth > 0 && outerHeight > 0)
+                {
+                    previousOuterBounds = new Rectangle(outerRect.Left, outerRect.Top, outerWidth, outerHeight);
+                }
+                else
+                {
+                    preserveOuterBounds = false;
+                }
+            }
+            else if (preserveOuterBounds)
+            {
+                preserveOuterBounds = false;
+            }
+
             Point? previousClientTopLeft = sourceWindowed && targetWindowed
                 ? GetClientTopLeftOnScreen(windowHandle)
                 : null;
@@ -279,7 +299,17 @@ namespace op.io
                 ApplyWorkAreaBounds(game, windowHandle, targetWorkArea);
             }
             ForceImmediateClear(game);
-            PreserveClientTopLeft(windowHandle, desiredClientTopLeft);
+
+            if (preserveOuterBounds)
+            {
+                _desiredClientTopLeft = null;
+                PreserveWindowOuterBounds(windowHandle, previousOuterBounds);
+            }
+            else
+            {
+                PreserveClientTopLeft(windowHandle, desiredClientTopLeft);
+            }
+
             if (snapToWorkArea)
             {
                 EnsureWindowWithinWorkArea(windowHandle, targetWorkArea);
@@ -563,11 +593,7 @@ namespace op.io
             int minWidth = Math.Max(320, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CXMINTRACK)));
             int minHeight = Math.Max(220, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CYMINTRACK)));
 
-            Rectangle dockingResizeBounds = GetDockingResizeBounds();
-            int minLeft = dockingResizeBounds.Left;
-            int minTop = dockingResizeBounds.Top;
-            int maxRight = dockingResizeBounds.Right;
-            int maxBottom = dockingResizeBounds.Bottom;
+            GetDockingResizeClampBounds(hwnd, out int minLeft, out int minTop, out int maxRight, out int maxBottom);
 
             if (edge is DockingWindowResizeEdge.Top)
             {
@@ -661,11 +687,7 @@ namespace op.io
             int minWidth = Math.Max(320, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CXMINTRACK)));
             int minHeight = Math.Max(220, Math.Max(UIStyle.MinBlockSize, GetSystemMetrics(SM_CYMINTRACK)));
 
-            Rectangle dockingResizeBounds = GetDockingResizeBounds();
-            int minLeft = dockingResizeBounds.Left;
-            int minTop = dockingResizeBounds.Top;
-            int maxRight = dockingResizeBounds.Right;
-            int maxBottom = dockingResizeBounds.Bottom;
+            GetDockingResizeClampBounds(hwnd, out int minLeft, out int minTop, out int maxRight, out int maxBottom);
 
             switch (edge)
             {
@@ -843,6 +865,30 @@ namespace op.io
             if (!SetWindowPos(hwnd, IntPtr.Zero, newX, newY, 0, 0, flags))
             {
                 DebugLogger.PrintUI("Failed to reposition window after toggling docking chrome.");
+            }
+        }
+
+        private static void PreserveWindowOuterBounds(IntPtr hwnd, Rectangle desiredOuterBounds)
+        {
+            if (hwnd == IntPtr.Zero || desiredOuterBounds.Width <= 0 || desiredOuterBounds.Height <= 0)
+            {
+                return;
+            }
+
+            GetDockingResizeClampBounds(hwnd, out int minLeft, out int minTop, out int maxRight, out int maxBottom);
+
+            int width = Math.Clamp(desiredOuterBounds.Width, 64, Math.Max(64, maxRight - minLeft));
+            int height = Math.Clamp(desiredOuterBounds.Height, 64, Math.Max(64, maxBottom - minTop));
+            int maxX = Math.Max(minLeft, maxRight - width);
+            int maxY = Math.Max(minTop, maxBottom - height);
+
+            int targetX = Math.Clamp(desiredOuterBounds.X, minLeft, maxX);
+            int targetY = Math.Clamp(desiredOuterBounds.Y, minTop, maxY);
+
+            const uint flags = SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE;
+            if (!SetWindowPos(hwnd, IntPtr.Zero, targetX, targetY, width, height, flags))
+            {
+                DebugLogger.PrintUI("Failed to preserve outer window bounds after docking chrome toggle.");
             }
         }
 
@@ -1088,6 +1134,60 @@ namespace op.io
             return unchecked((short)(((long)value >> 16) & 0xFFFF));
         }
 
+        private readonly struct WindowVisibleFrameInsets
+        {
+            public WindowVisibleFrameInsets(int left, int top, int right, int bottom)
+            {
+                Left = Math.Max(0, left);
+                Top = Math.Max(0, top);
+                Right = Math.Max(0, right);
+                Bottom = Math.Max(0, bottom);
+            }
+
+            public int Left { get; }
+            public int Top { get; }
+            public int Right { get; }
+            public int Bottom { get; }
+        }
+
+        private static bool TryGetWindowVisibleFrameInsets(IntPtr hwnd, out WindowVisibleFrameInsets insets)
+        {
+            insets = new WindowVisibleFrameInsets(0, 0, 0, 0);
+
+            if (hwnd == IntPtr.Zero || !GetWindowRect(hwnd, out NativeRect outerRect))
+            {
+                return false;
+            }
+
+            int windowWidth = outerRect.Right - outerRect.Left;
+            int windowHeight = outerRect.Bottom - outerRect.Top;
+            if (windowWidth <= 0 || windowHeight <= 0)
+            {
+                return false;
+            }
+
+            int hr = DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out NativeRect visibleRect, Marshal.SizeOf<NativeRect>());
+            if (hr == 0)
+            {
+                int visibleWidth = visibleRect.Right - visibleRect.Left;
+                int visibleHeight = visibleRect.Bottom - visibleRect.Top;
+                if (visibleWidth > 0 && visibleHeight > 0)
+                {
+                    int leftInset = Math.Clamp(visibleRect.Left - outerRect.Left, 0, windowWidth);
+                    int topInset = Math.Clamp(visibleRect.Top - outerRect.Top, 0, windowHeight);
+                    int rightInset = Math.Clamp(outerRect.Right - visibleRect.Right, 0, windowWidth);
+                    int bottomInset = Math.Clamp(outerRect.Bottom - visibleRect.Bottom, 0, windowHeight);
+                    insets = new WindowVisibleFrameInsets(leftInset, topInset, rightInset, bottomInset);
+                    return true;
+                }
+            }
+
+            int frameX = Math.Max(0, GetSystemMetrics(SM_CXSIZEFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER));
+            int frameY = Math.Max(0, GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER));
+            insets = new WindowVisibleFrameInsets(frameX, frameY, frameX, frameY);
+            return true;
+        }
+
         private static Rectangle GetMonitorWorkArea(IntPtr hwnd)
         {
             if (hwnd != IntPtr.Zero)
@@ -1108,6 +1208,67 @@ namespace op.io
 
             DisplayMode display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             return new Rectangle(0, 0, display.Width, display.Height);
+        }
+
+        private static Rectangle GetMonitorBounds(IntPtr hwnd)
+        {
+            if (hwnd != IntPtr.Zero)
+            {
+                NativeMonitorInfo info = new() { Size = Marshal.SizeOf<NativeMonitorInfo>() };
+                IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                if (monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info))
+                {
+                    NativeRect monitorRect = info.Monitor;
+                    int width = monitorRect.Right - monitorRect.Left;
+                    int height = monitorRect.Bottom - monitorRect.Top;
+                    if (width > 0 && height > 0)
+                    {
+                        return new Rectangle(monitorRect.Left, monitorRect.Top, width, height);
+                    }
+                }
+            }
+
+            return GetDockingResizeBounds();
+        }
+
+        private static void GetDockingResizeLimits(IntPtr hwnd, out Rectangle monitorBounds, out Rectangle monitorWorkArea)
+        {
+            monitorBounds = GetMonitorBounds(hwnd);
+            monitorWorkArea = GetMonitorWorkArea(hwnd);
+
+            if (monitorBounds.Width <= 0 || monitorBounds.Height <= 0)
+            {
+                monitorBounds = GetDockingResizeBounds();
+            }
+
+            if (monitorWorkArea.Width <= 0 || monitorWorkArea.Height <= 0)
+            {
+                monitorWorkArea = monitorBounds;
+            }
+
+            Rectangle constrainedWorkArea = Rectangle.Intersect(monitorBounds, monitorWorkArea);
+            if (constrainedWorkArea.Width > 0 && constrainedWorkArea.Height > 0)
+            {
+                monitorWorkArea = constrainedWorkArea;
+            }
+            else
+            {
+                monitorWorkArea = monitorBounds;
+            }
+        }
+
+        private static void GetDockingResizeClampBounds(IntPtr hwnd, out int minLeft, out int minTop, out int maxRight, out int maxBottom)
+        {
+            GetDockingResizeLimits(hwnd, out Rectangle monitorBounds, out Rectangle monitorWorkArea);
+            if (!TryGetWindowVisibleFrameInsets(hwnd, out WindowVisibleFrameInsets insets))
+            {
+                insets = new WindowVisibleFrameInsets(0, 0, 0, 0);
+            }
+
+            minLeft = monitorBounds.Left - insets.Left;
+            maxRight = monitorBounds.Right + insets.Right;
+            minTop = monitorWorkArea.Top - insets.Top;
+            maxBottom = monitorWorkArea.Bottom + insets.Bottom;
         }
 
         private static Rectangle GetDockingResizeBounds()
@@ -1341,6 +1502,9 @@ namespace op.io
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out NativeRect pvAttribute, int cbAttribute);
+
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
 
@@ -1393,6 +1557,7 @@ namespace op.io
         private const int SM_CXMINTRACK = 34;
         private const int SM_CYMINTRACK = 35;
         private const int SM_CXPADDEDBORDER = 92;
+        private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
         private const uint SW_SHOWMINIMIZED = 2;
 
         private static long GetWindowLongPtr(IntPtr hWnd, int nIndex)

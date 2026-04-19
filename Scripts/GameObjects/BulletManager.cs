@@ -303,9 +303,22 @@ namespace op.io
             float bulletPenetration = attrs.BulletPenetration >= 0 ? attrs.BulletPenetration : DefaultBulletPenetration;
             float bulletKnockback   = AttributeDerived.BulletKnockback(bulletPenetration, BulletKnockbackScalar); // hidden: derived from BulletPenetration
             float bulletMaxSpeed    = speed + agent.BaseSpeed; // hidden: ceiling = bulletSpeed + body speed
+            int sourceBarrelIndex = Math.Clamp(agent.ActiveBarrelIndex, 0, Math.Max(0, agent.BarrelCount - 1));
+            string sourceBarrelName = null;
+            if (agent.BarrelCount > 0 && sourceBarrelIndex >= 0 && sourceBarrelIndex < agent.BarrelCount)
+            {
+                sourceBarrelName = agent.Barrels[sourceBarrelIndex].Name;
+                if (string.IsNullOrWhiteSpace(sourceBarrelName))
+                {
+                    sourceBarrelName = $"Barrel {sourceBarrelIndex + 1}";
+                }
+            }
+
             var bullet = new Bullet(_nextId++, spawnPos, velocity, mass, lifespan, dragFactor, shape, bulletHealth, bulletDamage, bulletPenetration, bulletKnockback, bulletMaxSpeed, fill, outline, outlineW);
             bullet.OwnerID  = agent.ID;
             bullet.SourceID = HashCode.Combine(agent.ID, agent.ActiveBarrelIndex);
+            bullet.SourceBarrelIndex = sourceBarrelIndex;
+            bullet.SourceBarrelName = sourceBarrelName;
             _bullets.Add(bullet);
         }
 

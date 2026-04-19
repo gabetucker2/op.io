@@ -22,7 +22,7 @@ INSERT INTO Agents (
     MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
     BodyCollisionDamage, BodyPenetration,
     CollisionDamageResistance, BulletDamageResistance,
-    Speed, Control, BodyActionBuff
+    Speed, Control, Sight, BodyActionBuff
 ) VALUES (
     (SELECT last_insert_rowid()),
     1, 0.0, 0.0, 300.0,
@@ -31,5 +31,6 @@ INSERT INTO Agents (
     10, 3, 3.0, 0,
     62.5, 0,
     0, 0,
-    1.0, 1.0, 0.0       -- Speed=1×BaseSpeed, Control=1 → RotDelay=0.15s, AccelDelay=0.2s (computed)
+    1.0, 1.0, 50.0, 0.0       -- Speed=1×BaseSpeed, Control=1 → RotDelay=0.15s, AccelDelay=0.2s (computed)
 );
+

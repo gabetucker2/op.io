@@ -25,7 +25,7 @@ INSERT INTO BarrelPrototypes (
     BulletOutlineWidth
 ) VALUES (
     'Medium',
-    4,   -- BulletDamage
+    6,   -- BulletDamage
     0,   -- BulletPenetration
     400, -- BulletSpeed
     3,   -- ReloadSpeed (shots/sec)
@@ -48,7 +48,7 @@ INSERT INTO BarrelPrototypes (
     BulletOutlineWidth
 ) VALUES (
     'Heavy',
-    15,  -- BulletDamage
+    22.5,  -- BulletDamage
     0,   -- BulletPenetration
     600, -- BulletSpeed
     1,   -- ReloadSpeed (shots/sec)

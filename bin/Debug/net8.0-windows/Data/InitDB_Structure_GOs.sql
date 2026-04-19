@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS Agents (
     -- Movement group (RotationSpeed/AccelSpeed are hidden — derived from Control)
     Speed REAL DEFAULT 1.0,      -- Movement speed multiplier
     Control REAL DEFAULT 1.0,    -- Controls rotation and acceleration responsiveness
+    -- Vision group
+    Sight REAL DEFAULT 0,        -- World-space sight radius used by fog-of-war (0 = inactive)
     -- Action buff
     BodyActionBuff REAL DEFAULT 0,  -- Multiplier applied during body actions (crouch, sprint, etc.)
     FOREIGN KEY (ID) REFERENCES GameObjects(ID)

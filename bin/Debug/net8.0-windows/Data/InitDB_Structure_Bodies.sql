@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS BodyPrototypes (
     -- Movement group (RotationSpeed, AccelSpeed are hidden — derived from Control)
     Speed                     REAL    DEFAULT 1.0,
     Control                   REAL    DEFAULT 1.0,
+    -- Vision group
+    Sight                     REAL    DEFAULT 0,
     -- Action buff
     BodyActionBuff            REAL    DEFAULT 0
 );

@@ -12,6 +12,8 @@ namespace op.io
         // Computed at spawn as HashCode.Combine(ownerID, barrelIndex) so bullets
         // from different barrels of the same agent get distinct combat-text routines.
         public int SourceID { get; set; } = 0;
+        public int SourceBarrelIndex { get; set; } = -1;
+        public string SourceBarrelName { get; set; }
         public float CurrentPenetrationHP { get; set; }
         public float MaxPenetrationHP { get; }
         public float LifetimeElapsed { get; private set; }

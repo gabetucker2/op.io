@@ -22,7 +22,7 @@ namespace op.io
                     "       bp.MaxShield, bp.ShieldRegen, bp.ShieldRegenDelay, bp.ShieldArmor, " +
                     "       bp.BodyCollisionDamage, bp.BodyPenetration, " +
                     "       bp.CollisionDamageResistance, bp.BulletDamageResistance, " +
-                    "       bp.Speed, bp.Control, bp.BodyActionBuff " +
+                    "       bp.Speed, bp.Control, bp.Sight, bp.BodyActionBuff " +
                     "FROM AgentBodies ab " +
                     "JOIN BodyPrototypes bp ON ab.BodyPrototypeID = bp.ID " +
                     "WHERE ab.AgentID = @AgentID " +
@@ -50,6 +50,7 @@ namespace op.io
                         BulletDamageResistance    = Convert.ToSingle(row["BulletDamageResistance"]),
                         Speed                     = Convert.ToSingle(row["Speed"]),
                         Control                   = Convert.ToSingle(row["Control"]),
+                        Sight                     = row.ContainsKey("Sight") ? Convert.ToSingle(row["Sight"]) : 0.0f,
                         BodyActionBuff            = Convert.ToSingle(row["BodyActionBuff"]),
                     };
                     bodies.Add((name, attrs));

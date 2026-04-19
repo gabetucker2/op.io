@@ -23,7 +23,7 @@ namespace op.io
                                   "s.MaxShield, s.ShieldRegen, s.ShieldRegenDelay, s.ShieldArmor, " +
                                   "s.BodyPenetration, s.BodyCollisionDamage, " +
                                   "s.CollisionDamageResistance, s.BulletDamageResistance, " +
-                                  "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, " +
+                                  "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, COALESCE(s.Sight, 0.0) AS Sight, " +
                                   "COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, " +
                                   "COALESCE(s.MaxXP, 0) AS MaxXP"
                 );
@@ -78,7 +78,7 @@ namespace op.io
                                   "s.MaxShield, s.ShieldRegen, s.ShieldRegenDelay, s.ShieldArmor, " +
                                   "s.BodyPenetration, s.BodyCollisionDamage, " +
                                   "s.CollisionDamageResistance, s.BulletDamageResistance, " +
-                                  "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, " +
+                                  "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, COALESCE(s.Sight, 0.0) AS Sight, " +
                                   "COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, " +
                                   "COALESCE(s.MaxXP, 0) AS MaxXP"
                 );
@@ -148,6 +148,7 @@ namespace op.io
                     BulletDamageResistance    = Convert.ToSingle(row["BulletDamageResistance"]),
                     Speed                     = row.ContainsKey("Speed")   ? Convert.ToSingle(row["Speed"])   : 1.0f,
                     Control                   = row.ContainsKey("Control") ? Convert.ToSingle(row["Control"]) : 1.0f,
+                    Sight                     = row.ContainsKey("Sight") ? Convert.ToSingle(row["Sight"]) : 0.0f,
                     BodyActionBuff            = row.ContainsKey("BodyActionBuff") ? Convert.ToSingle(row["BodyActionBuff"]) : 0.0f,
                 };
 

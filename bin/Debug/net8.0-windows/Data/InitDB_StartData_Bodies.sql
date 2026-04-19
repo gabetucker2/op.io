@@ -12,7 +12,7 @@ INSERT INTO BodyPrototypes (
     MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
     BodyCollisionDamage, BodyPenetration,
     CollisionDamageResistance, BulletDamageResistance,
-    Speed, Control, BodyActionBuff
+    Speed, Control, Sight, BodyActionBuff
 ) VALUES (
     'Normal',
     3.0,                -- Mass=3 → MaxHealth=100
@@ -20,7 +20,7 @@ INSERT INTO BodyPrototypes (
     10, 3, 3.0, 0,
     62.5, 0,
     0, 0,
-    1.0, 1.0, 0.0
+    1.0, 1.0, 50.0, 0.0
 );
 
 -- Tank: slow, tanky body — higher mass, more collision damage, lower speed
@@ -31,7 +31,7 @@ INSERT INTO BodyPrototypes (
     MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
     BodyCollisionDamage, BodyPenetration,
     CollisionDamageResistance, BulletDamageResistance,
-    Speed, Control, BodyActionBuff
+    Speed, Control, Sight, BodyActionBuff
 ) VALUES (
     'Tank',
     9.0,                -- Mass=9 → MaxHealth=300
@@ -39,7 +39,7 @@ INSERT INTO BodyPrototypes (
     20, 2, 5.0, 1,
     125.0, 0,
     0.3, 0.2,
-    0.55, 0.6, 0.0
+    0.55, 0.6, 50.0, 0.0
 );
 
 -- ================================
