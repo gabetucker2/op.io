@@ -13,6 +13,8 @@ namespace op.io
             DebugLogger.Print("Initializing game...");
             _transparentWindowHandle = IntPtr.Zero;
             _clickThroughEnabled = false;
+            _startupWindowHidden = false;
+            _startupWindowHandle = IntPtr.Zero;
 
             // Ensure Core.Instance exists
             if (Core.Instance == null)
@@ -20,6 +22,8 @@ namespace op.io
                 DebugLogger.PrintError("Core.Instance is null. Make sure the Core constructor has been called before initialization.");
                 return;
             }
+
+            EnsureStartupWindowHidden();
 
             // Ensure the database is initialized before loading settings
             SafeLog("GameInitializer.Initialize: DatabaseInitializer.InitializeDatabase");
@@ -80,6 +84,7 @@ namespace op.io
             }
 
             ScreenManager.ApplyWindowMode(Core.Instance);
+            EnsureStartupWindowHidden();
             ApplyWindowIcon(Core.Instance);
 
             Core.Instance.Graphics.SynchronizeWithVerticalRetrace = Core.Instance.VSyncEnabled;
@@ -138,6 +143,47 @@ namespace op.io
 
             DebugLogger.Print("Game initialization complete.");
             SafeLog("GameInitializer.Initialize: complete");
+        }
+
+        public static void RevealStartupWindow()
+        {
+            if (!_startupWindowHidden)
+            {
+                return;
+            }
+
+            IntPtr hwnd = _startupWindowHandle;
+            if (hwnd == IntPtr.Zero)
+            {
+                hwnd = Core.Instance?.Window?.Handle ?? IntPtr.Zero;
+            }
+
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            ShowWindow(hwnd, SW_SHOW);
+            _startupWindowHidden = false;
+            _startupWindowHandle = hwnd;
+        }
+
+        private static void EnsureStartupWindowHidden()
+        {
+            if (_startupWindowHidden)
+            {
+                return;
+            }
+
+            IntPtr hwnd = Core.Instance?.Window?.Handle ?? IntPtr.Zero;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            ShowWindow(hwnd, SW_HIDE);
+            _startupWindowHidden = true;
+            _startupWindowHandle = hwnd;
         }
 
         public static void ApplyWindowIcon(Core game)
@@ -544,6 +590,8 @@ namespace op.io
         private static bool _windowIconAttemptedLoad;
         private static IntPtr _windowIconBig;
         private static IntPtr _windowIconSmall;
+        private static bool _startupWindowHidden;
+        private static IntPtr _startupWindowHandle;
 
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x00080000;
@@ -561,6 +609,8 @@ namespace op.io
         private const int ICON_BIG = 1;
         private const int GCLP_HICON = -14;
         private const int GCLP_HICONSM = -34;
+        private const int SW_HIDE = 0;
+        private const int SW_SHOW = 5;
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
         private static extern long SetWindowLongPtr64(IntPtr hWnd, int nIndex, long dwNewLong);
@@ -585,6 +635,9 @@ namespace op.io
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr CopyIcon(IntPtr hIcon);

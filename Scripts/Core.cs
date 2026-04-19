@@ -95,7 +95,14 @@ namespace op.io
 
         protected override void LoadContent()
         {
-            GameRenderer.LoadGraphics();
+            try
+            {
+                GameRenderer.LoadGraphics();
+            }
+            finally
+            {
+                GameInitializer.RevealStartupWindow();
+            }
         }
 
         protected override void Draw(GameTime gameTime)

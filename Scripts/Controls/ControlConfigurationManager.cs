@@ -33,6 +33,8 @@ namespace op.io
             public float? FloatStartState { get; set; }
             public bool MetaControl { get; set; }
             public int RenderOrder { get; set; }
+            public string RenderCategory { get; set; }
+            public int RenderCategoryOrder { get; set; }
             public bool LockMode { get; set; }
             public string EnumDisabledOptions { get; set; }
         }
@@ -298,6 +300,7 @@ namespace op.io
         private static void EnsureTables()
         {
             BlockDataStore.EnsureTables(null, DockBlockKind.ControlSetups, DockBlockKind.Controls);
+            ControlKeyMigrations.EnsureApplied();
 
             const string enumDisabledColumn = "EnumDisabledOptions";
             if (!ControlKeyData.ColumnExists(enumDisabledColumn))
@@ -325,10 +328,13 @@ namespace op.io
         {
             var payload = new ControlConfiguration();
 
-            const string sql = @"
-SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
+            string categorySql = ControlKeyData.HasRenderCategoryColumns()
+                ? "COALESCE(RenderCategory, '') AS RenderCategory, COALESCE(RenderCategoryOrder, 0) AS RenderCategoryOrder,"
+                : "'' AS RenderCategory, 0 AS RenderCategoryOrder,";
+            string sql = $@"
+SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, {categorySql} COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
 FROM ControlKey
-ORDER BY ControlOrder ASC, SettingKey ASC;";
+ORDER BY COALESCE(RenderCategoryOrder, 0) ASC, COALESCE(RenderCategory, '') ASC, ControlOrder ASC, SettingKey ASC;";
 
             var rows = DatabaseQuery.ExecuteQuery(sql);
             foreach (var row in rows)
@@ -347,6 +353,8 @@ ORDER BY ControlOrder ASC, SettingKey ASC;";
                     SwitchStartState = row.TryGetValue("SwitchStartState", out object switchObj) && switchObj != null && switchObj != DBNull.Value ? Convert.ToInt32(switchObj) : 0,
                     MetaControl = row.TryGetValue("MetaControl", out object metaObj) && metaObj != null && metaObj != DBNull.Value && Convert.ToInt32(metaObj) != 0,
                     RenderOrder = row.TryGetValue("ControlOrder", out object orderObj) ? Convert.ToInt32(orderObj) : 0,
+                    RenderCategory = row.TryGetValue("RenderCategory", out object categoryObj) ? categoryObj?.ToString() ?? string.Empty : string.Empty,
+                    RenderCategoryOrder = row.TryGetValue("RenderCategoryOrder", out object categoryOrderObj) ? Convert.ToInt32(categoryOrderObj) : 0,
                     LockMode = row.TryGetValue("LockMode", out object lockObj) && lockObj != null && lockObj != DBNull.Value && Convert.ToInt32(lockObj) != 0,
                     EnumDisabledOptions = row.TryGetValue("EnumDisabledOptions", out object disabledObj)
                         ? disabledObj?.ToString() ?? string.Empty
@@ -355,7 +363,7 @@ ORDER BY ControlOrder ASC, SettingKey ASC;";
             }
 
             payload.RowData = BlockDataStore.LoadRowData(DockBlockKind.Controls);
-            payload.RowOrders = BlockDataStore.LoadRowOrders(DockBlockKind.Controls);
+            payload.RowOrders = BuildRowOrdersFromBindings(payload.Bindings);
             return payload;
         }
 
@@ -390,14 +398,16 @@ ORDER BY ControlOrder ASC, SettingKey ASC;";
             }
 
             const string sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, RenderOrder, LockMode, EnumDisabledOptions)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @renderOrder, @lockMode, @enumDisabledOptions)
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode, EnumDisabledOptions)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @renderOrder, @renderCategory, @renderCategoryOrder, @lockMode, @enumDisabledOptions)
 ON CONFLICT(SettingKey) DO UPDATE SET
     InputKey = excluded.InputKey,
     InputType = excluded.InputType,
     MetaControl = excluded.MetaControl,
     SwitchStartState = excluded.SwitchStartState,
     RenderOrder = excluded.RenderOrder,
+    RenderCategory = excluded.RenderCategory,
+    RenderCategoryOrder = excluded.RenderCategoryOrder,
     LockMode = excluded.LockMode,
     EnumDisabledOptions = excluded.EnumDisabledOptions;";
 
@@ -408,6 +418,11 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     continue;
                 }
 
+                string categoryKey = ControlRowCategoryCatalog.NormalizeCategoryKey(binding.RenderCategory, binding.SettingKey);
+                int categoryOrder = binding.RenderCategoryOrder >= 0
+                    ? binding.RenderCategoryOrder
+                    : ControlRowCategoryCatalog.GetDefaultCategoryOrder(categoryKey);
+
                 var parameters = new Dictionary<string, object>
                 {
                     ["@settingKey"] = binding.SettingKey,
@@ -415,7 +430,9 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     ["@inputType"] = string.IsNullOrWhiteSpace(binding.InputType) ? "Hold" : binding.InputType,
                     ["@metaControl"] = binding.MetaControl ? 1 : 0,
                     ["@switchStartState"] = binding.SwitchStartState ?? 0,
-                    ["@renderOrder"] = Math.Max(1, binding.RenderOrder),
+                    ["@renderOrder"] = Math.Max(0, binding.RenderOrder),
+                    ["@renderCategory"] = categoryKey,
+                    ["@renderCategoryOrder"] = Math.Max(0, categoryOrder),
                     ["@lockMode"] = binding.LockMode ? 1 : 0,
                     ["@enumDisabledOptions"] = binding.EnumDisabledOptions ?? string.Empty
                 };
@@ -444,49 +461,164 @@ ON CONFLICT(SettingKey) DO UPDATE SET
 
         private static void ApplyRowOrders(Dictionary<string, int> rowOrders, IReadOnlyCollection<ControlBindingSnapshot> bindings)
         {
-            Dictionary<string, int> merged = BlockDataStore.LoadRowOrders(DockBlockKind.Controls);
-            int maxOrder = merged.Count == 0 ? 0 : merged.Values.Max();
-
-            if (rowOrders != null && rowOrders.Count > 0)
+            if (bindings == null || bindings.Count == 0)
             {
-                foreach (var pair in rowOrders.OrderBy(p => p.Value))
+                return;
+            }
+
+            bool hasExplicitCategoryData = bindings.Any(binding =>
+                binding != null &&
+                (!string.IsNullOrWhiteSpace(binding.RenderCategory) || binding.RenderCategoryOrder > 0));
+
+            var sourceRows = new List<(string SettingKey, int LegacyOrder, int CategoryOrder, int CategoryIndex, string CategoryKey, int SourceIndex)>(bindings.Count);
+            int sourceIndex = 0;
+            foreach (ControlBindingSnapshot binding in bindings)
+            {
+                if (binding == null || string.IsNullOrWhiteSpace(binding.SettingKey))
                 {
-                    if (pair.Value <= 0 || string.IsNullOrWhiteSpace(pair.Key))
+                    continue;
+                }
+
+                string normalizedSettingKey = BlockDataStore.CanonicalizeRowKey(DockBlockKind.Controls, binding.SettingKey);
+                string categoryKey = ControlRowCategoryCatalog.NormalizeCategoryKey(binding.RenderCategory, normalizedSettingKey);
+
+                int legacyOrder = binding.RenderOrder;
+                if (rowOrders != null && rowOrders.TryGetValue(normalizedSettingKey, out int storedOrder))
+                {
+                    legacyOrder = storedOrder;
+                }
+
+                int categoryOrder = binding.RenderCategoryOrder >= 0
+                    ? binding.RenderCategoryOrder
+                    : ControlRowCategoryCatalog.GetDefaultCategoryOrder(categoryKey);
+
+                sourceRows.Add((
+                    normalizedSettingKey,
+                    Math.Max(0, legacyOrder),
+                    Math.Max(0, categoryOrder),
+                    Math.Max(0, binding.RenderOrder),
+                    categoryKey,
+                    sourceIndex++));
+            }
+
+            if (sourceRows.Count == 0)
+            {
+                return;
+            }
+
+            var updates = new List<ControlKeyData.RenderOrderUpdate>(sourceRows.Count);
+
+            if (!hasExplicitCategoryData)
+            {
+                sourceRows.Sort((a, b) =>
+                {
+                    int cmp = a.LegacyOrder.CompareTo(b.LegacyOrder);
+                    if (cmp != 0) return cmp;
+
+                    cmp = a.SourceIndex.CompareTo(b.SourceIndex);
+                    if (cmp != 0) return cmp;
+
+                    return string.Compare(a.SettingKey, b.SettingKey, StringComparison.OrdinalIgnoreCase);
+                });
+
+                var categoryOrders = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                var categoryIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                int nextCategoryOrder = 0;
+
+                foreach (var sourceRow in sourceRows)
+                {
+                    string settingKey = sourceRow.SettingKey;
+                    string categoryKey = sourceRow.CategoryKey;
+                    if (!categoryOrders.ContainsKey(categoryKey))
                     {
-                        continue;
+                        categoryOrders[categoryKey] = nextCategoryOrder++;
+                        categoryIndexes[categoryKey] = 0;
                     }
 
-                    merged[pair.Key] = pair.Value;
-                    if (pair.Value > maxOrder)
+                    int indexInCategory = categoryIndexes[categoryKey];
+                    categoryIndexes[categoryKey] = indexInCategory + 1;
+
+                    updates.Add(new ControlKeyData.RenderOrderUpdate(
+                        settingKey,
+                        indexInCategory,
+                        categoryKey,
+                        categoryOrders[categoryKey]));
+                }
+            }
+            else
+            {
+                var rowsByCategory = new Dictionary<string, List<(string SettingKey, int CategoryIndex, int LegacyOrder, int SourceIndex)>>(StringComparer.OrdinalIgnoreCase);
+                var categoryHints = new Dictionary<string, (int MinCategoryOrder, int FirstSourceIndex)>(StringComparer.OrdinalIgnoreCase);
+
+                foreach ((string settingKey, int legacyOrder, int categoryOrder, int categoryIndex, string categoryKey, int rowSourceIndex) in sourceRows)
+                {
+                    if (!rowsByCategory.TryGetValue(categoryKey, out List<(string SettingKey, int CategoryIndex, int LegacyOrder, int SourceIndex)> categoryRows))
                     {
-                        maxOrder = pair.Value;
+                        categoryRows = new List<(string SettingKey, int CategoryIndex, int LegacyOrder, int SourceIndex)>();
+                        rowsByCategory[categoryKey] = categoryRows;
+                        categoryHints[categoryKey] = (categoryOrder, rowSourceIndex);
+                    }
+                    else
+                    {
+                        (int minCategoryOrder, int firstSourceIndex) = categoryHints[categoryKey];
+                        if (categoryOrder < minCategoryOrder || (categoryOrder == minCategoryOrder && rowSourceIndex < firstSourceIndex))
+                        {
+                            categoryHints[categoryKey] = (categoryOrder, rowSourceIndex);
+                        }
+                    }
+
+                    categoryRows.Add((settingKey, categoryIndex, legacyOrder, rowSourceIndex));
+                }
+
+                List<string> orderedCategories = rowsByCategory.Keys.ToList();
+                orderedCategories.Sort((a, b) =>
+                {
+                    (int minOrderA, int firstSourceA) = categoryHints[a];
+                    (int minOrderB, int firstSourceB) = categoryHints[b];
+                    int cmp = minOrderA.CompareTo(minOrderB);
+                    if (cmp != 0) return cmp;
+
+                    cmp = firstSourceA.CompareTo(firstSourceB);
+                    if (cmp != 0) return cmp;
+
+                    cmp = ControlRowCategoryCatalog.GetDefaultCategoryOrder(a).CompareTo(ControlRowCategoryCatalog.GetDefaultCategoryOrder(b));
+                    if (cmp != 0) return cmp;
+
+                    return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+                });
+
+                for (int categoryOrder = 0; categoryOrder < orderedCategories.Count; categoryOrder++)
+                {
+                    string categoryKey = orderedCategories[categoryOrder];
+                    List<(string SettingKey, int CategoryIndex, int LegacyOrder, int SourceIndex)> categoryRows = rowsByCategory[categoryKey];
+                    categoryRows.Sort((a, b) =>
+                    {
+                        int cmp = a.CategoryIndex.CompareTo(b.CategoryIndex);
+                        if (cmp != 0) return cmp;
+
+                        cmp = a.LegacyOrder.CompareTo(b.LegacyOrder);
+                        if (cmp != 0) return cmp;
+
+                        cmp = a.SourceIndex.CompareTo(b.SourceIndex);
+                        if (cmp != 0) return cmp;
+
+                        return string.Compare(a.SettingKey, b.SettingKey, StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    for (int rowIndex = 0; rowIndex < categoryRows.Count; rowIndex++)
+                    {
+                        updates.Add(new ControlKeyData.RenderOrderUpdate(
+                            categoryRows[rowIndex].SettingKey,
+                            rowIndex,
+                            categoryKey,
+                            categoryOrder));
                     }
                 }
             }
 
-            if (bindings != null)
+            if (updates.Count > 0)
             {
-                foreach (ControlBindingSnapshot binding in bindings)
-                {
-                    if (string.IsNullOrWhiteSpace(binding?.SettingKey) || merged.ContainsKey(binding.SettingKey))
-                    {
-                        continue;
-                    }
-
-                    merged[binding.SettingKey] = ++maxOrder;
-                }
-            }
-
-            var rows = merged
-                .Where(pair => pair.Value > 0)
-                .OrderBy(pair => pair.Value)
-                .Select(pair => (pair.Key, pair.Value))
-                .ToList();
-
-            if (rows.Count > 0)
-            {
-                BlockDataStore.SaveRowOrders(DockBlockKind.Controls, rows);
-                ControlKeyData.UpdateRenderOrders(rows);
+                ControlKeyData.UpdateRenderOrders(updates);
             }
         }
 
@@ -541,7 +673,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                 if (IsSwitchType(parsedType))
                 {
                     bool switchOn = TypeConversionFunctions.IntToBool(binding.SwitchStartState ?? 0);
-                    bool persist = parsedType != InputType.NoSaveSwitch;
+                    bool persist = parsedType == InputType.SaveSwitch;
                     ControlStateManager.RegisterSwitchPersistence(binding.SettingKey, persist);
                     ControlStateManager.SetSwitchState(binding.SettingKey, switchOn, "ControlConfigurationManager.ApplyRuntimeBindings");
                 }
@@ -629,7 +761,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
             }
 
             List<ControlBindingSnapshot> orderedBindings = bindings.Values
-                .OrderBy(b => b.RenderOrder > 0 ? b.RenderOrder : int.MaxValue)
+                .OrderBy(b => b.RenderOrder >= 0 ? b.RenderOrder : int.MaxValue)
                 .ThenBy(b => b.SettingKey, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -695,7 +827,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
             }
 
             int fallbackOrder = 0;
-            foreach (ControlBindingSnapshot binding in bindings.OrderBy(b => b.RenderOrder > 0 ? b.RenderOrder : int.MaxValue).ThenBy(b => b.SettingKey, StringComparer.OrdinalIgnoreCase))
+            foreach (ControlBindingSnapshot binding in bindings.OrderBy(b => b.RenderOrder >= 0 ? b.RenderOrder : int.MaxValue).ThenBy(b => b.SettingKey, StringComparer.OrdinalIgnoreCase))
             {
                 if (binding == null || string.IsNullOrWhiteSpace(binding.SettingKey))
                 {
@@ -708,9 +840,9 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     continue;
                 }
 
-                int order = binding.RenderOrder > 0 ? binding.RenderOrder : ++fallbackOrder;
+                int order = binding.RenderOrder >= 0 ? binding.RenderOrder : fallbackOrder++;
                 orders[key] = order;
-                fallbackOrder = Math.Max(fallbackOrder, order);
+                fallbackOrder = Math.Max(fallbackOrder, order + 1);
             }
 
             return orders;
@@ -723,7 +855,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                 return;
             }
 
-            int maxOrder = rowOrders.Count == 0 ? 0 : rowOrders.Values.Max();
+            int maxOrder = rowOrders.Count == 0 ? -1 : rowOrders.Values.Max();
             foreach (ControlBindingSnapshot binding in bindings)
             {
                 if (binding == null || string.IsNullOrWhiteSpace(binding.SettingKey))
@@ -737,7 +869,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     continue;
                 }
 
-                int order = binding.RenderOrder > 0 ? binding.RenderOrder : maxOrder + 1;
+                int order = binding.RenderOrder >= 0 ? binding.RenderOrder : maxOrder + 1;
                 if (order <= maxOrder)
                 {
                     order = maxOrder + 1;
@@ -837,7 +969,9 @@ ON CONFLICT(SettingKey) DO UPDATE SET
         }
 
         private static bool IsSwitchType(InputType inputType) =>
-            inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
+            inputType == InputType.SaveSwitch ||
+            inputType == InputType.NoSaveSwitch ||
+            inputType == InputType.DoubleTapToggle;
 
         private static bool IsEnumType(InputType inputType) =>
             inputType == InputType.SaveEnum || inputType == InputType.NoSaveEnum;

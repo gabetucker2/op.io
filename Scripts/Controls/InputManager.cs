@@ -42,7 +42,9 @@ namespace op.io
         };
 
         private static bool IsSwitchType(InputType inputType) =>
-            inputType == InputType.SaveSwitch || inputType == InputType.NoSaveSwitch;
+            inputType == InputType.SaveSwitch ||
+            inputType == InputType.NoSaveSwitch ||
+            inputType == InputType.DoubleTapToggle;
 
         private static bool IsEnumType(InputType inputType) =>
             inputType == InputType.SaveEnum || inputType == InputType.NoSaveEnum;
@@ -265,6 +267,17 @@ namespace op.io
             if (_controlBindings.TryGetValue(settingKey, out ControlBinding binding))
             {
                 return binding.TokenCount;
+            }
+
+            return 0;
+        }
+
+        public static int GetSwitchScanPriority(string settingKey)
+        {
+            if (_controlBindings.TryGetValue(settingKey, out ControlBinding binding) &&
+                binding.InputType == InputType.DoubleTapToggle)
+            {
+                return 1;
             }
 
             return 0;
@@ -862,6 +875,7 @@ namespace op.io
                     InputType.Hold => modifiersHeld && primary.IsHeld(),
                     InputType.Trigger => modifiersHeld && primary.IsTriggered(),
                     InputType.SaveSwitch or InputType.NoSaveSwitch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
+                    InputType.DoubleTapToggle => EvaluateDoubleTapToggleState(primary, modifiersHeld, hasModifiers),
                     InputType.SaveEnum or InputType.NoSaveEnum => modifiersHeld && primary.IsTriggered(),
                     _ => false
                 };
@@ -947,6 +961,37 @@ namespace op.io
                 }
 
                 return false;
+            }
+
+            private bool EvaluateDoubleTapToggleState(InputBindingToken primary, bool modifiersHeld, bool hasModifiers)
+            {
+                if (hasModifiers)
+                {
+                    bool allTokensHeld = Tokens.All(t => t.IsHeld());
+                    return InputTypeManager.EvaluateComboDoubleTapSwitch(
+                        SettingKey,
+                        allTokensHeld,
+                        GetAllKeys(Tokens),
+                        primary.MouseButton,
+                        primary.Keys);
+                }
+
+                if (!modifiersHeld)
+                {
+                    if (ControlStateManager.ContainsSwitchState(SettingKey))
+                    {
+                        return ControlStateManager.GetSwitchState(SettingKey);
+                    }
+
+                    return false;
+                }
+
+                bool tapReleased = primary.IsTapReleased();
+                return InputTypeManager.EvaluateDoubleTapSwitchTap(
+                    SettingKey,
+                    tapReleased,
+                    primary.MouseButton,
+                    primary.Keys);
             }
 
             private static IEnumerable<Keys> GetAllKeys(IReadOnlyList<InputBindingToken> tokens)
@@ -1189,6 +1234,24 @@ namespace op.io
                 foreach (Keys key in Keys)
                 {
                     if (InputTypeManager.IsKeySwitch(key))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public bool IsTapReleased()
+            {
+                if (IsMouse)
+                {
+                    return InputTypeManager.IsMouseButtonTapReleased(MouseButton);
+                }
+
+                foreach (Keys key in Keys)
+                {
+                    if (InputTypeManager.IsKeyTapReleased(key))
                     {
                         return true;
                     }

@@ -186,6 +186,9 @@ namespace op.io
                     ("FreezeGameInputs",
                         "Suspend all gameplay inputs. The game pauses reacting to keyboard and mouse while this is active.\n• ON: All gameplay inputs are suspended.\n• OFF: Gameplay inputs are active.",
                         "bool"),
+                    ("DoubleTapSuppressionSeconds",
+                        "Seconds used as the DoubleTapToggle window. Single-toggle bindings on the same primary input are suppressed during this window after the first tap.",
+                        "float"),
                     // Specs block — plain values
                     ("FPS",           "Frames rendered per second. Higher is smoother.",                    "float"),
                     ("TargetFPS",     "The frame rate cap configured in GeneralSettings.",                  "int"),

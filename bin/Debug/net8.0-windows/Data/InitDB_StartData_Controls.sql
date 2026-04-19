@@ -52,6 +52,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoveredBlock',  
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HoveredDragBar',     'Name of the UI block whose drag bar the cursor is currently hovering over, or None.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FocusedBlock',       'The block that last captured keyboard focus. Keyboard shortcuts routed to block content use this. None if no block has focus.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BlockType',          'Category of the focused block: Standard, Overlay, or Dynamic.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DoubleTapSuppressionSeconds', 'Seconds used as the DoubleTapToggle window. Single-toggle bindings on the same primary input are suppressed during this window after the first tap.');
 
 -- Backend block — physics & bullet constants
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AirResistanceScalar',   'Drag scalar applied to bullets: drag = AirResistanceScalar × bulletVolume / bulletDragFactor.');
@@ -123,12 +124,12 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Btn_SetupDelete'
 
 -- Most ControlKey rows are seeded via control configuration saves (see ControlConfigurationManager).
 -- Meta controls with explicit defaults are seeded here so their initial state is easy to change.
-INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, LockMode)
-    VALUES ('DebugMode', 'Shift + B', 'SaveSwitch', 0, 1, 13, 0);
-INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, LockMode)
-    VALUES ('DisableToolTips', 'Ctrl + T', 'SaveSwitch', 0, 1, 20, 0);
-INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, LockMode)
-    VALUES ('CameraLockMode', 'C', 'SaveEnum', 0, 1, 26, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
+    VALUES ('DebugMode', 'Shift + B', 'SaveSwitch', 0, 1, 0, 'System', 4, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
+    VALUES ('DisableToolTips', 'Ctrl + T', 'SaveSwitch', 0, 1, 0, 'Interface', 3, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
+    VALUES ('CameraLockMode', 'C', 'SaveEnum', 0, 1, 0, 'Camera', 2, 0);
 
 ---------------------------------------------------------------------------------------------------------------------------
 
@@ -136,5 +137,6 @@ INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SprintSpeedMultiplier',
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CrouchSpeedMultiplier', '0.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('TriggerCooldown', '0.5');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('SwitchCooldown', '0.1');
+INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DoubleTapSuppressionSeconds', '0.25');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('CursorFollowDeadzonePixels', '10');
 INSERT INTO ControlSettings (SettingKey, Value) VALUES ('DebugMaxRepeats', '25');

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace op.io
 {
@@ -48,6 +49,7 @@ namespace op.io
             try
             {
                 EnsureRenderOrderColumn();
+                EnsureRenderCategoryColumns();
                 EnsureLockModeColumn();
                 EnsureMetaControlColumn();
                 EnsureFloatStartStateColumn();
@@ -83,6 +85,7 @@ namespace op.io
                 EnsureShowHiddenAttrsControl();
                 EnsureBodySwitchControls();
                 EnsureControlTooltips();
+                NormalizeRenderLayoutByCategory();
 
                 _applied = true;
             }
@@ -100,7 +103,163 @@ namespace op.io
                 ControlKeyData.AddColumn(columnName, "INTEGER NOT NULL DEFAULT 0");
             }
 
-            ControlKeyData.NormalizeRenderOrderValues();
+            if (!ControlKeyData.HasRenderCategoryColumns())
+            {
+                ControlKeyData.NormalizeRenderOrderValues();
+            }
+        }
+
+        private static void EnsureRenderCategoryColumns()
+        {
+            const string categoryColumnName = "RenderCategory";
+            const string categoryOrderColumnName = "RenderCategoryOrder";
+
+            if (!ControlKeyData.ColumnExists(categoryColumnName))
+            {
+                ControlKeyData.AddColumn(categoryColumnName, "TEXT NOT NULL DEFAULT ''");
+            }
+
+            if (!ControlKeyData.ColumnExists(categoryOrderColumnName))
+            {
+                ControlKeyData.AddColumn(categoryOrderColumnName, "INTEGER NOT NULL DEFAULT 0");
+            }
+
+            try
+            {
+                const string normalizeSql = @"
+UPDATE ControlKey
+SET RenderCategory = COALESCE(RenderCategory, ''),
+    RenderCategoryOrder = COALESCE(RenderCategoryOrder, 0),
+    RenderOrder = COALESCE(RenderOrder, 0);";
+                DatabaseQuery.ExecuteNonQuery(normalizeSql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to normalize render category columns: {ex.Message}");
+            }
+
+            NormalizeRenderLayoutByCategory();
+        }
+
+        private static void NormalizeRenderLayoutByCategory()
+        {
+            if (!ControlKeyData.ColumnExists("RenderOrder") ||
+                !ControlKeyData.ColumnExists("RenderCategory") ||
+                !ControlKeyData.ColumnExists("RenderCategoryOrder"))
+            {
+                return;
+            }
+
+            const string sql = @"
+SELECT SettingKey,
+       COALESCE(RenderOrder, 0) AS RenderOrder,
+       COALESCE(RenderCategory, '') AS RenderCategory,
+       COALESCE(RenderCategoryOrder, 0) AS RenderCategoryOrder
+FROM ControlKey
+ORDER BY RenderCategoryOrder ASC, RenderOrder ASC, SettingKey ASC;";
+
+            var rows = DatabaseQuery.ExecuteQuery(sql);
+            if (rows == null || rows.Count == 0)
+            {
+                return;
+            }
+
+            var sourceRows = new List<(string SettingKey, int RenderOrder, string CategoryKey, int CategoryOrder, int SourceIndex)>(rows.Count);
+            int sourceIndex = 0;
+            foreach (Dictionary<string, object> row in rows)
+            {
+                string settingKey = row.TryGetValue("SettingKey", out object settingObj) ? settingObj?.ToString() : null;
+                if (string.IsNullOrWhiteSpace(settingKey))
+                {
+                    continue;
+                }
+
+                int renderOrder = row.TryGetValue("RenderOrder", out object orderObj) && orderObj != null && orderObj != DBNull.Value
+                    ? Convert.ToInt32(orderObj)
+                    : 0;
+                string categoryKey = row.TryGetValue("RenderCategory", out object categoryObj)
+                    ? categoryObj?.ToString() ?? string.Empty
+                    : string.Empty;
+                int categoryOrder = row.TryGetValue("RenderCategoryOrder", out object categoryOrderObj) && categoryOrderObj != null && categoryOrderObj != DBNull.Value
+                    ? Convert.ToInt32(categoryOrderObj)
+                    : 0;
+
+                sourceRows.Add((settingKey, Math.Max(0, renderOrder), categoryKey, Math.Max(0, categoryOrder), sourceIndex++));
+            }
+
+            if (sourceRows.Count == 0)
+            {
+                return;
+            }
+
+            var rowsByCategory = new Dictionary<string, List<(string SettingKey, int RenderOrder, int SourceIndex)>>(StringComparer.OrdinalIgnoreCase);
+            var categorySortHints = new Dictionary<string, (int MinCategoryOrder, int FirstSourceIndex)>(StringComparer.OrdinalIgnoreCase);
+
+            foreach ((string settingKey, int renderOrder, string categoryKey, int categoryOrder, int rowSourceIndex) in sourceRows)
+            {
+                string normalizedCategory = ControlRowCategoryCatalog.NormalizeCategoryKey(categoryKey, settingKey);
+
+                if (!rowsByCategory.TryGetValue(normalizedCategory, out List<(string SettingKey, int RenderOrder, int SourceIndex)> categoryRows))
+                {
+                    categoryRows = new List<(string SettingKey, int RenderOrder, int SourceIndex)>();
+                    rowsByCategory[normalizedCategory] = categoryRows;
+                    categorySortHints[normalizedCategory] = (categoryOrder, rowSourceIndex);
+                }
+                else
+                {
+                    (int minCategoryOrder, int firstSourceIndex) = categorySortHints[normalizedCategory];
+                    if (categoryOrder < minCategoryOrder || (categoryOrder == minCategoryOrder && rowSourceIndex < firstSourceIndex))
+                    {
+                        categorySortHints[normalizedCategory] = (categoryOrder, rowSourceIndex);
+                    }
+                }
+
+                categoryRows.Add((settingKey, renderOrder, rowSourceIndex));
+            }
+
+            List<string> orderedCategories = rowsByCategory.Keys.ToList();
+            orderedCategories.Sort((a, b) =>
+            {
+                (int minOrderA, int firstSourceA) = categorySortHints[a];
+                (int minOrderB, int firstSourceB) = categorySortHints[b];
+                int cmp = minOrderA.CompareTo(minOrderB);
+                if (cmp != 0) return cmp;
+
+                cmp = firstSourceA.CompareTo(firstSourceB);
+                if (cmp != 0) return cmp;
+
+                cmp = ControlRowCategoryCatalog.GetDefaultCategoryOrder(a).CompareTo(ControlRowCategoryCatalog.GetDefaultCategoryOrder(b));
+                if (cmp != 0) return cmp;
+
+                return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+            });
+
+            var updates = new List<ControlKeyData.RenderOrderUpdate>(sourceRows.Count);
+            for (int categoryOrder = 0; categoryOrder < orderedCategories.Count; categoryOrder++)
+            {
+                string categoryKey = orderedCategories[categoryOrder];
+                List<(string SettingKey, int RenderOrder, int SourceIndex)> categoryRows = rowsByCategory[categoryKey];
+                categoryRows.Sort((a, b) =>
+                {
+                    int cmp = a.RenderOrder.CompareTo(b.RenderOrder);
+                    if (cmp != 0) return cmp;
+
+                    cmp = a.SourceIndex.CompareTo(b.SourceIndex);
+                    if (cmp != 0) return cmp;
+
+                    return string.Compare(a.SettingKey, b.SettingKey, StringComparison.OrdinalIgnoreCase);
+                });
+
+                for (int rowIndex = 0; rowIndex < categoryRows.Count; rowIndex++)
+                {
+                    updates.Add(new ControlKeyData.RenderOrderUpdate(categoryRows[rowIndex].SettingKey, rowIndex, categoryKey, categoryOrder));
+                }
+            }
+
+            if (updates.Count > 0)
+            {
+                ControlKeyData.UpdateRenderOrders(updates);
+            }
         }
 
         private static void EnsureMetaControlColumn()

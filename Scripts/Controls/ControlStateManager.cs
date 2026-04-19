@@ -762,8 +762,8 @@ namespace op.io
                 // Fetch all control keys with SwitchStartState from the database
                 bool hasEnumDisabledColumn = ControlKeyData.ColumnExists(EnumDisabledOptionsColumn);
                 string sql = hasEnumDisabledColumn
-                    ? "SELECT SettingKey, SwitchStartState, InputType, InputKey, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');"
-                    : "SELECT SettingKey, SwitchStartState, InputType, InputKey, '' AS EnumDisabledOptions FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'Switch', 'SaveEnum', 'NoSaveEnum');";
+                    ? "SELECT SettingKey, SwitchStartState, InputType, InputKey, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'DoubleTapToggle', 'Switch', 'SaveEnum', 'NoSaveEnum');"
+                    : "SELECT SettingKey, SwitchStartState, InputType, InputKey, '' AS EnumDisabledOptions FROM ControlKey WHERE InputType IN ('SaveSwitch', 'NoSaveSwitch', 'DoubleTapToggle', 'Switch', 'SaveEnum', 'NoSaveEnum');";
                 var result = DatabaseQuery.ExecuteQuery(sql);
 
                 if (result.Count == 0)
@@ -797,7 +797,7 @@ namespace op.io
                         }
 
                         bool switchStateBool = TypeConversionFunctions.IntToBool(switchState);
-                        bool saveToBackend = !string.Equals(inputTypeLabel, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase);
+                        bool saveToBackend = !IsNoSaveSwitchType(inputTypeLabel);
 
                         DockingDiagnostics.RecordRawControlState(
                             "ControlStateManager.LoadControlSwitchStates",
@@ -825,6 +825,12 @@ namespace op.io
             {
                 DebugLogger.PrintError($"Failed to load control switch states: {ex.Message}");
             }
+        }
+
+        private static bool IsNoSaveSwitchType(string inputTypeLabel)
+        {
+            return string.Equals(inputTypeLabel, "NoSaveSwitch", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputTypeLabel, "DoubleTapToggle", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

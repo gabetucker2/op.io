@@ -6,6 +6,7 @@
         Trigger,
         SaveSwitch,
         NoSaveSwitch,
+        DoubleTapToggle,
         SaveEnum,
         NoSaveEnum,
         Float

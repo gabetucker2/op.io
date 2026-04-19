@@ -33,6 +33,7 @@ namespace op.io
         public static string FocusedBlock       => BlockManager.GetFocusedBlockKind()?.ToString() ?? "None";
         public static bool   AnyGUIInteracting  => BlockManager.IsAnyGuiInteracting;
         public static string GUIInteractingWith => BlockManager.GetInteractingBlockKind();
+        public static float DoubleTapSuppressionSeconds => InputTypeManager.DoubleTapSuppressionSeconds;
 
         /// <summary>
         /// Shows the DockBlockCategory (Standard / Overlay / Dynamic) of the

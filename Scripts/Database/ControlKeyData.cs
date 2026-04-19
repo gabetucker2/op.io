@@ -7,6 +7,8 @@ namespace op.io
     internal static class ControlKeyData
     {
         private const string RenderOrderColumnName = "RenderOrder";
+        private const string RenderCategoryColumnName = "RenderCategory";
+        private const string RenderCategoryOrderColumnName = "RenderCategoryOrder";
 
         internal sealed class ControlKeyRecord
         {
@@ -16,7 +18,9 @@ namespace op.io
             public int? SwitchStartState { get; init; }
             public float? FloatStartState { get; init; }
             public bool MetaControl { get; init; }
-            public int RenderOrder { get; init; }
+            public int RenderOrder { get; init; } = -1;
+            public string RenderCategory { get; init; }
+            public int RenderCategoryOrder { get; init; } = -1;
             public bool LockMode { get; init; }
             public string EnumDisabledOptions { get; init; }
         }
@@ -33,8 +37,18 @@ namespace op.io
                 ["@settingKey"] = settingKey
             };
 
-            const string sql = @"
-SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
+            bool renderCategoryColumnExists = ColumnExists(RenderCategoryColumnName);
+            bool renderCategoryOrderColumnExists = ColumnExists(RenderCategoryOrderColumnName);
+
+            string categorySelect = renderCategoryColumnExists
+                ? "COALESCE(RenderCategory, '') AS RenderCategory"
+                : "'' AS RenderCategory";
+            string categoryOrderSelect = renderCategoryOrderColumnExists
+                ? "COALESCE(RenderCategoryOrder, 0) AS RenderCategoryOrder"
+                : "0 AS RenderCategoryOrder";
+
+            string sql = $@"
+SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, {categorySelect}, {categoryOrderSelect}, COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
 FROM ControlKey
 WHERE SettingKey = @settingKey
 LIMIT 1;";
@@ -60,6 +74,12 @@ LIMIT 1;";
                 FloatStartState = floatStart,
                 MetaControl = row.TryGetValue("MetaControl", out object metaValue) && Convert.ToInt32(metaValue) != 0,
                 RenderOrder = row.TryGetValue("ControlOrder", out object orderValue) ? Convert.ToInt32(orderValue) : 0,
+                RenderCategory = row.TryGetValue("RenderCategory", out object categoryValue)
+                    ? categoryValue?.ToString() ?? string.Empty
+                    : string.Empty,
+                RenderCategoryOrder = row.TryGetValue("RenderCategoryOrder", out object categoryOrderValue)
+                    ? Convert.ToInt32(categoryOrderValue)
+                    : 0,
                 LockMode = row.TryGetValue("LockMode", out object lockValue) && Convert.ToInt32(lockValue) != 0,
                 EnumDisabledOptions = row.TryGetValue("EnumDisabledOptions", out object enumDisabledValue)
                     ? enumDisabledValue?.ToString() ?? string.Empty
@@ -86,11 +106,28 @@ LIMIT 1;";
             };
 
             bool orderColumnAvailable = ColumnExists(RenderOrderColumnName);
+            bool categoryColumnAvailable = ColumnExists(RenderCategoryColumnName);
+            bool categoryOrderColumnAvailable = ColumnExists(RenderCategoryOrderColumnName);
             bool lockModeAvailable = ColumnExists("LockMode");
             bool enumDisabledColumnAvailable = ColumnExists("EnumDisabledOptions");
+            string normalizedCategory = ControlRowCategoryCatalog.NormalizeCategoryKey(record.RenderCategory, record.SettingKey);
+
             if (orderColumnAvailable)
             {
-                parameters["@renderOrder"] = record.RenderOrder > 0 ? record.RenderOrder : GetNextRenderOrderValue();
+                parameters["@renderOrder"] = record.RenderOrder >= 0 ? record.RenderOrder : GetNextRenderOrderValue();
+            }
+
+            if (categoryColumnAvailable)
+            {
+                parameters["@renderCategory"] = normalizedCategory;
+            }
+
+            if (categoryOrderColumnAvailable)
+            {
+                int categoryOrder = record.RenderCategoryOrder >= 0
+                    ? record.RenderCategoryOrder
+                    : ControlRowCategoryCatalog.GetDefaultCategoryOrder(normalizedCategory);
+                parameters["@renderCategoryOrder"] = categoryOrder;
             }
 
             List<string> columns =
@@ -115,6 +152,18 @@ LIMIT 1;";
             {
                 columns.Add("RenderOrder");
                 values.Add("@renderOrder");
+            }
+
+            if (categoryColumnAvailable)
+            {
+                columns.Add(RenderCategoryColumnName);
+                values.Add("@renderCategory");
+            }
+
+            if (categoryOrderColumnAvailable)
+            {
+                columns.Add(RenderCategoryOrderColumnName);
+                values.Add("@renderCategoryOrder");
             }
 
             if (lockModeAvailable)
@@ -326,7 +375,7 @@ WHERE SettingKey = @settingKey;";
 
             foreach ((string settingKey, int order) in updates)
             {
-                if (string.IsNullOrWhiteSpace(settingKey) || order <= 0)
+                if (string.IsNullOrWhiteSpace(settingKey) || order < 0)
                 {
                     continue;
                 }
@@ -339,6 +388,73 @@ WHERE SettingKey = @settingKey;";
 
                 DatabaseQuery.ExecuteNonQuery(@"UPDATE ControlKey SET RenderOrder = @order WHERE SettingKey = @settingKey;", parameters);
             }
+        }
+
+        public readonly struct RenderOrderUpdate
+        {
+            public string SettingKey { get; }
+            public int Order { get; }
+            public string CategoryKey { get; }
+            public int CategoryOrder { get; }
+
+            public RenderOrderUpdate(string settingKey, int order, string categoryKey, int categoryOrder)
+            {
+                SettingKey = settingKey;
+                Order = order;
+                CategoryKey = categoryKey;
+                CategoryOrder = categoryOrder;
+            }
+        }
+
+        public static void UpdateRenderOrders(IReadOnlyList<RenderOrderUpdate> updates)
+        {
+            if (updates == null || updates.Count == 0 || !ColumnExists(RenderOrderColumnName))
+            {
+                return;
+            }
+
+            bool categoryColumnAvailable = ColumnExists(RenderCategoryColumnName);
+            bool categoryOrderColumnAvailable = ColumnExists(RenderCategoryOrderColumnName);
+
+            foreach (RenderOrderUpdate update in updates)
+            {
+                if (string.IsNullOrWhiteSpace(update.SettingKey) || update.Order < 0)
+                {
+                    continue;
+                }
+
+                string categoryKey = ControlRowCategoryCatalog.NormalizeCategoryKey(update.CategoryKey, update.SettingKey);
+                int categoryOrder = update.CategoryOrder >= 0
+                    ? update.CategoryOrder
+                    : ControlRowCategoryCatalog.GetDefaultCategoryOrder(categoryKey);
+
+                var parameters = new Dictionary<string, object>
+                {
+                    ["@order"] = update.Order,
+                    ["@settingKey"] = update.SettingKey
+                };
+
+                string sql = "UPDATE ControlKey SET RenderOrder = @order";
+                if (categoryColumnAvailable)
+                {
+                    sql += ", RenderCategory = @category";
+                    parameters["@category"] = categoryKey;
+                }
+
+                if (categoryOrderColumnAvailable)
+                {
+                    sql += ", RenderCategoryOrder = @categoryOrder";
+                    parameters["@categoryOrder"] = categoryOrder;
+                }
+
+                sql += " WHERE SettingKey = @settingKey;";
+                DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            }
+        }
+
+        public static bool HasRenderCategoryColumns()
+        {
+            return ColumnExists(RenderCategoryColumnName) && ColumnExists(RenderCategoryOrderColumnName);
         }
 
         private static int GetNextRenderOrderValue()
