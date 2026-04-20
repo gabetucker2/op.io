@@ -33,6 +33,9 @@ namespace op.io
                 float clusterAttractForce,
                 float clusterHomeostasisDistance,
                 float clusterRepelForce,
+                float clusterHomeostasisVariance,
+                float clusterInstabilityForce,
+                float clusterInstabilityPulseHz,
                 float visualMergeRadius,
                 float visualMergeGrowth,
                 float visualMergeMaxScale,
@@ -115,6 +118,9 @@ namespace op.io
                 ClusterAttractForce = clusterAttractForce;
                 ClusterHomeostasisDistance = clusterHomeostasisDistance;
                 ClusterRepelForce = clusterRepelForce;
+                ClusterHomeostasisVariance = clusterHomeostasisVariance;
+                ClusterInstabilityForce = clusterInstabilityForce;
+                ClusterInstabilityPulseHz = clusterInstabilityPulseHz;
                 VisualMergeRadius = visualMergeRadius;
                 VisualMergeGrowth = visualMergeGrowth;
                 VisualMergeMaxScale = visualMergeMaxScale;
@@ -198,6 +204,9 @@ namespace op.io
             public float ClusterAttractForce { get; }
             public float ClusterHomeostasisDistance { get; }
             public float ClusterRepelForce { get; }
+            public float ClusterHomeostasisVariance { get; }
+            public float ClusterInstabilityForce { get; }
+            public float ClusterInstabilityPulseHz { get; }
             public float VisualMergeRadius { get; }
             public float VisualMergeGrowth { get; }
             public float VisualMergeMaxScale { get; }
@@ -366,6 +375,7 @@ namespace op.io
         private const float FreeShadowOffsetScale = 0.72f;
         private const float ClusterAttractGlobalScale = 0.78f;
         private const float ClusterAttractNearPlayerScale = 0.25f;
+        private const float ClusterInstabilityNearPlayerScale = 0.15f;
         private const float MorphPlayerWeight = 1.35f;
         private const float MorphNeighborWeight = 0.82f;
         private const float MorphVelocityWeight = 0.3f;
@@ -385,6 +395,9 @@ namespace op.io
         public static float DeadZoneRadius => Settings.DeadZoneRadius;
         public static float PullZoneRadius => Settings.PullZoneRadius;
         public static float AbsorbZoneRadius => Settings.AbsorbZoneRadius;
+        public static float ClusterHomeostasisVariance => Settings.ClusterHomeostasisVariance;
+        public static float ClusterInstabilityForce => Settings.ClusterInstabilityForce;
+        public static float ClusterInstabilityPulseHz => Settings.ClusterInstabilityPulseHz;
 
         private static ClumpSettings Settings => _cachedSettings ??= LoadSettings();
 
@@ -1367,7 +1380,9 @@ namespace op.io
                 return;
             }
 
-            bool clusterForcesEnabled = settings.ClusterAttractForce > 0f || settings.ClusterRepelForce > 0f;
+            bool clusterForcesEnabled = settings.ClusterAttractForce > 0f ||
+                                        settings.ClusterRepelForce > 0f ||
+                                        settings.ClusterInstabilityForce > 0f;
             bool visualMergeEnabled = settings.VisualMergeGrowth > 0f && settings.VisualMergeRadius > 0f;
             if (!clusterForcesEnabled && !visualMergeEnabled)
             {
@@ -1406,7 +1421,6 @@ namespace op.io
 
             float maxDistanceSquared = interactionRadius * interactionRadius;
             float homeostasis = MathF.Max(0.001f, settings.ClusterHomeostasisDistance);
-            float attractRange = MathF.Max(settings.ClusterRadius - homeostasis, 0.001f);
 
             foreach (KeyValuePair<long, List<int>> cell in _clusterGrid)
             {
@@ -1436,8 +1450,7 @@ namespace op.io
                                         settings,
                                         dt,
                                         maxDistanceSquared,
-                                        homeostasis,
-                                        attractRange);
+                                        homeostasis);
                                 }
                             }
                         }
@@ -1453,8 +1466,7 @@ namespace op.io
                                         settings,
                                         dt,
                                         maxDistanceSquared,
-                                        homeostasis,
-                                        attractRange);
+                                        homeostasis);
                                 }
                             }
                         }
@@ -1469,8 +1481,7 @@ namespace op.io
             in ClumpSettings settings,
             float dt,
             float maxDistanceSquared,
-            float homeostasisDistance,
-            float attractRange)
+            float homeostasisDistance)
         {
             FreeClump a = _freeClumps[indexA];
             FreeClump b = _freeClumps[indexB];
@@ -1489,28 +1500,50 @@ namespace op.io
 
             float dist = MathF.Sqrt(distSq);
             Vector2 direction = delta / dist;
+            int pairSeed = ComposePairSeed(a.ID, b.ID);
+            float pairPhase = Hash01(pairSeed, 31) * MathF.Tau;
+            float pulse = MathF.Sin((Core.GAMETIME * MathF.Tau * settings.ClusterInstabilityPulseHz) + pairPhase);
+            float homeostasisVariance = MathHelper.Clamp(settings.ClusterHomeostasisVariance, 0f, 0.95f);
+            float pairBias = (Hash01(pairSeed, 32) * 2f) - 1f;
+            float homeostasisScale = 1f + (pairBias * homeostasisVariance) + (pulse * homeostasisVariance * 0.55f);
+            float effectiveHomeostasis = MathF.Max(0.001f, homeostasisDistance * MathHelper.Clamp(homeostasisScale, 0.25f, 2.2f));
+            float effectiveAttractRange = MathF.Max(settings.ClusterRadius - effectiveHomeostasis, 0.001f);
+            float playerInfluence = MathF.Max(GetPlayerInfluenceStrength(indexA), GetPlayerInfluenceStrength(indexB));
 
             if (settings.ClusterAttractForce > 0f || settings.ClusterRepelForce > 0f)
             {
                 float force;
-                if (dist > homeostasisDistance)
+                if (dist > effectiveHomeostasis)
                 {
-                    float t = MathHelper.Clamp((dist - homeostasisDistance) / attractRange, 0f, 1f);
+                    float t = MathHelper.Clamp((dist - effectiveHomeostasis) / effectiveAttractRange, 0f, 1f);
                     force = settings.ClusterAttractForce * t * ClusterAttractGlobalScale;
 
-                    float playerInfluence = MathF.Max(GetPlayerInfluenceStrength(indexA), GetPlayerInfluenceStrength(indexB));
                     float pullPriorityScale = MathHelper.Lerp(1f, ClusterAttractNearPlayerScale, playerInfluence);
                     force *= pullPriorityScale;
                 }
                 else
                 {
-                    float t = 1f - (dist / homeostasisDistance);
+                    float t = 1f - (dist / effectiveHomeostasis);
                     force = -settings.ClusterRepelForce * t;
                 }
 
                 Vector2 deltaVelocity = direction * (force * dt);
                 _clusterDeltaVelocities[indexA] += deltaVelocity;
                 _clusterDeltaVelocities[indexB] -= deltaVelocity;
+            }
+
+            if (settings.ClusterInstabilityForce > 0f)
+            {
+                Vector2 tangent = new(-direction.Y, direction.X);
+                float tangentialDirection = Hash01(pairSeed, 33) < 0.5f ? -1f : 1f;
+                float instabilityBandWidth = MathF.Max(effectiveHomeostasis, settings.ClumpRadius * 2f);
+                float bandStrength = 1f - MathHelper.Clamp(MathF.Abs(dist - effectiveHomeostasis) / instabilityBandWidth, 0f, 1f);
+                float instabilityEnvelope = 0.45f + (0.55f * MathF.Abs(pairBias));
+                float instabilityScale = MathHelper.Lerp(1f, ClusterInstabilityNearPlayerScale, playerInfluence);
+                float instabilityForce = settings.ClusterInstabilityForce * pulse * bandStrength * instabilityEnvelope * instabilityScale;
+                Vector2 instabilityDeltaVelocity = tangent * (tangentialDirection * instabilityForce * dt);
+                _clusterDeltaVelocities[indexA] += instabilityDeltaVelocity;
+                _clusterDeltaVelocities[indexB] -= instabilityDeltaVelocity;
             }
 
             if (settings.VisualMergeGrowth > 0f && settings.VisualMergeRadius > 0f && dist <= settings.VisualMergeRadius)
@@ -2083,6 +2116,16 @@ namespace op.io
             return MathHelper.Clamp(boundary, 0.72f, 1.3f);
         }
 
+        private static int ComposePairSeed(int idA, int idB)
+        {
+            int minID = Math.Min(idA, idB);
+            int maxID = Math.Max(idA, idB);
+            unchecked
+            {
+                return (minID * 73856093) ^ (maxID * 19349663);
+            }
+        }
+
         private static float Hash01(int seed, int salt)
         {
             unchecked
@@ -2124,6 +2167,9 @@ namespace op.io
             float clusterAttractForce = MathF.Max(0f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpClusterAttractForce", 45f));
             float clusterHomeostasis = MathF.Max(0.01f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpClusterHomeostasisDistance", 8f));
             float clusterRepelForce = MathF.Max(0f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpClusterRepelForce", 95f));
+            float clusterHomeostasisVariance = MathHelper.Clamp(DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpClusterHomeostasisVariance", 0.28f), 0f, 0.95f);
+            float clusterInstabilityForce = MathF.Max(0f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpClusterInstabilityForce", 9.5f));
+            float clusterInstabilityPulseHz = MathF.Max(0f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpClusterInstabilityPulseHz", 1.4f));
             float visualMergeRadius = MathF.Max(clumpRadius, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpVisualMergeRadius", 24f));
             float visualMergeGrowth = MathF.Max(0f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpVisualMergeGrowth", 0.19f));
             float visualMergeMaxScale = MathF.Max(1f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpVisualMergeMaxScale", 4.5f));
@@ -2214,6 +2260,9 @@ namespace op.io
                 clusterAttractForce,
                 clusterHomeostasis,
                 clusterRepelForce,
+                clusterHomeostasisVariance,
+                clusterInstabilityForce,
+                clusterInstabilityPulseHz,
                 visualMergeRadius,
                 visualMergeGrowth,
                 visualMergeMaxScale,

@@ -14,6 +14,13 @@
     <None Update="Data\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Large FOW pregenerated caches should stay in project Data to avoid slow startup/build copies. -->
+    <None Update="Data\fow_frontier_cache.bin">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\fow_body_cache.bin">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

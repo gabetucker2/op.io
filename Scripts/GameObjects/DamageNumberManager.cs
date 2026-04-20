@@ -223,6 +223,7 @@ namespace op.io
                 {
                     var e = _active[existingIdx];
                     e.BasePosition     = pos;
+                    e.Damage           = damage;
                     e.TotalDamage     += damage;
                     e.TimeSinceLastHit = 0f;
 
@@ -295,9 +296,8 @@ namespace op.io
                                    ComputeBounceMultiplier(e) *
                                    baseScale;
 
-                int total  = (int)MathF.Round(e.TotalDamage);
-                if (total <= 0) continue;
-                string text = e.HitCount > 1 ? $"{total} x{e.HitCount}" : total.ToString();
+                int perHit = e.Damage < 1f ? 0 : (int)MathF.Round(e.Damage);
+                string text = e.HitCount > 1 ? $"{perHit} x{e.HitCount}" : perHit.ToString();
 
                 Vector2 drawPos = e.BasePosition + e.DriftOffset;
                 Vector2 origin  = font.MeasureString(text) * 0.5f;

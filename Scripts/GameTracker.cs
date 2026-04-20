@@ -70,6 +70,9 @@ namespace op.io
         public static float XPClumpDeadZoneRadius       => XPClumpManager.DeadZoneRadius;
         public static float XPClumpPullZoneRadius       => XPClumpManager.PullZoneRadius;
         public static float XPClumpAbsorbZoneRadius     => XPClumpManager.AbsorbZoneRadius;
+        public static float XPClumpClusterHomeostasisVariance => XPClumpManager.ClusterHomeostasisVariance;
+        public static float XPClumpClusterInstabilityForce => XPClumpManager.ClusterInstabilityForce;
+        public static float XPClumpClusterInstabilityPulseHz => XPClumpManager.ClusterInstabilityPulseHz;
         // Bullet Defaults (DB-driven)
         public static float DefaultBulletSpeed      => BulletManager.DefaultBulletSpeed;
         public static float DefaultBulletLifespan   => BulletManager.DefaultBulletLifespan;
@@ -90,6 +93,20 @@ namespace op.io
         public static bool   FogOfWarEnabled       => FogOfWarManager.IsFogEnabled;
         public static bool   FogOfWarActive        => FogOfWarManager.IsFogActive;
         public static int    FogVisionSourceCount  => FogOfWarManager.ActiveVisionSourceCount;
+        public static bool   FogFrontierCacheFromDisk => FogOfWarManager.FrontierCacheLoadedFromDisk;
+        public static int    FogFrontierDirectionBin  => FogOfWarManager.ActiveFrontierDirectionBin;
+        public static int    FogFrontierPhaseIndex    => FogOfWarManager.ActiveFrontierPhaseIndex;
+        public static int    FogFrontierTextureResolution => FogOfWarManager.FrontierTextureResolution;
+        public static int    FogFrontierActiveTextureResolution => FogOfWarManager.FrontierActiveTextureResolution;
+        public static int    FogFrontierPhaseTotal    => FogOfWarManager.FrontierPhaseTotal;
+        public static float  FogFrontierAnimationPhase => FogOfWarManager.FrontierAnimationPhase;
+        public static float  FogFrontierFramesPerCentifoot => FogOfWarManager.FrontierFramesPerCentifootRate;
+        public static float  FogFrontierTargetUpdateIntervalSeconds => FogOfWarManager.FrontierTargetUpdateIntervalSeconds;
+        public static float  FogFrontierBuildMsLast   => FogOfWarManager.FrontierBuildMsLast;
+        public static float  FogFrontierBuildMsAvg    => FogOfWarManager.FrontierBuildMsAvg;
+        public static bool   FogFrontierBuildInFlight => FogOfWarManager.FrontierBuildInFlight;
+        public static float  CentifootWorldUnits   => CentifootUnits.WorldUnitsPerCentifoot;
+        public static string DistanceUnit          => CentifootUnits.UnitName;
 
         public static IReadOnlyList<GameTrackerVariable> GetTrackedVariables()
         {
@@ -116,33 +133,147 @@ namespace op.io
                     ? FreezeGameInputsReason
                     : string.Empty;
 
-                variables.Add(new GameTrackerVariable(property.Name, value, detail));
+                object displayValue = FormatTrackedValue(property.Name, value);
+                string category = GetVariableCategory(property.Name);
+                variables.Add(new GameTrackerVariable(property.Name, displayValue, detail, category));
             }
 
             foreach (FieldInfo field in trackerType.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
                 object value = field.GetValue(null);
-                variables.Add(new GameTrackerVariable(field.Name, value));
+                string category = GetVariableCategory(field.Name);
+                variables.Add(new GameTrackerVariable(field.Name, value, string.Empty, category));
             }
 
-            variables.Sort((left, right) => string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase));
+            variables.Sort((left, right) =>
+            {
+                int cmp = string.Compare(left.Category, right.Category, StringComparison.OrdinalIgnoreCase);
+                if (cmp != 0)
+                {
+                    return cmp;
+                }
+
+                return string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
+            });
             return variables;
         }
 
         public readonly struct GameTrackerVariable
         {
-            public GameTrackerVariable(string name, object value, string detail = null)
+            public GameTrackerVariable(string name, object value, string detail = null, string category = null)
             {
                 Name   = name;
                 Value  = value;
                 Detail = detail ?? string.Empty;
+                Category = string.IsNullOrWhiteSpace(category) ? "General" : category.Trim();
             }
 
             public string Name      { get; }
             public object Value     { get; }
             /// <summary>Optional detail/reason message shown in the Backend message column.</summary>
             public string Detail    { get; }
+            public string Category  { get; }
             public bool   IsBoolean => Value is bool;
+        }
+
+        private static string GetVariableCategory(string variableName)
+        {
+            if (string.IsNullOrWhiteSpace(variableName))
+            {
+                return "General";
+            }
+
+            if (variableName.StartsWith("Fog", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(variableName, nameof(PlayerSightRadius), StringComparison.OrdinalIgnoreCase))
+            {
+                return "Fog";
+            }
+
+            if (variableName.StartsWith("XP", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("PendingFarm", StringComparison.OrdinalIgnoreCase))
+            {
+                return "XP";
+            }
+
+            if (variableName.StartsWith("Bullet", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("AirResistance", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Bounce", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("HitVelocity", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Penetration", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Combat";
+            }
+
+            if (variableName.StartsWith("Physics", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Physics";
+            }
+
+            if (variableName.StartsWith("Window", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Block", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Dock", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Hovered", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("GUI", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Input", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Freeze", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("AnyGUI", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Cursor", StringComparison.OrdinalIgnoreCase))
+            {
+                return "UI";
+            }
+
+            if (variableName.StartsWith("ActiveBody", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Centifoot", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("DistanceUnit", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Angular", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("BarrelSwitch", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Player";
+            }
+
+            return "General";
+        }
+
+        private static object FormatTrackedValue(string variableName, object value)
+        {
+            if (value == null || !TryGetFloat(value, out float numericValue))
+            {
+                return value;
+            }
+
+            return variableName switch
+            {
+                nameof(PlayerSightRadius) => CentifootUnits.FormatDistance(numericValue),
+                nameof(XPClumpDeadZoneRadius) => CentifootUnits.FormatDistance(numericValue),
+                nameof(XPClumpPullZoneRadius) => CentifootUnits.FormatDistance(numericValue),
+                nameof(XPClumpAbsorbZoneRadius) => CentifootUnits.FormatDistance(numericValue),
+                _ => value
+            };
+        }
+
+        private static bool TryGetFloat(object value, out float numericValue)
+        {
+            switch (value)
+            {
+                case float f:
+                    numericValue = f;
+                    return true;
+                case double d:
+                    numericValue = (float)d;
+                    return true;
+                case int i:
+                    numericValue = i;
+                    return true;
+                case long l:
+                    numericValue = l;
+                    return true;
+                case decimal m:
+                    numericValue = (float)m;
+                    return true;
+                default:
+                    numericValue = 0f;
+                    return false;
+            }
         }
     }
 }

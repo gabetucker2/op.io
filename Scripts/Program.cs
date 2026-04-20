@@ -5,7 +5,7 @@ namespace op.io
     public static class Program
     {
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             RuntimeErrorLogger.Initialize();
             using var game = new Core();

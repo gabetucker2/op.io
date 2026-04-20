@@ -88,17 +88,18 @@ namespace op.io
                         {
                             // Agent A damages non-agent B (only if destructible). Agent takes
                             // reciprocal self-damage only when B itself deals collision damage.
-                            float dmg = agentA.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
+                            float dmgToB = agentA.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
                             if (objB.IsDestructible && objB.CurrentHealth > 0f)
                             {
-                                float dealtToB = objB.ApplyDamage(dmg, agentA.ID);
+                                float dealtToB = objB.ApplyDamage(dmgToB, agentA.ID);
                                 objB.TriggerHitFlash();
                                 DamageNumberManager.Notify(objB.ID, objB.Position, dealtToB, sourceId: agentA.ID, isNewHit: isNewContact);
                                 objB.DeathImpulse = (agentA.Position - agentA.PreviousPosition) / Core.DELTATIME;
                             }
-                            if (dmg > 0f && objB.BodyCollisionDamage > 0f)
+                            float dmgToA = objB.BodyCollisionDamage * Core.DELTATIME;
+                            if (dmgToA > 0f && objB.BodyCollisionDamage > 0f)
                             {
-                                float dealtToA = agentA.ApplyDamage(dmg, objB.ID);
+                                float dealtToA = agentA.ApplyDamage(dmgToA, objB.ID);
                                 agentA.TriggerHitFlash();
                                 DamageNumberManager.Notify(agentA.ID, agentA.Position, dealtToA, sourceId: objB.ID, isNewHit: isNewContact);
                                 agentA.DeathImpulse = (objB.Position - objB.PreviousPosition) / Core.DELTATIME;
@@ -108,17 +109,18 @@ namespace op.io
                         {
                             // Agent B damages non-agent A (only if destructible). Agent takes
                             // reciprocal self-damage only when A itself deals collision damage.
-                            float dmg = agentB.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
+                            float dmgToA = agentB.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
                             if (objA.IsDestructible && objA.CurrentHealth > 0f)
                             {
-                                float dealtToA = objA.ApplyDamage(dmg, agentB.ID);
+                                float dealtToA = objA.ApplyDamage(dmgToA, agentB.ID);
                                 objA.TriggerHitFlash();
                                 DamageNumberManager.Notify(objA.ID, objA.Position, dealtToA, sourceId: agentB.ID, isNewHit: isNewContact);
                                 objA.DeathImpulse = (agentB.Position - agentB.PreviousPosition) / Core.DELTATIME;
                             }
-                            if (dmg > 0f && objA.BodyCollisionDamage > 0f)
+                            float dmgToB = objA.BodyCollisionDamage * Core.DELTATIME;
+                            if (dmgToB > 0f && objA.BodyCollisionDamage > 0f)
                             {
-                                float dealtToB = agentB.ApplyDamage(dmg, objA.ID);
+                                float dealtToB = agentB.ApplyDamage(dmgToB, objA.ID);
                                 agentB.TriggerHitFlash();
                                 DamageNumberManager.Notify(agentB.ID, agentB.Position, dealtToB, sourceId: objA.ID, isNewHit: isNewContact);
                                 agentB.DeathImpulse = (objA.Position - objA.PreviousPosition) / Core.DELTATIME;

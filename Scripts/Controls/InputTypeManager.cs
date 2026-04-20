@@ -33,6 +33,7 @@ namespace op.io
         private static readonly Dictionary<string, bool> _doubleTapAwaitingSecondTap = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, float> _doubleTapFirstTapTime = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, bool> _doubleTapChordHeld = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, bool> _doubleTapHoldActive = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, float> _singleToggleSuppressionUntil = new(StringComparer.OrdinalIgnoreCase);
 
         // Minimal combo suppression state
@@ -456,6 +457,39 @@ namespace op.io
                     _previousMouseState.XButton2 == ButtonState.Pressed);
         }
 
+        public static bool IsMouseButtonPressStarted(string mouseKey)
+        {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
+            EnsurePreviousState();
+
+            if (string.IsNullOrWhiteSpace(mouseKey))
+            {
+                return false;
+            }
+
+            MouseState currentMouseState = Mouse.GetState();
+
+            return (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) &&
+                    currentMouseState.LeftButton == ButtonState.Pressed &&
+                    _previousMouseState.LeftButton == ButtonState.Released) ||
+                   (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) &&
+                    currentMouseState.RightButton == ButtonState.Pressed &&
+                    _previousMouseState.RightButton == ButtonState.Released) ||
+                   (string.Equals(mouseKey, "MiddleClick", StringComparison.OrdinalIgnoreCase) &&
+                    currentMouseState.MiddleButton == ButtonState.Pressed &&
+                    _previousMouseState.MiddleButton == ButtonState.Released) ||
+                   (string.Equals(mouseKey, "Mouse4", StringComparison.OrdinalIgnoreCase) &&
+                    currentMouseState.XButton1 == ButtonState.Pressed &&
+                    _previousMouseState.XButton1 == ButtonState.Released) ||
+                   (string.Equals(mouseKey, "Mouse5", StringComparison.OrdinalIgnoreCase) &&
+                    currentMouseState.XButton2 == ButtonState.Pressed &&
+                    _previousMouseState.XButton2 == ButtonState.Released);
+        }
+
         public static bool IsKeyTapReleased(Keys key)
         {
             if (IsFocusBlocked())
@@ -510,6 +544,19 @@ namespace op.io
             }
 
             return isReleased;
+        }
+
+        public static bool IsKeyPressStarted(Keys key)
+        {
+            if (IsFocusBlocked())
+            {
+                return false;
+            }
+
+            EnsurePreviousState();
+
+            KeyboardState current = Keyboard.GetState();
+            return current.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key);
         }
 
         public static bool IsMouseButtonSwitch(string mouseKey)
@@ -1230,6 +1277,28 @@ namespace op.io
             return EvaluateDoubleTapTapInternal(settingKey, tapDetected, primaryMouseToken, primaryKeyTokens);
         }
 
+        public static bool EvaluateDoubleTapHoldPress(
+            string settingKey,
+            bool pressStarted,
+            bool primaryHeld,
+            string primaryMouseToken,
+            IEnumerable<Keys> primaryKeyTokens)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            EnsureBindingTracking(settingKey);
+            if (IsFocusBlocked())
+            {
+                bool focusedState = _doubleTapHoldActive.TryGetValue(settingKey, out bool focusHeld) && focusHeld;
+                return focusedState && primaryHeld;
+            }
+
+            return EvaluateDoubleTapHoldInternal(settingKey, pressStarted, primaryHeld, primaryMouseToken, primaryKeyTokens);
+        }
+
         public static bool EvaluateComboDoubleTapSwitch(
             string settingKey,
             bool allTokensHeld,
@@ -1281,6 +1350,56 @@ namespace op.io
             }
 
             return EvaluateDoubleTapTapInternal(settingKey, tapDetected: true, primaryMouseToken, primaryKeyTokens);
+        }
+
+        public static bool EvaluateComboDoubleTapHold(
+            string settingKey,
+            bool allTokensHeld,
+            IEnumerable<Keys> chordKeys,
+            string primaryMouseToken,
+            IEnumerable<Keys> primaryKeyTokens)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            EnsureBindingTracking(settingKey);
+            if (IsFocusBlocked())
+            {
+                bool focusedState = _doubleTapHoldActive.TryGetValue(settingKey, out bool focusHeld) && focusHeld;
+                return focusedState && allTokensHeld;
+            }
+
+            bool wasFullyHeld = _doubleTapChordHeld.TryGetValue(settingKey, out bool held) && held;
+            _doubleTapChordHeld[settingKey] = allTokensHeld;
+
+            if (allTokensHeld)
+            {
+                if (chordKeys != null)
+                {
+                    foreach (Keys key in chordKeys)
+                    {
+                        if (key == Keys.None) continue;
+                        _comboActiveKeys.Add(key);
+                    }
+                }
+            }
+            else if (wasFullyHeld)
+            {
+                if (chordKeys != null)
+                {
+                    foreach (Keys key in chordKeys)
+                    {
+                        if (key == Keys.None) continue;
+                        _comboActiveKeys.Remove(key);
+                        _comboBreakGuard.Add(key);
+                    }
+                }
+            }
+
+            bool pressStarted = allTokensHeld && !wasFullyHeld;
+            return EvaluateDoubleTapHoldInternal(settingKey, pressStarted, allTokensHeld, primaryMouseToken, primaryKeyTokens);
         }
 
         public static bool EvaluateComboSwitch(
@@ -1417,6 +1536,77 @@ namespace op.io
             _doubleTapAwaitingSecondTap[settingKey] = true;
             ArmSingleToggleSuppression(primaryMouseToken, primaryKeyTokens, now + window);
             return _bindingSwitchStates[settingKey];
+        }
+
+        private static bool EvaluateDoubleTapHoldInternal(
+            string settingKey,
+            bool pressStarted,
+            bool primaryHeld,
+            string primaryMouseToken,
+            IEnumerable<Keys> primaryKeyTokens)
+        {
+            EnsureBindingTracking(settingKey);
+
+            if (!_doubleTapAwaitingSecondTap.ContainsKey(settingKey))
+            {
+                _doubleTapAwaitingSecondTap[settingKey] = false;
+            }
+
+            if (!_doubleTapFirstTapTime.ContainsKey(settingKey))
+            {
+                _doubleTapFirstTapTime[settingKey] = -1f;
+            }
+
+            if (!_doubleTapHoldActive.ContainsKey(settingKey))
+            {
+                _doubleTapHoldActive[settingKey] = false;
+            }
+
+            float now = Core.GAMETIME;
+            float window = GetDoubleTapSuppressionSeconds();
+
+            if (_doubleTapAwaitingSecondTap[settingKey])
+            {
+                float firstTapTime = _doubleTapFirstTapTime[settingKey];
+                if (firstTapTime < 0f || (now - firstTapTime) > window)
+                {
+                    _doubleTapAwaitingSecondTap[settingKey] = false;
+                    _doubleTapFirstTapTime[settingKey] = -1f;
+                }
+            }
+
+            if (!primaryHeld && _doubleTapHoldActive[settingKey])
+            {
+                _doubleTapHoldActive[settingKey] = false;
+            }
+
+            if (!pressStarted)
+            {
+                return _doubleTapHoldActive[settingKey] && primaryHeld;
+            }
+
+            if (!_doubleTapAwaitingSecondTap[settingKey])
+            {
+                _doubleTapAwaitingSecondTap[settingKey] = true;
+                _doubleTapFirstTapTime[settingKey] = now;
+                ArmSingleToggleSuppression(primaryMouseToken, primaryKeyTokens, now + window);
+                return false;
+            }
+
+            float elapsed = now - _doubleTapFirstTapTime[settingKey];
+            if (elapsed <= window)
+            {
+                _doubleTapAwaitingSecondTap[settingKey] = false;
+                _doubleTapFirstTapTime[settingKey] = -1f;
+                _doubleTapHoldActive[settingKey] = true;
+                return primaryHeld;
+            }
+
+            _doubleTapFirstTapTime[settingKey] = now;
+            _doubleTapAwaitingSecondTap[settingKey] = true;
+            _doubleTapHoldActive[settingKey] = false;
+            ArmSingleToggleSuppression(primaryMouseToken, primaryKeyTokens, now + window);
+            return false;
         }
 
         private static void ArmSingleToggleSuppression(string primaryMouseToken, IEnumerable<Keys> primaryKeyTokens, float suppressUntil)
@@ -1560,6 +1750,11 @@ namespace op.io
             {
                 _doubleTapChordHeld[settingKey] = false;
             }
+
+            if (!_doubleTapHoldActive.ContainsKey(settingKey))
+            {
+                _doubleTapHoldActive[settingKey] = false;
+            }
         }
 
         private static void SeedBindingState(string settingKey, bool state)
@@ -1579,6 +1774,7 @@ namespace op.io
             _doubleTapAwaitingSecondTap[settingKey] = false;
             _doubleTapFirstTapTime[settingKey] = -1f;
             _doubleTapChordHeld[settingKey] = false;
+            _doubleTapHoldActive[settingKey] = false;
         }
 
         private static void RegisterComboKeyMembership(string settingKey, string inputKey)

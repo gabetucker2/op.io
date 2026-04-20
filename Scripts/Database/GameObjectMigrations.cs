@@ -59,6 +59,7 @@ namespace op.io
                 EnsureBlueLootFarmPrototype();
                 EnsureFarmMassQuadrupled();
                 EnsureBlueLootCollisionDamage();
+                EnsureFarmBodyCollisionDamageQuintupled();
                 EnsureDropGameObjectsTypeColumn();
                 EnsureBarrelHeightScalarSetting();
                 EnsureBulletKnockbackScalarSetting();
@@ -918,6 +919,44 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
             }
         }
 
+        private static void EnsureFarmBodyCollisionDamageQuintupled()
+        {
+            // One-time global balance pass: all farm collision damage x5.
+            // Compatibility:
+            // - if legacy x4 migration already applied, only apply x1.25 so total becomes x5.
+            // - otherwise apply x5 directly.
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".farm_body_collision_damage_quintupled_v1_applied");
+            if (System.IO.File.Exists(marker))
+            {
+                return;
+            }
+
+            string legacyQuadMarker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".farm_body_collision_damage_quadrupled_v1_applied");
+            try
+            {
+                bool hasLegacyQuad = System.IO.File.Exists(legacyQuadMarker);
+                string sql = hasLegacyQuad
+                    ? @"
+UPDATE Destructibles
+SET BodyCollisionDamage = BodyCollisionDamage * 1.25
+WHERE ID IN (SELECT ID FROM FarmData);"
+                    : @"
+UPDATE Destructibles
+SET BodyCollisionDamage = BodyCollisionDamage * 5
+WHERE ID IN (SELECT ID FROM FarmData);";
+                DatabaseQuery.ExecuteNonQuery(sql);
+
+                System.IO.File.WriteAllText(marker, System.DateTime.UtcNow.ToString("O"));
+                DebugLogger.PrintDatabase(hasLegacyQuad
+                    ? "EnsureFarmBodyCollisionDamageQuintupled: upgraded legacy farm BodyCollisionDamage from x4 to x5."
+                    : "EnsureFarmBodyCollisionDamageQuintupled: multiplied farm BodyCollisionDamage x5.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureFarmBodyCollisionDamageQuintupled failed: {ex.Message}");
+            }
+        }
+
         private static void EnsureDropGameObjectsTypeColumn()
         {
             if (!ColumnExists("GameObjects", "Type")) return;
@@ -1081,6 +1120,9 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
                 ("XPClumpClusterAttractForce", "45"),
                 ("XPClumpClusterHomeostasisDistance", "8"),
                 ("XPClumpClusterRepelForce", "95"),
+                ("XPClumpClusterHomeostasisVariance", "0.28"),
+                ("XPClumpClusterInstabilityForce", "9.5"),
+                ("XPClumpClusterInstabilityPulseHz", "1.4"),
                 ("XPClumpVisualMergeRadius", "24"),
                 ("XPClumpVisualMergeGrowth", "0.19"),
                 ("XPClumpVisualMergeMaxScale", "4.5"),
@@ -1193,21 +1235,26 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
                 ("FogOfWarEnabled", "Whether fog-of-war currently has a viewing unit context available."),
                 ("FogOfWarActive", "Whether fog-of-war is actively rendering this frame."),
                 ("FogVisionSourceCount", "How many sight sources are currently revealing vision territory."),
-                ("PlayerSightRadius", "The player's active sight radius in world units."),
+                ("PlayerSightRadius", "The player's active sight radius in centifoots."),
+                ("CentifootWorldUnits", "Copied baseline conversion: 1 centifoot = this many world units."),
+                ("DistanceUnit", "Name of the active distance unit used by backend distance displays."),
                 ("XPClumpCount", "Number of active free clumps currently in the world."),
                 ("XPUnstableClumpCount", "Number of low-health unstable clumps currently visualized on destructible drop sources."),
                 ("PendingFarmXPDrops", "Number of destructible drop sources currently fading out that still have queued free clumps to spawn."),
                 ("XPClumpsAbsorbedThisSecond", "How many XP clumps have been absorbed across all units during the current one-second pickup window."),
                 ("XPClumpPickupPerSecond", "Maximum number of XP clumps a single unit may absorb per second."),
-                ("XPClumpDeadZoneRadius", "Distance from a clump where units are considered outside active pickup influence."),
-                ("XPClumpPullZoneRadius", "Distance from a clump where units begin applying pull-zone attraction."),
-                ("XPClumpAbsorbZoneRadius", "Distance from a clump where orbit-lock and absorption behavior begins."),
+                ("XPClumpDeadZoneRadius", "Distance from a clump where units are considered outside active pickup influence, shown in centifoots."),
+                ("XPClumpPullZoneRadius", "Distance from a clump where units begin applying pull-zone attraction, shown in centifoots."),
+                ("XPClumpAbsorbZoneRadius", "Distance from a clump where orbit-lock and absorption behavior begins, shown in centifoots."),
+                ("XPClumpClusterHomeostasisVariance", "How much pair-by-pair variance is injected into clump cluster homeostasis distance."),
+                ("XPClumpClusterInstabilityForce", "Tangential magnetic wobble force that keeps clump clusters fluid and irregular."),
+                ("XPClumpClusterInstabilityPulseHz", "Pulse frequency for magnetic wobble and dynamic homeostasis modulation in clump clusters."),
             ];
 
             foreach ((string key, string text) in entries)
             {
                 DatabaseQuery.ExecuteNonQuery(
-                    "INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
+                    "INSERT OR REPLACE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
                     new Dictionary<string, object>
                     {
                         ["@key"] = key,

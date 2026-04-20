@@ -922,6 +922,7 @@ namespace op.io
                     InputType.Trigger => modifiersHeld && primary.IsTriggered(),
                     InputType.SaveSwitch or InputType.NoSaveSwitch => EvaluateSwitchState(primary, modifiersHeld, hasModifiers),
                     InputType.DoubleTapToggle => EvaluateDoubleTapToggleState(primary, modifiersHeld, hasModifiers),
+                    InputType.DoubleTapHold => EvaluateDoubleTapHoldState(primary, modifiersHeld, hasModifiers),
                     InputType.SaveEnum or InputType.NoSaveEnum => modifiersHeld && primary.IsTriggered(),
                     _ => false
                 };
@@ -1041,6 +1042,34 @@ namespace op.io
                 return InputTypeManager.EvaluateDoubleTapSwitchTap(
                     SettingKey,
                     tapReleased,
+                    primary.MouseButton,
+                    primary.Keys);
+            }
+
+            private bool EvaluateDoubleTapHoldState(InputBindingToken primary, bool modifiersHeld, bool hasModifiers)
+            {
+                if (hasModifiers)
+                {
+                    bool allTokensHeld = Tokens.All(t => t.IsHeld());
+                    return InputTypeManager.EvaluateComboDoubleTapHold(
+                        SettingKey,
+                        allTokensHeld,
+                        GetAllKeys(Tokens),
+                        primary.MouseButton,
+                        primary.Keys);
+                }
+
+                if (!modifiersHeld)
+                {
+                    return false;
+                }
+
+                bool pressStarted = primary.IsPressStarted();
+                bool primaryHeld = primary.IsHeld();
+                return InputTypeManager.EvaluateDoubleTapHoldPress(
+                    SettingKey,
+                    pressStarted,
+                    primaryHeld,
                     primary.MouseButton,
                     primary.Keys);
             }
@@ -1385,6 +1414,24 @@ namespace op.io
                 foreach (Keys key in Keys)
                 {
                     if (InputTypeManager.IsKeyTapReleased(key))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public bool IsPressStarted()
+            {
+                if (IsMouse)
+                {
+                    return InputTypeManager.IsMouseButtonPressStarted(MouseButton);
+                }
+
+                foreach (Keys key in Keys)
+                {
+                    if (InputTypeManager.IsKeyPressStarted(key))
                     {
                         return true;
                     }

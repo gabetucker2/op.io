@@ -372,6 +372,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 row.Value = variable.Value;
                 row.IsBoolean = variable.IsBoolean;
                 row.RenderOrder = _customOrder[storageKey];
+                row.DisplayName = variable.Name;
+                row.Category = variable.Category;
 
                 // A non-empty Detail from GameTracker takes precedence as the persistent message.
                 // Otherwise, build a descriptive change message when the value transitions.
@@ -584,8 +586,8 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_headerFunCol != null) return _headerFunCol;
             _headerFunCol = new FunColInterface(
                 new float[] { 1f / 3f, 1f / 3f, 1f / 3f },
-                new TextLabelFeature("Name", FunColTextAlign.Right)
-                    { HeaderTooltipTexts = ["Variable name"] },
+                new TextLabelFeature("Category/Name", FunColTextAlign.Right)
+                    { HeaderTooltipTexts = ["Variable category and name"] },
                 new ValueDisplayFeature("Value")
                     { HeaderTooltipTexts = ["Current value of the variable"] },
                 new WrappingTextFeature("Message", FunColTextAlign.Left)
@@ -636,7 +638,7 @@ namespace op.io.UI.BlockScripts.Blocks
             var funCol = GetOrCreateRowFunCol(row.Name);
 
             if (funCol.GetFeature(0) is TextLabelFeature nameF)
-                nameF.Text = row.Name;
+                nameF.Text = BuildCategorizedDisplayName(row);
 
             if (funCol.GetFeature(1) is ValueDisplayFeature valF)
             {
@@ -678,7 +680,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 _dragGhostFunCol.SuppressTooltipWarnings = true;
             }
 
-            if (_dragGhostFunCol.GetFeature(0) is TextLabelFeature gn) gn.Text = row.Name;
+            if (_dragGhostFunCol.GetFeature(0) is TextLabelFeature gn) gn.Text = BuildCategorizedDisplayName(row);
             if (_dragGhostFunCol.GetFeature(1) is ValueDisplayFeature gv)
             {
                 gv.IsBoolean = row.IsBoolean;
@@ -691,6 +693,22 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_dragGhostFunCol.GetFeature(2) is WrappingTextFeature gm) gm.Text = row.LastChangeMessage ?? string.Empty;
 
             _dragGhostFunCol.Draw(spriteBatch, dragBounds, boldFont, _pixelTexture);
+        }
+
+        private static string BuildCategorizedDisplayName(BackendVariable row)
+        {
+            if (row == null)
+            {
+                return string.Empty;
+            }
+
+            string name = string.IsNullOrWhiteSpace(row.DisplayName) ? row.Name : row.DisplayName;
+            if (string.IsNullOrWhiteSpace(row.Category))
+            {
+                return name;
+            }
+
+            return $"{row.Category} / {name}";
         }
 
         private static int GetNextOrderSeed()
@@ -771,9 +789,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 Value = value;
                 IsBoolean = isBoolean;
                 LastChangeMessage = string.Empty;
+                DisplayName = Name;
+                Category = "General";
             }
 
             public string Name { get; }
+            public string DisplayName { get; set; }
+            public string Category { get; set; }
             public object Value { get; set; }
             public bool IsBoolean { get; set; }
             public string LastChangeMessage { get; set; }

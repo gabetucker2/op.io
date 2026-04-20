@@ -301,7 +301,7 @@ namespace op.io
             // ── Movement group ────────────────────────────────────────────────────
             yield return new Row("Speed",              $"{a.Speed:0.##}");
             yield return new Row("Control",            $"{a.Control:0.##}");
-            yield return new Row("Sight",              $"{a.Sight:0.##}");
+            yield return new Row("Sight",              CentifootUnits.FormatDistance(a.Sight));
             yield return new Row("Rotation Speed",     $"{(float)(180.0 / AttributeDerived.RotationDelay(control)):0.##} deg/s",
                                  isHidden: true, affectsList: AttributeDerived.AffectsRotationSpeed);
             yield return new Row("Accel. Speed",       $"{(1f / AttributeDerived.AccelerationDelay(control)):0.##} /s",
@@ -333,11 +333,11 @@ namespace op.io
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletRecoil);
             yield return new Row("Bullet Health",      $"{AttributeDerived.BulletHealth(mass):0.##}",
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletHealth);
-            yield return new Row("Bullet Radius",      $"{radius:0.##} px",
+            yield return new Row("Bullet Radius",      CentifootUnits.FormatDistance(radius),
                                  isHidden: true, affectsList: AttributeDerived.AffectsBulletRadius);
 
             yield return new Row("Bullet Mass",        $"{a.BulletMass:0.##}");
-            yield return new Row("Bullet Speed",       $"{a.BulletSpeed:0.##}");
+            yield return new Row("Bullet Speed",       CentifootUnits.FormatSpeed(a.BulletSpeed));
             yield return new Row("Bullet Lifespan",    $"{a.BulletMaxLifespan:0.##}");
 
             yield return new Row("Bullet Drag",        $"{drag:0.####}",
@@ -443,19 +443,19 @@ namespace op.io
 
         private readonly IEnumerable<Row> BodyTransformRows()
         {
-            yield return new Row("Position", $"{_target.Position.X:0.0}, {_target.Position.Y:0.0}");
+            yield return new Row("Position", CentifootUnits.FormatVector2(_target.Position, "0.###"));
             float rotationDeg = MathHelper.ToDegrees(_target.Rotation);
             yield return new Row("Rotation", $"{rotationDeg:0.0} deg");
 
             if (_target.Shape != null && _target.Shape.ShapeType == "Circle")
             {
                 float radius = AttributeDerived.BodyRadius(_target.Mass, CollisionResolver.BodyRadiusScalar);
-                yield return new Row("Radius", $"{radius:0.##} px",
+                yield return new Row("Radius", CentifootUnits.FormatDistance(radius),
                                      isHidden: true, affectsList: AttributeDerived.AffectsBodyRadius);
             }
             else
             {
-                yield return new Row("Size", $"{_target.Width} x {_target.Height}");
+                yield return new Row("Size", CentifootUnits.FormatDimensions(_target.Width, _target.Height));
             }
 
             yield return new Row("Shape",    BuildShapeText());
@@ -488,7 +488,7 @@ namespace op.io
         {
             if (agent.BarrelCount <= 0)
             {
-                yield return new Row("Offset",   "0.0, 0.0");
+                yield return new Row("Offset",   CentifootUnits.FormatVector2(Vector2.Zero, "0.###"));
                 yield return new Row("Rotation", "0.0 deg");
                 yield break;
             }
@@ -500,12 +500,12 @@ namespace op.io
             float barrelWidth  = AttributeDerived.BarrelWidth(mass, BulletManager.BulletRadiusScalar);
             float barrelHeight = AttributeDerived.BarrelHeight(bulletSpeed, BulletManager.BarrelHeightScalar);
 
-            yield return new Row("Offset",   $"{agent.Position.X:0.0}, {agent.Position.Y:0.0}");
+            yield return new Row("Offset",   CentifootUnits.FormatVector2(agent.Position, "0.###"));
             float rotDeg = MathHelper.ToDegrees(agent.Rotation);
             yield return new Row("Rotation", $"{rotDeg:0.0} deg");
-            yield return new Row("Barrel Width",  $"{barrelWidth:0.##} px",
+            yield return new Row("Barrel Width",  CentifootUnits.FormatDistance(barrelWidth),
                                  isHidden: true, affectsList: AttributeDerived.AffectsBarrelWidth);
-            yield return new Row("Barrel Height", $"{barrelHeight:0.##} px",
+            yield return new Row("Barrel Height", CentifootUnits.FormatDistance(barrelHeight),
                                  isHidden: true, affectsList: AttributeDerived.AffectsBarrelHeight);
             if (slot.FullShape != null)
             {

@@ -7,6 +7,7 @@
         SaveSwitch,
         NoSaveSwitch,
         DoubleTapToggle,
+        DoubleTapHold,
         SaveEnum,
         NoSaveEnum,
         Float

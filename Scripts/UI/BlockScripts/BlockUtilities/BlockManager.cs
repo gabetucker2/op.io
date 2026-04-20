@@ -343,8 +343,15 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         /// </summary>
         private static bool IsBlockInteractableAt(DockBlock block, Point pos)
         {
+            if (IsTabChromeInteractableAt(pos))
+            {
+                return true;
+            }
+
             if (IsBlockLocked(block) || IsPanelLocked(block))
+            {
                 return false;
+            }
 
             return block.Kind switch
             {
@@ -352,6 +359,61 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 DockBlockKind.DockingSetups => DockingSetupsBlock.IsInteractableAt(pos),
                 _ => true
             };
+        }
+
+        private static bool IsTabChromeInteractableAt(Point pos)
+        {
+            foreach (PanelGroupBarLayout layout in _groupBarLayoutCache.Values)
+            {
+                if (layout == null || layout.Tabs.Count == 0)
+                {
+                    continue;
+                }
+
+                if (!_panelGroups.TryGetValue(layout.PanelId, out PanelGroup group))
+                {
+                    continue;
+                }
+
+                DockBlock active = group.ActiveBlock;
+                if (active == null || !active.IsVisible || GetGroupBarHeight(group) <= 0)
+                {
+                    continue;
+                }
+
+                DockBlock topOverlayAtCursor = GetTopmostVisibleOverlayAt(pos);
+                if (topOverlayAtCursor != null &&
+                    (!active.IsOverlay || !ReferenceEquals(active, topOverlayAtCursor)))
+                {
+                    continue;
+                }
+
+                bool inTabRegion = layout.GroupBarBounds != Rectangle.Empty && layout.GroupBarBounds.Contains(pos);
+                if (!inTabRegion)
+                {
+                    foreach (TabHitRegion tab in layout.Tabs)
+                    {
+                        if (tab.Bounds.Contains(pos))
+                        {
+                            inTabRegion = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!inTabRegion)
+                {
+                    continue;
+                }
+
+                bool tabsBlockedByPanelLock = IsPanelLocked(group) && !DockingModeEnabled;
+                if (!tabsBlockedByPanelLock)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static bool DockingModeEnabled
@@ -1867,10 +1929,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _blockMenuEntries.Add(new BlockMenuEntry(PropertiesBlockKey, PropertiesBlock.BlockTitle, DockBlockKind.Properties, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlsBlockKey, ControlsBlock.BlockTitle, DockBlockKind.Controls, BlockMenuControlMode.Toggle, initialVisible: true));
-            _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlSetupsBlockKey, ControlSetupsBlock.BlockTitle, DockBlockKind.ControlSetups, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(DockingSetupsBlockKey, DockingSetupsBlock.BlockTitle, DockBlockKind.DockingSetups, BlockMenuControlMode.Toggle, initialVisible: false));
-            _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(BackendBlockKey, BackendBlock.BlockTitle, DockBlockKind.Backend, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(DebugLogsBlockKey, DebugLogsBlock.BlockTitle, DockBlockKind.DebugLogs, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(SpecsBlockKey, SpecsBlock.BlockTitle, DockBlockKind.Specs, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(BarsBlockKey, BarsBlock.BlockTitle, DockBlockKind.Bars, BlockMenuControlMode.Toggle, initialVisible: true));
@@ -3279,6 +3341,11 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 if (leftClickStarted)
                 {
+                    if (!tabsBlockedByPanelLock)
+                    {
+                        _uiOwnsLeftClick = true;
+                    }
+
                     if (!panelLocked && allowLockToggle)
                     {
                         foreach (TabHitRegion tab in layout.Tabs)

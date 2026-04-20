@@ -43,7 +43,7 @@
 
 - Miscellaneous
     - A **centifoot** is the unit of measurement of distance in the game. 1 centifoot is around twice as large as the starting player and about the width of an intermediate farm.
-    - **Fog of war** obscures parts of the map out of your vision
+    - **Fog of war (FOW)** obscures parts of the map out of your vision
         - **Fog territory** should fully obstruct territory with respect to a unit
         - **Vision territory** is visible with respect to a unit
     - **Drops** are items/XP dropped after a destructible GO dies
