@@ -93,6 +93,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int CategoryLabelTopPad = 1;
         private const int CategoryToggleBtnSize = 10;
         private const int CategoryToggleBtnPad = 3;
+        private const int CategoryModeToggleGap = 2;
         private const string EnumOptionTooltipKeyEnabled = "Dropdown_ControlEnumOptionEnabled";
         private const string EnumOptionTooltipKeyDisabled = "Dropdown_ControlEnumOptionDisabled";
 
@@ -226,8 +227,9 @@ namespace op.io.UI.BlockScripts.Blocks
             bool leftClickStarted = leftDown && !leftDownPrev;
             bool leftClickReleased = !leftDown && leftDownPrev;
             bool pointerInsideList = listBounds.Contains(mouseState.Position);
-            _categoryModeToggleBounds = GetCategoryModeToggleBounds(contentBounds);
-            bool pointerOnCategoryModeToggle = _categoryModeToggleBounds.Contains(mouseState.Position);
+            _categoryModeToggleBounds = GetCategoryModeToggleBounds(contentBounds, headerFunColEarly);
+            bool categoryModeToggleVisible = ShouldShowHeaderUtilityToggles(contentBounds, headerFunColEarly, blockLocked, mouseState.Position);
+            bool pointerOnCategoryModeToggle = categoryModeToggleVisible && _categoryModeToggleBounds.Contains(mouseState.Position);
             bool categoryModeToggleClicked = false;
 
             if (!blockLocked && !IsAnyDragActive && leftClickStarted && pointerOnCategoryModeToggle)
@@ -605,7 +607,7 @@ namespace op.io.UI.BlockScripts.Blocks
             hfc.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
             var headerStrip = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, hdrH);
             hfc.DrawHeader(spriteBatch, headerStrip, boldFont, _pixelTexture);
-            DrawCategoryModeToggle(spriteBatch, contentBounds, blockLocked, boldFont);
+            DrawCategoryModeToggle(spriteBatch, contentBounds, blockLocked, hfc);
             DrawEnumDropdownOptionOverlays(spriteBatch, blockLocked);
         }
 
@@ -1405,13 +1407,45 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             }
         }
 
-        private static Rectangle GetCategoryModeToggleBounds(Rectangle contentBounds)
+        private static Rectangle GetCategoryModeToggleBounds(Rectangle contentBounds, FunColInterface headerFunCol)
         {
-            const int toggleWidth = 146;
-            const int toggleHeight = 14;
-            int x = Math.Max(contentBounds.X, contentBounds.Right - toggleWidth - 4);
-            int y = contentBounds.Y + 1;
-            return new Rectangle(x, y, toggleWidth, toggleHeight);
+            Rectangle toggleAnchorBounds = new(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
+            Rectangle colsToggleBounds = headerFunCol?.GetHeaderToggleButtonRect(toggleAnchorBounds)
+                ?? new Rectangle(contentBounds.X + 3, contentBounds.Y + 3, CategoryToggleBtnSize, CategoryToggleBtnSize);
+
+            int width = Math.Max(4, colsToggleBounds.Width);
+            int x = colsToggleBounds.Right + CategoryModeToggleGap;
+            if (x + width > contentBounds.Right)
+            {
+                x = Math.Max(contentBounds.X, contentBounds.Right - width);
+            }
+
+            return new Rectangle(x, colsToggleBounds.Y, width, colsToggleBounds.Height);
+        }
+
+        private static Rectangle GetHeaderUtilityToggleHoverBounds(Rectangle contentBounds, FunColInterface headerFunCol)
+        {
+            if (headerFunCol != null && !headerFunCol.HeaderVisible && headerFunCol.CollapsedToggleBounds.HasValue)
+            {
+                return headerFunCol.CollapsedToggleBounds.Value;
+            }
+
+            return new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, ControlsHeaderHeight);
+        }
+
+        private static bool ShouldShowHeaderUtilityToggles(
+            Rectangle contentBounds,
+            FunColInterface headerFunCol,
+            bool blockLocked,
+            Point pointer)
+        {
+            if (blockLocked || IsAnyDragActive || !BlockManager.DockingModeEnabled)
+            {
+                return false;
+            }
+
+            Rectangle hoverBounds = GetHeaderUtilityToggleHoverBounds(contentBounds, headerFunCol);
+            return hoverBounds.Contains(pointer);
         }
 
         private static void SetCategoryModeEnabled(bool enabled, bool persistState, bool resetDefaultsWhenEnabling)
@@ -1500,37 +1534,30 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             PersistRowOrder();
         }
 
-        private static void DrawCategoryModeToggle(SpriteBatch spriteBatch, Rectangle contentBounds, bool blockLocked, UIStyle.UIFont font)
+        private static void DrawCategoryModeToggle(
+            SpriteBatch spriteBatch,
+            Rectangle contentBounds,
+            bool blockLocked,
+            FunColInterface headerFunCol)
         {
             if (spriteBatch == null || _pixelTexture == null)
             {
                 return;
             }
 
-            Rectangle bounds = GetCategoryModeToggleBounds(contentBounds);
+            Rectangle bounds = GetCategoryModeToggleBounds(contentBounds, headerFunCol);
             _categoryModeToggleBounds = bounds;
-            bool hovered = !blockLocked && bounds.Contains(Mouse.GetState().Position);
-            Color fill = _funColCategoryModeEnabled
-                ? (hovered ? ColorPalette.IndicatorActive * 0.58f : ColorPalette.IndicatorActive * 0.45f)
-                : (hovered ? ColorPalette.IndicatorInactive * 0.58f : ColorPalette.IndicatorInactive * 0.45f);
-
-            if (blockLocked)
+            Point pointer = Mouse.GetState().Position;
+            if (!ShouldShowHeaderUtilityToggles(contentBounds, headerFunCol, blockLocked, pointer))
             {
-                fill *= 0.6f;
+                return;
             }
 
-            FillRect(spriteBatch, bounds, fill);
-            DrawRectOutline(spriteBatch, bounds, UIStyle.BlockBorder * 0.8f, 1);
-
-            if (font.IsAvailable)
-            {
-                string text = _funColCategoryModeEnabled ? "Categories ON" : "Categories OFF";
-                Vector2 size = font.MeasureString(text);
-                Vector2 position = new Vector2(
-                    bounds.X + Math.Max(2f, (bounds.Width - size.X) * 0.5f),
-                    bounds.Y + Math.Max(0f, (bounds.Height - size.Y) * 0.5f));
-                font.DrawString(spriteBatch, text, position, blockLocked ? UIStyle.MutedTextColor : UIStyle.TextColor);
-            }
+            bool hovered = bounds.Contains(pointer);
+            Color baseFill = _funColCategoryModeEnabled ? ColorPalette.ButtonPrimary : ColorPalette.ButtonPrimary * 0.58f;
+            Color hoverFill = _funColCategoryModeEnabled ? ColorPalette.ButtonPrimaryHover : ColorPalette.ButtonPrimary * 0.8f;
+            FillRect(spriteBatch, bounds, hovered ? hoverFill : baseFill);
+            DrawRectOutline(spriteBatch, bounds, UIStyle.AccentColor, 1);
         }
 
         private static bool ShouldHighlightRow(KeybindDisplayRow row, bool blockLocked)
@@ -1812,22 +1839,35 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
         private static FunColInterface _headerFunCol;
         private static FunColInterface GetOrEnsureHeaderFunCol()
         {
-            if (_headerFunCol != null) return _headerFunCol;
-            _headerFunCol = new FunColInterface(
-                new float[] { 0.35f, 0.25f, 0.22f, 0.18f },
-                new TextLabelFeature("Action", FunColTextAlign.Right)
-                    { HeaderTooltipTexts = ["Name of the game action"] },
-                new TextLabelFeature("Key",    FunColTextAlign.Left)
-                    { HeaderTooltipTexts = ["Keybinding assigned to this action"] },
-                new TextLabelFeature("Type",   FunColTextAlign.Left)
-                    { HeaderTooltipTexts = ["Input type: Hold, DoubleTapHold, Switch, DoubleTapToggle, Trigger, or Float"] },
-                new CyclerFeature("Value") { TextAlign = FunColTextAlign.Center,
-                    HeaderTooltipTexts = ["Current state or value"] }
-            );
+            if (_headerFunCol == null)
+            {
+                _headerFunCol = new FunColInterface(
+                    new float[] { 0.35f, 0.25f, 0.22f, 0.18f },
+                    new TextLabelFeature("Action", FunColTextAlign.Right)
+                        { HeaderTooltipTexts = ["Name of the game action"] },
+                    new TextLabelFeature("Key",    FunColTextAlign.Left)
+                        { HeaderTooltipTexts = ["Keybinding assigned to this action"] },
+                    new TextLabelFeature("Type",   FunColTextAlign.Left)
+                        { HeaderTooltipTexts = ["Input type: Hold, DoubleTapHold, Switch, DoubleTapToggle, Trigger, or Float"] },
+                    new CyclerFeature("Value") { TextAlign = FunColTextAlign.Center,
+                        HeaderTooltipTexts = ["Current state or value"] }
+                );
+            }
+
             _headerFunCol.DisableExpansion = true;
             _headerFunCol.DisableColors = true;
             _headerFunCol.ShowHeaderTooltips = true;
             _headerFunCol.EnableColumnResize = true;
+            _headerFunCol.HeaderToggleText = string.Empty;
+            _headerFunCol.HeaderToggleUseBlueStyle = false;
+            _headerFunCol.HeaderToggleButtonWidth = CategoryToggleBtnSize;
+            _headerFunCol.HeaderToggleButtonHeight = CategoryToggleBtnSize;
+            _headerFunCol.HeaderToggleCollapsedHoverOnly = true;
+            Color expansionToggleColor = FunColInterface.GetColumnColor(3);
+            _headerFunCol.HeaderToggleFillColor = expansionToggleColor * 0.72f;
+            _headerFunCol.HeaderToggleHoverFillColor = expansionToggleColor * 0.92f;
+            _headerFunCol.HeaderToggleCollapsedFillColor = expansionToggleColor * 0.55f;
+            _headerFunCol.HeaderToggleCollapsedHoverFillColor = expansionToggleColor * 0.78f;
             return _headerFunCol;
         }
 

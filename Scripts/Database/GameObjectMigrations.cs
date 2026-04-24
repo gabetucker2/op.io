@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace op.io
 {
@@ -24,6 +26,7 @@ namespace op.io
                 EnsureMapDataDeathPointReward();
                 EnsureMapDataMaxHealth();
                 EnsureAgentsDestructible();
+                EnsureAgentsDestructibleRows();
                 EnsureBarrelPrototypesExist();
                 EnsureBulletRangeRenamedToDragFactor();
                 EnsurePlayerBarrelAssignments();
@@ -38,6 +41,7 @@ namespace op.io
                 EnsureRegenBarConfigs();
                 EnsureBarsVisibleSetting();
                 EnsureBarsInPropertiesPanel();
+                EnsureDefaultDockingSetupVisibilityDefaults();
                 EnsureBarConfigShowPercent();
                 EnsureBarConfigDefaultHidden();
                 EnsureShieldAboveHealth();
@@ -53,6 +57,7 @@ namespace op.io
                 EnsureAgentsSpeedControl();
                 EnsureAgentsBodyActionBuff();
                 EnsureBodySightColumns();
+                EnsureScoutSentryVisionUnit();
                 EnsureDropAgentsHiddenColumns();
                 EnsureDropBarrelHiddenColumns();
                 EnsurePlayerBodyCollisionDamage();
@@ -224,6 +229,79 @@ namespace op.io
                 AND    ID IN (SELECT ID FROM Agents);";
             DatabaseQuery.ExecuteNonQuery(sql);
             DebugLogger.PrintDatabase("EnsureAgentsDestructible: set IsDestructible=1 for all agent rows.");
+        }
+
+        private static void EnsureAgentsDestructibleRows()
+        {
+            if (!TableExists("Destructibles") || !TableExists("Agents") || !TableExists("GameObjects"))
+            {
+                return;
+            }
+
+            const string insertSql = @"
+INSERT INTO Destructibles (ID, MaxHealth, DeathPointReward)
+SELECT
+    a.ID,
+    MAX(1.0, (COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0))),
+    CASE
+        WHEN MAX(1.0, (COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0))) <= 30  THEN 2
+        WHEN MAX(1.0, (COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0))) <= 60  THEN 4
+        WHEN MAX(1.0, (COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0))) <= 120 THEN 7
+        WHEN MAX(1.0, (COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0))) <= 250 THEN 12
+        ELSE 16
+    END
+FROM Agents a
+INNER JOIN GameObjects g ON g.ID = a.ID
+WHERE NOT EXISTS (SELECT 1 FROM Destructibles d WHERE d.ID = a.ID);";
+
+            const string backfillSql = @"
+UPDATE Destructibles
+SET MaxHealth = CASE
+        WHEN COALESCE(MaxHealth, 0) > 0 THEN MaxHealth
+        ELSE MAX(1.0, (
+            SELECT COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0)
+            FROM Agents a
+            INNER JOIN GameObjects g ON g.ID = a.ID
+            WHERE a.ID = Destructibles.ID
+        ))
+    END,
+    DeathPointReward = CASE
+        WHEN COALESCE(DeathPointReward, 0) > 0 THEN DeathPointReward
+        ELSE (
+            CASE
+                WHEN MAX(1.0, (
+                    SELECT COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0)
+                    FROM Agents a
+                    INNER JOIN GameObjects g ON g.ID = a.ID
+                    WHERE a.ID = Destructibles.ID
+                )) <= 30 THEN 2
+                WHEN MAX(1.0, (
+                    SELECT COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0)
+                    FROM Agents a
+                    INNER JOIN GameObjects g ON g.ID = a.ID
+                    WHERE a.ID = Destructibles.ID
+                )) <= 60 THEN 4
+                WHEN MAX(1.0, (
+                    SELECT COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0)
+                    FROM Agents a
+                    INNER JOIN GameObjects g ON g.ID = a.ID
+                    WHERE a.ID = Destructibles.ID
+                )) <= 120 THEN 7
+                WHEN MAX(1.0, (
+                    SELECT COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0)
+                    FROM Agents a
+                    INNER JOIN GameObjects g ON g.ID = a.ID
+                    WHERE a.ID = Destructibles.ID
+                )) <= 250 THEN 12
+                ELSE 16
+            END
+        )
+    END
+WHERE ID IN (SELECT ID FROM Agents);";
+
+            DatabaseQuery.ExecuteNonQuery(insertSql);
+            DatabaseQuery.ExecuteNonQuery(backfillSql);
+            DebugLogger.PrintDatabase("EnsureAgentsDestructibleRows: ensured agent destructible rows and non-zero drop rewards.");
         }
 
         private static void EnsureBarrelPrototypesExist()
@@ -501,12 +579,19 @@ AND BulletDamage IN (4, 10, 15);");
                 if (!json.Contains("\"kind\": \"Bars\""))
                 {
                     // Insert before the closing menu bracket — find last "}," in menu array
-                    const string specsEntry = "{ \"kind\": \"Specs\", \"mode\": \"Toggle\", \"count\": 0, \"visible\": true }";
+                    const string specsEntryVisible = "{ \"kind\": \"Specs\", \"mode\": \"Toggle\", \"count\": 0, \"visible\": true }";
+                    const string specsEntryHidden = "{ \"kind\": \"Specs\", \"mode\": \"Toggle\", \"count\": 0, \"visible\": false }";
                     const string barsEntry  = ",\n    { \"kind\": \"Bars\", \"mode\": \"Toggle\", \"count\": 0, \"visible\": true }";
-                    int idx = json.IndexOf(specsEntry, System.StringComparison.Ordinal);
+                    int idx = json.IndexOf(specsEntryVisible, System.StringComparison.Ordinal);
+                    int markerLength = specsEntryVisible.Length;
+                    if (idx < 0)
+                    {
+                        idx = json.IndexOf(specsEntryHidden, System.StringComparison.Ordinal);
+                        markerLength = specsEntryHidden.Length;
+                    }
                     if (idx >= 0)
                     {
-                        json    = json.Insert(idx + specsEntry.Length, barsEntry);
+                        json    = json.Insert(idx + markerLength, barsEntry);
                         updated = true;
                     }
                 }
@@ -522,6 +607,119 @@ AND BulletDamage IN (4, 10, 15);");
             {
                 DebugLogger.PrintError($"EnsureBarsInPropertiesPanel failed: {ex.Message}");
             }
+        }
+
+        private static void EnsureDefaultDockingSetupVisibilityDefaults()
+        {
+            try
+            {
+                var rows = DatabaseQuery.ExecuteQuery(
+                    "SELECT RowData FROM BlockDockingSetups WHERE RowKey = 'Default';");
+                if (rows.Count == 0)
+                {
+                    return;
+                }
+
+                string payload = rows[0]["RowData"]?.ToString();
+                if (string.IsNullOrWhiteSpace(payload))
+                {
+                    return;
+                }
+
+                JsonNode root = JsonNode.Parse(payload);
+                JsonArray menu = root?["menu"] as JsonArray;
+                if (menu == null)
+                {
+                    return;
+                }
+
+                bool updated = false;
+                updated |= UpsertMenuToggleVisibility(menu, "ColorScheme", false);
+                updated |= UpsertMenuToggleVisibility(menu, "Notes", false);
+                updated |= UpsertMenuToggleVisibility(menu, "ControlSetups", false);
+                updated |= UpsertMenuToggleVisibility(menu, "DockingSetups", false);
+                updated |= UpsertMenuToggleVisibility(menu, "Backend", false);
+                updated |= UpsertMenuToggleVisibility(menu, "Specs", false);
+                updated |= UpsertMenuToggleVisibility(menu, "DebugLogs", false);
+                updated |= UpsertMenuToggleVisibility(menu, "Chat", false);
+                updated |= UpsertMenuToggleVisibility(menu, "Performance", false);
+
+                if (!updated)
+                {
+                    return;
+                }
+
+                string normalized = root.ToJsonString(new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                DatabaseQuery.ExecuteNonQuery(
+                    "UPDATE BlockDockingSetups SET RowData = @data WHERE RowKey = 'Default';",
+                    new Dictionary<string, object>
+                    {
+                        ["@data"] = normalized
+                    });
+
+                DebugLogger.PrintDatabase("EnsureDefaultDockingSetupVisibilityDefaults: normalized hidden-by-default panels in Default setup.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureDefaultDockingSetupVisibilityDefaults failed: {ex.Message}");
+            }
+        }
+
+        private static bool UpsertMenuToggleVisibility(JsonArray menu, string kind, bool visible)
+        {
+            if (menu == null || string.IsNullOrWhiteSpace(kind))
+            {
+                return false;
+            }
+
+            foreach (JsonNode node in menu)
+            {
+                if (node is not JsonObject entry)
+                {
+                    continue;
+                }
+
+                string entryKind = entry["kind"]?.ToString();
+                if (!string.Equals(entryKind, kind, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                bool changed = false;
+                if (!string.Equals(entry["mode"]?.ToString(), "Toggle", StringComparison.OrdinalIgnoreCase))
+                {
+                    entry["mode"] = "Toggle";
+                    changed = true;
+                }
+
+                if (!int.TryParse(entry["count"]?.ToString(), out int count) || count != 0)
+                {
+                    entry["count"] = 0;
+                    changed = true;
+                }
+
+                bool parsedVisible = bool.TryParse(entry["visible"]?.ToString(), out bool currentVisible) && currentVisible;
+                if (parsedVisible != visible)
+                {
+                    entry["visible"] = visible;
+                    changed = true;
+                }
+
+                return changed;
+            }
+
+            menu.Add(new JsonObject
+            {
+                ["kind"] = kind,
+                ["mode"] = "Toggle",
+                ["count"] = 0,
+                ["visible"] = visible
+            });
+            return true;
         }
 
         private static void EnsureBarConfigShowPercent()
@@ -919,6 +1117,216 @@ WHERE ID = (SELECT ID FROM GameObjects WHERE Name = 'Player1' LIMIT 1)
             }
         }
 
+        private static void EnsureScoutSentryVisionUnit()
+        {
+            const string scoutName = "ScoutSentry1";
+            const string scoutBodyName = "ScoutSentryBody";
+            const float scoutSpawnX = 420f;
+            const float scoutSpawnY = 100f;
+
+            try
+            {
+                Dictionary<string, object> parameters = new()
+                {
+                    ["@scoutName"] = scoutName,
+                    ["@scoutBodyName"] = scoutBodyName,
+                    ["@spawnX"] = scoutSpawnX,
+                    ["@spawnY"] = scoutSpawnY
+                };
+
+                if (TableExists("BodyPrototypes"))
+                {
+                    DatabaseQuery.ExecuteNonQuery(@"
+INSERT OR IGNORE INTO BodyPrototypes (
+    Name,
+    Mass,
+    HealthRegen, HealthRegenDelay, HealthArmor,
+    MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
+    BodyCollisionDamage, BodyPenetration,
+    CollisionDamageResistance, BulletDamageResistance,
+    Speed, Control, Sight, BodyActionBuff
+)
+SELECT
+    @scoutBodyName,
+    3.0,
+    0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0,
+    0.0, 0.0,
+    0.0, 1.0,
+    COALESCE((SELECT p.Sight / 3.0 FROM Agents p WHERE p.IsPlayer = 1 ORDER BY p.ID LIMIT 1), 16.6666667),
+    0.0;",
+                        parameters);
+
+                    DatabaseQuery.ExecuteNonQuery(@"
+UPDATE BodyPrototypes
+SET Sight = COALESCE((SELECT p.Sight / 3.0 FROM Agents p WHERE p.IsPlayer = 1 ORDER BY p.ID LIMIT 1), Sight)
+WHERE Name = @scoutBodyName;",
+                        parameters);
+                }
+
+                DatabaseQuery.ExecuteNonQuery(@"
+INSERT INTO GameObjects (
+    Shape, Name,
+    PositionX, PositionY, Width, Height, Sides, Rotation,
+    FillR, FillG, FillB, FillA,
+    OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth,
+    IsCollidable, IsDestructible, Mass, StaticPhysics
+)
+SELECT
+    'Circle', @scoutName,
+    @spawnX, @spawnY, 50, 50, 0, 0,
+    250, 220, 70, 255,
+    120, 95, 30, 255, 4,
+    1, 1, 3.0, 0
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM GameObjects g
+    INNER JOIN Agents a ON a.ID = g.ID
+    WHERE g.Name = @scoutName
+);",
+                    parameters);
+
+                DatabaseQuery.ExecuteNonQuery(@"
+INSERT INTO Agents (
+    ID, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed,
+    Mass,
+    HealthRegen, HealthRegenDelay, HealthArmor,
+    MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
+    BodyCollisionDamage, BodyPenetration,
+    CollisionDamageResistance, BulletDamageResistance,
+    Speed, Control, Sight, BodyActionBuff
+)
+SELECT
+    g.ID, 0, 0.0, 0.0, 0.0,
+    3.0,
+    0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0,
+    0.0, 0.0,
+    0.0, 1.0,
+    COALESCE((SELECT p.Sight / 3.0 FROM Agents p WHERE p.IsPlayer = 1 ORDER BY p.ID LIMIT 1), 16.6666667),
+    0.0
+FROM GameObjects g
+WHERE g.Name = @scoutName
+  AND NOT EXISTS (SELECT 1 FROM Agents a WHERE a.ID = g.ID)
+ORDER BY g.ID
+LIMIT 1;",
+                    parameters);
+
+                if (TableExists("Destructibles"))
+                {
+                    DatabaseQuery.ExecuteNonQuery(@"
+INSERT INTO Destructibles (ID, MaxHealth, DeathPointReward)
+SELECT
+    g.ID,
+    MAX(1.0, (COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0))),
+    7.0
+FROM GameObjects g
+INNER JOIN Agents a ON a.ID = g.ID
+WHERE g.Name = @scoutName
+  AND NOT EXISTS (SELECT 1 FROM Destructibles d WHERE d.ID = g.ID)
+ORDER BY g.ID
+LIMIT 1;",
+                        parameters);
+
+                    DatabaseQuery.ExecuteNonQuery(@"
+UPDATE Destructibles
+SET MaxHealth = CASE
+        WHEN COALESCE(MaxHealth, 0) > 0 THEN MaxHealth
+        ELSE MAX(1.0, (
+            SELECT COALESCE(NULLIF(a.Mass, 0), NULLIF(g.Mass, 0), 3.0) * (100.0 / 3.0)
+            FROM Agents a
+            INNER JOIN GameObjects g ON g.ID = a.ID
+            WHERE g.Name = @scoutName
+            ORDER BY g.ID
+            LIMIT 1
+        ))
+    END,
+    DeathPointReward = CASE
+        WHEN COALESCE(DeathPointReward, 0) > 0 THEN DeathPointReward
+        ELSE 7.0
+    END
+WHERE ID IN (
+    SELECT g.ID
+    FROM GameObjects g
+    INNER JOIN Agents a ON a.ID = g.ID
+    WHERE g.Name = @scoutName
+);",
+                        parameters);
+                }
+
+                DatabaseQuery.ExecuteNonQuery(@"
+UPDATE GameObjects
+SET IsCollidable = 1,
+    StaticPhysics = 0
+WHERE ID IN (
+    SELECT g.ID
+    FROM GameObjects g
+    INNER JOIN Agents a ON a.ID = g.ID
+    WHERE g.Name = @scoutName
+);",
+                    parameters);
+
+                // Move legacy default scout placements into the current in-map spawn so
+                // the second unit is always visible and contributes vision from startup.
+                DatabaseQuery.ExecuteNonQuery(@"
+UPDATE GameObjects
+SET PositionX = @spawnX,
+    PositionY = @spawnY
+WHERE Name = @scoutName
+  AND (
+      (ABS(PositionX - 960) < 0.01 AND ABS(PositionY - 180) < 0.01)
+      OR
+      (ABS(PositionX - 1700) < 0.01 AND ABS(PositionY - 100) < 0.01)
+  );",
+                    parameters);
+
+                DatabaseQuery.ExecuteNonQuery(@"
+UPDATE Agents
+SET BaseSpeed = 0.0,
+    Speed = 0.0,
+    Control = CASE WHEN COALESCE(Control, 0.0) <= 0.0 THEN 1.0 ELSE Control END,
+    Sight = COALESCE((SELECT p.Sight / 3.0 FROM Agents p WHERE p.IsPlayer = 1 ORDER BY p.ID LIMIT 1), Sight)
+WHERE ID IN (
+    SELECT g.ID
+    FROM GameObjects g
+    INNER JOIN Agents a ON a.ID = g.ID
+    WHERE g.Name = @scoutName
+);",
+                    parameters);
+
+                if (TableExists("AgentBodies") && TableExists("BodyPrototypes"))
+                {
+                    DatabaseQuery.ExecuteNonQuery(@"
+INSERT INTO AgentBodies (AgentID, BodyPrototypeID, SlotIndex)
+SELECT
+    a.ID,
+    bp.ID,
+    0
+FROM Agents a
+INNER JOIN GameObjects g ON g.ID = a.ID
+INNER JOIN BodyPrototypes bp ON bp.Name = @scoutBodyName
+WHERE g.Name = @scoutName
+  AND a.IsPlayer = 0
+  AND NOT EXISTS (
+      SELECT 1
+      FROM AgentBodies ab
+      WHERE ab.AgentID = a.ID
+        AND ab.BodyPrototypeID = bp.ID
+        AND ab.SlotIndex = 0
+  );",
+                        parameters);
+                }
+
+                DebugLogger.PrintDatabase("EnsureScoutSentryVisionUnit: ensured ScoutSentry1 and ScoutSentryBody are present.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureScoutSentryVisionUnit failed: {ex.Message}");
+            }
+        }
+
         private static void EnsureFarmBodyCollisionDamageQuintupled()
         {
             // One-time global balance pass: all farm collision damage x5.
@@ -1158,7 +1566,7 @@ WHERE ID IN (SELECT ID FROM FarmData);";
                 ("XPClumpDeadPulseSpeedMax", "12.0"),
                 ("XPClumpDeadPulseLowAlphaStart", "0.55"),
                 ("XPClumpDeadPulseLowAlphaEnd", "0.03"),
-                ("XPDropUnstableHealthThresholdRatio", "0.33333334"),
+                ("XPDropUnstableHealthThresholdRatio", "0.3"),
                 ("XPDropUnstableJitterAccel", "1500"),
                 ("XPDropUnstableCenterPullAccel", "300"),
                 ("XPDropUnstableVelocityDampingPerSecond", "2.7"),
@@ -1202,7 +1610,7 @@ WHERE ID IN (SELECT ID FROM FarmData);";
 
             // Retune legacy unstable-clump defaults to the new behavior without
             // overriding user-customized values.
-            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.33333334' WHERE SettingKey = 'XPDropUnstableHealthThresholdRatio' AND Value = '0.2';");
+            DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '0.3' WHERE SettingKey = 'XPDropUnstableHealthThresholdRatio';");
             DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '1500'      WHERE SettingKey = 'XPDropUnstableJitterAccel' AND Value = '640';");
             DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '300'       WHERE SettingKey = 'XPDropUnstableCenterPullAccel' AND Value = '460';");
             DatabaseQuery.ExecuteNonQuery("UPDATE FXSettings SET Value = '2.7'       WHERE SettingKey = 'XPDropUnstableVelocityDampingPerSecond' AND Value = '5.8';");
@@ -1236,6 +1644,8 @@ WHERE ID IN (SELECT ID FROM FarmData);";
                 ("FogOfWarActive", "Whether fog-of-war is actively rendering this frame."),
                 ("FogVisionSourceCount", "How many sight sources are currently revealing vision territory."),
                 ("PlayerSightRadius", "The player's active sight radius in centifoots."),
+                ("FogFrontierBorderThickness", "Reference world-space thickness used to normalize fog frontier widths and amplitudes."),
+                ("FogFrontierFieldSmoothingRadius", "Current world-space smoothing radius applied to the fog frontier scalar field."),
                 ("CentifootWorldUnits", "Copied baseline conversion: 1 centifoot = this many world units."),
                 ("DistanceUnit", "Name of the active distance unit used by backend distance displays."),
                 ("XPClumpCount", "Number of active free clumps currently in the world."),

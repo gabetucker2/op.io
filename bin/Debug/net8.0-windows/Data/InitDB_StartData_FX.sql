@@ -78,7 +78,7 @@ INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPClumpDeadPulseSpeedMin', '
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPClumpDeadPulseSpeedMax', '12.0');              -- dead-clump flicker pulse speed near despawn
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPClumpDeadPulseLowAlphaStart', '0.55');         -- dead-clump minimum pulse alpha at start
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPClumpDeadPulseLowAlphaEnd', '0.03');           -- dead-clump minimum pulse alpha near despawn
-INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPDropUnstableHealthThresholdRatio', '0.33333334'); -- destructible HP ratio where unstable clumps start rendering
+INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPDropUnstableHealthThresholdRatio', '0.3'); -- destructible HP ratio where unstable clumps start rendering
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPDropUnstableJitterAccel', '1500');            -- random acceleration intensity of unstable clumps
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPDropUnstableCenterPullAccel', '300');         -- center-restoring acceleration keeping unstable clumps contained
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('XPDropUnstableVelocityDampingPerSecond', '2.7');-- damping for unstable clump velocity

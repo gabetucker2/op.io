@@ -19,8 +19,8 @@ namespace op.io
         public static bool DockingMode          => BlockManager.DockingModeEnabled;
         public static bool DisableToolTips      => ControlStateManager.ContainsSwitchState(ControlKeyMigrations.DisableToolTipsKey) &&
                                                    ControlStateManager.GetSwitchState(ControlKeyMigrations.DisableToolTipsKey);
-        public static bool Grid                 => ControlStateManager.ContainsSwitchState(ControlKeyMigrations.GridKey) &&
-                                                   ControlStateManager.GetSwitchState(ControlKeyMigrations.GridKey);
+        public static bool GridRequested       => GameRenderer.WorldGridRequested;
+        public static bool Grid                => GameRenderer.WorldGridVisible;
         public static bool BlockMenuOpen        => BlockManager.IsBlockMenuOpen();
         public static bool InputBlocked         => BlockManager.IsInputBlocked();
         public static bool DraggingLayout       => BlockManager.IsDraggingLayout;
@@ -37,7 +37,32 @@ namespace op.io
         public static string GUIInteractingWith => BlockManager.GetInteractingBlockKind();
         public static bool WaitingForFocusClick => InputManager.WaitingForFocusClick;
         public static bool WindowGameplayFocus  => InputManager.HasWindowGameplayFocus;
+        public static bool WindowChromeLeftClickSuppressed => InputTypeManager.WindowChromeLeftClickSuppressed;
         public static float DoubleTapSuppressionSeconds => InputTypeManager.DoubleTapSuppressionSeconds;
+        public static bool GameBlockOceanShaderReady => GameBlockOceanBackground.ShaderReady;
+        public static bool GameBlockOceanUsingShaderPath => GameBlockOceanBackground.UsingShaderPath;
+        public static string GameBlockOceanShaderStatus => GameBlockOceanBackground.ShaderStatus;
+        public static string GameBlockOceanBaseColor => GameBlockOceanBackground.BaseColorRgb;
+        public static float GameBlockOceanTimeScale => GameBlockOceanBackground.TimeScale;
+        public static float GameBlockOceanDownwardSpeed => GameBlockOceanBackground.DownwardSpeed;
+        public static float GameBlockOceanBackgroundVariationStrength => GameBlockOceanBackground.BackgroundVariationStrength;
+        public static float GameBlockOceanWarpStrengthX => GameBlockOceanBackground.WarpStrengthX;
+        public static float GameBlockOceanWarpStrengthY => GameBlockOceanBackground.WarpStrengthY;
+        public static float GameBlockOceanCrestBrightness => GameBlockOceanBackground.CrestBrightness;
+        public static float GameBlockOceanCrestThickness => GameBlockOceanBackground.CrestThickness;
+        public static float GameBlockOceanCrestSegmentation => GameBlockOceanBackground.CrestSegmentation;
+        public static float GameBlockOceanCrestDensity => GameBlockOceanBackground.CrestDensity;
+        public static float GameBlockOceanWaveSet1Strength => GameBlockOceanBackground.WaveSet1Strength;
+        public static float GameBlockOceanWaveSet2Strength => GameBlockOceanBackground.WaveSet2Strength;
+        public static float GameBlockOceanWaveSet3Strength => GameBlockOceanBackground.WaveSet3Strength;
+        public static float GameBlockOceanPanelScale => GameBlockOceanBackground.PanelScale;
+        public static float GameBlockOceanRenderScale => GameBlockOceanBackground.RenderScale;
+        public static int GameBlockOceanMaxRenderPixels => GameBlockOceanBackground.MaxRenderPixels;
+        public static float GameBlockOceanZoomInfluence => GameBlockOceanBackground.ZoomInfluence;
+        public static float GameBlockOceanDetailScale => GameBlockOceanBackground.DetailScale;
+        public static float GameBlockOceanLastResolvedRenderScale => GameBlockOceanBackground.LastResolvedRenderScale;
+        public static float GameBlockOceanLastCameraZoom => GameBlockOceanBackground.LastCameraZoom;
+        public static string GameBlockOceanRenderTextureResolution => GameBlockOceanBackground.RenderTextureResolution;
 
         /// <summary>
         /// Shows the DockBlockCategory (Standard / Overlay / Dynamic) of the
@@ -73,6 +98,10 @@ namespace op.io
         public static float XPClumpClusterHomeostasisVariance => XPClumpManager.ClusterHomeostasisVariance;
         public static float XPClumpClusterInstabilityForce => XPClumpManager.ClusterInstabilityForce;
         public static float XPClumpClusterInstabilityPulseHz => XPClumpManager.ClusterInstabilityPulseHz;
+        public static int   XPPlayerUnstablePreviewClumpCount => XPClumpManager.PlayerUnstablePreviewClumpCount;
+        public static float XPPlayerUnstablePreviewHealthRatio => XPClumpManager.PlayerUnstablePreviewHealthRatio;
+        public static float XPPlayerUnstablePreviewRewardXP => XPClumpManager.PlayerUnstablePreviewRewardXP;
+        public static bool  XPPlayerUnstablePreviewEligible => XPClumpManager.PlayerUnstablePreviewEligible;
         // Bullet Defaults (DB-driven)
         public static float DefaultBulletSpeed      => BulletManager.DefaultBulletSpeed;
         public static float DefaultBulletLifespan   => BulletManager.DefaultBulletLifespan;
@@ -93,6 +122,8 @@ namespace op.io
         public static bool   FogOfWarEnabled       => FogOfWarManager.IsFogEnabled;
         public static bool   FogOfWarActive        => FogOfWarManager.IsFogActive;
         public static int    FogVisionSourceCount  => FogOfWarManager.ActiveVisionSourceCount;
+        public static float  FogBodyDetailMaskScale => FogOfWarManager.FogBodyDetailMaskScale;
+        public static int    FogBodyDetailMaskResolution => FogOfWarManager.FogBodyDetailMaskResolution;
         public static bool   FogFrontierCacheFromDisk => FogOfWarManager.FrontierCacheLoadedFromDisk;
         public static int    FogFrontierDirectionBin  => FogOfWarManager.ActiveFrontierDirectionBin;
         public static int    FogFrontierPhaseIndex    => FogOfWarManager.ActiveFrontierPhaseIndex;
@@ -104,6 +135,8 @@ namespace op.io
         public static float  FogFrontierTargetUpdateIntervalSeconds => FogOfWarManager.FrontierTargetUpdateIntervalSeconds;
         public static float  FogFrontierBuildMsLast   => FogOfWarManager.FrontierBuildMsLast;
         public static float  FogFrontierBuildMsAvg    => FogOfWarManager.FrontierBuildMsAvg;
+        public static float  FogFrontierBorderThickness => FogOfWarManager.FrontierBorderThickness;
+        public static float  FogFrontierFieldSmoothingRadius => FogOfWarManager.FrontierFieldSmoothingRadius;
         public static bool   FogFrontierBuildInFlight => FogOfWarManager.FrontierBuildInFlight;
         public static float  CentifootWorldUnits   => CentifootUnits.WorldUnitsPerCentifoot;
         public static string DistanceUnit          => CentifootUnits.UnitName;
@@ -217,6 +250,7 @@ namespace op.io
                 variableName.StartsWith("Input", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("Freeze", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("AnyGUI", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("GameBlockOcean", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("Cursor", StringComparison.OrdinalIgnoreCase))
             {
                 return "UI";

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace op.io
 {
@@ -81,6 +82,16 @@ namespace op.io
             {
                 DebugLogger.PrintError("GraphicsDeviceManager is null. Ensure Core.Instance.Graphics is initialized properly.");
                 return;
+            }
+
+            try
+            {
+                Core.Instance.Graphics.GraphicsProfile = GraphicsProfile.HiDef;
+                DebugLogger.Print("Graphics profile set to HiDef.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning($"Unable to set HiDef graphics profile; falling back to default profile. {ex.Message}");
             }
 
             ScreenManager.ApplyWindowMode(Core.Instance);

@@ -296,8 +296,8 @@ namespace op.io
                                    ComputeBounceMultiplier(e) *
                                    baseScale;
 
-                int perHit = e.Damage < 1f ? 0 : (int)MathF.Round(e.Damage);
-                string text = e.HitCount > 1 ? $"{perHit} x{e.HitCount}" : perHit.ToString();
+                int displayedTotal = e.TotalDamage < 1f ? 0 : (int)MathF.Round(e.TotalDamage);
+                string text = e.HitCount > 1 ? $"{displayedTotal} x{e.HitCount}" : displayedTotal.ToString();
 
                 Vector2 drawPos = e.BasePosition + e.DriftOffset;
                 Vector2 origin  = font.MeasureString(text) * 0.5f;

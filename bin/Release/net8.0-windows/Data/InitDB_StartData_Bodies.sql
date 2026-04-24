@@ -42,6 +42,27 @@ INSERT INTO BodyPrototypes (
     0.55, 0.6, 50.0, 0.0
 );
 
+-- ScoutSentryBody: stationary support body that contributes one-third of player sight
+INSERT INTO BodyPrototypes (
+    Name,
+    Mass,
+    HealthRegen, HealthRegenDelay, HealthArmor,
+    MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor,
+    BodyCollisionDamage, BodyPenetration,
+    CollisionDamageResistance, BulletDamageResistance,
+    Speed, Control, Sight, BodyActionBuff
+) VALUES (
+    'ScoutSentryBody',
+    3.0,
+    0, 0.0, 0,
+    0, 0, 0.0, 0,
+    0.0, 0,
+    0, 0,
+    0.0, 1.0,
+    (SELECT COALESCE(a.Sight, 50.0) / 3.0 FROM Agents a WHERE a.IsPlayer = 1 LIMIT 1),
+    0.0
+);
+
 -- ================================
 -- Player Body Assignments
 -- ================================
@@ -57,3 +78,15 @@ INSERT INTO AgentBodies (AgentID, BodyPrototypeID, SlotIndex) VALUES (
     (SELECT ID FROM BodyPrototypes WHERE Name = 'Tank'),
     1
 );
+
+INSERT INTO AgentBodies (AgentID, BodyPrototypeID, SlotIndex)
+SELECT
+    a.ID,
+    bp.ID,
+    0
+FROM Agents a
+INNER JOIN GameObjects g ON g.ID = a.ID
+INNER JOIN BodyPrototypes bp ON bp.Name = 'ScoutSentryBody'
+WHERE g.Name = 'ScoutSentry1'
+  AND a.IsPlayer = 0
+LIMIT 1;

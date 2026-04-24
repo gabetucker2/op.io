@@ -7,15 +7,15 @@ namespace op.io
 {
     public static class GameRenderer
     {
-        private const int GridStepUnits = 1;
-        private const int GridCoordinateStepUnits = 5;
+        private static readonly int GridStepWorldUnits = Math.Max(1, (int)MathF.Round(CentifootUnits.CentifootToWorld(1f)));
+        private static readonly int GridCoordinateStepWorldUnits = Math.Max(GridStepWorldUnits, (int)MathF.Round(CentifootUnits.CentifootToWorld(5f)));
+        private const int GridCoordinateTextStride = 2;
         private const int MaxGridLinesPerAxis = 6000;
         private const int MaxGridCoordinateLabels = 900;
-        private static readonly Color GridMinorLineColor = new(128, 128, 128, 64);
-        private static readonly Color GridMajorLineColor = new(156, 156, 156, 112);
-        private static readonly Color GridCoordinateMarkerColor = new(178, 178, 178, 210);
-        private static readonly Color GridCoordinateTextColor = new(205, 205, 205, 220);
-        private static readonly Color GridCoordinateTextShadowColor = new(0, 0, 0, 135);
+        private static readonly Color GridMinorLineColor = new(128, 128, 128, 34);
+        private static readonly Color GridMajorLineColor = new(154, 154, 154, 82);
+        private static readonly Color GridCoordinateTextColor = new(210, 210, 210, 174);
+        private static readonly Color GridCoordinateTextShadowColor = new(0, 0, 0, 120);
         private static Texture2D _gridPixelTexture;
 
         public static bool IsDrawing { get; private set; }
@@ -41,6 +41,7 @@ namespace op.io
 
             DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
             BlockManager.OnGraphicsReady();
+            GameBlockOceanBackground.Initialize(Core.Instance.GraphicsDevice, Core.Instance.Content);
             XPClumpManager.LoadContent(Core.Instance.GraphicsDevice);
 
             if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
@@ -105,6 +106,14 @@ namespace op.io
             Matrix camMatrix = BlockManager.GetCameraTransform();
             FogOfWarManager.Prepare(camMatrix);
             Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
+
+            Rectangle panelBounds = new(
+                0,
+                0,
+                Core.Instance.GraphicsDevice.Viewport.Width,
+                Core.Instance.GraphicsDevice.Viewport.Height);
+            GameBlockOceanBackground.Draw(Core.Instance.SpriteBatch, panelBounds, Core.GAMETIME, BlockManager.CameraZoom, camMatrix);
+
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
 
             // Draw all shapes once; ShapeManager already iterates registered objects.
@@ -153,10 +162,15 @@ namespace op.io
             }
         }
 
+        public static bool WorldGridRequested =>
+            ControlStateManager.ContainsSwitchState(ControlKeyMigrations.GridKey) &&
+            ControlStateManager.GetSwitchState(ControlKeyMigrations.GridKey);
+
+        public static bool WorldGridVisible => DebugModeHandler.DEBUGENABLED && WorldGridRequested;
+
         private static bool IsGridEnabled()
         {
-            return ControlStateManager.ContainsSwitchState(ControlKeyMigrations.GridKey) &&
-                ControlStateManager.GetSwitchState(ControlKeyMigrations.GridKey);
+            return WorldGridVisible;
         }
 
         private static void DrawWorldGrid(SpriteBatch spriteBatch, Matrix cameraMatrix)
@@ -195,9 +209,9 @@ namespace op.io
                 return;
             }
 
-            int startX = (int)MathF.Floor(minX);
+            int startX = RoundUpToStep((int)MathF.Floor(minX), GridStepWorldUnits);
             int endX = (int)MathF.Ceiling(maxX);
-            int startY = (int)MathF.Floor(minY);
+            int startY = RoundUpToStep((int)MathF.Floor(minY), GridStepWorldUnits);
             int endY = (int)MathF.Ceiling(maxY);
 
             ClampGridLineRange(ref startX, ref endX);
@@ -211,16 +225,16 @@ namespace op.io
             int gridHeight = Math.Max(1, endY - startY + 1);
             int gridWidth = Math.Max(1, endX - startX + 1);
 
-            for (int x = startX; x <= endX; x += GridStepUnits)
+            for (int x = startX; x <= endX; x += GridStepWorldUnits)
             {
-                bool isMajor = x % GridCoordinateStepUnits == 0;
+                bool isMajor = x % GridCoordinateStepWorldUnits == 0;
                 Color lineColor = isMajor ? GridMajorLineColor : GridMinorLineColor;
                 spriteBatch.Draw(_gridPixelTexture, new Rectangle(x, startY, 1, gridHeight), lineColor);
             }
 
-            for (int y = startY; y <= endY; y += GridStepUnits)
+            for (int y = startY; y <= endY; y += GridStepWorldUnits)
             {
-                bool isMajor = y % GridCoordinateStepUnits == 0;
+                bool isMajor = y % GridCoordinateStepWorldUnits == 0;
                 Color lineColor = isMajor ? GridMajorLineColor : GridMinorLineColor;
                 spriteBatch.Draw(_gridPixelTexture, new Rectangle(startX, y, gridWidth, 1), lineColor);
             }
@@ -230,15 +244,15 @@ namespace op.io
 
         private static void DrawGridCoordinateOverlay(SpriteBatch spriteBatch, int startX, int endX, int startY, int endY)
         {
-            int labelStartX = RoundUpToStep(startX, GridCoordinateStepUnits);
-            int labelStartY = RoundUpToStep(startY, GridCoordinateStepUnits);
+            int labelStartX = RoundUpToStep(startX, GridCoordinateStepWorldUnits);
+            int labelStartY = RoundUpToStep(startY, GridCoordinateStepWorldUnits);
             if (labelStartX > endX || labelStartY > endY)
             {
                 return;
             }
 
-            int markerCountX = ((endX - labelStartX) / GridCoordinateStepUnits) + 1;
-            int markerCountY = ((endY - labelStartY) / GridCoordinateStepUnits) + 1;
+            int markerCountX = ((endX - labelStartX) / GridCoordinateStepWorldUnits) + 1;
+            int markerCountY = ((endY - labelStartY) / GridCoordinateStepWorldUnits) + 1;
             long markerCount = (long)markerCountX * markerCountY;
             if (markerCount <= 0)
             {
@@ -248,7 +262,7 @@ namespace op.io
             UIStyle.UIFont font = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Regular);
             bool canDrawText = font.IsAvailable && font.Font != null;
             float fontScale = canDrawText ? MathF.Max(0.18f, font.Scale * 0.4f) : 0f;
-            int labelStride = 1;
+            int labelStride = GridCoordinateTextStride;
             if (canDrawText)
             {
                 while (markerCount / ((long)labelStride * labelStride) > MaxGridCoordinateLabels)
@@ -258,18 +272,19 @@ namespace op.io
             }
 
             int xIndex = 0;
-            for (int x = labelStartX; x <= endX; x += GridCoordinateStepUnits, xIndex++)
+            for (int x = labelStartX; x <= endX; x += GridCoordinateStepWorldUnits, xIndex++)
             {
                 int yIndex = 0;
-                for (int y = labelStartY; y <= endY; y += GridCoordinateStepUnits, yIndex++)
+                for (int y = labelStartY; y <= endY; y += GridCoordinateStepWorldUnits, yIndex++)
                 {
-                    spriteBatch.Draw(_gridPixelTexture, new Rectangle(x, y, 1, 1), GridCoordinateMarkerColor);
                     if (!canDrawText || (xIndex % labelStride != 0) || (yIndex % labelStride != 0))
                     {
                         continue;
                     }
 
-                    string label = $"{x},{y}";
+                    int xCentifoot = (int)MathF.Round(CentifootUnits.WorldToCentifoot(x));
+                    int yCentifoot = (int)MathF.Round(CentifootUnits.WorldToCentifoot(y));
+                    string label = $"{xCentifoot},{yCentifoot}";
                     Vector2 labelPosition = new(x + 0.8f, y + 0.8f);
                     spriteBatch.DrawString(font.Font, label, labelPosition + new Vector2(0.6f, 0.6f), GridCoordinateTextShadowColor, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
                     spriteBatch.DrawString(font.Font, label, labelPosition, GridCoordinateTextColor, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);

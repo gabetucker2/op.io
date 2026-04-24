@@ -71,6 +71,9 @@ namespace op.io
         private const float DefaultDoubleTapSuppressionSeconds = 0.25f;
         private const string DoubleTapSuppressionSettingKey = "DoubleTapSuppressionSeconds";
         private static bool _hasPreviousState;
+        private static bool _windowChromeLeftDragActive;
+        private static bool _windowChromeLeftReleasePending;
+        internal static bool WindowChromeLeftClickSuppressed => _windowChromeLeftDragActive || _windowChromeLeftReleasePending;
         private static bool IsFocusBlocked() => FocusModeManager.IsFocusModeActive && InputManager.IsFocusModeBlocking();
 
         public static void InitializeControlStates()
@@ -212,6 +215,18 @@ namespace op.io
             return (Core.GAMETIME - _ctrlKeyReleaseTime) <= buffer;
         }
 
+        internal static void SetWindowChromeLeftClickSuppressed(bool active)
+        {
+            if (active)
+            {
+                _windowChromeLeftDragActive = true;
+                _windowChromeLeftReleasePending = true;
+                return;
+            }
+
+            _windowChromeLeftDragActive = false;
+        }
+
         public static bool IsMouseButtonHeld(string mouseKey)
         {
             if (IsFocusBlocked())
@@ -228,7 +243,8 @@ namespace op.io
 
             if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase))
             {
-                return currentMouseState.LeftButton == ButtonState.Pressed;
+                return currentMouseState.LeftButton == ButtonState.Pressed &&
+                    !ShouldSuppressLeftMouseHold();
             }
 
             if (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase))
@@ -363,7 +379,8 @@ namespace op.io
             bool triggered = false;
 
             if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.LeftButton == ButtonState.Released &&
-                     _previousMouseState.LeftButton == ButtonState.Pressed && isCooldownPassed)
+                     _previousMouseState.LeftButton == ButtonState.Pressed && isCooldownPassed &&
+                     !ShouldSuppressLeftMouseReleaseEdge(currentMouseState))
             {
                 triggered = true;
             }
@@ -440,10 +457,14 @@ namespace op.io
 
             MouseState currentMouseState = Mouse.GetState();
 
-            return (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) &&
-                    currentMouseState.LeftButton == ButtonState.Released &&
-                    _previousMouseState.LeftButton == ButtonState.Pressed) ||
-                   (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) &&
+            if (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase))
+            {
+                return currentMouseState.LeftButton == ButtonState.Released &&
+                    _previousMouseState.LeftButton == ButtonState.Pressed &&
+                    !ShouldSuppressLeftMouseReleaseEdge(currentMouseState);
+            }
+
+            return (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) &&
                     currentMouseState.RightButton == ButtonState.Released &&
                     _previousMouseState.RightButton == ButtonState.Pressed) ||
                    (string.Equals(mouseKey, "MiddleClick", StringComparison.OrdinalIgnoreCase) &&
@@ -475,7 +496,8 @@ namespace op.io
 
             return (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) &&
                     currentMouseState.LeftButton == ButtonState.Pressed &&
-                    _previousMouseState.LeftButton == ButtonState.Released) ||
+                    _previousMouseState.LeftButton == ButtonState.Released &&
+                    !ShouldSuppressLeftMouseHold()) ||
                    (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) &&
                     currentMouseState.RightButton == ButtonState.Pressed &&
                     _previousMouseState.RightButton == ButtonState.Released) ||
@@ -589,7 +611,8 @@ namespace op.io
                 (string.Equals(mouseKey, "ScrollUp", StringComparison.OrdinalIgnoreCase) && IsScrollUp(currentMouseState, _previousMouseState) && cooldownPassed) ||
                 (string.Equals(mouseKey, "ScrollDown", StringComparison.OrdinalIgnoreCase) && IsScrollDown(currentMouseState, _previousMouseState) && cooldownPassed) ||
                 (string.Equals(mouseKey, "LeftClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.LeftButton == ButtonState.Released &&
-                 _previousMouseState.LeftButton == ButtonState.Pressed && cooldownPassed) ||
+                 _previousMouseState.LeftButton == ButtonState.Pressed && cooldownPassed &&
+                 !ShouldSuppressLeftMouseReleaseEdge(currentMouseState)) ||
                 (string.Equals(mouseKey, "RightClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.RightButton == ButtonState.Released &&
                  _previousMouseState.RightButton == ButtonState.Pressed && cooldownPassed) ||
                 (string.Equals(mouseKey, "MiddleClick", StringComparison.OrdinalIgnoreCase) && currentMouseState.MiddleButton == ButtonState.Released &&
@@ -1177,6 +1200,7 @@ namespace op.io
         public static void Update()
         {
             KeyboardState currentKeyboardState = Keyboard.GetState();
+            MouseState currentMouseState = Mouse.GetState();
 
             // Track when Ctrl is released so IsCtrlWithinBuffer() can detect the post-release window.
             bool ctrlWasHeld = _previousKeyboardState.IsKeyDown(Keys.LeftControl) || _previousKeyboardState.IsKeyDown(Keys.RightControl);
@@ -1184,8 +1208,10 @@ namespace op.io
             if (ctrlWasHeld && !ctrlIsHeld)
                 _ctrlKeyReleaseTime = Core.GAMETIME;
 
+            UpdateWindowChromeLeftClickSuppression(currentMouseState);
+
             _previousKeyboardState = currentKeyboardState;
-            _previousMouseState = Mouse.GetState();
+            _previousMouseState = currentMouseState;
             _hasPreviousState = true;
 
             _frameCounter++;
@@ -2111,12 +2137,56 @@ namespace op.io
         private static bool IsMouseTokenHeld(string token)
         {
             MouseState state = Mouse.GetState();
-            return token.Equals("LeftClick", StringComparison.OrdinalIgnoreCase) ? state.LeftButton == ButtonState.Pressed
+            return token.Equals("LeftClick", StringComparison.OrdinalIgnoreCase) ? state.LeftButton == ButtonState.Pressed && !ShouldSuppressLeftMouseHold()
                  : token.Equals("RightClick", StringComparison.OrdinalIgnoreCase) ? state.RightButton == ButtonState.Pressed
                  : token.Equals("MiddleClick", StringComparison.OrdinalIgnoreCase) ? state.MiddleButton == ButtonState.Pressed
                  : token.Equals("Mouse4", StringComparison.OrdinalIgnoreCase) ? state.XButton1 == ButtonState.Pressed
                  : token.Equals("Mouse5", StringComparison.OrdinalIgnoreCase) ? state.XButton2 == ButtonState.Pressed
                  : false;
+        }
+
+        private static bool ShouldSuppressLeftMouseHold()
+        {
+            return _windowChromeLeftDragActive;
+        }
+
+        private static bool ShouldSuppressLeftMouseReleaseEdge(MouseState currentMouseState)
+        {
+            return _windowChromeLeftDragActive ||
+                (_windowChromeLeftReleasePending &&
+                 currentMouseState.LeftButton == ButtonState.Released &&
+                 _previousMouseState.LeftButton == ButtonState.Pressed);
+        }
+
+        private static void UpdateWindowChromeLeftClickSuppression(MouseState currentMouseState)
+        {
+            if (_windowChromeLeftDragActive && currentMouseState.LeftButton == ButtonState.Released)
+            {
+                // Fail-safe in case a non-client release message is missed by the window hook.
+                _windowChromeLeftDragActive = false;
+            }
+
+            if (!_windowChromeLeftReleasePending || _windowChromeLeftDragActive)
+            {
+                return;
+            }
+
+            bool suppressedReleaseConsumed =
+                currentMouseState.LeftButton == ButtonState.Released &&
+                _previousMouseState.LeftButton == ButtonState.Pressed;
+
+            bool suppressionIdle =
+                currentMouseState.LeftButton == ButtonState.Released &&
+                _previousMouseState.LeftButton == ButtonState.Released;
+
+            bool freshClientClickStarted =
+                currentMouseState.LeftButton == ButtonState.Pressed &&
+                _previousMouseState.LeftButton == ButtonState.Released;
+
+            if (suppressedReleaseConsumed || suppressionIdle || freshClientClickStarted)
+            {
+                _windowChromeLeftReleasePending = false;
+            }
         }
 
         private static bool IsScrollUp(MouseState current, MouseState previous) => current.ScrollWheelValue > previous.ScrollWheelValue;

@@ -25,7 +25,8 @@ namespace op.io
                                   "s.CollisionDamageResistance, s.BulletDamageResistance, " +
                                   "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, COALESCE(s.Sight, 0.0) AS Sight, " +
                                   "COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, " +
-                                  "COALESCE(s.MaxXP, 0) AS MaxXP"
+                                  "COALESCE(s.MaxXP, 0) AS MaxXP, " +
+                                  "COALESCE(d.DeathPointReward, 0.0) AS DeathPointReward"
                 );
 
                 var result = DatabaseQuery.ExecuteQuery(query, new Dictionary<string, object> { { "@ID", agentId } });
@@ -80,7 +81,8 @@ namespace op.io
                                   "s.CollisionDamageResistance, s.BulletDamageResistance, " +
                                   "COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, COALESCE(s.Sight, 0.0) AS Sight, " +
                                   "COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, " +
-                                  "COALESCE(s.MaxXP, 0) AS MaxXP"
+                                  "COALESCE(s.MaxXP, 0) AS MaxXP, " +
+                                  "COALESCE(d.DeathPointReward, 0.0) AS DeathPointReward"
                 );
 
                 var results = DatabaseQuery.ExecuteQuery(query);
@@ -157,6 +159,9 @@ namespace op.io
                 Agent agent = archetype.ToAgent();
                 agent.Mass = bodyAttributes.Mass; // override GO mass with body attribute mass
                 agent.MaxXP = maxXP;
+                agent.DeathPointReward = row.ContainsKey("DeathPointReward")
+                    ? Convert.ToSingle(row["DeathPointReward"])
+                    : 0f;
                 agent.UpdateCircleDimensions(bodyAttributes.Mass);
                 return agent;
             }

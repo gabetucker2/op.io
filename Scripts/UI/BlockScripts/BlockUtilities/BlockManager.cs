@@ -8,6 +8,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using op.io.UI.BlockScripts.Blocks;
 using op.io.UI.BlockScripts.BlockUtilities;
+using op.io.UI.FunCol;
+using op.io.UI.FunCol.Features;
 
 namespace op.io
 {
@@ -30,13 +32,27 @@ namespace op.io
 
         private const string InteractBlockKey = "interact";
         private const string BlockMenuControlKey = "BlockMenu";
-private const string DockingSetupActiveRowKey = "__ActiveSetup";
+        private const string DockingSetupActiveRowKey = "__ActiveSetup";
+        private const string BlockMenuWindowStateRowKey = "__BlockMenuWindowState";
+        private const string OverlayMenuToggleTooltipKey = "OverlayMenuToggleRow";
+        private const string OverlayMenuCountTooltipKey = "OverlayMenuCountRow";
         private const string OverlayInputFocusOwner = "BlockManager.OverlayNumeric";
         private const int DragBarButtonPadding = 8;
         private const int DragBarButtonSpacing = 6;
         private const int WindowEdgeSnapDistance = 30;
         private const int WindowResizeCornerSize = 14;
         private const int GroupBarHeight = 26;
+        private const int OverlayMenuPadding = 14;
+        private const int OverlayMenuHeaderHeight = 34;
+        private const int OverlayMenuFooterHeight = 30;
+        private const int OverlayMenuRowHeight = 24;
+        private const int OverlayMenuRowGap = 4;
+        private const int OverlayMenuColumnGap = 8;
+        private const float OverlayMenuNameColumnWeight = 0.68f;
+        private const int OverlayMenuFooterButtonHeight = 22;
+        private const int OverlayMenuFooterButtonWidth = 88;
+        private const int OverlayMenuFooterButtonGap = 6;
+        private const int OverlayMenuNumericButtonMinWidth = 18;
         private const int TabMinWidth = 72;
         private const int TabHorizontalPadding = 12;
         private const int TabSpacing = 4;
@@ -147,6 +163,12 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static Rectangle _overlayDismissBounds;
         private static Rectangle _overlayOpenAllBounds;
         private static Rectangle _overlayCloseAllBounds;
+        private static Rectangle _overlayDragHandleBounds;
+        private static bool _overlayMenuDragging;
+        private static Point _overlayMenuDragOffset;
+        private static Point? _overlayMenuTopLeft;
+        private static Vector2? _overlayMenuTopLeftNormalized;
+        private static bool _overlayMenuWindowStateLoaded;
         private static readonly List<ResizeEdge> _resizeEdges = [];
         private static ResizeEdge? _hoveredResizeEdge;
         private static ResizeEdge? _activeResizeEdge;
@@ -185,6 +207,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static KeyboardState _previousKeyboardState;
         private static readonly List<BlockMenuEntry> _blockMenuEntries = [];
         private static readonly List<OverlayMenuRow> _overlayRows = [];
+        private static readonly Dictionary<DockBlockKind, FunColInterface> _overlayRowFunCols = new();
         private static BlockMenuEntry _activeNumericEntry;
         private static readonly KeyRepeatTracker OverlayInputRepeater = new();
         private static Dictionary<string, Rectangle> _resizeStartBlockBounds;
@@ -500,6 +523,18 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             }
 
             bool blockMenuState = rebindOverlayOpen ? false : GetBlockMenuState();
+            if (!rebindOverlayOpen &&
+                !_panelInteractionLockActive &&
+                _overlayMenuVisible &&
+                !blockMenuState &&
+                !(Core.Instance?.IsActive ?? true))
+            {
+                // Keep the block menu open across focus loss by restoring the switch state
+                // if the window deactivation path temporarily clears it.
+                SetBlockMenuSwitchState(true);
+                blockMenuState = true;
+            }
+
             _blockMenuSwitchState = blockMenuState;
             _overlayMenuVisible = !_panelInteractionLockActive && blockMenuState;
 
@@ -609,7 +644,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             else if (_overlayMenuVisible)
             {
                 UpdateOverlayKeyboardInput(keyboardState, elapsedSeconds);
-                UpdateOverlayInteractions(leftClickStarted);
+                UpdateOverlayInteractions(virtualMouseState, _previousVirtualMouseState, leftClickStarted, leftClickHeld, leftClickReleased, elapsedSeconds);
                 ClearDockingInteractions();
             }
             else if (!_panelInteractionLockActive)
@@ -796,6 +831,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static void EnsureBlocks()
         {
             EnsureBlockMenuEntries();
+            EnsureOverlayMenuWindowStateLoaded();
 
             if (!_tooltipsLoaded)
             {
@@ -820,6 +856,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 _blockTooltips["Dropdown_ControlEnumOptionEnabled"]  = [("Select this enum option for the control.", string.Empty)];
                 _blockTooltips["Dropdown_ControlEnumOptionDisabled"] = [("This enum option is disabled. Click its checkbox to re-enable it.", string.Empty)];
                 _blockTooltips["Dropdown_PanelTransparency"]         = [("Adjust panel transparency for this block. Right is more transparent.", string.Empty)];
+                _blockTooltips[OverlayMenuToggleTooltipKey]          = [("Click the state indicator to toggle this block between shown and hidden.", string.Empty)];
+                _blockTooltips[OverlayMenuCountTooltipKey]           = [("Use the minus and plus buttons to change how many instances of this block are active.", string.Empty)];
 
                 // All property row tooltips: non-hidden rows get 1 entry, hidden rows get 2
                 foreach (var (key, entries) in PropertiesBlock.GetAllPropRowTooltipEntries())
@@ -1942,6 +1980,63 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _blockMenuEntries.Add(new BlockMenuEntry(InteractBlockKey, InteractBlock.BlockTitle, DockBlockKind.Interact, BlockMenuControlMode.Toggle, initialVisible: true));
         }
 
+        private static BlockMenuEntry FindMenuEntry(DockBlockKind kind)
+        {
+            return _blockMenuEntries.FirstOrDefault(entry => entry != null && entry.Kind == kind);
+        }
+
+        private static bool IsBlockEnabledByMenuEntry(DockBlock block)
+        {
+            if (block == null)
+            {
+                return false;
+            }
+
+            BlockMenuEntry entry = FindMenuEntry(block.Kind);
+            if (entry == null)
+            {
+                return true;
+            }
+
+            return entry.ControlMode switch
+            {
+                BlockMenuControlMode.Toggle => entry.IsVisible,
+                BlockMenuControlMode.Count => entry.Count > 0,
+                _ => true
+            };
+        }
+
+        private static DockBlock ResolveVisibleActiveBlock(PanelGroup group, DockBlock excludedBlock = null)
+        {
+            if (group == null || group.Blocks.Count == 0)
+            {
+                return null;
+            }
+
+            DockBlock active = group.ActiveBlock;
+            if (active != null &&
+                !ReferenceEquals(active, excludedBlock) &&
+                IsBlockEnabledByMenuEntry(active))
+            {
+                return active;
+            }
+
+            foreach (DockBlock candidate in group.Blocks)
+            {
+                if (candidate == null || ReferenceEquals(candidate, excludedBlock))
+                {
+                    continue;
+                }
+
+                if (IsBlockEnabledByMenuEntry(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
         private static int ClampCount(BlockMenuEntry entry, int value)
         {
             if (entry == null)
@@ -2723,8 +2818,21 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _groupBarLayoutCache.Clear();
             foreach (PanelGroup group in _panelGroups.Values)
             {
-                DockBlock active = group?.ActiveBlock;
-                if (active == null || !active.IsVisible)
+                DockBlock active = ResolveVisibleActiveBlock(group);
+                if (active == null)
+                {
+                    continue;
+                }
+
+                bool activeNeedsRepair =
+                    !string.Equals(group.ActiveBlockId, active.Id, StringComparison.OrdinalIgnoreCase) ||
+                    !active.IsVisible;
+                if (activeNeedsRepair && GetPanelNode(group) != null)
+                {
+                    SetPanelActiveBlock(group, active);
+                }
+
+                if (!active.IsVisible)
                 {
                     continue;
                 }
@@ -2748,7 +2856,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             Rectangle groupBarBounds = GetGroupBarBounds(block, group, dragBarHeight);
             PanelGroupBarLayout layout = new(group.PanelId, groupBarBounds);
-            if (groupBarBounds == Rectangle.Empty || group.Blocks.Count == 0)
+            List<DockBlock> tabBlocks = group.Blocks
+                .Where(tab => tab != null && IsBlockEnabledByMenuEntry(tab))
+                .ToList();
+            if (groupBarBounds == Rectangle.Empty || tabBlocks.Count == 0)
             {
                 return layout;
             }
@@ -2861,7 +2972,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             bool showLockButtons = DockingModeEnabled && !panelLocked;
             bool showCloseButtons = DockingModeEnabled && !panelLocked;
             bool showUngroupButtons = showLockButtons && IsOverlayPanelGroup(group);
-            int tabCount = group.Blocks.Count;
+            int tabCount = tabBlocks.Count;
             int availableWidth = Math.Max(0, groupBarBounds.Width - (TabSpacing * Math.Max(0, tabCount - 1)) - (TabHorizontalPadding * 2));
             int iconMinWidth = CalculateIconMinWidth(showCloseButtons, showLockButtons, showUngroupButtons);
             int comfortableMinWidth = Math.Max(iconMinWidth, TabMinWidth);
@@ -2871,7 +2982,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             List<int> tabWidths = new(tabCount);
             List<int> textWidths = new(tabCount);
-            foreach (DockBlock tabBlock in group.Blocks)
+            foreach (DockBlock tabBlock in tabBlocks)
             {
                 tabWidths.Add(baseWidth);
                 int measuredText = tabFont.IsAvailable ? (int)Math.Ceiling(tabFont.MeasureString(tabBlock.Title).X) : 0;
@@ -2909,9 +3020,9 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             int x = groupBarBounds.X + TabHorizontalPadding;
             int height = Math.Max(0, groupBarBounds.Height - (TabVerticalPadding * 2));
-            for (int i = 0; i < group.Blocks.Count && i < tabWidths.Count; i++)
+            for (int i = 0; i < tabBlocks.Count && i < tabWidths.Count; i++)
             {
-                DockBlock tabBlock = group.Blocks[i];
+                DockBlock tabBlock = tabBlocks[i];
                 int targetWidth = tabWidths[i];
                 targetWidth = Math.Min(targetWidth, Math.Max(0, groupBarBounds.Right - x));
                 if (targetWidth <= 0)
@@ -7400,32 +7511,45 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
-            string rowKey =
-                ControlsBlock.GetHoveredRowKey()
-                ?? BackendBlock.GetHoveredRowKey()
-                ?? SpecsBlock.GetHoveredRowKey()
-                ?? ColorSchemeBlock.GetHoveredRowKey()
-                ?? PropertiesBlock.GetHoveredButtonKey()
-                ?? PropertiesBlock.GetHoveredPropRowKey()
-                ?? InteractBlock.GetHoveredRowKey()
-                ?? ControlSetupsBlock.GetHoveredRowKey()
-                ?? DockingSetupsBlock.GetHoveredRowKey()
-                ?? NotesBlock.GetHoveredRowKey()
-                ?? GetHoveredOpacityTooltipKey()
-                ?? GetHoveredTabButtonTooltipKey()
-                ?? GetHoveredDragBarButtonTooltipKey();
+            string rowKey;
+            string rowLabel;
+            if (_overlayMenuVisible)
+            {
+                if (!TryGetOverlayMenuTooltipHover(out rowKey, out rowLabel))
+                {
+                    ResetTooltipHoverState();
+                    return;
+                }
+            }
+            else
+            {
+                rowKey =
+                    ControlsBlock.GetHoveredRowKey()
+                    ?? BackendBlock.GetHoveredRowKey()
+                    ?? SpecsBlock.GetHoveredRowKey()
+                    ?? ColorSchemeBlock.GetHoveredRowKey()
+                    ?? PropertiesBlock.GetHoveredButtonKey()
+                    ?? PropertiesBlock.GetHoveredPropRowKey()
+                    ?? InteractBlock.GetHoveredRowKey()
+                    ?? ControlSetupsBlock.GetHoveredRowKey()
+                    ?? DockingSetupsBlock.GetHoveredRowKey()
+                    ?? NotesBlock.GetHoveredRowKey()
+                    ?? GetHoveredOpacityTooltipKey()
+                    ?? GetHoveredTabButtonTooltipKey()
+                    ?? GetHoveredDragBarButtonTooltipKey();
 
-            string rowLabel = rowKey != null
-                ? (ControlsBlock.GetHoveredRowLabel()
-                    ?? BackendBlock.GetHoveredRowLabel()
-                    ?? SpecsBlock.GetHoveredRowLabel()
-                    ?? ColorSchemeBlock.GetHoveredRowLabel()
-                    ?? PropertiesBlock.GetHoveredPropRowLabel()
-                    ?? InteractBlock.GetHoveredRowLabel()
-                    ?? ControlSetupsBlock.GetHoveredRowLabel()
-                    ?? DockingSetupsBlock.GetHoveredRowLabel()
-                    ?? NotesBlock.GetHoveredRowLabel())
-                : null;
+                rowLabel = rowKey != null
+                    ? (ControlsBlock.GetHoveredRowLabel()
+                        ?? BackendBlock.GetHoveredRowLabel()
+                        ?? SpecsBlock.GetHoveredRowLabel()
+                        ?? ColorSchemeBlock.GetHoveredRowLabel()
+                        ?? PropertiesBlock.GetHoveredPropRowLabel()
+                        ?? InteractBlock.GetHoveredRowLabel()
+                        ?? ControlSetupsBlock.GetHoveredRowLabel()
+                        ?? DockingSetupsBlock.GetHoveredRowLabel()
+                        ?? NotesBlock.GetHoveredRowLabel())
+                    : null;
+            }
 
             if (!string.Equals(rowKey, _tooltipHoveredRowKey, StringComparison.OrdinalIgnoreCase))
             {
@@ -7444,6 +7568,28 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
                 _tooltipHoverElapsed += elapsedSeconds;
             }
+        }
+
+        private static bool TryGetOverlayMenuTooltipHover(out string rowKey, out string rowLabel)
+        {
+            rowKey = null;
+            rowLabel = null;
+
+            foreach (OverlayMenuRow row in _overlayRows)
+            {
+                if (row.Entry == null || row.RowBounds == Rectangle.Empty || !row.RowBounds.Contains(_mousePosition))
+                {
+                    continue;
+                }
+
+                rowKey = row.Entry.ControlMode == BlockMenuControlMode.Toggle
+                    ? OverlayMenuToggleTooltipKey
+                    : OverlayMenuCountTooltipKey;
+                rowLabel = row.Entry.Label;
+                return true;
+            }
+
+            return false;
         }
 
         private static void ResetTooltipHoverState()
@@ -7958,7 +8104,7 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
         private static void DrawOverlayMenu(SpriteBatch spriteBatch)
         {
-            UIStyle.UIFont headerFont = UIStyle.FontH1;
+            UIStyle.UIFont headerFont = UIStyle.FontHBody;
             UIStyle.UIFont bodyFont = UIStyle.FontTech;
 
             if (!_overlayMenuVisible || !headerFont.IsAvailable || !bodyFont.IsAvailable)
@@ -7976,42 +8122,40 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
 
             string header = "Block visibility";
             Vector2 headerSize = headerFont.MeasureString(header);
-            Vector2 headerPosition = new(_overlayBounds.X + (_overlayBounds.Width - headerSize.X) / 2f, _overlayBounds.Y + 12);
+            Vector2 headerPosition = new(
+                _overlayBounds.X + OverlayMenuPadding,
+                _overlayBounds.Y + OverlayMenuPadding + ((OverlayMenuHeaderHeight - headerSize.Y) * 0.5f));
             headerFont.DrawString(spriteBatch, header, headerPosition, UIStyle.TextColor);
             DrawOverlayDismissButton(spriteBatch);
 
-            int rowY = _overlayBounds.Y + 52;
             foreach (OverlayMenuRow row in _overlayRows)
             {
                 BlockMenuEntry entry = row.Entry;
-                if (entry == null)
+                FunColInterface rowFunCol = row.RowFunCol;
+                if (entry == null || rowFunCol == null || row.RowBounds == Rectangle.Empty)
                 {
                     continue;
                 }
 
-                bodyFont.DrawString(spriteBatch, entry.Label, new Vector2(_overlayBounds.X + 20, rowY), UIStyle.TextColor);
+                ConfigureOverlayRowFunCol(entry, rowFunCol);
+                DrawRect(spriteBatch, row.RowBounds, UIStyle.BlockBackground * 0.92f);
+                DrawRectOutline(spriteBatch, row.RowBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+                rowFunCol.Draw(spriteBatch, row.RowBounds, bodyFont, _pixelTexture);
 
-                if (entry.ControlMode == BlockMenuControlMode.Toggle)
+                if (entry.ControlMode == BlockMenuControlMode.Count)
                 {
-                    string state = entry.IsVisible ? "Hide" : "Show";
-                    bool hovered = UIButtonRenderer.IsHovered(row.ToggleBounds, _mousePosition);
-                    UIButtonRenderer.ButtonStyle style = entry.IsVisible ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey;
-                    UIButtonRenderer.Draw(spriteBatch, row.ToggleBounds, state, style, hovered);
+                    Rectangle stateBounds = GetOverlayStateColumnBounds(row.RowBounds);
+                    GetOverlayStepperBounds(stateBounds, out Rectangle minusBounds, out Rectangle numberBounds, out Rectangle plusBounds);
+                    bool minusDisabled = entry.Count <= entry.MinCount;
+                    bool plusDisabled = entry.Count >= entry.MaxCount;
+                    DrawStepperButton(spriteBatch, minusBounds, "-", minusDisabled);
+                    DrawNumberField(spriteBatch, numberBounds, GetNumericDisplayText(entry), ReferenceEquals(_activeNumericEntry, entry));
+                    DrawStepperButton(spriteBatch, plusBounds, "+", plusDisabled);
                 }
-                else
-                {
-                    bool atMin = entry.Count <= entry.MinCount;
-                    bool atMax = entry.Count >= entry.MaxCount;
-                    DrawStepperButton(spriteBatch, row.MinusBounds, "-", atMin);
-                    DrawNumberField(spriteBatch, row.InputBounds, GetNumericDisplayText(entry), entry.IsEditing);
-                    DrawStepperButton(spriteBatch, row.PlusBounds, "+", atMax);
-                }
-
-                rowY += 32;
             }
 
-            string openAllLabel = TextSpacingHelper.JoinWithWideSpacing("Open", "all");
-            string closeAllLabel = TextSpacingHelper.JoinWithWideSpacing("Close", "all");
+            string openAllLabel = "Show all";
+            string closeAllLabel = "Hide all";
             bool openAllHovered = UIButtonRenderer.IsHovered(_overlayOpenAllBounds, _mousePosition);
             bool closeAllHovered = UIButtonRenderer.IsHovered(_overlayCloseAllBounds, _mousePosition);
             UIButtonRenderer.Draw(spriteBatch, _overlayOpenAllBounds, openAllLabel, UIButtonRenderer.ButtonStyle.Blue, openAllHovered);
@@ -8022,6 +8166,8 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         {
             _overlayMenuVisible = false;
             _blockMenuSwitchState = false;
+            SetBlockMenuSwitchState(false);
+            PersistOverlayMenuWindowState();
             ClearDockingInteractions();
             ResetOverlayLayout();
         }
@@ -8071,7 +8217,10 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             _overlayDismissBounds = Rectangle.Empty;
             _overlayOpenAllBounds = Rectangle.Empty;
             _overlayCloseAllBounds = Rectangle.Empty;
+            _overlayDragHandleBounds = Rectangle.Empty;
             _overlayRows.Clear();
+            _overlayMenuDragging = false;
+            _overlayMenuDragOffset = Point.Zero;
             ClearOverlayEditingState();
         }
 
@@ -8148,6 +8297,57 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             font.DrawString(spriteBatch, text, textPosition, UIStyle.TextColor);
         }
 
+        private static FunColInterface GetOrCreateOverlayRowFunCol(BlockMenuEntry entry)
+        {
+            if (entry == null)
+            {
+                return null;
+            }
+
+            if (_overlayRowFunCols.TryGetValue(entry.Kind, out FunColInterface existing) && existing != null)
+            {
+                return existing;
+            }
+
+            FunColInterface funCol = new(
+                new float[] { OverlayMenuNameColumnWeight, 1f - OverlayMenuNameColumnWeight },
+                new TextLabelFeature("Block", FunColTextAlign.Left),
+                new ValueDisplayFeature("State") { TextAlign = FunColTextAlign.Center });
+
+            funCol.DisableExpansion = true;
+            funCol.SuppressTooltipWarnings = true;
+            _overlayRowFunCols[entry.Kind] = funCol;
+            return funCol;
+        }
+
+        private static void ConfigureOverlayRowFunCol(BlockMenuEntry entry, FunColInterface rowFunCol)
+        {
+            if (entry == null || rowFunCol == null)
+            {
+                return;
+            }
+
+            if (rowFunCol.GetFeature(0) is TextLabelFeature labelFeature)
+            {
+                labelFeature.Text = entry.Label;
+            }
+
+            if (rowFunCol.GetFeature(1) is ValueDisplayFeature stateFeature)
+            {
+                if (entry.ControlMode == BlockMenuControlMode.Toggle)
+                {
+                    stateFeature.IsBoolean = true;
+                    stateFeature.BoolState = entry.IsVisible;
+                    stateFeature.Text = string.Empty;
+                }
+                else
+                {
+                    stateFeature.IsBoolean = false;
+                    stateFeature.Text = string.Empty;
+                }
+            }
+        }
+
         private static string GetNumericDisplayText(BlockMenuEntry entry)
         {
             if (entry == null)
@@ -8163,12 +8363,40 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             return entry.InputBuffer;
         }
 
-        private static void UpdateOverlayInteractions(bool leftClickStarted)
+        private static void UpdateOverlayInteractions(
+            MouseState mouseState,
+            MouseState previousMouseState,
+            bool leftClickStarted,
+            bool leftClickHeld,
+            bool leftClickReleased,
+            double elapsedSeconds)
         {
+            _ = previousMouseState;
             BuildOverlayLayout();
+            float dt = MathF.Max(0f, (float)elapsedSeconds);
 
+            foreach (OverlayMenuRow row in _overlayRows)
+            {
+                BlockMenuEntry entry = row.Entry;
+                FunColInterface rowFunCol = row.RowFunCol;
+                if (entry == null || rowFunCol == null || row.RowBounds == Rectangle.Empty)
+                {
+                    continue;
+                }
+
+                ConfigureOverlayRowFunCol(entry, rowFunCol);
+                rowFunCol.Update(row.RowBounds, mouseState, dt);
+            }
+
+            bool draggingMenu = UpdateOverlayMenuDragState(leftClickStarted, leftClickHeld, leftClickReleased);
             if (!leftClickStarted)
             {
+                return;
+            }
+
+            if (draggingMenu)
+            {
+                ClearActiveNumericEntry();
                 return;
             }
 
@@ -8193,46 +8421,142 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             foreach (OverlayMenuRow row in _overlayRows)
             {
                 BlockMenuEntry entry = row.Entry;
-                if (entry == null)
+                if (entry == null || row.RowBounds == Rectangle.Empty || !row.RowBounds.Contains(_mousePosition))
                 {
                     continue;
                 }
 
+                Rectangle stateBounds = GetOverlayStateColumnBounds(row.RowBounds);
+                if (stateBounds == Rectangle.Empty || !stateBounds.Contains(_mousePosition))
+                {
+                    ClearActiveNumericEntry();
+                    return;
+                }
+
                 if (entry.ControlMode == BlockMenuControlMode.Toggle)
                 {
-                    if (row.ToggleBounds.Contains(_mousePosition))
-                    {
-                        entry.IsVisible = !entry.IsVisible;
-                        ApplyToggleVisibility(entry);
-                        ResetOverlayLayout();
-                        return;
-                    }
+                    entry.IsVisible = !entry.IsVisible;
+                    ApplyToggleVisibility(entry);
+                    ResetOverlayLayout();
+                    return;
                 }
-                else
+
+                GetOverlayStepperBounds(stateBounds, out Rectangle minusBounds, out Rectangle numberBounds, out Rectangle plusBounds);
+                if (minusBounds.Contains(_mousePosition))
                 {
-                    if (row.MinusBounds.Contains(_mousePosition))
-                    {
-                        SetActiveNumericEntry(entry);
-                        AdjustNumericEntry(entry, entry.Count - 1);
-                        return;
-                    }
-
-                    if (row.PlusBounds.Contains(_mousePosition))
-                    {
-                        SetActiveNumericEntry(entry);
-                        AdjustNumericEntry(entry, entry.Count + 1);
-                        return;
-                    }
-
-                    if (row.InputBounds.Contains(_mousePosition))
-                    {
-                        SetActiveNumericEntry(entry);
-                        return;
-                    }
+                    SetActiveNumericEntry(entry);
+                    AdjustNumericEntry(entry, entry.Count - 1);
+                    return;
                 }
+
+                if (plusBounds.Contains(_mousePosition))
+                {
+                    SetActiveNumericEntry(entry);
+                    AdjustNumericEntry(entry, entry.Count + 1);
+                    return;
+                }
+
+                if (numberBounds.Contains(_mousePosition))
+                {
+                    SetActiveNumericEntry(entry);
+                    return;
+                }
+
+                ClearActiveNumericEntry();
+                return;
             }
 
             ClearActiveNumericEntry();
+        }
+
+        private static bool UpdateOverlayMenuDragState(bool leftClickStarted, bool leftClickHeld, bool leftClickReleased)
+        {
+            if (_overlayBounds == Rectangle.Empty)
+            {
+                _overlayMenuDragging = false;
+                return false;
+            }
+
+            if (_overlayMenuDragging)
+            {
+                if (leftClickHeld)
+                {
+                    _overlayMenuTopLeft = new Point(
+                        _mousePosition.X - _overlayMenuDragOffset.X,
+                        _mousePosition.Y - _overlayMenuDragOffset.Y);
+                    BuildOverlayLayout();
+                }
+
+                if (leftClickReleased)
+                {
+                    _overlayMenuDragging = false;
+                    PersistOverlayMenuWindowState();
+                }
+
+                return true;
+            }
+
+            if (leftClickStarted &&
+                _overlayDragHandleBounds != Rectangle.Empty &&
+                _overlayDragHandleBounds.Contains(_mousePosition) &&
+                (_overlayDismissBounds == Rectangle.Empty || !_overlayDismissBounds.Contains(_mousePosition)))
+            {
+                _overlayMenuDragging = true;
+                _overlayMenuDragOffset = new Point(
+                    _mousePosition.X - _overlayBounds.X,
+                    _mousePosition.Y - _overlayBounds.Y);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static Rectangle GetOverlayStateColumnBounds(Rectangle rowBounds)
+        {
+            if (rowBounds == Rectangle.Empty || rowBounds.Width <= 0 || rowBounds.Height <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int nameWidth = (int)(rowBounds.Width * OverlayMenuNameColumnWeight);
+            nameWidth = Math.Clamp(nameWidth, 0, rowBounds.Width);
+            int stateX = rowBounds.X + nameWidth;
+            int stateWidth = Math.Max(0, rowBounds.Right - stateX);
+            return new Rectangle(stateX, rowBounds.Y, stateWidth, rowBounds.Height);
+        }
+
+        private static void GetOverlayStepperBounds(Rectangle stateBounds, out Rectangle minusBounds, out Rectangle numberBounds, out Rectangle plusBounds)
+        {
+            minusBounds = Rectangle.Empty;
+            numberBounds = Rectangle.Empty;
+            plusBounds = Rectangle.Empty;
+
+            if (stateBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            int innerX = stateBounds.X + 2;
+            int innerY = stateBounds.Y + 2;
+            int innerWidth = Math.Max(0, stateBounds.Width - 4);
+            int innerHeight = Math.Max(0, stateBounds.Height - 4);
+            if (innerWidth <= 0 || innerHeight <= 0)
+            {
+                return;
+            }
+
+            int gap = 2;
+            int buttonWidth = Math.Clamp(innerWidth / 4, OverlayMenuNumericButtonMinWidth, 22);
+            if ((buttonWidth * 2) + (gap * 2) >= innerWidth)
+            {
+                buttonWidth = Math.Max(OverlayMenuNumericButtonMinWidth, (innerWidth - (gap * 2)) / 3);
+            }
+
+            minusBounds = new Rectangle(innerX, innerY, buttonWidth, innerHeight);
+            plusBounds = new Rectangle(innerX + innerWidth - buttonWidth, innerY, buttonWidth, innerHeight);
+            int numberX = minusBounds.Right + gap;
+            int numberWidth = Math.Max(0, plusBounds.X - gap - numberX);
+            numberBounds = new Rectangle(numberX, innerY, numberWidth, innerHeight);
         }
 
         private static void RebuildBlocksFromMenuChange()
@@ -8249,13 +8573,35 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                 return;
             }
 
-            if (_blocks.TryGetValue(entry.IdPrefix, out DockBlock block))
+            if (!_blocks.TryGetValue(entry.IdPrefix, out DockBlock block) || block == null)
             {
-                block.IsVisible = entry.IsVisible;
-                if (entry.IsVisible)
+                MarkLayoutDirty();
+                return;
+            }
+
+            if (!entry.IsVisible)
+            {
+                PanelGroup group = GetPanelGroupForBlock(block);
+                if (group != null && string.Equals(group.ActiveBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    EnsureBlockAttachedToLayout(block);
+                    DockBlock fallback = ResolveVisibleActiveBlock(group, block);
+                    if (fallback != null && GetPanelNode(group) != null)
+                    {
+                        SetPanelActiveBlock(group, fallback);
+                        MapBlockToPanel(fallback, group);
+                    }
+                    else if (_panelNodes.TryGetValue(group.PanelId, out BlockNode panelNode))
+                    {
+                        _rootNode = DockLayout.Detach(_rootNode, panelNode);
+                    }
                 }
+
+                block.IsVisible = false;
+                _blockNodes.Remove(block.Id);
+            }
+            else
+            {
+                EnsureBlockAttachedToLayout(block);
             }
 
             MarkLayoutDirty();
@@ -8588,19 +8934,19 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static void CloseOverlayMenuFromUi()
         {
             _overlayMenuVisible = false;
-            bool overrideApplied = InputTypeManager.OverrideSwitchState(BlockMenuControlKey, false);
+            SetBlockMenuSwitchState(false);
+            _blockMenuSwitchState = false;
+            PersistOverlayMenuWindowState();
+            ResetOverlayLayout();
+        }
+
+        private static void SetBlockMenuSwitchState(bool value)
+        {
+            bool overrideApplied = InputTypeManager.OverrideSwitchState(BlockMenuControlKey, value);
             if (!overrideApplied && ControlStateManager.ContainsSwitchState(BlockMenuControlKey))
             {
-                ControlStateManager.SetSwitchState(BlockMenuControlKey, false);
+                ControlStateManager.SetSwitchState(BlockMenuControlKey, value);
             }
-            _blockMenuSwitchState = false;
-
-            _overlayBounds = Rectangle.Empty;
-            _overlayDismissBounds = Rectangle.Empty;
-            _overlayOpenAllBounds = Rectangle.Empty;
-            _overlayCloseAllBounds = Rectangle.Empty;
-            _overlayRows.Clear();
-            ClearOverlayEditingState();
         }
 
         private static bool GetBlockMenuState()
@@ -8618,47 +8964,167 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
         private static void BuildOverlayLayout()
         {
             EnsureBlockMenuEntries();
+            EnsureOverlayMenuWindowStateLoaded();
             Rectangle viewport = Core.Instance?.GraphicsDevice?.Viewport.Bounds ?? new Rectangle(0, 0, 1280, 720);
-            int width = 360;
-            int height = 120 + (_blockMenuEntries.Count * 32);
-            _overlayBounds = new Rectangle(viewport.X + (viewport.Width - width) / 2, viewport.Y + (viewport.Height - height) / 2, width, height);
-            int closeButtonSize = 24;
-            _overlayDismissBounds = new Rectangle(_overlayBounds.Right - closeButtonSize - 12, _overlayBounds.Y + 12, closeButtonSize, closeButtonSize);
+
+            int rowCount = Math.Max(1, _blockMenuEntries.Count);
+            int chromeHeight = (OverlayMenuPadding * 2) + OverlayMenuHeaderHeight + OverlayMenuFooterHeight;
+            int availableRowsHeight = Math.Max(OverlayMenuRowHeight, (viewport.Height - 24) - chromeHeight);
+            int maxRowsPerColumn = Math.Max(1, (availableRowsHeight + OverlayMenuRowGap) / (OverlayMenuRowHeight + OverlayMenuRowGap));
+            int columns = Math.Clamp((int)Math.Ceiling(rowCount / (double)maxRowsPerColumn), 1, 2);
+            int rowsPerColumn = Math.Max(1, (int)Math.Ceiling(rowCount / (double)columns));
+
+            int targetInnerWidth = columns == 1 ? 400 : 760;
+            int width = Math.Min(targetInnerWidth + (OverlayMenuPadding * 2), Math.Max(340, viewport.Width - 24));
+            int innerWidth = Math.Max(120, width - (OverlayMenuPadding * 2));
+            int cellWidth = columns == 1
+                ? innerWidth
+                : (innerWidth - ((columns - 1) * OverlayMenuColumnGap)) / columns;
+
+            int rowsHeight = (rowsPerColumn * OverlayMenuRowHeight) + (Math.Max(0, rowsPerColumn - 1) * OverlayMenuRowGap);
+            int height = (OverlayMenuPadding * 2) + OverlayMenuHeaderHeight + rowsHeight + OverlayMenuFooterHeight;
+            height = Math.Min(height, Math.Max(220, viewport.Height - 24));
+
+            Point topLeft = ResolveOverlayMenuTopLeft(viewport, width, height);
+            _overlayBounds = new Rectangle(topLeft.X, topLeft.Y, width, height);
+            _overlayMenuTopLeft = topLeft;
+
+            int closeButtonSize = 20;
+            _overlayDismissBounds = new Rectangle(
+                _overlayBounds.Right - OverlayMenuPadding - closeButtonSize,
+                _overlayBounds.Y + OverlayMenuPadding + ((OverlayMenuHeaderHeight - closeButtonSize) / 2),
+                closeButtonSize,
+                closeButtonSize);
+            _overlayDragHandleBounds = new Rectangle(
+                _overlayBounds.X + OverlayMenuPadding,
+                _overlayBounds.Y + OverlayMenuPadding,
+                Math.Max(0, _overlayBounds.Width - (OverlayMenuPadding * 2) - closeButtonSize - 8),
+                OverlayMenuHeaderHeight);
 
             _overlayRows.Clear();
-            int rowY = _overlayBounds.Y + 52;
-            foreach (BlockMenuEntry entry in _blockMenuEntries)
+            int rowsTop = _overlayBounds.Y + OverlayMenuPadding + OverlayMenuHeaderHeight;
+            for (int i = 0; i < _blockMenuEntries.Count; i++)
             {
-                Rectangle toggleBounds = Rectangle.Empty;
-                Rectangle minusBounds = Rectangle.Empty;
-                Rectangle inputBounds = Rectangle.Empty;
-                Rectangle plusBounds = Rectangle.Empty;
-
-                if (entry.ControlMode == BlockMenuControlMode.Toggle)
-                {
-                    toggleBounds = new Rectangle(_overlayBounds.Right - 96, rowY - 4, 76, 28);
-                }
-                else
-                {
-                    const int stepWidth = 28;
-                    const int inputWidth = 52;
-                    int controlHeight = 28;
-                    int totalWidth = (stepWidth * 2) + inputWidth;
-                    int startX = _overlayBounds.Right - 20 - totalWidth;
-                    int controlY = rowY - 4;
-
-                    minusBounds = new Rectangle(startX, controlY, stepWidth, controlHeight);
-                    inputBounds = new Rectangle(minusBounds.Right, controlY, inputWidth, controlHeight);
-                    plusBounds = new Rectangle(inputBounds.Right, controlY, stepWidth, controlHeight);
-                }
-
-                _overlayRows.Add(new OverlayMenuRow(entry, toggleBounds, minusBounds, inputBounds, plusBounds));
-                rowY += 32;
+                int columnIndex = columns == 1 ? 0 : i / rowsPerColumn;
+                int rowIndex = columns == 1 ? i : i % rowsPerColumn;
+                int x = _overlayBounds.X + OverlayMenuPadding + (columnIndex * (cellWidth + OverlayMenuColumnGap));
+                int y = rowsTop + (rowIndex * (OverlayMenuRowHeight + OverlayMenuRowGap));
+                Rectangle rowBounds = new(x, y, cellWidth, OverlayMenuRowHeight);
+                _overlayRows.Add(new OverlayMenuRow(
+                    _blockMenuEntries[i],
+                    rowBounds,
+                    GetOrCreateOverlayRowFunCol(_blockMenuEntries[i])));
             }
 
-            int buttonWidth = (width - 60) / 2;
-            _overlayOpenAllBounds = new Rectangle(_overlayBounds.X + 20, _overlayBounds.Bottom - 44, buttonWidth, 32);
-            _overlayCloseAllBounds = new Rectangle(_overlayOpenAllBounds.Right + 20, _overlayBounds.Bottom - 44, buttonWidth, 32);
+            int buttonWidth = Math.Min(OverlayMenuFooterButtonWidth, Math.Max(70, (innerWidth - OverlayMenuFooterButtonGap) / 2));
+            int buttonsTotalWidth = (buttonWidth * 2) + OverlayMenuFooterButtonGap;
+            int footerX = _overlayBounds.X + (_overlayBounds.Width - buttonsTotalWidth) / 2;
+            int footerY = _overlayBounds.Bottom - OverlayMenuPadding - OverlayMenuFooterButtonHeight;
+            _overlayOpenAllBounds = new Rectangle(footerX, footerY, buttonWidth, OverlayMenuFooterButtonHeight);
+            _overlayCloseAllBounds = new Rectangle(_overlayOpenAllBounds.Right + OverlayMenuFooterButtonGap, footerY, buttonWidth, OverlayMenuFooterButtonHeight);
+        }
+
+        private static Point ResolveOverlayMenuTopLeft(Rectangle viewport, int width, int height)
+        {
+            Point centered = new(
+                viewport.X + (viewport.Width - width) / 2,
+                viewport.Y + (viewport.Height - height) / 2);
+
+            Point target = centered;
+            if (_overlayMenuTopLeft.HasValue)
+            {
+                target = _overlayMenuTopLeft.Value;
+            }
+            else if (_overlayMenuTopLeftNormalized.HasValue)
+            {
+                Vector2 normalized = _overlayMenuTopLeftNormalized.Value;
+                int maxOffsetX = Math.Max(0, viewport.Width - width);
+                int maxOffsetY = Math.Max(0, viewport.Height - height);
+                target = new Point(
+                    viewport.X + (int)MathF.Round(MathHelper.Clamp(normalized.X, 0f, 1f) * maxOffsetX),
+                    viewport.Y + (int)MathF.Round(MathHelper.Clamp(normalized.Y, 0f, 1f) * maxOffsetY));
+            }
+
+            int minX = viewport.X;
+            int maxX = viewport.Right - width;
+            int minY = viewport.Y;
+            int maxY = viewport.Bottom - height;
+            if (maxX < minX)
+            {
+                maxX = minX;
+            }
+
+            if (maxY < minY)
+            {
+                maxY = minY;
+            }
+
+            return new Point(
+                Math.Clamp(target.X, minX, maxX),
+                Math.Clamp(target.Y, minY, maxY));
+        }
+
+        private static void EnsureOverlayMenuWindowStateLoaded()
+        {
+            if (_overlayMenuWindowStateLoaded)
+            {
+                return;
+            }
+
+            _overlayMenuWindowStateLoaded = true;
+            Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.DockingSetups);
+            if (data == null || !data.TryGetValue(BlockMenuWindowStateRowKey, out string encodedState) || string.IsNullOrWhiteSpace(encodedState))
+            {
+                return;
+            }
+
+            try
+            {
+                OverlayMenuWindowState state = JsonSerializer.Deserialize<OverlayMenuWindowState>(encodedState, DockingSerializerOptions);
+                if (state == null)
+                {
+                    return;
+                }
+
+                _overlayMenuTopLeftNormalized = new Vector2(
+                    MathHelper.Clamp(state.NormalizedX, 0f, 1f),
+                    MathHelper.Clamp(state.NormalizedY, 0f, 1f));
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning($"Failed to decode block menu window state: {ex.Message}");
+            }
+        }
+
+        private static void PersistOverlayMenuWindowState()
+        {
+            if (_overlayBounds == Rectangle.Empty)
+            {
+                return;
+            }
+
+            Rectangle viewport = Core.Instance?.GraphicsDevice?.Viewport.Bounds ?? new Rectangle(0, 0, 1280, 720);
+            int xRange = Math.Max(1, viewport.Width - _overlayBounds.Width);
+            int yRange = Math.Max(1, viewport.Height - _overlayBounds.Height);
+            float normalizedX = MathHelper.Clamp((_overlayBounds.X - viewport.X) / (float)xRange, 0f, 1f);
+            float normalizedY = MathHelper.Clamp((_overlayBounds.Y - viewport.Y) / (float)yRange, 0f, 1f);
+
+            _overlayMenuTopLeftNormalized = new Vector2(normalizedX, normalizedY);
+            OverlayMenuWindowState state = new()
+            {
+                NormalizedX = normalizedX,
+                NormalizedY = normalizedY
+            };
+
+            try
+            {
+                string encodedState = JsonSerializer.Serialize(state, DockingSerializerOptions);
+                BlockDataStore.SetRowData(DockBlockKind.DockingSetups, BlockMenuWindowStateRowKey, encodedState);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning($"Failed to persist block menu window state: {ex.Message}");
+            }
         }
 
         public static Rectangle GetVirtualViewport()
@@ -10204,6 +10670,18 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
                  * Matrix.CreateTranslation(cx, cy, 0f);
         }
 
+        public static Vector2 GetCameraRenderCenter()
+        {
+            if (_worldRenderTarget != null)
+            {
+                return new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
+            }
+
+            return new Vector2(
+                Core.Instance?.GraphicsDevice?.Viewport.Width / 2f ?? 0f,
+                Core.Instance?.GraphicsDevice?.Viewport.Height / 2f ?? 0f);
+        }
+
         /// <summary>
         /// Adjusts the camera zoom by one step. Positive delta zooms in (closer),
         /// negative zooms out (farther). Clamped to the ScrollMinDistance / ScrollMaxDistance
@@ -10409,22 +10887,27 @@ private const string DockingSetupActiveRowKey = "__ActiveSetup";
             public string InputBuffer { get; set; }
         }
 
+        private sealed class OverlayMenuWindowState
+        {
+            [JsonPropertyName("x")]
+            public float NormalizedX { get; set; }
+
+            [JsonPropertyName("y")]
+            public float NormalizedY { get; set; }
+        }
+
         private readonly struct OverlayMenuRow
         {
-            public OverlayMenuRow(BlockMenuEntry entry, Rectangle toggleBounds, Rectangle minusBounds, Rectangle inputBounds, Rectangle plusBounds)
+            public OverlayMenuRow(BlockMenuEntry entry, Rectangle rowBounds, FunColInterface rowFunCol)
             {
                 Entry = entry;
-                ToggleBounds = toggleBounds;
-                MinusBounds = minusBounds;
-                InputBounds = inputBounds;
-                PlusBounds = plusBounds;
+                RowBounds = rowBounds;
+                RowFunCol = rowFunCol;
             }
 
             public BlockMenuEntry Entry { get; }
-            public Rectangle ToggleBounds { get; }
-            public Rectangle MinusBounds { get; }
-            public Rectangle InputBounds { get; }
-            public Rectangle PlusBounds { get; }
+            public Rectangle RowBounds { get; }
+            public FunColInterface RowFunCol { get; }
         }
 
         private readonly struct ResizeEdge

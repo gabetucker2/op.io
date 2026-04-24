@@ -337,6 +337,12 @@ namespace op.io
             public int Count;
         }
 
+        private struct XPAbsorbDisplayStack
+        {
+            public float TotalXP;
+            public float LastAbsorbTime;
+        }
+
         private static readonly List<FreeClump> _freeClumps = new();
         private static readonly Dictionary<int, DropState> _dropStates = new();
         private static readonly Dictionary<int, UnstableDropState> _unstableDropStates = new();
@@ -345,6 +351,7 @@ namespace op.io
         private static readonly List<Agent> _liveAgents = new();
         private static readonly Dictionary<int, Agent> _liveAgentsById = new();
         private static readonly Dictionary<int, PickupWindow> _pickupWindows = new();
+        private static readonly Dictionary<int, XPAbsorbDisplayStack> _xpAbsorbDisplayStacks = new();
         private static readonly List<int> _stalePickupAgentIDs = new();
 
         private static readonly Dictionary<long, List<int>> _clusterGrid = new();
@@ -380,6 +387,10 @@ namespace op.io
         private const float MorphNeighborWeight = 0.82f;
         private const float MorphVelocityWeight = 0.3f;
         private const float MorphMaxStretch = 1.3f;
+        private const int MinAgentUnstablePreviewClumps = 12;
+        private const int MinPlayerUnstablePreviewClumps = 24;
+        private const int XPAbsorbTextSourceId = int.MinValue + 4096;
+        private const float XPPerClumpAbsorb = 1f;
         private static readonly Vector2 ShadowOffsetDirection = Vector2.Normalize(new Vector2(0.58f, 1f));
 
         private static Texture2D _orbCoreTexture;
@@ -398,6 +409,10 @@ namespace op.io
         public static float ClusterHomeostasisVariance => Settings.ClusterHomeostasisVariance;
         public static float ClusterInstabilityForce => Settings.ClusterInstabilityForce;
         public static float ClusterInstabilityPulseHz => Settings.ClusterInstabilityPulseHz;
+        public static int PlayerUnstablePreviewClumpCount { get; private set; }
+        public static float PlayerUnstablePreviewHealthRatio { get; private set; } = 1f;
+        public static float PlayerUnstablePreviewRewardXP { get; private set; }
+        public static bool PlayerUnstablePreviewEligible { get; private set; }
 
         private static ClumpSettings Settings => _cachedSettings ??= LoadSettings();
 
@@ -409,6 +424,7 @@ namespace op.io
             _liveAgents.Clear();
             _liveAgentsById.Clear();
             _pickupWindows.Clear();
+            _xpAbsorbDisplayStacks.Clear();
             _stalePickupAgentIDs.Clear();
             _staleUnstableDropIDs.Clear();
             _removeIndices.Clear();
@@ -432,11 +448,20 @@ namespace op.io
             _absorbedThisSecond = 0;
             _unstableStateFrame = 0;
             _cachedSettings = null;
+            PlayerUnstablePreviewClumpCount = 0;
+            PlayerUnstablePreviewHealthRatio = 1f;
+            PlayerUnstablePreviewRewardXP = 0f;
+            PlayerUnstablePreviewEligible = false;
         }
 
         public static void LoadContent(GraphicsDevice graphicsDevice)
         {
             EnsureTextures(graphicsDevice);
+        }
+
+        public static float ResolveDropRewardXP(GameObject source)
+        {
+            return GetDropRewardXP(source);
         }
 
         public static void UpdateUnstableDropPreviews(List<GameObject> gameObjects, float dt)
@@ -445,27 +470,60 @@ namespace op.io
             {
                 _unstableDropStates.Clear();
                 _staleUnstableDropIDs.Clear();
+                PlayerUnstablePreviewClumpCount = 0;
+                PlayerUnstablePreviewHealthRatio = 1f;
+                PlayerUnstablePreviewRewardXP = 0f;
+                PlayerUnstablePreviewEligible = false;
                 return;
             }
 
             _unstableStateFrame++;
             ClumpSettings settings = Settings;
+            int playerId = Core.Instance?.Player?.ID ?? -1;
+            PlayerUnstablePreviewClumpCount = 0;
+            PlayerUnstablePreviewHealthRatio = 1f;
+            PlayerUnstablePreviewRewardXP = 0f;
+            PlayerUnstablePreviewEligible = false;
 
             foreach (GameObject go in gameObjects)
             {
-                if (!IsValidDropSource(go) || go.CurrentHealth <= 0f || go.MaxHealth <= 0f)
+                bool isPlayerSource = go != null && go.ID == playerId;
+                float maxHealth = ResolveMaxHealthForDropSource(go);
+                float rewardXP = GetDropRewardXP(go);
+                bool validDropSource = go != null && (go.IsDestructible || go is Agent) && rewardXP > 0f;
+                bool aliveAndHasHealth = go != null && go.CurrentHealth > 0f && maxHealth > 0f;
+
+                if (isPlayerSource)
+                {
+                    PlayerUnstablePreviewRewardXP = rewardXP;
+                    PlayerUnstablePreviewHealthRatio = maxHealth > 0f
+                        ? go.CurrentHealth / MathF.Max(maxHealth, 0.001f)
+                        : 1f;
+                    PlayerUnstablePreviewEligible = validDropSource && aliveAndHasHealth;
+                }
+
+                if (!validDropSource || !aliveAndHasHealth)
                 {
                     continue;
                 }
 
-                int clumpCount = (int)MathF.Floor(go.DeathPointReward);
+                int clumpCount = (int)MathF.Floor(rewardXP);
+                if (go is Agent)
+                {
+                    clumpCount = Math.Max(clumpCount, MinAgentUnstablePreviewClumps);
+                }
+                if (isPlayerSource)
+                {
+                    clumpCount = Math.Max(clumpCount, MinPlayerUnstablePreviewClumps);
+                }
+
                 if (clumpCount <= 0)
                 {
                     _unstableDropStates.Remove(go.ID);
                     continue;
                 }
 
-                float healthRatio = go.CurrentHealth / MathF.Max(go.MaxHealth, 0.001f);
+                float healthRatio = go.CurrentHealth / MathF.Max(maxHealth, 0.001f);
                 bool isBelowThreshold = healthRatio <= settings.UnstableHealthThresholdRatio;
                 if (!isBelowThreshold && !_unstableDropStates.ContainsKey(go.ID))
                 {
@@ -473,6 +531,15 @@ namespace op.io
                 }
 
                 float sourceRadius = MathF.Max(go.BoundingRadius, settings.ClumpRadius * 2f);
+                if (go is Agent)
+                {
+                    sourceRadius = MathF.Max(sourceRadius, settings.ClumpRadius * 6f);
+                }
+                if (isPlayerSource)
+                {
+                    sourceRadius = MathF.Max(sourceRadius, settings.ClumpRadius * 10f);
+                }
+
                 UnstableDropState state = GetOrCreateUnstableDropState(go, clumpCount, sourceRadius, settings);
                 state.Center = go.Position;
                 state.Radius = sourceRadius;
@@ -507,6 +574,10 @@ namespace op.io
                 }
 
                 _unstableDropStates[go.ID] = state;
+                if (isPlayerSource)
+                {
+                    PlayerUnstablePreviewClumpCount = state.UnstableClumps.Count;
+                }
             }
 
             _staleUnstableDropIDs.Clear();
@@ -524,9 +595,9 @@ namespace op.io
             }
         }
 
-        public static void BeginDeathDrop(GameObject source, int killerAgentID, float rewardXP, float fadeDurationSeconds)
+        public static void BeginDeathDrop(GameObject source, float rewardXP, float fadeDurationSeconds)
         {
-            if (source == null || killerAgentID < 0 || rewardXP <= 0f || source is Agent)
+            if (source == null || rewardXP <= 0f)
             {
                 return;
             }
@@ -668,7 +739,15 @@ namespace op.io
                     {
                         if (_liveAgentsById.TryGetValue(clump.LockedAgentID, out Agent collector))
                         {
-                            collector.CurrentXP += 1f;
+                            collector.CurrentXP += XPPerClumpAbsorb;
+                            float xpStackTotal = AccumulateXPAbsorbDisplayTotal(collector.ID, XPPerClumpAbsorb);
+                            DamageNumberManager.Notify(
+                                collector.ID,
+                                collector.Position,
+                                xpStackTotal,
+                                sourceId: XPAbsorbTextSourceId,
+                                color: ColorPalette.XPBar,
+                                isNewHit: true);
                         }
 
                         _removeIndices.Add(i);
@@ -1040,6 +1119,32 @@ namespace op.io
             clump.Velocity = Vector2.Lerp(clump.Velocity, desiredVelocity, blend);
         }
 
+        private static float AccumulateXPAbsorbDisplayTotal(int agentID, float absorbedXP)
+        {
+            if (agentID < 0 || absorbedXP <= 0f)
+            {
+                return MathF.Max(0f, absorbedXP);
+            }
+
+            float now = Core.GAMETIME;
+            float stackLifetime = MathF.Max(0.01f, DamageNumberManager.Hold + DamageNumberManager.FadeOut);
+            XPAbsorbDisplayStack stack;
+            if (!_xpAbsorbDisplayStacks.TryGetValue(agentID, out stack) ||
+                (now - stack.LastAbsorbTime) > stackLifetime)
+            {
+                stack = new XPAbsorbDisplayStack
+                {
+                    TotalXP = 0f,
+                    LastAbsorbTime = now
+                };
+            }
+
+            stack.TotalXP += absorbedXP;
+            stack.LastAbsorbTime = now;
+            _xpAbsorbDisplayStacks[agentID] = stack;
+            return stack.TotalXP;
+        }
+
         private static bool TryReservePickupSlot(int agentID)
         {
             if (agentID < 0)
@@ -1200,13 +1305,80 @@ namespace op.io
         {
             return go != null &&
                    go.IsDestructible &&
-                   go is not Agent &&
-                   go.DeathPointReward > 0f;
+                   GetDropRewardXP(go) > 0f;
+        }
+
+        private static float GetDropRewardXP(GameObject source)
+        {
+            if (source == null)
+            {
+                return 0f;
+            }
+
+            float reward = MathF.Max(0f, source.DeathPointReward);
+            if (source is Agent agent)
+            {
+                reward = MathF.Max(reward, agent.CurrentXP);
+                reward = MathF.Max(reward, GetAgentBaselineDropReward(agent));
+            }
+
+            return reward;
+        }
+
+        private static float GetAgentBaselineDropReward(Agent agent)
+        {
+            if (agent == null)
+            {
+                return 0f;
+            }
+
+            float maxHealth = ResolveMaxHealthForDropSource(agent);
+            if (maxHealth <= 0f)
+            {
+                return 0f;
+            }
+
+            if (maxHealth <= 30f) return 2f;
+            if (maxHealth <= 60f) return 4f;
+            if (maxHealth <= 120f) return 7f;
+            if (maxHealth <= 250f) return 12f;
+            return 16f;
+        }
+
+        private static float ResolveMaxHealthForDropSource(GameObject source)
+        {
+            if (source == null)
+            {
+                return 0f;
+            }
+
+            float maxHealth = MathF.Max(source.MaxHealth, 0f);
+            if (maxHealth > 0f)
+            {
+                return maxHealth;
+            }
+
+            if (source is Agent agent)
+            {
+                float mass = MathF.Max(agent.BodyAttributes.Mass, agent.Mass);
+                if (mass > 0f)
+                {
+                    maxHealth = MathF.Max(maxHealth, AttributeDerived.MaxHealth(mass));
+                }
+            }
+
+            return MathF.Max(maxHealth, 0f);
         }
 
         private static Color GetDropSourceColor(GameObject source)
         {
             Color c = source?.FillColor ?? Color.White;
+            if (source is Agent)
+            {
+                Color alert = new Color(255, 86, 86, 255);
+                c = Color.Lerp(c, alert, 0.62f);
+            }
+
             return new Color(c.R, c.G, c.B, (byte)255);
         }
 
@@ -2210,7 +2382,7 @@ namespace op.io
             float deadPulseLowAlphaEnd = MathHelper.Clamp(DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPClumpDeadPulseLowAlphaEnd", 0.03f), 0f, 1f);
 
             float unstableHealthThresholdRatio = MathHelper.Clamp(
-                DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPDropUnstableHealthThresholdRatio", 0.33333334f),
+                DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPDropUnstableHealthThresholdRatio", 0.3f),
                 0f,
                 1f);
             float unstableJitterAccel = MathF.Max(0f, DatabaseFetch.GetSetting<float>("FXSettings", "Value", "SettingKey", "XPDropUnstableJitterAccel", 1500f));

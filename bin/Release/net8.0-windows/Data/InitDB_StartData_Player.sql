@@ -34,3 +34,11 @@ INSERT INTO Agents (
     1.0, 1.0, 50.0, 0.0       -- Speed=1×BaseSpeed, Control=1 → RotDelay=0.15s, AccelDelay=0.2s (computed)
 );
 
+
+INSERT INTO Destructibles (
+    ID,
+    MaxHealth, DeathPointReward
+) VALUES (
+    (SELECT ID FROM GameObjects WHERE Name = 'Player1' ORDER BY ID LIMIT 1),
+    100.0, 7.0
+);

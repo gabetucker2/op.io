@@ -1106,7 +1106,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 (ScrollIncrementKey,               "Scroll wheel units per zoom step (default 120 = one notch)."),
                 (CtrlBufferKey,                     "Seconds after releasing Ctrl that a Ctrl+key combo still registers (e.g. release Ctrl then press Space within this window)."),
                 (ShowHiddenAttrsKey,                "Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately."),
-                (GridKey,                           "Toggle the world grid overlay. Draws 1-unit grey grid lines with 5x5 coordinate plotting."),
+                (GridKey,                           "Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting."),
                 (DisableToolTipsKey,                "When enabled, tooltips are hidden throughout the UI."),
                 ("EnumDisabledOptions",             "Lists disabled enum options by control key in the format ControlKey[option,option]."),
             };

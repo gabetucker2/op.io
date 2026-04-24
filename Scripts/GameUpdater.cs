@@ -57,32 +57,16 @@ namespace op.io
 
             if (dead == null) return;
 
-            // Build a fast agent lookup so we don't O(n)-search per death.
-            Dictionary<int, Agent> agentById = null;
             foreach (var go in dead)
             {
-                Agent killer = null;
-                if (go.LastDamagedByAgentID >= 0)
-                {
-                    if (agentById == null)
-                    {
-                        agentById = new Dictionary<int, Agent>();
-                        foreach (var obj in gameObjects)
-                            if (obj is Agent a) agentById[a.ID] = a;
-                    }
+                // Destructible kills spill into XP drops (free clumps) during death fade,
+                // including units. Unit drops prefer CurrentXP so unstable/death behavior
+                // matches farms, regardless of what delivered the killing blow.
+                float rewardXP = XPClumpManager.ResolveDropRewardXP(go);
 
-                    agentById.TryGetValue(go.LastDamagedByAgentID, out killer);
-                }
-
-                // Destructible non-agent kills now spill into XP drops (free clumps)
-                // during the death fade instead of direct XP on the kill frame.
-                if (go is not Agent && killer != null && go.DeathPointReward > 0f)
+                if (rewardXP > 0f)
                 {
-                    XPClumpManager.BeginDeathDrop(go, killer.ID, go.DeathPointReward, DeathFadeOut);
-                }
-                else if (killer != null && go.DeathPointReward > 0f)
-                {
-                    killer.CurrentXP += go.DeathPointReward;
+                    XPClumpManager.BeginDeathDrop(go, rewardXP, DeathFadeOut);
                 }
 
                 gameObjects.Remove(go);

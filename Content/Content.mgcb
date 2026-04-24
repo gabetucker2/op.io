@@ -12,6 +12,10 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Effects/GameBlockOcean.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/build:Effects/GameBlockOcean.fx
 #begin Fonts/Bebas.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor

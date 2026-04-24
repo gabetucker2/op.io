@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
@@ -298,7 +297,6 @@ namespace op.io
             {
                 ApplyWorkAreaBounds(game, windowHandle, targetWorkArea);
             }
-            ForceImmediateClear(game);
 
             if (preserveOuterBounds)
             {
@@ -314,6 +312,8 @@ namespace op.io
             {
                 EnsureWindowWithinWorkArea(windowHandle, targetWorkArea);
             }
+
+            RequestWindowRepaint(game.Window?.Handle ?? windowHandle);
         }
 
         private static void InitializeDockingWindowModes(Core game)
@@ -892,29 +892,16 @@ namespace op.io
             }
         }
 
-        private static void ForceImmediateClear(Core game)
+        private static void RequestWindowRepaint(IntPtr hwnd)
         {
-            try
+            if (hwnd == IntPtr.Zero)
             {
-                GraphicsDevice device = game?.GraphicsDevice;
-                if (device == null)
-                {
-                    return;
-                }
-
-                device.SetRenderTarget(null);
-                Color clearColor = game?.BackgroundColor != default
-                    ? game.BackgroundColor
-                    : UIStyle.DragBarBackground;
-                device.Clear(clearColor);
-
-                MethodInfo present = device.GetType().GetMethod("Present", BindingFlags.Instance | BindingFlags.Public);
-                present?.Invoke(device, null);
+                return;
             }
-            catch (Exception ex)
-            {
-                DebugLogger.PrintUI($"Immediate clear after docking toggle failed: {ex.Message}");
-            }
+
+            // Queue WM_PAINT without erasing the background so the old composed frame stays
+            // visible until GameRenderer presents the first frame in the new docking state.
+            InvalidateRect(hwnd, IntPtr.Zero, false);
         }
 
         private static void SyncViewportToClient(Core game)
@@ -1364,6 +1351,10 @@ namespace op.io
             private const int WM_PAINT = 0x000F;
             private const int WM_ERASEBKGND = 0x0014;
             private const int WM_NCHITTEST = 0x0084;
+            private const int WM_NCLBUTTONDOWN = 0x00A1;
+            private const int WM_NCLBUTTONUP = 0x00A2;
+            private const int WM_ENTERSIZEMOVE = 0x0231;
+            private const int WM_EXITSIZEMOVE = 0x0232;
             private const int GWLP_WNDPROC = -4;
 
             private delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
@@ -1388,6 +1379,15 @@ namespace op.io
 
             private IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
             {
+                if ((msg == WM_NCLBUTTONDOWN && wParam == (IntPtr)HTCAPTION) || msg == WM_ENTERSIZEMOVE)
+                {
+                    InputTypeManager.SetWindowChromeLeftClickSuppressed(active: true);
+                }
+                else if ((msg == WM_NCLBUTTONUP && wParam == (IntPtr)HTCAPTION) || msg == WM_EXITSIZEMOVE)
+                {
+                    InputTypeManager.SetWindowChromeLeftClickSuppressed(active: false);
+                }
+
                 if (msg == WM_NCHITTEST)
                 {
                     IntPtr baseResult = CallWindowProc(_originalWndProc, hwnd, msg, wParam, lParam);
@@ -1544,6 +1544,7 @@ namespace op.io
         private const long WS_THICKFRAME = 0x00040000L;
         private const long WS_MAXIMIZEBOX = 0x00010000L;
         private const int HTCLIENT = 1;
+        private const int HTCAPTION = 2;
         private const int HTLEFT = 10;
         private const int HTRIGHT = 11;
         private const int HTTOP = 12;

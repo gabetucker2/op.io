@@ -122,7 +122,8 @@ public static class GameObjectManager
         string query = $@"
             SELECT {baseColumns}
             FROM {secondaryTable} s
-            INNER JOIN GameObjects g ON s.ID = g.ID";
+            INNER JOIN GameObjects g ON s.ID = g.ID
+            LEFT JOIN Destructibles d ON d.ID = g.ID";
 
         // Add any where clause if provided (useful for filtering)
         if (!string.IsNullOrWhiteSpace(whereClause))

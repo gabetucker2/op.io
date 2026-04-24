@@ -131,6 +131,41 @@ namespace op.io.UI.FunCol
         /// </summary>
         public Rectangle? CollapsedToggleBounds { get; set; }
 
+        /// <summary>
+        /// Optional label rendered inside the header toggle button.
+        /// Leave empty to keep the unlabeled icon-style toggle.
+        /// </summary>
+        public string HeaderToggleText { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When true, the header toggle uses the standard blue button styling.
+        /// </summary>
+        public bool HeaderToggleUseBlueStyle { get; set; } = false;
+
+        /// <summary>Pixel width of the header toggle button hitbox.</summary>
+        public int HeaderToggleButtonWidth { get; set; } = ToggleBtnSize;
+
+        /// <summary>Pixel height of the header toggle button hitbox.</summary>
+        public int HeaderToggleButtonHeight { get; set; } = ToggleBtnSize;
+
+        /// <summary>
+        /// When true, the collapsed-header toggle draws/interacts only while its host row is hovered.
+        /// Default false preserves legacy always-visible collapsed toggle behavior.
+        /// </summary>
+        public bool HeaderToggleCollapsedHoverOnly { get; set; } = false;
+
+        /// <summary>Optional base fill override when the header is visible.</summary>
+        public Color? HeaderToggleFillColor { get; set; }
+
+        /// <summary>Optional hover fill override when the header is visible.</summary>
+        public Color? HeaderToggleHoverFillColor { get; set; }
+
+        /// <summary>Optional base fill override when the header is collapsed.</summary>
+        public Color? HeaderToggleCollapsedFillColor { get; set; }
+
+        /// <summary>Optional hover fill override when the header is collapsed.</summary>
+        public Color? HeaderToggleCollapsedHoverFillColor { get; set; }
+
         private bool _toggleButtonHovered;
         private bool _headerIsHovered;
 
@@ -329,13 +364,18 @@ namespace op.io.UI.FunCol
             // ── Toggle button ─────────────────────────────────────────────────
             if (ShowHeaderToggle && !HeaderVisible && CollapsedToggleBounds.HasValue)
             {
-                // Header is collapsed: toggle button lives at top-left of the first visible row.
-                Rectangle toggleRect = GetToggleButtonRect(CollapsedToggleBounds.Value);
-                _toggleButtonHovered = toggleRect.Contains(mouse.Position);
-                if (_toggleButtonHovered && clickStart)
+                Rectangle collapsedHostBounds = CollapsedToggleBounds.Value;
+                bool allowCollapsedToggle = !HeaderToggleCollapsedHoverOnly || collapsedHostBounds.Contains(mouse.Position);
+                if (allowCollapsedToggle)
                 {
-                    HeaderToggleClicked = true;
-                    HeaderVisible       = true;
+                    // Header is collapsed: toggle button lives at top-left of the first visible row.
+                    Rectangle toggleRect = GetToggleButtonRect(collapsedHostBounds);
+                    _toggleButtonHovered = toggleRect.Contains(mouse.Position);
+                    if (_toggleButtonHovered && clickStart)
+                    {
+                        HeaderToggleClicked = true;
+                        HeaderVisible       = true;
+                    }
                 }
             }
             else if (ShowHeaderToggle && _headerIsHovered)
@@ -392,6 +432,21 @@ namespace op.io.UI.FunCol
             int n = _features.Length;
             if (n == 0) return;
 
+            bool dragHandleHoverActive =
+                RowDragEnabled &&
+                DisableExpansion &&
+                _isInField &&
+                _hoveredColumn == 0;
+
+            if (dragHandleHoverActive)
+            {
+                Color dragColor = GetColumnColor(0);
+                Color fill = DisableColors ? dragColor * 0.46f : dragColor * 0.34f;
+                Color border = dragColor * 0.70f;
+                sb.Draw(pixel, fieldBounds, fill);
+                DrawOutline(sb, pixel, fieldBounds, border, 1);
+            }
+
             int x = fieldBounds.X;
             for (int i = 0; i < n; i++)
             {
@@ -399,10 +454,10 @@ namespace op.io.UI.FunCol
                 if (cw <= 0) { x += cw; continue; }
 
                 var colBounds  = new Rectangle(x, fieldBounds.Y, cw, fieldBounds.Height);
-                bool isExpanded = !DisableExpansion && _hoveredColumn == i;
+                bool isExpanded = (!DisableExpansion && _hoveredColumn == i) || (dragHandleHoverActive && i == 0);
                 Color baseColor = i < ColumnColors.Length ? ColumnColors[i] : Color.Gray;
 
-                if (!DisableColors)
+                if (!DisableColors && !dragHandleHoverActive)
                 {
                     Color fill   = isExpanded ? baseColor * 0.55f : baseColor * 0.18f;
                     Color border = isExpanded ? baseColor * 0.70f : baseColor * 0.14f;
@@ -436,6 +491,18 @@ namespace op.io.UI.FunCol
             int n = _features.Length;
             if (n == 0) return;
 
+            bool dragHandleHoverActive =
+                RowDragEnabled &&
+                DisableExpansion &&
+                _isInField &&
+                _hoveredColumn == 0;
+            if (dragHandleHoverActive)
+            {
+                Color dragColor = GetColumnColor(0);
+                sb.Draw(pixel, fieldBounds, dragColor * 0.32f);
+                return;
+            }
+
             int x = fieldBounds.X;
             for (int i = 0; i < n; i++)
             {
@@ -466,13 +533,31 @@ namespace op.io.UI.FunCol
             if (!DisableColors)
                 sb.Draw(pixel, headerBounds, ColorPalette.OverlayBackground);
 
-            // Header is collapsed: draw nothing for the strip, but always show the toggle button
-            // at the first visible row position (CollapsedToggleBounds) so the user can expand it.
+            // Header is collapsed: draw nothing for the strip. The toggle button appears only
+            // while the collapsed host row is hovered.
             if (!HeaderVisible)
             {
                 if (ShowHeaderToggle && CollapsedToggleBounds.HasValue)
-                    DrawToggleButton(sb, pixel, CollapsedToggleBounds.Value);
+                {
+                    Rectangle collapsedHostBounds = CollapsedToggleBounds.Value;
+                    bool showCollapsedToggle = !HeaderToggleCollapsedHoverOnly || collapsedHostBounds.Contains(Mouse.GetState().Position);
+                    if (showCollapsedToggle)
+                    {
+                        DrawToggleButton(sb, pixel, collapsedHostBounds, font);
+                    }
+                }
                 return;
+            }
+
+            int headerHoverColumn = (_headerHoveredColumn >= 0 && _headerHoveredColumn < n)
+                ? _headerHoveredColumn
+                : -1;
+            bool headerHoverActive = headerHoverColumn >= 0;
+            if (headerHoverActive)
+            {
+                Color hoverColor = GetColumnColor(headerHoverColumn);
+                sb.Draw(pixel, headerBounds, hoverColor * 0.24f);
+                DrawOutline(sb, pixel, headerBounds, hoverColor * 0.55f, 1);
             }
 
             int x = headerBounds.X;
@@ -484,7 +569,7 @@ namespace op.io.UI.FunCol
                 var colBounds = new Rectangle(x, headerBounds.Y, cw, headerBounds.Height);
                 Color baseColor = i < ColumnColors.Length ? ColumnColors[i] : Color.Gray;
 
-                if (!DisableColors)
+                if (!DisableColors && !headerHoverActive)
                     sb.Draw(pixel, colBounds, baseColor * 0.12f);
 
                 if (font.IsAvailable)
@@ -494,14 +579,29 @@ namespace op.io.UI.FunCol
                         label += SortDescending ? " ↓" : " ↑";
                     if (!string.IsNullOrEmpty(label))
                     {
-                        Vector2 ts = font.MeasureString(label);
-                        if (ts.X + 4 <= cw)
+                        int availableWidth = Math.Max(1, cw - 4);
+                        string displayLabel = TruncateWithEllipsis(font, label, availableWidth);
+                        if (!string.IsNullOrEmpty(displayLabel))
                         {
+                            Vector2 ts = font.MeasureString(displayLabel);
                             float tx = colBounds.X + (colBounds.Width  - ts.X) / 2f;
                             float ty = colBounds.Y + (colBounds.Height - ts.Y) / 2f;
+                            bool isHoveredHeaderColumn = i == headerHoverColumn;
                             Color tc = DisableColors ? UIStyle.MutedTextColor : baseColor * 0.85f;
-                            if (EnableColumnSort && i == SortColumn) tc = Color.White * 0.95f;
-                            font.DrawString(sb, label, new Vector2(tx, ty), tc);
+                            if (headerHoverActive)
+                                tc = isHoveredHeaderColumn ? Color.White * 0.98f : Color.White * 0.78f;
+                            else if (EnableColumnSort && i == SortColumn)
+                                tc = Color.White * 0.95f;
+
+                            var textPos = new Vector2(tx, ty);
+                            if (isHoveredHeaderColumn)
+                            {
+                                DrawPseudoBoldText(font, sb, displayLabel, textPos, tc);
+                            }
+                            else
+                            {
+                                font.DrawString(sb, displayLabel, textPos, tc);
+                            }
                         }
                     }
                 }
@@ -591,7 +691,7 @@ namespace op.io.UI.FunCol
 
             // Toggle button drawn on top of everything (only when hovered + enabled)
             if (ShowHeaderToggle && _headerIsHovered)
-                DrawToggleButton(sb, pixel, headerBounds);
+                DrawToggleButton(sb, pixel, headerBounds, font);
         }
 
         private void CheckTooltipWarnings()
@@ -623,20 +723,48 @@ namespace op.io.UI.FunCol
             return Rectangle.Empty;
         }
 
+        public Rectangle GetHeaderToggleButtonRect(Rectangle headerBounds) => GetToggleButtonRect(headerBounds);
+
         // ── Helpers ───────────────────────────────────────────────────────────
 
         private Rectangle GetToggleButtonRect(Rectangle headerBounds)
         {
-            int by = headerBounds.Y + (headerBounds.Height - ToggleBtnSize) / 2;
-            return new Rectangle(headerBounds.X + ToggleBtnPad, by, ToggleBtnSize, ToggleBtnSize);
+            int width = Math.Max(4, HeaderToggleButtonWidth);
+            int height = Math.Clamp(HeaderToggleButtonHeight, 4, Math.Max(4, headerBounds.Height));
+            int by = headerBounds.Y + (headerBounds.Height - height) / 2;
+            return new Rectangle(headerBounds.X + ToggleBtnPad, by, width, height);
         }
 
-        private void DrawToggleButton(SpriteBatch sb, Texture2D pixel, Rectangle headerBounds)
+        private void DrawToggleButton(SpriteBatch sb, Texture2D pixel, Rectangle headerBounds, UIStyle.UIFont font)
         {
             Rectangle r = GetToggleButtonRect(headerBounds);
+            bool useBlueStyle = HeaderToggleUseBlueStyle || !string.IsNullOrWhiteSpace(HeaderToggleText);
+            if (useBlueStyle)
+            {
+                Color baseFill = HeaderVisible ? ColorPalette.ButtonPrimary : ColorPalette.ButtonPrimary * 0.62f;
+                Color hoverFill = HeaderVisible ? ColorPalette.ButtonPrimaryHover : ColorPalette.ButtonPrimary * 0.8f;
+                Color textColor = HeaderVisible ? UIStyle.TextColor : UIStyle.MutedTextColor;
+                UIButtonRenderer.Draw(
+                    sb,
+                    r,
+                    HeaderToggleText ?? string.Empty,
+                    UIButtonRenderer.ButtonStyle.Blue,
+                    _toggleButtonHovered,
+                    false,
+                    textColorOverride: textColor,
+                    fillOverride: baseFill,
+                    hoverFillOverride: hoverFill,
+                    borderOverride: UIStyle.AccentColor);
+                return;
+            }
+
+            Color visibleBase = HeaderToggleFillColor ?? (ColorPalette.IndicatorActive * 0.67f);
+            Color visibleHover = HeaderToggleHoverFillColor ?? (ColorPalette.IndicatorActive * 0.9f);
+            Color collapsedBase = HeaderToggleCollapsedFillColor ?? (ColorPalette.IndicatorInactive * 0.67f);
+            Color collapsedHover = HeaderToggleCollapsedHoverFillColor ?? (ColorPalette.IndicatorInactive * 0.9f);
             Color fill = HeaderVisible
-                ? (_toggleButtonHovered ? ColorPalette.IndicatorActive * 0.9f : ColorPalette.IndicatorActive * 0.67f)
-                : (_toggleButtonHovered ? ColorPalette.IndicatorInactive * 0.9f : ColorPalette.IndicatorInactive * 0.67f);
+                ? (_toggleButtonHovered ? visibleHover : visibleBase)
+                : (_toggleButtonHovered ? collapsedHover : collapsedBase);
             sb.Draw(pixel, r, fill);
             DrawOutline(sb, pixel, r, ColorPalette.TextMuted * 0.55f, 1);
         }
@@ -672,6 +800,44 @@ namespace op.io.UI.FunCol
             }
             if (current.Length > 0) lines.Add(current.ToString());
             return lines;
+        }
+
+        private static string TruncateWithEllipsis(UIStyle.UIFont font, string text, int maxWidth)
+        {
+            if (string.IsNullOrEmpty(text) || !font.IsAvailable || maxWidth <= 0)
+                return string.Empty;
+
+            if (font.MeasureString(text).X <= maxWidth)
+                return text;
+
+            const string Ellipsis = "...";
+            if (font.MeasureString(Ellipsis).X > maxWidth)
+                return string.Empty;
+
+            int lo = 0;
+            int hi = text.Length;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                string candidate = text.Substring(0, mid) + Ellipsis;
+                if (font.MeasureString(candidate).X <= maxWidth)
+                    lo = mid;
+                else
+                    hi = mid - 1;
+            }
+
+            return lo > 0 ? text.Substring(0, lo) + Ellipsis : string.Empty;
+        }
+
+        private static void DrawPseudoBoldText(
+            UIStyle.UIFont font,
+            SpriteBatch sb,
+            string text,
+            Vector2 position,
+            Color color)
+        {
+            font.DrawString(sb, text, position, color);
+            font.DrawString(sb, text, new Vector2(position.X + 0.9f, position.Y), color * 0.94f);
         }
 
         private int GetColumnAtX(Rectangle fieldBounds, int mouseX)
