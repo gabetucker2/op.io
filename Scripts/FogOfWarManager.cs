@@ -13,12 +13,14 @@ namespace op.io
     {
         private readonly struct VisionSource
         {
-            public VisionSource(Vector2 position, float radius)
+            public VisionSource(int sourceId, Vector2 position, float radius)
             {
+                SourceId = sourceId;
                 Position = position;
                 Radius = radius;
             }
 
+            public int SourceId { get; }
             public Vector2 Position { get; }
             public float Radius { get; }
         }
@@ -80,10 +82,10 @@ namespace op.io
                     BaseColor = new Color(184, 166, 132, 255),
                     StableWorldScale = 0.00125f,
                     BroadScale = 0.35f,
-                    BroadAmp = new Vector3(0.0090f, 0.0078f, 0.0059f),
+                    BroadAmp = new Vector3(0.0135f, 0.0117f, 0.0089f),
 
                     DetailMaskScale = 0.045f,
-                    SplotchDarkening = new Vector3(18f / 255f, 16f / 255f, 12f / 255f),
+                    SplotchDarkening = new Vector3(24f / 255f, 22f / 255f, 17f / 255f),
                     DetailSeed = 19073,
                     SpeckCount = 340,
                     DotCount = 280,
@@ -196,14 +198,57 @@ namespace op.io
             public byte[] RevealLiftAlpha;
         }
 
+        private readonly struct FrontierSourceBuildRequest
+        {
+            public FrontierSourceBuildRequest(int sourceId, Vector2 position, float radius)
+            {
+                SourceId = sourceId;
+                Position = position;
+                Radius = radius;
+            }
+
+            public int SourceId { get; }
+            public Vector2 Position { get; }
+            public float Radius { get; }
+        }
+
+        private sealed class FrontierSourceSample
+        {
+            public int SourceId;
+            public Vector2 Position;
+            public float Radius;
+            public float BorderReferenceRadius;
+            public byte[] VisionMaskAlpha;
+            public byte[] HiddenEdgeAlpha;
+            public byte[] RevealLiftAlpha;
+        }
+
+        private sealed class FrontierSourceTextureSet
+        {
+            public int SourceId;
+            public Texture2D VisionMaskTexture;
+            public Texture2D HiddenEdgeTexture;
+            public Texture2D RevealLiftTexture;
+
+            public void DisposeAll()
+            {
+                VisionMaskTexture?.Dispose();
+                HiddenEdgeTexture?.Dispose();
+                RevealLiftTexture?.Dispose();
+                VisionMaskTexture = null;
+                HiddenEdgeTexture = null;
+                RevealLiftTexture = null;
+            }
+        }
+
         private readonly struct FrontierBuildRequest
         {
             public FrontierBuildRequest(
                 int requestId,
                 int textureSize,
                 FogVisualParameters parameters,
-                float referenceRadius,
-                Vector2 referenceCenter,
+                FrontierSourceBuildRequest[] sources,
+                float borderReferenceRadius,
                 int hash,
                 float animationPhase,
                 int directionBin)
@@ -211,8 +256,8 @@ namespace op.io
                 RequestId = requestId;
                 TextureSize = textureSize;
                 Parameters = parameters;
-                ReferenceRadius = referenceRadius;
-                ReferenceCenter = referenceCenter;
+                Sources = sources;
+                BorderReferenceRadius = borderReferenceRadius;
                 Hash = hash;
                 AnimationPhase = animationPhase;
                 DirectionBin = directionBin;
@@ -221,8 +266,8 @@ namespace op.io
             public int RequestId { get; }
             public int TextureSize { get; }
             public FogVisualParameters Parameters { get; }
-            public float ReferenceRadius { get; }
-            public Vector2 ReferenceCenter { get; }
+            public FrontierSourceBuildRequest[] Sources { get; }
+            public float BorderReferenceRadius { get; }
             public int Hash { get; }
             public float AnimationPhase { get; }
             public int DirectionBin { get; }
@@ -233,13 +278,10 @@ namespace op.io
             public int RequestId;
             public int TextureSize;
             public int Hash;
-            public float ReferenceRadius;
-            public Vector2 ReferenceCenter;
+            public FrontierSourceSample[] SourceSamples;
+            public float BorderReferenceRadius;
             public float AnimationPhase;
             public int DirectionBin;
-            public byte[] VisionMaskAlpha;
-            public byte[] HiddenEdgeAlpha;
-            public byte[] RevealLiftAlpha;
             public float BuildMilliseconds;
         }
 
@@ -362,6 +404,8 @@ namespace op.io
         private static Vector2 _frontierSampleCenter;
         private static float _frontierSampleRadius;
         private static int _frontierRuntimeHash;
+        private static FrontierSourceSample[] _frontierSourceSamples;
+        private static FrontierSourceTextureSet[] _frontierSourceTextures;
         private static byte[] _visionAlphaBuffer;
         private static byte[] _hiddenAlphaBuffer;
         private static byte[] _revealAlphaBuffer;
@@ -416,6 +460,7 @@ namespace op.io
                 _frontierSampleCenter = Vector2.Zero;
                 _frontierSampleRadius = 0f;
                 _frontierRuntimeHash = 0;
+                _frontierSourceSamples = null;
                 _visionAlphaBuffer = null;
                 _hiddenAlphaBuffer = null;
                 _revealAlphaBuffer = null;
@@ -576,7 +621,7 @@ namespace op.io
             PlayerSightRadius = playerSightRadius;
             if (playerSightRadius > 0f)
             {
-                VisionSources.Add(new VisionSource(player.Position, playerSightRadius));
+                VisionSources.Add(new VisionSource(player.ID, player.Position, playerSightRadius));
             }
 
             List<GameObject> gameObjects = Core.Instance?.GameObjects;
@@ -598,7 +643,7 @@ namespace op.io
                         continue;
                     }
 
-                    VisionSources.Add(new VisionSource(agent.Position, sightRadius));
+                    VisionSources.Add(new VisionSource(agent.ID, agent.Position, sightRadius));
                 }
             }
 
@@ -669,6 +714,8 @@ namespace op.io
             int activeTextureSize = FrontierRuntimeTextureSize;
             _frontierActiveTextureSize = activeTextureSize;
             bool needsReveal = _visualParameters.RevealNearWeight > 0f || _visualParameters.RevealMidWeight > 0f;
+            FrontierSourceBuildRequest[] sourceRequests = CaptureFrontierSourceBuildRequests();
+            float borderReferenceRadius = MathF.Max(1f, referenceRadius);
             EnsureFrontierRuntimeTextures(graphicsDevice, activeTextureSize);
             if (_visionMaskTexture == null || _visionMaskTexture.IsDisposed)
             {
@@ -679,7 +726,8 @@ namespace op.io
 
             int desiredHash = HashCode.Combine(
                 ComputeFrontierHash(_visualParameters, FrontierCacheRadiusKey),
-                activeTextureSize);
+                activeTextureSize,
+                ComputeVisionSourceLayoutHash(sourceRequests, borderReferenceRadius));
 
             EnsureFrontierCache(referenceRadius);
             EnsureFrontierDirectionalTextures(graphicsDevice, activeTextureSize, needsReveal);
@@ -688,8 +736,12 @@ namespace op.io
                 return;
             }
 
-            TryCommitCompletedFrontierBuild(needsReveal, desiredHash, activeTextureSize);
-            bool needsBuild = NeedsFrontierRefresh(desiredHash, referenceCenter, referenceRadius);
+            TryCommitCompletedFrontierBuild(
+                needsReveal,
+                desiredHash,
+                activeTextureSize,
+                referenceCenter);
+            bool needsBuild = NeedsFrontierRefresh(desiredHash, referenceCenter, borderReferenceRadius, sourceRequests);
             if (!needsBuild)
             {
                 _hasQueuedFrontierBuild = false;
@@ -699,35 +751,31 @@ namespace op.io
             FrontierBuildRequest request = CreateFrontierBuildRequest(
                 activeTextureSize,
                 _visualParameters,
-                referenceRadius,
-                referenceCenter,
+                sourceRequests,
+                borderReferenceRadius,
                 desiredHash,
                 animationPhase: FrontierAnimationPhase,
                 directionBin: _activeDirectionBin);
 
             if (!_hasFrontierSample)
             {
-                BuildFrontierTexturesProcedural(
+                long buildStartTicks = Stopwatch.GetTimestamp();
+                FrontierSourceSample[] sourceSamples = BuildFrontierSourceSamples(
                     request.TextureSize,
                     request.Parameters,
-                    request.ReferenceRadius,
-                    request.ReferenceCenter,
-                    request.AnimationPhase,
-                    request.DirectionBin,
-                    out byte[] visionMaskAlpha,
-                    out byte[] hiddenEdgeAlpha,
-                    out byte[] revealLiftAlpha);
-
+                    request.Sources,
+                    request.BorderReferenceRadius);
+                float buildMilliseconds = (float)((Stopwatch.GetTimestamp() - buildStartTicks) * 1000.0 / Stopwatch.Frequency);
                 CommitFrontierTextures(
+                    graphicsDevice,
                     needsReveal,
                     request.RequestId,
                     request.Hash,
-                    request.ReferenceRadius,
-                    request.ReferenceCenter,
-                    visionMaskAlpha,
-                    hiddenEdgeAlpha,
-                    revealLiftAlpha,
-                    _frontierBuildMillisecondsLast);
+                    request.TextureSize,
+                    referenceCenter,
+                    borderReferenceRadius,
+                    sourceSamples,
+                    buildMilliseconds);
                 _hasQueuedFrontierBuild = false;
             }
             else if (_frontierBuildTask == null)
@@ -908,8 +956,8 @@ namespace op.io
         private static FrontierBuildRequest CreateFrontierBuildRequest(
             int textureSize,
             FogVisualParameters parameters,
-            float referenceRadius,
-            Vector2 referenceCenter,
+            FrontierSourceBuildRequest[] sourceRequests,
+            float borderReferenceRadius,
             int hash,
             float animationPhase,
             int directionBin)
@@ -919,14 +967,18 @@ namespace op.io
                 requestId,
                 textureSize,
                 parameters,
-                MathF.Max(1f, referenceRadius),
-                referenceCenter,
+                sourceRequests,
+                MathF.Max(1f, borderReferenceRadius),
                 hash,
                 animationPhase,
                 directionBin);
         }
 
-        private static bool NeedsFrontierRefresh(int desiredHash, Vector2 referenceCenter, float referenceRadius)
+        private static bool NeedsFrontierRefresh(
+            int desiredHash,
+            Vector2 referenceCenter,
+            float borderReferenceRadius,
+            FrontierSourceBuildRequest[] sourceRequests)
         {
             if (!_hasFrontierSample || _frontierRuntimeHash != desiredHash)
             {
@@ -942,7 +994,78 @@ namespace op.io
                 return true;
             }
 
-            return MathF.Abs(_frontierSampleRadius - referenceRadius) >= radiusRefreshDistance;
+            if (MathF.Abs(_frontierSampleRadius - borderReferenceRadius) >= radiusRefreshDistance)
+            {
+                return true;
+            }
+
+            if (_frontierSourceSamples == null || sourceRequests == null || _frontierSourceSamples.Length != sourceRequests.Length)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < sourceRequests.Length; i++)
+            {
+                FrontierSourceBuildRequest request = sourceRequests[i];
+                FrontierSourceSample sample = FindFrontierSourceSample(request.SourceId);
+                if (sample == null)
+                {
+                    return true;
+                }
+
+                float sourceDistanceSq = Vector2.DistanceSquared(sample.Position, request.Position);
+                if (sourceDistanceSq >= centerRefreshDistance * centerRefreshDistance)
+                {
+                    return true;
+                }
+
+                if (MathF.Abs(sample.Radius - request.Radius) >= radiusRefreshDistance ||
+                    MathF.Abs(sample.BorderReferenceRadius - borderReferenceRadius) >= radiusRefreshDistance)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static FrontierSourceSample[] BuildFrontierSourceSamples(
+            int textureSize,
+            FogVisualParameters parameters,
+            FrontierSourceBuildRequest[] sourceRequests,
+            float borderReferenceRadius)
+        {
+            if (sourceRequests == null || sourceRequests.Length == 0)
+            {
+                return Array.Empty<FrontierSourceSample>();
+            }
+
+            FrontierSourceSample[] samples = new FrontierSourceSample[sourceRequests.Length];
+            for (int i = 0; i < sourceRequests.Length; i++)
+            {
+                FrontierSourceBuildRequest source = sourceRequests[i];
+                BuildFrontierTexturesProcedural(
+                    textureSize,
+                    parameters,
+                    source.Radius,
+                    borderReferenceRadius,
+                    source.Position,
+                    out byte[] visionMaskAlpha,
+                    out byte[] hiddenEdgeAlpha,
+                    out byte[] revealLiftAlpha);
+
+                samples[i] = new FrontierSourceSample
+                {
+                    SourceId = source.SourceId,
+                    Position = source.Position,
+                    Radius = source.Radius,
+                    BorderReferenceRadius = borderReferenceRadius,
+                    VisionMaskAlpha = (byte[])visionMaskAlpha.Clone(),
+                    HiddenEdgeAlpha = (byte[])hiddenEdgeAlpha.Clone(),
+                    RevealLiftAlpha = (byte[])revealLiftAlpha.Clone()
+                };
+            }
+            return samples;
         }
 
         private static void StartFrontierBuildAsync(FrontierBuildRequest request)
@@ -950,36 +1073,31 @@ namespace op.io
             _frontierBuildTask = Task.Run(() =>
             {
                 long startTicks = Stopwatch.GetTimestamp();
-                BuildFrontierTexturesProcedural(
+                FrontierSourceSample[] sourceSamples = BuildFrontierSourceSamples(
                     request.TextureSize,
                     request.Parameters,
-                    request.ReferenceRadius,
-                    request.ReferenceCenter,
-                    request.AnimationPhase,
-                    request.DirectionBin,
-                    out byte[] visionMaskAlpha,
-                    out byte[] hiddenEdgeAlpha,
-                    out byte[] revealLiftAlpha);
-
+                    request.Sources,
+                    request.BorderReferenceRadius);
                 float elapsedMs = (float)((Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency);
                 return new FrontierBuildResult
                 {
                     RequestId = request.RequestId,
                     TextureSize = request.TextureSize,
                     Hash = request.Hash,
-                    ReferenceRadius = request.ReferenceRadius,
-                    ReferenceCenter = request.ReferenceCenter,
+                    SourceSamples = sourceSamples,
+                    BorderReferenceRadius = request.BorderReferenceRadius,
                     AnimationPhase = request.AnimationPhase,
                     DirectionBin = request.DirectionBin,
-                    VisionMaskAlpha = visionMaskAlpha,
-                    HiddenEdgeAlpha = hiddenEdgeAlpha,
-                    RevealLiftAlpha = revealLiftAlpha,
                     BuildMilliseconds = elapsedMs
                 };
             });
         }
 
-        private static void TryCommitCompletedFrontierBuild(bool needsReveal, int desiredHash, int activeTextureSize)
+        private static void TryCommitCompletedFrontierBuild(
+            bool needsReveal,
+            int desiredHash,
+            int activeTextureSize,
+            Vector2 referenceCenter)
         {
             if (_frontierBuildTask == null || !_frontierBuildTask.IsCompleted)
             {
@@ -1008,47 +1126,202 @@ namespace op.io
             }
 
             CommitFrontierTextures(
+                Core.Instance?.GraphicsDevice,
                 needsReveal,
                 result.RequestId,
                 result.Hash,
-                result.ReferenceRadius,
-                result.ReferenceCenter,
-                result.VisionMaskAlpha,
-                result.HiddenEdgeAlpha,
-                result.RevealLiftAlpha,
+                result.TextureSize,
+                referenceCenter,
+                result.BorderReferenceRadius,
+                result.SourceSamples,
                 result.BuildMilliseconds);
         }
 
         private static void CommitFrontierTextures(
+            GraphicsDevice graphicsDevice,
             bool needsReveal,
             int requestId,
             int hash,
-            float referenceRadius,
+            int textureSize,
             Vector2 referenceCenter,
-            byte[] visionMaskAlpha,
-            byte[] hiddenEdgeAlpha,
-            byte[] revealLiftAlpha,
+            float borderReferenceRadius,
+            FrontierSourceSample[] sourceSamples,
             float buildMilliseconds)
         {
-            UploadAlphaMask(_visionMaskTexture, visionMaskAlpha);
-            UploadAlphaMask(_hiddenEdgeTexture, hiddenEdgeAlpha);
-            if (needsReveal)
+            _frontierSourceSamples = sourceSamples ?? Array.Empty<FrontierSourceSample>();
+            _frontierSourceTextures = UploadFrontierSourceTextures(
+                graphicsDevice,
+                _frontierSourceTextures,
+                _frontierSourceSamples,
+                Math.Max(256, textureSize),
+                needsReveal);
+            if (_frontierSourceSamples.Length > 0)
             {
-                UploadAlphaMask(_revealLiftTexture, revealLiftAlpha);
+                _visionAlphaBuffer = _frontierSourceSamples[0].VisionMaskAlpha;
+                _hiddenAlphaBuffer = _frontierSourceSamples[0].HiddenEdgeAlpha;
+                _revealAlphaBuffer = needsReveal ? _frontierSourceSamples[0].RevealLiftAlpha : null;
             }
-
-            _visionAlphaBuffer = visionMaskAlpha;
-            _hiddenAlphaBuffer = hiddenEdgeAlpha;
-            _revealAlphaBuffer = needsReveal ? revealLiftAlpha : null;
+            else
+            {
+                _visionAlphaBuffer = null;
+                _hiddenAlphaBuffer = null;
+                _revealAlphaBuffer = null;
+            }
             _hasFrontierSample = true;
             _frontierSampleCenter = referenceCenter;
-            _frontierSampleRadius = referenceRadius;
+            _frontierSampleRadius = borderReferenceRadius;
             _frontierRuntimeHash = hash;
             _frontierCommittedRequestId = Math.Max(_frontierCommittedRequestId, requestId);
             _frontierBuildMillisecondsLast = buildMilliseconds;
             _frontierBuildMillisecondsAvg = _frontierBuildMillisecondsAvg <= 0f
                 ? buildMilliseconds
                 : MathHelper.Lerp(_frontierBuildMillisecondsAvg, buildMilliseconds, 0.12f);
+        }
+
+        private static FrontierSourceTextureSet[] UploadFrontierSourceTextures(
+            GraphicsDevice graphicsDevice,
+            FrontierSourceTextureSet[] existingTextures,
+            FrontierSourceSample[] sourceSamples,
+            int textureSize,
+            bool needsReveal)
+        {
+            if (sourceSamples == null || sourceSamples.Length == 0 || graphicsDevice == null)
+            {
+                DisposeFrontierSourceTextureSets(existingTextures);
+                return Array.Empty<FrontierSourceTextureSet>();
+            }
+
+            FrontierSourceTextureSet[] updatedTextures = new FrontierSourceTextureSet[sourceSamples.Length];
+            bool[] reusedSlots = existingTextures != null && existingTextures.Length > 0
+                ? new bool[existingTextures.Length]
+                : null;
+
+            for (int i = 0; i < sourceSamples.Length; i++)
+            {
+                FrontierSourceSample sample = sourceSamples[i];
+                if (sample == null)
+                {
+                    continue;
+                }
+
+                FrontierSourceTextureSet textureSet = TakeReusableFrontierSourceTextureSet(existingTextures, reusedSlots, sample.SourceId);
+                textureSet ??= new FrontierSourceTextureSet();
+                textureSet.SourceId = sample.SourceId;
+                EnsureFrontierSourceTextureSet(graphicsDevice, textureSet, textureSize, needsReveal);
+
+                UploadAlphaMask(textureSet.VisionMaskTexture, sample.VisionMaskAlpha);
+                UploadAlphaMask(textureSet.HiddenEdgeTexture, sample.HiddenEdgeAlpha);
+                if (needsReveal)
+                {
+                    UploadAlphaMask(textureSet.RevealLiftTexture, sample.RevealLiftAlpha);
+                }
+
+                updatedTextures[i] = textureSet;
+            }
+
+            DisposeUnusedFrontierSourceTextureSets(existingTextures, reusedSlots);
+            return updatedTextures;
+        }
+
+        private static FrontierSourceTextureSet TakeReusableFrontierSourceTextureSet(
+            FrontierSourceTextureSet[] existingTextures,
+            bool[] reusedSlots,
+            int sourceId)
+        {
+            if (existingTextures == null || reusedSlots == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < existingTextures.Length; i++)
+            {
+                FrontierSourceTextureSet textureSet = existingTextures[i];
+                if (reusedSlots[i] || textureSet == null || textureSet.SourceId != sourceId)
+                {
+                    continue;
+                }
+
+                reusedSlots[i] = true;
+                return textureSet;
+            }
+
+            return null;
+        }
+
+        private static void EnsureFrontierSourceTextureSet(
+            GraphicsDevice graphicsDevice,
+            FrontierSourceTextureSet textureSet,
+            int textureSize,
+            bool needsReveal)
+        {
+            if (graphicsDevice == null || textureSet == null)
+            {
+                return;
+            }
+
+            bool visionInvalid = textureSet.VisionMaskTexture == null || textureSet.VisionMaskTexture.IsDisposed ||
+                textureSet.VisionMaskTexture.Width != textureSize || textureSet.VisionMaskTexture.Height != textureSize;
+            bool hiddenInvalid = textureSet.HiddenEdgeTexture == null || textureSet.HiddenEdgeTexture.IsDisposed ||
+                textureSet.HiddenEdgeTexture.Width != textureSize || textureSet.HiddenEdgeTexture.Height != textureSize;
+            bool revealInvalid = needsReveal && (textureSet.RevealLiftTexture == null || textureSet.RevealLiftTexture.IsDisposed ||
+                textureSet.RevealLiftTexture.Width != textureSize || textureSet.RevealLiftTexture.Height != textureSize);
+
+            if (visionInvalid)
+            {
+                textureSet.VisionMaskTexture?.Dispose();
+                textureSet.VisionMaskTexture = new Texture2D(graphicsDevice, textureSize, textureSize, false, SurfaceFormat.Alpha8);
+            }
+
+            if (hiddenInvalid)
+            {
+                textureSet.HiddenEdgeTexture?.Dispose();
+                textureSet.HiddenEdgeTexture = new Texture2D(graphicsDevice, textureSize, textureSize, false, SurfaceFormat.Color);
+            }
+
+            if (needsReveal)
+            {
+                if (revealInvalid)
+                {
+                    textureSet.RevealLiftTexture?.Dispose();
+                    textureSet.RevealLiftTexture = new Texture2D(graphicsDevice, textureSize, textureSize, false, SurfaceFormat.Color);
+                }
+            }
+            else
+            {
+                textureSet.RevealLiftTexture?.Dispose();
+                textureSet.RevealLiftTexture = null;
+            }
+        }
+
+        private static void DisposeUnusedFrontierSourceTextureSets(FrontierSourceTextureSet[] existingTextures, bool[] reusedSlots)
+        {
+            if (existingTextures == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < existingTextures.Length; i++)
+            {
+                if (reusedSlots != null && reusedSlots[i])
+                {
+                    continue;
+                }
+
+                existingTextures[i]?.DisposeAll();
+            }
+        }
+
+        private static void DisposeFrontierSourceTextureSets(FrontierSourceTextureSet[] textureSets)
+        {
+            if (textureSets == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < textureSets.Length; i++)
+            {
+                textureSets[i]?.DisposeAll();
+            }
         }
 
         private static FrontierCache BuildFrontierCache(float referenceRadius, int radiusKey, int hash)
@@ -1594,6 +1867,9 @@ namespace op.io
                 _hasFrontierSample = false;
                 _frontierSampleCenter = Vector2.Zero;
                 _frontierSampleRadius = 0f;
+                _frontierSourceSamples = null;
+                DisposeFrontierSourceTextureSets(_frontierSourceTextures);
+                _frontierSourceTextures = null;
                 _loadedDirectionBin = int.MinValue;
                 _frontierAngleCache = null;
                 _frontierFieldBuffer = null;
@@ -1953,18 +2229,23 @@ namespace op.io
 
         private static float GetReferenceVisionRadius()
         {
+            if (PlayerSightRadius > 0f)
+            {
+                return MathF.Max(1f, PlayerSightRadius);
+            }
+
             if (VisionSources.Count <= 0)
             {
                 return MathF.Max(1f, PlayerSightRadius);
             }
 
-            float total = 0f;
+            float maxRadius = 0f;
             for (int i = 0; i < VisionSources.Count; i++)
             {
-                total += VisionSources[i].Radius;
+                maxRadius = MathF.Max(maxRadius, VisionSources[i].Radius);
             }
 
-            return MathF.Max(1f, total / VisionSources.Count);
+            return MathF.Max(1f, maxRadius);
         }
 
         private static Vector2 GetReferenceVisionCenter()
@@ -1987,6 +2268,106 @@ namespace op.io
             }
 
             return sum / VisionSources.Count;
+        }
+
+        private static FrontierSourceBuildRequest[] CaptureFrontierSourceBuildRequests()
+        {
+            FrontierSourceBuildRequest[] requests = new FrontierSourceBuildRequest[VisionSources.Count];
+            for (int i = 0; i < VisionSources.Count; i++)
+            {
+                VisionSource source = VisionSources[i];
+                requests[i] = new FrontierSourceBuildRequest(source.SourceId, source.Position, source.Radius);
+            }
+
+            return requests;
+        }
+
+        private static int ComputeVisionSourceLayoutHash(FrontierSourceBuildRequest[] sourceRequests, float borderReferenceRadius)
+        {
+            HashCode hash = new HashCode();
+            hash.Add(sourceRequests?.Length ?? 0);
+            hash.Add(borderReferenceRadius);
+            if (sourceRequests == null)
+            {
+                return hash.ToHashCode();
+            }
+
+            for (int i = 0; i < sourceRequests.Length; i++)
+            {
+                hash.Add(sourceRequests[i].SourceId);
+                hash.Add(sourceRequests[i].Radius);
+            }
+
+            return hash.ToHashCode();
+        }
+
+        private static FrontierSourceSample FindFrontierSourceSample(int sourceId)
+        {
+            if (_frontierSourceSamples == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < _frontierSourceSamples.Length; i++)
+            {
+                FrontierSourceSample sample = _frontierSourceSamples[i];
+                if (sample != null && sample.SourceId == sourceId)
+                {
+                    return sample;
+                }
+            }
+
+            return null;
+        }
+
+        private static FrontierSourceTextureSet FindFrontierSourceTextureSet(int sourceId)
+        {
+            if (_frontierSourceTextures == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < _frontierSourceTextures.Length; i++)
+            {
+                FrontierSourceTextureSet textureSet = _frontierSourceTextures[i];
+                if (textureSet != null && textureSet.SourceId == sourceId)
+                {
+                    return textureSet;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryResolveFrontierSourceRenderData(
+            VisionSource source,
+            out FrontierSourceSample sample,
+            out FrontierSourceTextureSet textureSet)
+        {
+            sample = FindFrontierSourceSample(source.SourceId);
+            textureSet = FindFrontierSourceTextureSet(source.SourceId);
+            if (sample != null && textureSet != null)
+            {
+                return true;
+            }
+
+            if (_frontierSourceSamples == null || _frontierSourceTextures == null)
+            {
+                return false;
+            }
+
+            int fallbackCount = Math.Min(_frontierSourceSamples.Length, _frontierSourceTextures.Length);
+            for (int i = 0; i < fallbackCount; i++)
+            {
+                if (_frontierSourceSamples[i] != null && _frontierSourceTextures[i] != null)
+                {
+                    sample = _frontierSourceSamples[i];
+                    textureSet = _frontierSourceTextures[i];
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void RenderFogTarget(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, Matrix cameraTransform, int width, int height)
@@ -2029,21 +2410,33 @@ namespace op.io
             Vector2 visionMaskOrigin = new Vector2(visionMaskTexture.Width * 0.5f, visionMaskTexture.Height * 0.5f);
             Color edgeTint = ToColor(_visualParameters.EdgeDarkColor, 1f);
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, HiddenEdgeDarkenBlend, SamplerState.LinearClamp,
-                DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
             for (int i = 0; i < VisionSources.Count; i++)
             {
-                DrawVisionTexture(spriteBatch, hiddenEdgeTexture, VisionSources[i], cameraTransform, cameraScale, hiddenMaskOrigin, edgeTint);
-            }
-            spriteBatch.End();
+                VisionSource visionSource = VisionSources[i];
+                if (!TryResolveFrontierSourceRenderData(visionSource, out FrontierSourceSample sample, out FrontierSourceTextureSet textureSet))
+                {
+                    continue;
+                }
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, VisionCutoutBlend, SamplerState.LinearClamp,
-                DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
+                spriteBatch.Begin(SpriteSortMode.Deferred, HiddenEdgeDarkenBlend, SamplerState.LinearClamp,
+                    DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
+                DrawVisionTexture(spriteBatch, textureSet.HiddenEdgeTexture ?? hiddenEdgeTexture, visionSource.Position, sample.BorderReferenceRadius, cameraTransform, cameraScale, hiddenMaskOrigin, edgeTint);
+                spriteBatch.End();
+            }
+
             for (int i = 0; i < VisionSources.Count; i++)
             {
-                DrawVisionTexture(spriteBatch, visionMaskTexture, VisionSources[i], cameraTransform, cameraScale, visionMaskOrigin, Color.White);
+                VisionSource visionSource = VisionSources[i];
+                if (!TryResolveFrontierSourceRenderData(visionSource, out FrontierSourceSample sample, out FrontierSourceTextureSet textureSet))
+                {
+                    continue;
+                }
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, VisionCutoutBlend, SamplerState.LinearClamp,
+                    DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
+                DrawVisionTexture(spriteBatch, textureSet.VisionMaskTexture ?? visionMaskTexture, visionSource.Position, sample.BorderReferenceRadius, cameraTransform, cameraScale, visionMaskOrigin, Color.White);
+                spriteBatch.End();
             }
-            spriteBatch.End();
 
             if ((_visualParameters.RevealNearWeight > 0f || _visualParameters.RevealMidWeight > 0f) &&
                 revealLiftTexture != null &&
@@ -2051,13 +2444,19 @@ namespace op.io
             {
                 Vector2 revealMaskOrigin = new Vector2(revealLiftTexture.Width * 0.5f, revealLiftTexture.Height * 0.5f);
                 Color liftTint = ToColor(_visualParameters.RevealLiftColor, 1f);
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.LinearClamp,
-                    DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
                 for (int i = 0; i < VisionSources.Count; i++)
                 {
-                    DrawVisionTexture(spriteBatch, revealLiftTexture, VisionSources[i], cameraTransform, cameraScale, revealMaskOrigin, liftTint);
+                    VisionSource visionSource = VisionSources[i];
+                    if (!TryResolveFrontierSourceRenderData(visionSource, out FrontierSourceSample sample, out FrontierSourceTextureSet textureSet))
+                    {
+                        continue;
+                    }
+
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.LinearClamp,
+                        DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
+                    DrawVisionTexture(spriteBatch, textureSet.RevealLiftTexture ?? revealLiftTexture, visionSource.Position, sample.BorderReferenceRadius, cameraTransform, cameraScale, revealMaskOrigin, liftTint);
+                    spriteBatch.End();
                 }
-                spriteBatch.End();
             }
         }
 
@@ -2082,19 +2481,26 @@ namespace op.io
             Vector2 maskOrigin = new Vector2(revealLiftTexture.Width * 0.5f, revealLiftTexture.Height * 0.5f);
             Color liftTint = ToColor(_visualParameters.RevealLiftColor, 1f);
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
-                DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
             for (int i = 0; i < VisionSources.Count; i++)
             {
-                DrawVisionTexture(spriteBatch, revealLiftTexture, VisionSources[i], cameraTransform, cameraScale, maskOrigin, liftTint);
+                VisionSource source = VisionSources[i];
+                if (!TryResolveFrontierSourceRenderData(source, out FrontierSourceSample sample, out FrontierSourceTextureSet textureSet))
+                {
+                    continue;
+                }
+
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                    DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
+                DrawVisionTexture(spriteBatch, textureSet.RevealLiftTexture ?? revealLiftTexture, source.Position, sample.BorderReferenceRadius, cameraTransform, cameraScale, maskOrigin, liftTint);
+                spriteBatch.End();
             }
-            spriteBatch.End();
         }
 
         private static void DrawVisionTexture(
             SpriteBatch spriteBatch,
             Texture2D texture,
-            VisionSource source,
+            Vector2 worldPosition,
+            float drawRadius,
             Matrix cameraTransform,
             float cameraScale,
             Vector2 origin,
@@ -2105,13 +2511,13 @@ namespace op.io
                 return;
             }
 
-            float scaledRadius = source.Radius * cameraScale;
+            float scaledRadius = drawRadius * cameraScale;
             if (scaledRadius <= 0f)
             {
                 return;
             }
 
-            Vector2 screenPosition = Vector2.Transform(source.Position, cameraTransform);
+            Vector2 screenPosition = Vector2.Transform(worldPosition, cameraTransform);
             float drawScale = ((scaledRadius * 2f) * FrontierDomainExtent) / texture.Width;
 
             spriteBatch.Draw(
@@ -2651,7 +3057,8 @@ namespace op.io
         private static void BuildFrontierScalarField(
             float[] scalarField,
             int size,
-            float referenceRadius,
+            float visionRadius,
+            float borderReferenceRadius,
             Vector2 referenceCenter,
             FogVisualParameters parameters)
         {
@@ -2660,7 +3067,8 @@ namespace op.io
                 return;
             }
 
-            float refRadiusSafe = MathF.Max(1f, referenceRadius);
+            float visionRadiusSafe = MathF.Max(0f, visionRadius);
+            float borderRadiusSafe = MathF.Max(1f, borderReferenceRadius);
             float edgeDomainScale = parameters.StableWorldScale * 64f;
 
             Parallel.For(0, size, y =>
@@ -2672,9 +3080,9 @@ namespace op.io
                     float localX = _frontierLocalXCache[index];
                     float localY = _frontierLocalYCache[index];
                     float radial = MathF.Min(_frontierRadialCache[index], FrontierDomainExtent);
-                    float baseDistanceWorld = (radial - 1f) * refRadiusSafe;
-                    float worldX = referenceCenter.X + (localX * refRadiusSafe);
-                    float worldY = referenceCenter.Y + (localY * refRadiusSafe);
+                    float baseDistanceWorld = (radial * borderRadiusSafe) - visionRadiusSafe;
+                    float worldX = referenceCenter.X + (localX * borderRadiusSafe);
+                    float worldY = referenceCenter.Y + (localY * borderRadiusSafe);
                     scalarField[index] = baseDistanceWorld + EvaluateEdgeOffsetWorld(worldX, worldY, edgeDomainScale, parameters);
                 }
             });
@@ -2696,6 +3104,7 @@ namespace op.io
             float nearWidthWorld = MathF.Max(0.1f, parameters.NearWidth);
             float midWidthWorld = MathF.Max(nearWidthWorld, parameters.MidWidth);
             float wideWidthWorld = MathF.Max(midWidthWorld, parameters.WideWidth);
+            float boundarySoftnessWorld = MathF.Max(0.001f, parameters.BoundarySoftness);
             bool hasRevealWeights = parameters.RevealNearWeight > 0f || parameters.RevealMidWeight > 0f;
 
             Parallel.For(0, size, y =>
@@ -2722,7 +3131,7 @@ namespace op.io
                     float bandMid = EvaluateBand(absD, midWidthWorld);
                     float bandWide = EvaluateBand(absD, wideWidthWorld);
 
-                    float cutoutAlpha = visibleMask;
+                    float cutoutAlpha = 1f - SmoothStep(-boundarySoftnessWorld, boundarySoftnessWorld, dSmooth);
                     float edgeDarkStrength = hiddenMask *
                         ((bandNear * parameters.NearWeight) +
                          (bandMid * parameters.MidWeight) +
@@ -2749,15 +3158,13 @@ namespace op.io
         private static void BuildFrontierTexturesProcedural(
             int textureSize,
             FogVisualParameters parameters,
-            float referenceRadius,
+            float visionRadius,
+            float borderReferenceRadius,
             Vector2 referenceCenter,
-            float animationPhase,
-            int directionBin,
             out byte[] visionMaskAlpha,
             out byte[] hiddenEdgeAlpha,
             out byte[] revealLiftAlpha)
         {
-            long buildStartTicks = Stopwatch.GetTimestamp();
             lock (FrontierComputeSync)
             {
                 EnsureEdgeNoiseTables(parameters.DetailSeed);
@@ -2773,9 +3180,9 @@ namespace op.io
                 revealLiftAlpha = _revealAlphaBuffer != null && _revealAlphaBuffer.Length == pixelCount
                     ? _revealAlphaBuffer
                     : new byte[pixelCount];
-                BuildFrontierScalarField(_frontierFieldBuffer, size, referenceRadius, referenceCenter, parameters);
+                BuildFrontierScalarField(_frontierFieldBuffer, size, visionRadius, borderReferenceRadius, referenceCenter, parameters);
 
-                float blurRadiusTexels = ResolveFrontierFieldBlurRadiusTexels(size, referenceRadius, parameters.FieldSmoothing);
+                float blurRadiusTexels = ResolveFrontierFieldBlurRadiusTexels(size, borderReferenceRadius, parameters.FieldSmoothing);
                 if (blurRadiusTexels >= FrontierFieldBlurRadiusFloorTexels)
                 {
                     ApplySeparableBlur(
@@ -2794,12 +3201,6 @@ namespace op.io
                     hiddenEdgeAlpha,
                     revealLiftAlpha);
             }
-
-            double elapsedMs = (Stopwatch.GetTimestamp() - buildStartTicks) * 1000.0 / Stopwatch.Frequency;
-            _frontierBuildMillisecondsLast = (float)elapsedMs;
-            _frontierBuildMillisecondsAvg = _frontierBuildMillisecondsAvg <= 0f
-                ? _frontierBuildMillisecondsLast
-                : MathHelper.Lerp(_frontierBuildMillisecondsAvg, _frontierBuildMillisecondsLast, 0.12f);
         }
 
         private static void BuildFrontierTextures(
@@ -2823,7 +3224,7 @@ namespace op.io
             _ = directionBin;
             _ = phaseIndex;
 
-            BuildFrontierScalarField(scalarField, size, referenceRadius, Vector2.Zero, parameters);
+            BuildFrontierScalarField(scalarField, size, referenceRadius, referenceRadius, Vector2.Zero, parameters);
 
             float blurRadiusTexels = ResolveFrontierFieldBlurRadiusTexels(size, referenceRadius, parameters.FieldSmoothing);
             if (blurRadiusTexels >= FrontierFieldBlurRadiusFloorTexels)

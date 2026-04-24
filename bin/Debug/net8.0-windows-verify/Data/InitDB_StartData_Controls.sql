@@ -37,7 +37,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CameraSnapToPlay
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Respawn',                  'Respawn the player after death.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ScrollIncrement',          'Scroll wheel units per zoom step (default 120 = one notch).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ShowHiddenAttrs',          'Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Grid',                     'Toggle the world grid overlay. Draws 1-unit grey grid lines with 5x5 coordinate plotting.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Grid',                     'Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting.');
 
 -- Backend block
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FreezeGameInputs',   'Gameplay inputs are currently suspended. Keyboard and mouse actions will not affect the game while this is true.');
@@ -58,9 +58,11 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpCount',  
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PendingFarmXPDrops', 'Number of farms currently fading out that still have queued XP clumps to spawn.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpsAbsorbedThisSecond', 'How many XP clumps have been absorbed across all units during the current one-second pickup window.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpPickupPerSecond', 'Maximum number of XP clumps a single unit may absorb per second.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpDeadZoneRadius', 'Distance from a clump where units are considered outside active pickup influence.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpPullZoneRadius', 'Distance from a clump where units begin applying pull-zone attraction.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpAbsorbZoneRadius', 'Distance from a clump where orbit-lock and absorption behavior begins.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpDeadZoneRadius', 'Distance from a clump where units are considered outside active pickup influence, shown in centifoots.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpPullZoneRadius', 'Distance from a clump where units begin applying pull-zone attraction, shown in centifoots.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpAbsorbZoneRadius', 'Distance from a clump where orbit-lock and absorption behavior begins, shown in centifoots.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CentifootWorldUnits', 'Copied baseline conversion: 1 centifoot = this many world units.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DistanceUnit', 'Name of the active distance unit used by backend distance displays.');
 
 -- Backend block — physics & bullet constants
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AirResistanceScalar',   'Drag scalar applied to bullets: drag = AirResistanceScalar × bulletVolume / bulletDragFactor.');
@@ -68,7 +70,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BounceVelocityLo
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('HitVelocityLoss',       'Fraction of bullet speed lost when penetrating non-static objects, scaled by mass ratio.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PenetrationSpring',     'Spring stiffness governing how deeply bullets embed in objects. Higher = shallower penetration.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PenetrationDamping',    'Damping on embedded bullets. 0 = elastic bounce; higher = stickier impact.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletSpeed',    'Fallback bullet speed (px/s) when a barrel does not specify one.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletSpeed',    'Fallback bullet speed (centifoot/s) when a barrel does not specify one.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletLifespan', 'Fallback bullet lifespan in seconds before automatic despawn.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultDragFactor',     'Fallback bullet drag factor used in air-resistance calculations.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletMass',     'Fallback bullet mass, affects recoil, knockback, and drag.');

@@ -73,7 +73,6 @@ sampler FieldsCSampler = sampler_state
 };
 
 static const float Tau = 6.28318530718f;
-static const float DefaultBackgroundVariationStrength = 0.055f;
 static const float DefaultCrestBrightness = 1.24f;
 static const float DefaultWaveSet1Strength = 0.86f;
 static const float DefaultWaveSet2Strength = 0.56f;
@@ -275,7 +274,7 @@ float computeCrestMask(float2 p, float timeSeconds, float hn, float sn, float pa
 
 float4 applyOceanColor(float backgroundField, float hn, float sn, float crestMask)
 {
-    float backgroundFactor = max(0.0f, BackgroundVariationStrength / DefaultBackgroundVariationStrength);
+    float backgroundFactor = max(0.0f, BackgroundVariationStrength);
     float centeredBackground = backgroundField - 0.5f;
     float compressedBackground =
         centeredBackground >= 0.0f
