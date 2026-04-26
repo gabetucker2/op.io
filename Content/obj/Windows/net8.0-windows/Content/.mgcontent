@@ -5,6 +5,7 @@
   <Config />
   <SourceFiles>
     <File>C:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Content/Effects/GameBlockOcean.fx</File>
+    <File>C:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Content/Effects/GameBlockTint.fx</File>
     <File>C:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Content/Fonts/Bebas.spritefont</File>
     <File>C:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Content/Fonts/Futura.spritefont</File>
     <File>C:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Content/Fonts/MontHeavy.spritefont</File>
@@ -16,6 +17,7 @@
     <File>C:/Users/gabeq/OneDrive/Desktop/Coding_Projects/op.io/Content/Fonts/MonaspaceNeonItalic.spritefont</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />
     <File xsi:nil="true" />

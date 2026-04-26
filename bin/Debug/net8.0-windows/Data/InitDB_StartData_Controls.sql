@@ -39,6 +39,12 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ScrollIncrement'
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ShowHiddenAttrs',          'Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Grid',                     'Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting.');
 
+-- Ambience block
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceFogOfWarColor',   'Base color currently applied to hidden fog-of-war territory. Edit it live in the Ambience block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceOceanWaterColor', 'Base color currently driving the ocean water shader. Edit it live in the Ambience block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceBackgroundWavesColor', 'Highlight color for the background wave crests in the ocean ambience. Edit it live in the Ambience block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceWorldTintColor',  'Gameplay object tint color. Mid-gray is neutral; warmer or cooler colors shift object colors already drawn in the world.');
+
 -- Backend block
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FreezeGameInputs',   'Gameplay inputs are currently suspended. Keyboard and mouse actions will not affect the game while this is true.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AnyGUIInteracting',  'True when the cursor is pressed inside a UI block (not the game viewport). Gameplay inputs are suppressed while this is active.');

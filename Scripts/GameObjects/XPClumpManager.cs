@@ -867,12 +867,12 @@ namespace op.io
                 }
 
                 ComputeFreeMorphTransform(i, clump, settings, baseScale, out Vector2 morphScale, out float morphRotation);
-                Color coreColor = GetCoreColor(clump.SourceColor) * alpha;
+                Color coreColor = AmbienceSettings.ApplyWorldTint(GetCoreColor(clump.SourceColor) * alpha);
                 spriteBatch.Draw(coreTexture, clump.Position, null, coreColor, morphRotation, origin, morphScale, SpriteEffects.None, 0f);
 
                 // White-hot center keeps the orb viscous and readable while preserving source tint.
                 Vector2 highlightScale = morphScale * settings.CoreHighlightScale;
-                Color highlightColor = Color.White * (alpha * settings.CoreHighlightAlphaScale);
+                Color highlightColor = AmbienceSettings.ApplyWorldTint(Color.White * (alpha * settings.CoreHighlightAlphaScale));
                 spriteBatch.Draw(coreTexture, clump.Position, null, highlightColor, morphRotation, origin, highlightScale, SpriteEffects.None, 0f);
             }
         }
@@ -912,7 +912,7 @@ namespace op.io
                 float scaleMultiplier = MathF.Max(1f, clump.VisualSizeScale) * ComputeConsumeGrowthScale(clump, settings);
                 float baseScale = (clump.Radius * 2f / glowTexture.Width) * settings.GlowScale * scaleMultiplier;
                 ComputeFreeMorphTransform(i, clump, settings, baseScale, out Vector2 morphScale, out float morphRotation);
-                Color glowColor = GetGlowColor(clump.SourceColor) * (alpha * settings.GlowAlphaScale);
+                Color glowColor = AmbienceSettings.ApplyWorldTint(GetGlowColor(clump.SourceColor) * (alpha * settings.GlowAlphaScale));
                 spriteBatch.Draw(glowTexture, clump.Position, null, glowColor, morphRotation, origin, morphScale, SpriteEffects.None, 0f);
             }
         }
@@ -999,11 +999,11 @@ namespace op.io
                     Vector2 origin = new(coreTexture.Width * 0.5f, coreTexture.Height * 0.5f);
                     float unstableScale = unstableRadius * 2f / coreTexture.Width;
                     Vector2 worldPosition = state.Center + unstableClump.LocalOffset;
-                    Color coreColor = GetCoreColor(state.SourceColor) * alpha;
+                    Color coreColor = AmbienceSettings.ApplyWorldTint(GetCoreColor(state.SourceColor) * alpha);
                     spriteBatch.Draw(coreTexture, worldPosition, null, coreColor, 0f, origin, unstableScale, SpriteEffects.None, 0f);
 
                     float highlightScale = unstableScale * settings.CoreHighlightScale;
-                    Color highlightColor = Color.White * (alpha * settings.CoreHighlightAlphaScale);
+                    Color highlightColor = AmbienceSettings.ApplyWorldTint(Color.White * (alpha * settings.CoreHighlightAlphaScale));
                     spriteBatch.Draw(coreTexture, worldPosition, null, highlightColor, 0f, origin, highlightScale, SpriteEffects.None, 0f);
                 }
             }
@@ -1044,7 +1044,7 @@ namespace op.io
                     Vector2 origin = new(glowTexture.Width * 0.5f, glowTexture.Height * 0.5f);
                     float unstableScale = unstableRadius * 2f / glowTexture.Width * settings.GlowScale;
                     Vector2 worldPosition = state.Center + unstableClump.LocalOffset;
-                    Color glowColor = GetGlowColor(state.SourceColor) * (alpha * settings.GlowAlphaScale);
+                    Color glowColor = AmbienceSettings.ApplyWorldTint(GetGlowColor(state.SourceColor) * (alpha * settings.GlowAlphaScale));
                     spriteBatch.Draw(glowTexture, worldPosition, null, glowColor, 0f, origin, unstableScale, SpriteEffects.None, 0f);
                 }
             }

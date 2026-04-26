@@ -36,6 +36,9 @@ namespace op.io
             ScissorTestEnable = true
         };
         private static readonly Vector3 DefaultBaseColor = new(40f / 255f, 176f / 255f, 206f / 255f);
+        private static readonly Vector3 DefaultWaveColor = Vector3.One;
+        private const float DefaultBaseAlpha = 1f;
+        private const float DefaultWaveAlpha = 1f;
 
         private static Texture2D _fullscreenPixel;
         private static Effect _oceanShader;
@@ -111,6 +114,9 @@ namespace op.io
 
         // Live tunables.
         public static Vector3 BaseColor { get; set; } = DefaultBaseColor;
+        public static Vector3 WaveColor { get; set; } = DefaultWaveColor;
+        public static float BaseAlpha { get; set; } = DefaultBaseAlpha;
+        public static float WaveAlpha { get; set; } = DefaultWaveAlpha;
         public static float TimeScale { get; set; } = 0.72f;
         public static float DownwardSpeed { get; set; } = DefaultDownwardSpeed;
         public static float BackgroundVariationStrength { get; set; } = DefaultBackgroundVariationStrength;
@@ -136,6 +142,8 @@ namespace op.io
         public static string ShaderStatus => _shaderStatus;
         public static string BaseColorRgb =>
             $"{ClampToByte(BaseColor.X)}, {ClampToByte(BaseColor.Y)}, {ClampToByte(BaseColor.Z)}";
+        public static string WaveColorRgb =>
+            $"{ClampToByte(WaveColor.X)}, {ClampToByte(WaveColor.Y)}, {ClampToByte(WaveColor.Z)}";
         public static float LastResolvedRenderScale => _lastResolvedFieldScale;
         public static float LastCameraZoom => _lastCameraZoom;
         public static string RenderTextureResolution =>
@@ -283,7 +291,8 @@ namespace op.io
             float waveSet2Factor = Math.Clamp(WaveSet2Strength / DefaultWaveSet2Strength, 0f, 3f);
             float waveSet3Factor = Math.Clamp(WaveSet3Strength / DefaultWaveSet3Strength, 0f, 3f);
 
-            _oceanShader.Parameters["BaseColor"]?.SetValue(new Vector4(Vector3.Clamp(BaseColor, Vector3.Zero, Vector3.One), 1f));
+            _oceanShader.Parameters["BaseColor"]?.SetValue(new Vector4(Vector3.Clamp(BaseColor, Vector3.Zero, Vector3.One), Math.Clamp(BaseAlpha, 0f, 1f)));
+            _oceanShader.Parameters["WaveColor"]?.SetValue(new Vector4(Vector3.Clamp(WaveColor, Vector3.Zero, Vector3.One), Math.Clamp(WaveAlpha, 0f, 1f)));
             _oceanShader.Parameters["TimeSeconds"]?.SetValue(scaledTime);
             _oceanShader.Parameters["FieldScale"]?.SetValue(Math.Clamp(fieldScale, 0.20f, 12f));
             _oceanShader.Parameters["BackgroundVariationStrength"]?.SetValue(backgroundFactor);
@@ -540,6 +549,9 @@ namespace op.io
             int width = _tileWidth;
             int height = _tileHeight;
             Vector3 baseColor = Vector3.Clamp(BaseColor, Vector3.Zero, Vector3.One);
+            Vector3 waveColor = Vector3.Clamp(WaveColor, Vector3.Zero, Vector3.One);
+            float baseAlpha = Math.Clamp(BaseAlpha, 0f, 1f);
+            float waveAlpha = Math.Clamp(WaveAlpha, 0f, 1f);
             float bgVariation = Math.Clamp(BackgroundVariationStrength, 0f, 1f);
             float scale = Math.Clamp(fieldScale, 0.20f, 12f);
 
@@ -602,8 +614,10 @@ namespace op.io
                         Math.Clamp(CrestDensity, 0f, 1f),
                         Math.Max(0f, CrestBrightness));
 
-                    Vector3 color = applyOceanColor(baseColor, backgroundField, hn, sn, crestMask, bgVariation);
-                    pixels[index] = new Color(color);
+                    float waveMix = Saturate(0.97f * crestMask);
+                    Vector3 color = applyOceanColor(baseColor, waveColor, backgroundField, hn, sn, crestMask, bgVariation);
+                    float alpha = MathHelper.Lerp(baseAlpha, waveAlpha, waveMix);
+                    pixels[index] = new Color(color.X, color.Y, color.Z, alpha);
                 }
             });
 
@@ -867,6 +881,7 @@ namespace op.io
 
         private static Vector3 applyOceanColor(
             Vector3 baseColor,
+            Vector3 waveColor,
             float backgroundField,
             float hn,
             float sn,
@@ -885,7 +900,7 @@ namespace op.io
             float backgroundLuminance = 0.982f + ((0.040f * backgroundFactor) * compressedBackground);
             float waveLuminance = 1.0f + (0.011f * (hn - 0.5f)) + (0.009f * (sn - 0.5f));
             Vector3 water = Vector3.Clamp(baseColor * (backgroundLuminance * waveLuminance), Vector3.Zero, Vector3.One);
-            return Vector3.Lerp(water, Vector3.One, Saturate(0.97f * crestMask));
+            return Vector3.Lerp(water, waveColor, Saturate(0.97f * crestMask));
         }
 
         private static void EnsureReferenceFields()
@@ -1168,6 +1183,11 @@ namespace op.io
             hash.Add(ClampToByte(BaseColor.X));
             hash.Add(ClampToByte(BaseColor.Y));
             hash.Add(ClampToByte(BaseColor.Z));
+            hash.Add(ClampToByte(BaseAlpha));
+            hash.Add(ClampToByte(WaveColor.X));
+            hash.Add(ClampToByte(WaveColor.Y));
+            hash.Add(ClampToByte(WaveColor.Z));
+            hash.Add(ClampToByte(WaveAlpha));
             hash.Add(MathF.Round(Math.Clamp(TimeScale, 0f, 10f) * 1000f));
             hash.Add(MathF.Round(Math.Clamp(DownwardSpeed, 0f, 5f) * 1000f));
             hash.Add(MathF.Round(Math.Clamp(BackgroundVariationStrength, 0f, 1f) * 1000f));

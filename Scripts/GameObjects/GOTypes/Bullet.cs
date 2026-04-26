@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
 namespace op.io
@@ -24,9 +25,16 @@ namespace op.io
         public float MaxLifespan { get; }
         public float DragFactor { get; }
         public new bool IsDying { get; private set; } = false;
+        public bool IsBarrelLocked { get; private set; }
 
         private float _dyingTimer = 0f;
         private readonly float _volume;
+        private int _barrelOwnerId = -1;
+        private int _barrelIndex = -1;
+        private float _barrelTravelProgress;
+        private float _barrelTravelDistance;
+        private float _barrelEntryOffset;
+        private float _barrelLockedSpeed;
 
         public Bullet(int id, Vector2 position, Vector2 velocity, float mass,
                       float maxLifespan, float dragFactor, Shape shape,
@@ -68,6 +76,18 @@ namespace op.io
         /// <summary>True while the bullet cannot collide with or damage its owner.</summary>
         public bool IsOwnerImmune => LifetimeElapsed < BulletManager.OwnerImmunityDuration;
 
+        public void LockToBarrel(int ownerId, int barrelIndex, float barrelLength, float lockedSpeed)
+        {
+            float radius = Shape != null ? MathF.Min(Shape.Width, Shape.Height) * 0.5f : 0f;
+            _barrelOwnerId = ownerId;
+            _barrelIndex = barrelIndex;
+            _barrelLockedSpeed = MathF.Max(0f, lockedSpeed);
+            _barrelEntryOffset = MathF.Min(radius, MathF.Max(barrelLength * 0.5f, 0f));
+            _barrelTravelDistance = MathF.Max(0f, barrelLength - (_barrelEntryOffset * 2f));
+            _barrelTravelProgress = 0f;
+            IsBarrelLocked = true;
+        }
+
         public void StartDying()
         {
             if (IsDying) return;
@@ -104,6 +124,11 @@ namespace op.io
                 return;
             }
 
+            if (IsBarrelLocked && UpdateBarrelLockedMotion())
+            {
+                return;
+            }
+
             float drag = BulletManager.AirResistanceScalar * _volume / MathF.Max(DragFactor, 0.0001f);
             Velocity *= MathF.Max(1f - drag * Core.DELTATIME, 0f);
 
@@ -117,6 +142,59 @@ namespace op.io
 
             Vector2 movement = Velocity * Core.DELTATIME;
             Position += movement;
+        }
+
+        private Agent ResolveBarrelOwner()
+        {
+            List<GameObject> objects = Core.Instance?.GameObjects;
+            if (objects == null)
+            {
+                return null;
+            }
+
+            foreach (GameObject gameObject in objects)
+            {
+                if (gameObject is Agent agent && agent.ID == _barrelOwnerId)
+                {
+                    return agent;
+                }
+            }
+
+            return null;
+        }
+
+        private bool UpdateBarrelLockedMotion()
+        {
+            Agent owner = ResolveBarrelOwner();
+            if (owner == null ||
+                !owner.TryGetBarrelWorldSegment(_barrelIndex, out Vector2 barrelBack, out _, out Vector2 direction, out _, out float barrelLength))
+            {
+                IsBarrelLocked = false;
+                return false;
+            }
+
+            float entryOffset = MathF.Min(_barrelEntryOffset, MathF.Max(barrelLength * 0.5f, 0f));
+            float travelDistance = MathF.Max(0f, barrelLength - (entryOffset * 2f));
+            float nextProgress = _barrelTravelProgress + (_barrelLockedSpeed * Core.DELTATIME);
+            float clampedProgress = MathF.Min(nextProgress, travelDistance);
+
+            Velocity = owner.GetLinearVelocity() + (direction * _barrelLockedSpeed);
+            Position = barrelBack + (direction * (entryOffset + clampedProgress));
+
+            if (nextProgress >= travelDistance)
+            {
+                float overshoot = nextProgress - travelDistance;
+                if (overshoot > 0f)
+                {
+                    Position += direction * overshoot;
+                }
+
+                IsBarrelLocked = false;
+            }
+
+            _barrelTravelDistance = travelDistance;
+            _barrelTravelProgress = MathF.Min(nextProgress, travelDistance);
+            return true;
         }
     }
 }

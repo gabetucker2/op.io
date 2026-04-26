@@ -116,6 +116,54 @@ namespace op.io.UI.BlockScripts.Blocks
 
         public static bool IsEditorOpen => _editor.IsActive;
 
+        public static void UpdateOpenEditor(GameTime gameTime, Rectangle overlayBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
+        {
+            if (!_editor.IsActive || _schemePrompt.IsOpen)
+            {
+                return;
+            }
+
+            double elapsedSeconds = Math.Max(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d, 0d);
+            _lastContentBounds = overlayBounds;
+            UpdateEditor(overlayBounds, mouseState, previousMouseState, keyboardState, previousKeyboardState, elapsedSeconds);
+            FocusModeManager.SetFocusActive(HexFocusOwner, _editor.HexFocused);
+            _lastMousePosition = mouseState.Position;
+            _previousKeyboardState = keyboardState;
+        }
+
+        public static void OpenExternalColorEditor(string ownerId, string label, Color initialColor, Action<Color> liveApply, Action<Color, bool> finalize)
+        {
+            if (_schemePrompt.IsOpen)
+            {
+                _schemePrompt = default;
+                SchemePromptRepeater.Reset();
+                FocusModeManager.SetFocusActive(SchemePromptFocusOwner, false);
+            }
+
+            if (_editor.IsActive)
+            {
+                CloseEditor(applyChanges: false);
+            }
+
+            _editor = new ColorEditorState
+            {
+                IsActive = true,
+                Label = string.IsNullOrWhiteSpace(label) ? "Color" : label,
+                WorkingColor = initialColor,
+                OriginalColor = initialColor,
+                HexBuffer = ColorScheme.ToHex(initialColor, includeAlpha: true),
+                HexFocused = false,
+                HexFreshFocus = false,
+                ReadyForOutsideClose = false,
+                IsExternalSession = true,
+                ExternalOwnerId = ownerId ?? string.Empty,
+                LiveApply = liveApply,
+                Finalize = finalize
+            };
+
+            SetEditorColor(initialColor);
+        }
+
         public static void Update(GameTime gameTime, Rectangle contentBounds, MouseState mouseState, MouseState previousMouseState, KeyboardState keyboardState, KeyboardState previousKeyboardState)
         {
             double elapsedSeconds = Math.Max(gameTime?.ElapsedGameTime.TotalSeconds ?? 0d, 0d);
@@ -964,10 +1012,14 @@ namespace op.io.UI.BlockScripts.Blocks
                 Label = target.Label,
                 WorkingColor = target.Value,
                 OriginalColor = target.Value,
-                HexBuffer = ColorScheme.ToHex(target.Value, includeAlpha: false),
+                HexBuffer = ColorScheme.ToHex(target.Value, includeAlpha: true),
                 HexFocused = focusHexInput,
                 HexFreshFocus = focusHexInput,
-                ReadyForOutsideClose = false
+                ReadyForOutsideClose = false,
+                IsExternalSession = false,
+                ExternalOwnerId = string.Empty,
+                LiveApply = null,
+                Finalize = null
             };
 
             SetEditorColor(target.Value);
@@ -975,7 +1027,17 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void CloseEditor(bool applyChanges)
         {
-            if (_editor.IsActive && applyChanges)
+            if (_editor.IsActive && _editor.IsExternalSession)
+            {
+                Color finalColor = applyChanges ? _editor.WorkingColor : _editor.OriginalColor;
+                if (!applyChanges)
+                {
+                    _editor.LiveApply?.Invoke(finalColor);
+                }
+
+                _editor.Finalize?.Invoke(finalColor, applyChanges);
+            }
+            else if (_editor.IsActive && applyChanges)
             {
                 ColorScheme.TryUpdateColor(_editor.Role, _editor.WorkingColor);
                 EnsureRows();
@@ -1182,7 +1244,7 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawRect(spriteBatch, hex, background);
             DrawRectOutline(spriteBatch, hex, border, UIStyle.BlockBorderThickness);
 
-            string text = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? "#RRGGBB" : _editor.HexBuffer;
+            string text = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? "#RRGGBBAA" : _editor.HexBuffer;
             Color textColor = string.IsNullOrWhiteSpace(_editor.HexBuffer) ? UIStyle.MutedTextColor : UIStyle.TextColor;
             Vector2 size = font.MeasureString(text);
             Vector2 pos = new(hex.X + 8, hex.Y + (hex.Height - size.Y) / 2f);
@@ -1385,16 +1447,24 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void SetEditorColor(Color color)
         {
             _editor.WorkingColor = color;
-            _editor.HexBuffer = ColorScheme.ToHex(color, includeAlpha: false);
+            _editor.HexBuffer = ColorScheme.ToHex(color, includeAlpha: true);
             _editor.Alpha = color.A;
             ToHsv(color, out _editor.Hue, out _editor.Saturation, out _editor.Value);
+            if (_editor.IsExternalSession)
+            {
+                _editor.LiveApply?.Invoke(_editor.WorkingColor);
+            }
         }
 
         private static void ApplyHsvToEditorColor()
         {
             Color color = FromHsv(_editor.Hue, _editor.Saturation, _editor.Value, _editor.Alpha);
             _editor.WorkingColor = color;
-            _editor.HexBuffer = ColorScheme.ToHex(color, includeAlpha: false);
+            _editor.HexBuffer = ColorScheme.ToHex(color, includeAlpha: true);
+            if (_editor.IsExternalSession)
+            {
+                _editor.LiveApply?.Invoke(_editor.WorkingColor);
+            }
         }
 
         private static void AppendHexCharacter(char c)
@@ -1416,7 +1486,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 buffer = "#" + buffer;
             }
 
-            if (buffer.Length >= 7)
+            if (buffer.Length >= 9)
             {
                 _editor.HexBuffer = buffer;
                 return;
@@ -2031,6 +2101,10 @@ namespace op.io.UI.BlockScripts.Blocks
             public Rectangle ApplyBounds;
             public Rectangle CancelBounds;
             public Rectangle PreviewBounds;
+            public bool IsExternalSession;
+            public string ExternalOwnerId;
+            public Action<Color> LiveApply;
+            public Action<Color, bool> Finalize;
         }
 
         private struct SchemePromptState

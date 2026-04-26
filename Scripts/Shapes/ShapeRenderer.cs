@@ -100,7 +100,8 @@ namespace op.io
             }
 
             float scale = MathF.Max(0f, GO.DeathFadeScale);
-            spriteBatch.Draw(_texture, GO.Position, null, Color.White * GO.Opacity, GO.Rotation, _origin, scale, SpriteEffects.None, 0f);
+            Color drawColor = AmbienceSettings.ApplyWorldTint(Color.White * GO.Opacity);
+            spriteBatch.Draw(_texture, GO.Position, null, drawColor, GO.Rotation, _origin, scale, SpriteEffects.None, 0f);
         }
 
         public void DrawFlash(SpriteBatch spriteBatch, GameObject GO)
@@ -116,7 +117,7 @@ namespace op.io
             spriteBatch.Draw(_flashTexture, GO.Position, null, new Color((byte)255, (byte)255, (byte)255, (byte)(180 * alpha)), GO.Rotation, _origin, 1f, SpriteEffects.None, 0f);
         }
 
-        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation)
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, bool applyWorldTint = false)
         {
             if (_texture == null)
             {
@@ -124,10 +125,11 @@ namespace op.io
                 return;
             }
 
-            spriteBatch.Draw(_texture, position, null, Color.White, rotation, _origin, 1f, SpriteEffects.None, 0f);
+            Color drawColor = applyWorldTint ? AmbienceSettings.ApplyWorldTint(Color.White) : Color.White;
+            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, 1f, SpriteEffects.None, 0f);
         }
 
-        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale)
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, bool applyWorldTint = false)
         {
             if (_texture == null)
             {
@@ -135,10 +137,11 @@ namespace op.io
                 return;
             }
 
-            spriteBatch.Draw(_texture, position, null, Color.White, rotation, _origin, scale, SpriteEffects.None, 0f);
+            Color drawColor = applyWorldTint ? AmbienceSettings.ApplyWorldTint(Color.White) : Color.White;
+            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale, SpriteEffects.None, 0f);
         }
 
-        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity)
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity, bool applyWorldTint = false)
         {
             if (_texture == null)
             {
@@ -146,7 +149,13 @@ namespace op.io
                 return;
             }
 
-            spriteBatch.Draw(_texture, position, null, Color.White * opacity, rotation, _origin, scale, SpriteEffects.None, 0f);
+            Color drawColor = Color.White * opacity;
+            if (applyWorldTint)
+            {
+                drawColor = AmbienceSettings.ApplyWorldTint(drawColor);
+            }
+
+            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale, SpriteEffects.None, 0f);
         }
 
         public void Dispose()

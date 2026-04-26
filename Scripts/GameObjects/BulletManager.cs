@@ -199,6 +199,10 @@ namespace op.io
             }
         }
 
+        // Shared attenuation scalar for bullet momentum transfer into dynamic targets.
+        // Backed by the legacy BulletFarmKnockbackScalar setting for compatibility.
+        public static float BulletDynamicKnockbackScalar => BulletFarmKnockbackScalar;
+
         private static float? _cachedOwnerImmunityDuration = null;
         public static float OwnerImmunityDuration
         {
@@ -281,16 +285,23 @@ namespace op.io
             float dragFactor = DefaultBulletDragFactor; // hidden: derived from radius (airR * pi * r^2 / dragFactor)
             float mass = attrs.BulletMass >= 0 ? attrs.BulletMass : DefaultBulletMass;
 
-            Vector2 dir = new Vector2(MathF.Cos(agent.Rotation), MathF.Sin(agent.Rotation));
-            Vector2 inheritedVelocity = Core.DELTATIME > 0f
-                ? (agent.Position - agent.PreviousPosition) / Core.DELTATIME
-                : Vector2.Zero;
-            Vector2 velocity = inheritedVelocity + dir * speed;
-
-            // Spawn at the center of the player so the bullet visually emerges from the body.
-            Vector2 spawnPos = agent.Position;
-
             float radius = ComputeBulletRadius(mass);
+            int sourceBarrelIndex = Math.Clamp(agent.ActiveBarrelIndex, 0, Math.Max(0, agent.BarrelCount - 1));
+            Vector2 dir = new(MathF.Cos(agent.Rotation), MathF.Sin(agent.Rotation));
+            Vector2 inheritedVelocity = agent.GetLinearVelocity();
+            Vector2 spawnPos = agent.Position;
+            float barrelLength = 0f;
+            bool barrelResolved = false;
+
+            if (agent.TryGetBarrelWorldSegment(sourceBarrelIndex, out Vector2 barrelBack, out _, out Vector2 barrelDirection, out _, out barrelLength))
+            {
+                dir = barrelDirection;
+                float entryOffset = MathF.Min(radius, MathF.Max(barrelLength * 0.5f, 0f));
+                spawnPos = barrelBack + (dir * entryOffset);
+                barrelResolved = true;
+            }
+
+            Vector2 velocity = inheritedVelocity + (dir * speed);
             int diameter = Math.Max(1, (int)MathF.Round(radius * 2));
             Color fill    = attrs.BulletFillAlphaRaw    >= 0 ? attrs.BulletFillColor    : DefaultBulletFillColor;
             Color outline = attrs.BulletOutlineAlphaRaw >= 0 ? attrs.BulletOutlineColor : DefaultBulletOutlineColor;
@@ -303,7 +314,6 @@ namespace op.io
             float bulletPenetration = attrs.BulletPenetration >= 0 ? attrs.BulletPenetration : DefaultBulletPenetration;
             float bulletKnockback   = AttributeDerived.BulletKnockback(bulletPenetration, BulletKnockbackScalar); // hidden: derived from BulletPenetration
             float bulletMaxSpeed    = speed + agent.BaseSpeed; // hidden: ceiling = bulletSpeed + body speed
-            int sourceBarrelIndex = Math.Clamp(agent.ActiveBarrelIndex, 0, Math.Max(0, agent.BarrelCount - 1));
             string sourceBarrelName = null;
             if (agent.BarrelCount > 0 && sourceBarrelIndex >= 0 && sourceBarrelIndex < agent.BarrelCount)
             {
@@ -319,6 +329,12 @@ namespace op.io
             bullet.SourceID = HashCode.Combine(agent.ID, agent.ActiveBarrelIndex);
             bullet.SourceBarrelIndex = sourceBarrelIndex;
             bullet.SourceBarrelName = sourceBarrelName;
+
+            if (barrelResolved)
+            {
+                bullet.LockToBarrel(agent.ID, sourceBarrelIndex, barrelLength, speed);
+            }
+
             _bullets.Add(bullet);
         }
 

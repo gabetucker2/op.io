@@ -72,14 +72,19 @@ namespace op.io
                         if (i == agent.ActiveBarrelIndex) continue;
                         var slot = agent.Barrels[i];
                         if (slot.FullShape == null) continue;
-                        float barrelAngle = agent.Rotation + i * angleStep - agent.CarouselAngle;
-                        // Position the barrel so its near edge always touches the body edge.
-                        // As the height scale animates, the barrel extends/retracts outward.
-                        float scaledHalfLen = slot.FullShape.Width * slot.CurrentHeightScale / 2f;
-                        Vector2 dir = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle));
-                        Vector2 offset = dir * (bodyRadius + scaledHalfLen);
-                        slot.FullShape.DrawAt(spriteBatch, agent.Position + offset, barrelAngle,
-                            new Vector2(slot.CurrentHeightScale, 1f), agent.Opacity);
+                        if (!agent.TryGetBarrelWorldTransform(
+                            i,
+                            out Vector2 barrelCenter,
+                            out _,
+                            out float barrelAngle,
+                            out _,
+                            out _))
+                        {
+                            continue;
+                        }
+
+                        slot.FullShape.DrawAt(spriteBatch, barrelCenter, barrelAngle,
+                            new Vector2(slot.CurrentHeightScale, 1f), agent.Opacity, applyWorldTint: true);
                     }
 
                     // Pass 2: active barrel (drawn last so it appears in front of standby ones)
@@ -87,16 +92,24 @@ namespace op.io
                         var active = agent.Barrels[agent.ActiveBarrelIndex];
                         if (active.FullShape != null)
                         {
-                            float barrelAngle = agent.Rotation + agent.ActiveBarrelIndex * angleStep - agent.CarouselAngle;
-                            float scaledHalfLen = active.FullShape.Width * active.CurrentHeightScale / 2f;
-                            Vector2 dir = new Vector2(MathF.Cos(barrelAngle), MathF.Sin(barrelAngle));
-                            Vector2 offset = dir * (bodyRadius + scaledHalfLen);
-                            active.FullShape.DrawAt(spriteBatch, agent.Position + offset, barrelAngle,
-                                new Vector2(active.CurrentHeightScale, 1f), agent.Opacity);
+                            if (!agent.TryGetBarrelWorldTransform(
+                                agent.ActiveBarrelIndex,
+                                out Vector2 barrelCenter,
+                                out _,
+                                out float barrelAngle,
+                                out _,
+                                out _))
+                            {
+                                goto DrawAgentBody;
+                            }
+
+                            active.FullShape.DrawAt(spriteBatch, barrelCenter, barrelAngle,
+                                new Vector2(active.CurrentHeightScale, 1f), agent.Opacity, applyWorldTint: true);
                         }
                     }
                 }
 
+DrawAgentBody:
                 gameObject.Shape.Draw(spriteBatch, gameObject);
 
                 if (DebugModeHandler.DEBUGENABLED && gameObject == Core.Instance.Player)

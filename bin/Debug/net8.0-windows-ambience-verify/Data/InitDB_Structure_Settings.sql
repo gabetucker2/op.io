@@ -1,0 +1,65 @@
+﻿-- InitDB_Structure_Settings.sql
+
+CREATE TABLE IF NOT EXISTS DebugSettings (
+    Setting TEXT PRIMARY KEY,
+    ForceEnabled INTEGER NOT NULL,
+    MaxRepeats INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS DebugVisuals (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS GeneralSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ControlKey (
+    SettingKey TEXT PRIMARY KEY,
+    InputKey TEXT NOT NULL,
+    InputType TEXT NOT NULL,
+    MetaControl INTEGER NOT NULL DEFAULT 0,
+    RenderOrder INTEGER NOT NULL DEFAULT 0,
+    RenderCategory TEXT NOT NULL DEFAULT '',
+    RenderCategoryOrder INTEGER NOT NULL DEFAULT 0,
+    SwitchStartState BOOLEAN DEFAULT 0,
+    LockMode INTEGER NOT NULL DEFAULT 0,
+    EnumDisabledOptions TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS ControlSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS PhysicsSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS BulletPhysics (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS BulletDefaults (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS BarSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS FXSettings (
+    SettingKey TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS UITooltips (
+    RowKey TEXT PRIMARY KEY,
+    TooltipText TEXT NOT NULL
+);

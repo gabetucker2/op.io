@@ -52,10 +52,12 @@ namespace op.io
                 EnsureRenderOrderColumn();
                 EnsureRenderCategoryColumns();
                 EnsureLockModeColumn();
+                EnsureBindingRequiredColumn();
                 EnsureMetaControlColumn();
                 EnsureFloatStartStateColumn();
                 EnsureEnumDisabledOptionsColumn();
                 EnsureBlockMenuControl();
+                EnsureBlockVisibilityControls();
                 EnsureExitControl();
                 EnsureTransparentTabBlockingControl();
                 EnsureHoldInputsControl();
@@ -273,6 +275,25 @@ ORDER BY RenderCategoryOrder ASC, RenderOrder ASC, SettingKey ASC;";
             }
         }
 
+        private static void EnsureBindingRequiredColumn()
+        {
+            const string columnName = "BindingRequired";
+            if (!ControlKeyData.ColumnExists(columnName))
+            {
+                ControlKeyData.AddColumn(columnName, "INTEGER NOT NULL DEFAULT 0");
+            }
+
+            try
+            {
+                const string normalizeSql = "UPDATE ControlKey SET BindingRequired = COALESCE(BindingRequired, 0);";
+                DatabaseQuery.ExecuteNonQuery(normalizeSql);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to normalize BindingRequired column: {ex.Message}");
+            }
+        }
+
         private static void EnsureBlockMenuControl()
         {
             try
@@ -306,11 +327,59 @@ WHERE SettingKey = @legacyKey;";
                 InputType = "SaveSwitch",
                 SwitchStartState = 0,
                 MetaControl = true,
-                RenderOrder = 11
+                RenderOrder = 0,
+                RenderCategory = ControlRowCategoryCatalog.BlockControlsCategoryKey,
+                RenderCategoryOrder = ControlRowCategoryCatalog.GetDefaultCategoryOrder(ControlRowCategoryCatalog.BlockControlsCategoryKey),
+                BindingRequired = true
             });
 
             ControlKeyData.SetInputType(BlockMenuKey, "SaveSwitch");
             ControlKeyData.EnsureSwitchStartState(BlockMenuKey, 0);
+            ControlKeyData.SetBindingRequired(BlockMenuKey, true);
+        }
+
+        private static void EnsureBlockVisibilityControls()
+        {
+            IReadOnlyList<BlockManager.BlockVisibilityControlDefinition> blockControls = BlockManager.GetBlockVisibilityControlDefinitions();
+            if (blockControls == null || blockControls.Count == 0)
+            {
+                return;
+            }
+
+            int blockCategoryOrder = ControlRowCategoryCatalog.GetDefaultCategoryOrder(ControlRowCategoryCatalog.BlockControlsCategoryKey);
+            var renderOrderUpdates = new List<ControlKeyData.RenderOrderUpdate>(blockControls.Count + 1)
+            {
+                new(BlockMenuKey, 0, ControlRowCategoryCatalog.BlockControlsCategoryKey, blockCategoryOrder)
+            };
+
+            int renderOrder = 1;
+            foreach (BlockManager.BlockVisibilityControlDefinition blockControl in blockControls)
+            {
+                ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+                {
+                    SettingKey = blockControl.SettingKey,
+                    InputKey = string.Empty,
+                    InputType = "SaveSwitch",
+                    SwitchStartState = blockControl.DefaultVisible ? 1 : 0,
+                    MetaControl = true,
+                    RenderOrder = renderOrder,
+                    RenderCategory = ControlRowCategoryCatalog.BlockControlsCategoryKey,
+                    RenderCategoryOrder = blockCategoryOrder,
+                    BindingRequired = false
+                });
+
+                ControlKeyData.SetInputType(blockControl.SettingKey, "SaveSwitch");
+                ControlKeyData.EnsureSwitchStartState(blockControl.SettingKey, blockControl.DefaultVisible ? 1 : 0);
+                ControlKeyData.SetBindingRequired(blockControl.SettingKey, required: false);
+                renderOrderUpdates.Add(new ControlKeyData.RenderOrderUpdate(
+                    blockControl.SettingKey,
+                    renderOrder,
+                    ControlRowCategoryCatalog.BlockControlsCategoryKey,
+                    blockCategoryOrder));
+                renderOrder++;
+            }
+
+            ControlKeyData.UpdateRenderOrders(renderOrderUpdates);
         }
 
         private static void EnsureExitControl()
@@ -1088,7 +1157,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
         private static void EnsureControlTooltips()
         {
             const string sql = "INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @tip);";
-            var tooltips = new (string Key, string Tip)[]
+            var tooltips = new List<(string Key, string Tip)>
             {
                 (InspectModeState.InspectModeKey,   "Toggle inspect mode to hover and examine game objects."),
                 (TabSwitchRequiresBlockModeKey,     "When enabled, the tab key only switches panels while Block Menu is open."),
@@ -1110,6 +1179,12 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 (DisableToolTipsKey,                "When enabled, tooltips are hidden throughout the UI."),
                 ("EnumDisabledOptions",             "Lists disabled enum options by control key in the format ControlKey[option,option]."),
             };
+
+            foreach (BlockManager.BlockVisibilityControlDefinition blockControl in BlockManager.GetBlockVisibilityControlDefinitions())
+            {
+                tooltips.Add((blockControl.SettingKey, $"Toggle the {blockControl.Label} block visible or hidden."));
+            }
+
             foreach (var (key, tip) in tooltips)
             {
                 try
@@ -1130,6 +1205,37 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
 
     internal static class ControlKeyRules
     {
+        private const string BlockVisibilityControlPrefix = "Toggle";
+        private const string BlockVisibilityControlSuffix = "Block";
+
+        public static string GetBlockVisibilityControlKey(DockBlockKind kind) => $"{BlockVisibilityControlPrefix}{kind}{BlockVisibilityControlSuffix}";
+
+        public static bool IsGeneratedBlockVisibilityControlKey(string settingKey)
+        {
+            return TryGetGeneratedBlockVisibilityControlKind(settingKey, out _);
+        }
+
+        public static bool TryGetGeneratedBlockVisibilityControlKind(string settingKey, out DockBlockKind kind)
+        {
+            kind = default;
+            if (string.IsNullOrWhiteSpace(settingKey) ||
+                !settingKey.StartsWith(BlockVisibilityControlPrefix, StringComparison.OrdinalIgnoreCase) ||
+                !settingKey.EndsWith(BlockVisibilityControlSuffix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            int prefixLength = BlockVisibilityControlPrefix.Length;
+            int kindLength = settingKey.Length - prefixLength - BlockVisibilityControlSuffix.Length;
+            if (kindLength <= 0)
+            {
+                return false;
+            }
+
+            string kindToken = settingKey.Substring(prefixLength, kindLength);
+            return Enum.TryParse(kindToken, ignoreCase: true, out kind);
+        }
+
         public static bool RequiresSwitchSemantics(string settingKey)
         {
             return string.Equals(settingKey, ControlKeyMigrations.BlockMenuKey, StringComparison.OrdinalIgnoreCase) ||

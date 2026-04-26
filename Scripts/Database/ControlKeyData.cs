@@ -22,6 +22,7 @@ namespace op.io
             public string RenderCategory { get; init; }
             public int RenderCategoryOrder { get; init; } = -1;
             public bool LockMode { get; init; }
+            public bool BindingRequired { get; init; }
             public string EnumDisabledOptions { get; init; }
         }
 
@@ -48,7 +49,7 @@ namespace op.io
                 : "0 AS RenderCategoryOrder";
 
             string sql = $@"
-SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, {categorySelect}, {categoryOrderSelect}, COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
+SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, {categorySelect}, {categoryOrderSelect}, COALESCE(LockMode, 0) AS LockMode, COALESCE(BindingRequired, 0) AS BindingRequired, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
 FROM ControlKey
 WHERE SettingKey = @settingKey
 LIMIT 1;";
@@ -81,6 +82,7 @@ LIMIT 1;";
                     ? Convert.ToInt32(categoryOrderValue)
                     : 0,
                 LockMode = row.TryGetValue("LockMode", out object lockValue) && Convert.ToInt32(lockValue) != 0,
+                BindingRequired = row.TryGetValue("BindingRequired", out object bindingRequiredValue) && Convert.ToInt32(bindingRequiredValue) != 0,
                 EnumDisabledOptions = row.TryGetValue("EnumDisabledOptions", out object enumDisabledValue)
                     ? enumDisabledValue?.ToString() ?? string.Empty
                     : string.Empty
@@ -102,6 +104,7 @@ LIMIT 1;";
                 ["@metaControl"] = record.MetaControl ? 1 : 0,
                 ["@switchStartState"] = record.SwitchStartState,
                 ["@lockMode"] = record.LockMode ? 1 : 0,
+                ["@bindingRequired"] = record.BindingRequired ? 1 : 0,
                 ["@enumDisabledOptions"] = record.EnumDisabledOptions ?? string.Empty
             };
 
@@ -109,6 +112,7 @@ LIMIT 1;";
             bool categoryColumnAvailable = ColumnExists(RenderCategoryColumnName);
             bool categoryOrderColumnAvailable = ColumnExists(RenderCategoryOrderColumnName);
             bool lockModeAvailable = ColumnExists("LockMode");
+            bool bindingRequiredAvailable = ColumnExists("BindingRequired");
             bool enumDisabledColumnAvailable = ColumnExists("EnumDisabledOptions");
             string normalizedCategory = ControlRowCategoryCatalog.NormalizeCategoryKey(record.RenderCategory, record.SettingKey);
 
@@ -172,6 +176,12 @@ LIMIT 1;";
                 values.Add("@lockMode");
             }
 
+            if (bindingRequiredAvailable)
+            {
+                columns.Add("BindingRequired");
+                values.Add("@bindingRequired");
+            }
+
             if (enumDisabledColumnAvailable)
             {
                 columns.Add("EnumDisabledOptions");
@@ -219,14 +229,14 @@ VALUES ({string.Join(", ", values)});";
 
         public static void SetInputKey(string settingKey, string inputKey)
         {
-            if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
+            if (string.IsNullOrWhiteSpace(settingKey))
             {
                 return;
             }
 
             var parameters = new Dictionary<string, object>
             {
-                ["@inputKey"] = inputKey.Trim(),
+                ["@inputKey"] = inputKey?.Trim() ?? string.Empty,
                 ["@settingKey"] = settingKey
             };
 
@@ -250,6 +260,23 @@ WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }
 
+        public static void SetSwitchStartState(string settingKey, int value)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            var parameters = new Dictionary<string, object>
+            {
+                ["@settingKey"] = settingKey,
+                ["@value"] = value
+            };
+
+            const string sql = "UPDATE ControlKey SET SwitchStartState = @value WHERE SettingKey = @settingKey;";
+            DatabaseQuery.ExecuteNonQuery(sql, parameters);
+        }
+
         public static void EnsureInputKey(string settingKey, string inputKey)
         {
             if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
@@ -269,6 +296,23 @@ SET InputKey = @inputKey
 WHERE SettingKey = @settingKey
   AND (InputKey IS NULL OR TRIM(InputKey) = '');";
 
+            DatabaseQuery.ExecuteNonQuery(sql, parameters);
+        }
+
+        public static void SetBindingRequired(string settingKey, bool required)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || !ColumnExists("BindingRequired"))
+            {
+                return;
+            }
+
+            var parameters = new Dictionary<string, object>
+            {
+                ["@settingKey"] = settingKey,
+                ["@required"] = required ? 1 : 0
+            };
+
+            const string sql = "UPDATE ControlKey SET BindingRequired = @required WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
         }
 

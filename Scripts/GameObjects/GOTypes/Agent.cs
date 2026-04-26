@@ -348,6 +348,79 @@ namespace op.io
                 _barrels[i].TargetHeightScale = (i == ActiveBarrelIndex) ? 1f : StandbyHeightScale;
         }
 
+        public bool TryGetBarrelWorldTransform(
+            int barrelIndex,
+            out Vector2 center,
+            out Vector2 direction,
+            out float angle,
+            out float scaledLength,
+            out float bodyRadius)
+        {
+            center = Position;
+            direction = Vector2.UnitX;
+            angle = Rotation;
+            scaledLength = 0f;
+            bodyRadius = 0f;
+
+            if (Shape == null || barrelIndex < 0 || barrelIndex >= _barrels.Count)
+            {
+                return false;
+            }
+
+            BarrelSlot slot = _barrels[barrelIndex];
+            if (slot.FullShape == null)
+            {
+                return false;
+            }
+
+            int barrelCount = _barrels.Count;
+            float angleStep = barrelCount > 1 ? MathF.Tau / barrelCount : 0f;
+            angle = Rotation + barrelIndex * angleStep - _carouselAngle;
+            direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            bodyRadius = Math.Max(Shape.Width, Shape.Height) / 2f;
+            scaledLength = slot.FullShape.Width * slot.CurrentHeightScale;
+            center = Position + direction * (bodyRadius + (scaledLength * 0.5f));
+            return true;
+        }
+
+        public bool TryGetBarrelWorldSegment(
+            int barrelIndex,
+            out Vector2 back,
+            out Vector2 front,
+            out Vector2 direction,
+            out float angle,
+            out float scaledLength)
+        {
+            back = Position;
+            front = Position;
+            direction = Vector2.UnitX;
+            angle = Rotation;
+            scaledLength = 0f;
+
+            if (!TryGetBarrelWorldTransform(
+                barrelIndex,
+                out Vector2 center,
+                out direction,
+                out angle,
+                out scaledLength,
+                out _))
+            {
+                return false;
+            }
+
+            Vector2 halfSegment = direction * (scaledLength * 0.5f);
+            back = center - halfSegment;
+            front = center + halfSegment;
+            return true;
+        }
+
+        public Vector2 GetLinearVelocity()
+        {
+            return Core.DELTATIME > 0f
+                ? (Position - PreviousPosition) / Core.DELTATIME
+                : Vector2.Zero;
+        }
+
         // ── Cooldown loading ─────────────────────────────────────────────────────
         public void LoadTriggerCooldown()
         {

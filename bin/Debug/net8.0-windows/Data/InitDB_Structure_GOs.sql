@@ -123,11 +123,32 @@ CREATE TABLE IF NOT EXISTS BarConfig (
     SegmentCount    INTEGER NOT NULL DEFAULT 10,
     SegmentsEnabled INTEGER NOT NULL DEFAULT 1,
     IsHidden        INTEGER NOT NULL DEFAULT 0,
-    ShowPercent     INTEGER NOT NULL DEFAULT 0
+    VisibilityRelations TEXT NOT NULL DEFAULT '',
+    ShowPercent     INTEGER NOT NULL DEFAULT 0,
+    VisibilityFade  TEXT    NOT NULL DEFAULT '0.18'
 );
 
-INSERT OR IGNORE INTO BarConfig VALUES ('Shield',      0, 0, 10, 1, 0, 0);
-INSERT OR IGNORE INTO BarConfig VALUES ('Health',      1, 0, 10, 1, 0, 0);
-INSERT OR IGNORE INTO BarConfig VALUES ('XP',          2, 0, 10, 1, 1, 0);
-INSERT OR IGNORE INTO BarConfig VALUES ('HealthRegen', 3, 0, 10, 1, 1, 0);
-INSERT OR IGNORE INTO BarConfig VALUES ('ShieldRegen', 3, 1, 10, 1, 1, 0);
+INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
+VALUES ('Shield', 0, 0, 10, 1, 0, 'Shield:BelowFull|Health:BelowFull', 0, '0.18');
+INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
+VALUES ('Health', 1, 0, 10, 1, 0, 'Shield:Empty', 0, '0.18');
+INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
+VALUES ('XP', 2, 0, 10, 0, 0, 'XP:Change', 0, '0.18');
+INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
+VALUES ('HealthRegen', 3, 0, 10, 1, 1, '', 0, '0.18');
+INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
+VALUES ('ShieldRegen', 3, 1, 10, 1, 1, '', 0, '0.18');
+
+CREATE TABLE IF NOT EXISTS BarConfigGroupOverrides (
+    GroupKey         TEXT    NOT NULL,
+    BarType          TEXT    NOT NULL,
+    BarRow           INTEGER NOT NULL DEFAULT 0,
+    PositionInRow    INTEGER NOT NULL DEFAULT 0,
+    SegmentCount     INTEGER NOT NULL DEFAULT 10,
+    SegmentsEnabled  INTEGER NOT NULL DEFAULT 1,
+    IsHidden         INTEGER NOT NULL DEFAULT 0,
+    VisibilityRelations TEXT NOT NULL DEFAULT '',
+    ShowPercent      INTEGER NOT NULL DEFAULT 0,
+    VisibilityFade   TEXT    NOT NULL DEFAULT '0.18',
+    PRIMARY KEY (GroupKey, BarType)
+);

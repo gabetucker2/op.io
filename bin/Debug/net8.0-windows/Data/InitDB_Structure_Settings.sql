@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS ControlKey (
     RenderCategoryOrder INTEGER NOT NULL DEFAULT 0,
     SwitchStartState BOOLEAN DEFAULT 0,
     LockMode INTEGER NOT NULL DEFAULT 0,
+    BindingRequired INTEGER NOT NULL DEFAULT 0,
     EnumDisabledOptions TEXT NOT NULL DEFAULT ''
 );
 

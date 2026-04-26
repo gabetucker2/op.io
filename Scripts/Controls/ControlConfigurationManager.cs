@@ -36,6 +36,7 @@ namespace op.io
             public string RenderCategory { get; set; }
             public int RenderCategoryOrder { get; set; }
             public bool LockMode { get; set; }
+            public bool BindingRequired { get; set; }
             public string EnumDisabledOptions { get; set; }
         }
 
@@ -332,7 +333,7 @@ namespace op.io
                 ? "COALESCE(RenderCategory, '') AS RenderCategory, COALESCE(RenderCategoryOrder, 0) AS RenderCategoryOrder,"
                 : "'' AS RenderCategory, 0 AS RenderCategoryOrder,";
             string sql = $@"
-SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, {categorySql} COALESCE(LockMode, 0) AS LockMode, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
+SELECT SettingKey, InputKey, InputType, COALESCE(SwitchStartState, 0) AS SwitchStartState, COALESCE(MetaControl, 0) AS MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, {categorySql} COALESCE(LockMode, 0) AS LockMode, COALESCE(BindingRequired, 0) AS BindingRequired, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions
 FROM ControlKey
 ORDER BY COALESCE(RenderCategoryOrder, 0) ASC, COALESCE(RenderCategory, '') ASC, ControlOrder ASC, SettingKey ASC;";
 
@@ -356,6 +357,7 @@ ORDER BY COALESCE(RenderCategoryOrder, 0) ASC, COALESCE(RenderCategory, '') ASC,
                     RenderCategory = row.TryGetValue("RenderCategory", out object categoryObj) ? categoryObj?.ToString() ?? string.Empty : string.Empty,
                     RenderCategoryOrder = row.TryGetValue("RenderCategoryOrder", out object categoryOrderObj) ? Convert.ToInt32(categoryOrderObj) : 0,
                     LockMode = row.TryGetValue("LockMode", out object lockObj) && lockObj != null && lockObj != DBNull.Value && Convert.ToInt32(lockObj) != 0,
+                    BindingRequired = row.TryGetValue("BindingRequired", out object bindingRequiredObj) && bindingRequiredObj != null && bindingRequiredObj != DBNull.Value && Convert.ToInt32(bindingRequiredObj) != 0,
                     EnumDisabledOptions = row.TryGetValue("EnumDisabledOptions", out object disabledObj)
                         ? disabledObj?.ToString() ?? string.Empty
                         : string.Empty
@@ -398,8 +400,8 @@ ORDER BY COALESCE(RenderCategoryOrder, 0) ASC, COALESCE(RenderCategory, '') ASC,
             }
 
             const string sql = @"
-INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode, EnumDisabledOptions)
-VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @renderOrder, @renderCategory, @renderCategoryOrder, @lockMode, @enumDisabledOptions)
+INSERT INTO ControlKey (SettingKey, InputKey, InputType, MetaControl, SwitchStartState, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode, BindingRequired, EnumDisabledOptions)
+VALUES (@settingKey, @inputKey, @inputType, @metaControl, @switchStartState, @renderOrder, @renderCategory, @renderCategoryOrder, @lockMode, @bindingRequired, @enumDisabledOptions)
 ON CONFLICT(SettingKey) DO UPDATE SET
     InputKey = excluded.InputKey,
     InputType = excluded.InputType,
@@ -409,6 +411,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
     RenderCategory = excluded.RenderCategory,
     RenderCategoryOrder = excluded.RenderCategoryOrder,
     LockMode = excluded.LockMode,
+    BindingRequired = excluded.BindingRequired,
     EnumDisabledOptions = excluded.EnumDisabledOptions;";
 
             foreach (ControlBindingSnapshot binding in bindings)
@@ -434,6 +437,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                     ["@renderCategory"] = categoryKey,
                     ["@renderCategoryOrder"] = Math.Max(0, categoryOrder),
                     ["@lockMode"] = binding.LockMode ? 1 : 0,
+                    ["@bindingRequired"] = binding.BindingRequired ? 1 : 0,
                     ["@enumDisabledOptions"] = binding.EnumDisabledOptions ?? string.Empty
                 };
 
@@ -787,7 +791,7 @@ ON CONFLICT(SettingKey) DO UPDATE SET
                 new ControlBindingSnapshot { SettingKey = "Crouch", InputKey = "LeftControl", InputType = "NoSaveSwitch", SwitchStartState = 0, MetaControl = false, RenderOrder = 8, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "ReturnCursorToPlayer", InputKey = "Space", InputType = "Trigger", SwitchStartState = 0, MetaControl = false, RenderOrder = 9, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "Exit", InputKey = "Escape", InputType = "Trigger", SwitchStartState = 0, MetaControl = true, RenderOrder = 10, LockMode = true },
-                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.BlockMenuKey, InputKey = "Shift + X", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 11, LockMode = false },
+                new ControlBindingSnapshot { SettingKey = ControlKeyMigrations.BlockMenuKey, InputKey = "Shift + X", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 11, LockMode = false, BindingRequired = true },
                 new ControlBindingSnapshot { SettingKey = "DockingMode", InputKey = "V", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 12, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "DebugMode", InputKey = "Shift + B", InputType = "SaveSwitch", SwitchStartState = 0, MetaControl = true, RenderOrder = 13, LockMode = false },
                 new ControlBindingSnapshot { SettingKey = "AllowGameInputFreeze", InputKey = "Shift + C", InputType = "SaveEnum", SwitchStartState = 1, MetaControl = true, RenderOrder = 14, LockMode = false },

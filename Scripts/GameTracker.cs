@@ -39,10 +39,15 @@ namespace op.io
         public static bool WindowGameplayFocus  => InputManager.HasWindowGameplayFocus;
         public static bool WindowChromeLeftClickSuppressed => InputTypeManager.WindowChromeLeftClickSuppressed;
         public static float DoubleTapSuppressionSeconds => InputTypeManager.DoubleTapSuppressionSeconds;
+        public static string AmbienceFogOfWarColor => AmbienceSettings.FogOfWarHex;
+        public static string AmbienceOceanWaterColor => AmbienceSettings.OceanWaterHex;
+        public static string AmbienceBackgroundWavesColor => AmbienceSettings.BackgroundWavesHex;
+        public static string AmbienceWorldTintColor => AmbienceSettings.WorldTintHex;
         public static bool GameBlockOceanShaderReady => GameBlockOceanBackground.ShaderReady;
         public static bool GameBlockOceanUsingShaderPath => GameBlockOceanBackground.UsingShaderPath;
         public static string GameBlockOceanShaderStatus => GameBlockOceanBackground.ShaderStatus;
         public static string GameBlockOceanBaseColor => GameBlockOceanBackground.BaseColorRgb;
+        public static string GameBlockOceanWaveColor => GameBlockOceanBackground.WaveColorRgb;
         public static float GameBlockOceanTimeScale => GameBlockOceanBackground.TimeScale;
         public static float GameBlockOceanDownwardSpeed => GameBlockOceanBackground.DownwardSpeed;
         public static float GameBlockOceanBackgroundVariationStrength => GameBlockOceanBackground.BackgroundVariationStrength;
@@ -84,6 +89,7 @@ namespace op.io
         public static float BarrelHeightScalar          => BulletManager.BarrelHeightScalar;
         public static float BulletKnockbackScalar       => BulletManager.BulletKnockbackScalar;
         public static float BulletRecoilScalar          => BulletManager.BulletRecoilScalar;
+        public static float BulletDynamicKnockbackScalar => BulletManager.BulletDynamicKnockbackScalar;
         public static float BulletFarmKnockbackScalar   => BulletManager.BulletFarmKnockbackScalar;
         public static float OwnerImmunityDuration       => BulletManager.OwnerImmunityDuration;
         // XP clump runtime telemetry
@@ -220,6 +226,11 @@ namespace op.io
                 string.Equals(variableName, nameof(PlayerSightRadius), StringComparison.OrdinalIgnoreCase))
             {
                 return "Fog";
+            }
+
+            if (variableName.StartsWith("Ambience", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Ambience";
             }
 
             if (variableName.StartsWith("XP", StringComparison.OrdinalIgnoreCase) ||

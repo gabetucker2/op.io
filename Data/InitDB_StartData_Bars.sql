@@ -58,6 +58,6 @@ INSERT INTO BarSettings (SettingKey, Value) VALUES ('PropBarEmptyA', '210');
 -- XP bar fill color
 
 INSERT INTO BarSettings (SettingKey, Value) VALUES ('XPBarFillR', '50');
-INSERT INTO BarSettings (SettingKey, Value) VALUES ('XPBarFillG', '220');
+INSERT INTO BarSettings (SettingKey, Value) VALUES ('XPBarFillG', '255');
 INSERT INTO BarSettings (SettingKey, Value) VALUES ('XPBarFillB', '80');
 INSERT INTO BarSettings (SettingKey, Value) VALUES ('XPBarFillA', '255');

@@ -146,7 +146,7 @@ namespace op.io
         private const int FrontierTextureSizeMoveFast = 896;
         private const int FrontierRuntimeTextureSize = FrontierTextureSizeMoveFast;
         private const int FrontierDirectionBins = 8;
-        private const int FrontierPhaseCount = 30;
+        private const int FrontierPhaseCount = 60;
         private const float FrontierFramesPerCentifoot = 30f;
         private const float FrontierDomainExtent = 1.18f;
         private const float FrontierMinUpdateIntervalSeconds = 1f / 30f;
@@ -160,8 +160,10 @@ namespace op.io
         private const int FrontierCacheRadiusKey = 1000;
         private const string FrontierCacheFileName = "fow_frontier_cache.bin";
         private const int FogBodyCacheMagic = 0x464F5742; // FOWB
-        private const int FogBodyCacheVersion = 4;
+        private const int FogBodyCacheVersion = 5;
         private const string FogBodyCacheFileName = "fow_body_cache.bin";
+        private const int FogBodyTextureRecipeVersion = 3;
+        private const int DetailMaskRecipeVersion = 3;
         private const float ScoutSentryFallbackSightRatio = 1f / 3f;
         private const float DetailMaskTargetScreenPixelsAtFarthestZoom = 0.8f;
         private const float FrontierFieldBlurRadiusFloorTexels = 0.01f;
@@ -381,8 +383,12 @@ namespace op.io
         private static Texture2D _hiddenEdgeTexture;
         private static Texture2D _revealLiftTexture;
         private static float[] _detailMaskCache;
+        private static float[] _fogBodyWashMaskCache;
+        private static float[] _fogBodyTearMaskCache;
         private static int _detailMaskCacheHash = int.MinValue;
         private static int _detailMaskCacheSize;
+        private static int _fogBodyFieldMaskCacheHash = int.MinValue;
+        private static int _fogBodyFieldMaskCacheSize;
 
         private static RenderTarget2D _fogRenderTarget;
         private static RenderTarget2D _revealLiftRenderTarget;
@@ -472,6 +478,10 @@ namespace op.io
                 _detailMaskCache = null;
                 _detailMaskCacheHash = int.MinValue;
                 _detailMaskCacheSize = 0;
+                _fogBodyWashMaskCache = null;
+                _fogBodyTearMaskCache = null;
+                _fogBodyFieldMaskCacheHash = int.MinValue;
+                _fogBodyFieldMaskCacheSize = 0;
                 _fogBodyDetailMaskScale = _visualParameters.DetailMaskScale;
                 _frontierFieldBuffer = null;
                 _frontierFieldScratchBuffer = null;
@@ -2609,7 +2619,11 @@ namespace op.io
             int pixelCount = textureSize * textureSize;
             Color[] pixels = new Color[pixelCount];
             float[] detailMask = GetOrBuildDetailMask(parameters, DetailMaskTextureSize, out int detailMaskSize);
+            GetOrBuildFogBodyFieldMasks(parameters, textureSize, out int fieldMaskSize, out float[] washMask, out float[] tearMask);
             Vector3 splotchDarkening = parameters.SplotchDarkening;
+            Vector3 washDarkening = (splotchDarkening * 0.20f) + (parameters.BroadAmp * 0.90f);
+            Vector3 tearDarkening = (splotchDarkening * 0.30f) + (parameters.BroadAmp * 0.75f);
+            Vector3 toneVariation = (parameters.BroadAmp * 1.45f) + (splotchDarkening * 0.025f);
             Vector3 baseColor = new Vector3(
                 parameters.BaseColor.R / 255f,
                 parameters.BaseColor.G / 255f,
@@ -2626,17 +2640,47 @@ namespace op.io
                     float u = (x + 0.5f) / textureSize;
                     Vector2 stableUv = new Vector2(u, v);
 
-                    float broadNoise = FbmNoise(stableUv * parameters.BroadScale, 2, parameters.DetailSeed + 17);
-                    Vector3 baseFow = baseColor + ((broadNoise - 0.5f) * parameters.BroadAmp);
+                    Vector2 washUv = new Vector2(
+                        (stableUv.X * 0.91f) + (stableUv.Y * 0.37f) + 0.17f,
+                        (-stableUv.X * 0.28f) + (stableUv.Y * 1.08f) + 0.43f);
+                    Vector2 washUvSecondary = new Vector2(
+                        (-stableUv.X * 0.57f) + (stableUv.Y * 0.79f) + 0.61f,
+                        (stableUv.X * 0.46f) + (stableUv.Y * 0.67f) + 0.19f);
+                    Vector2 tearUv = new Vector2(
+                        (stableUv.X * 1.12f) - (stableUv.Y * 0.34f) + 0.23f,
+                        (stableUv.X * 0.29f) + (stableUv.Y * 0.93f) + 0.71f);
+                    Vector2 tearUvSecondary = new Vector2(
+                        (-stableUv.X * 0.74f) + (stableUv.Y * 0.52f) + 0.35f,
+                        (stableUv.X * 0.58f) + (stableUv.Y * 0.81f) + 0.09f);
+
+                    float washField =
+                        (0.62f * SampleDetailMask(washMask, fieldMaskSize, washUv)) +
+                        (0.38f * SampleDetailMask(washMask, fieldMaskSize, washUvSecondary));
+                    float tearField =
+                        (0.67f * SampleDetailMask(tearMask, fieldMaskSize, tearUv)) +
+                        (0.33f * SampleDetailMask(tearMask, fieldMaskSize, tearUvSecondary));
+                    float washTone = (washField - 0.5f) * 1.08f;
+                    float tearTone = (tearField - 0.5f) * 0.38f;
+                    float washShadow = SmoothStep(0.34f, 0.82f, washField);
+                    float tearShadow = SmoothStep(0.52f, 0.88f, tearField);
+
+                    Vector3 baseFow =
+                        baseColor +
+                        (washTone * toneVariation) +
+                        (tearTone * (parameters.BroadAmp * 0.45f));
                     float detail = SampleDetailMask(detailMask, detailMaskSize, stableUv * wrappedDetailMaskScale);
-                    Vector3 fowBody = baseFow - (detail * splotchDarkening);
+                    Vector3 fowBody =
+                        baseFow -
+                        (washShadow * washDarkening) -
+                        (tearShadow * tearDarkening) -
+                        (detail * splotchDarkening);
                     fowBody = ClampVector3(fowBody);
 
                     pixels[index] = new Color(
                         (byte)MathF.Round(fowBody.X * 255f),
                         (byte)MathF.Round(fowBody.Y * 255f),
                         (byte)MathF.Round(fowBody.Z * 255f),
-                        (byte)255);
+                        parameters.BaseColor.A);
                 }
             }
 
@@ -2663,6 +2707,7 @@ namespace op.io
         private static int ComputeDetailMaskHash(FogVisualParameters parameters, int textureSize)
         {
             HashCode hash = new HashCode();
+            hash.Add(DetailMaskRecipeVersion);
             hash.Add(textureSize);
             hash.Add(parameters.DetailSeed);
             hash.Add(parameters.SpeckCount);
@@ -2707,6 +2752,144 @@ namespace op.io
             float sx0 = MathHelper.Lerp(s00, s10, tx);
             float sx1 = MathHelper.Lerp(s01, s11, tx);
             return MathHelper.Lerp(sx0, sx1, ty);
+        }
+
+        private static void GetOrBuildFogBodyFieldMasks(
+            FogVisualParameters parameters,
+            int textureSize,
+            out int resolvedSize,
+            out float[] washMask,
+            out float[] tearMask)
+        {
+            resolvedSize = Math.Max(1024, textureSize);
+            int desiredHash = ComputeFogBodyFieldMaskHash(parameters, resolvedSize);
+            if (_fogBodyWashMaskCache != null &&
+                _fogBodyTearMaskCache != null &&
+                _fogBodyFieldMaskCacheSize == resolvedSize &&
+                _fogBodyFieldMaskCacheHash == desiredHash)
+            {
+                washMask = _fogBodyWashMaskCache;
+                tearMask = _fogBodyTearMaskCache;
+                return;
+            }
+
+            _fogBodyWashMaskCache = BuildFogBodyWashMask(parameters, resolvedSize);
+            _fogBodyTearMaskCache = BuildFogBodyTearMask(parameters, resolvedSize);
+            _fogBodyFieldMaskCacheSize = resolvedSize;
+            _fogBodyFieldMaskCacheHash = desiredHash;
+            washMask = _fogBodyWashMaskCache;
+            tearMask = _fogBodyTearMaskCache;
+        }
+
+        private static int ComputeFogBodyFieldMaskHash(FogVisualParameters parameters, int textureSize)
+        {
+            HashCode hash = new HashCode();
+            hash.Add(FogBodyTextureRecipeVersion);
+            hash.Add(textureSize);
+            hash.Add(parameters.DetailSeed);
+            return hash.ToHashCode();
+        }
+
+        private static float[] BuildFogBodyWashMask(FogVisualParameters parameters, int textureSize)
+        {
+            float[] mask = new float[textureSize * textureSize];
+            Random random = new Random(parameters.DetailSeed ^ unchecked((int)0x51A1F33B));
+            int largeCount = Math.Max(22, textureSize / 36);
+            int mediumCount = Math.Max(44, textureSize / 18);
+            float largeWidthMin = textureSize * 0.08f;
+            float largeWidthMax = textureSize * 0.22f;
+            float largeHeightMin = textureSize * 0.05f;
+            float largeHeightMax = textureSize * 0.17f;
+            float mediumWidthMin = textureSize * 0.04f;
+            float mediumWidthMax = textureSize * 0.11f;
+            float mediumHeightMin = textureSize * 0.03f;
+            float mediumHeightMax = textureSize * 0.08f;
+
+            for (int i = 0; i < largeCount; i++)
+            {
+                float cx = NextFloat(random) * textureSize;
+                float cy = NextFloat(random) * textureSize;
+                float width = MathHelper.Lerp(largeWidthMin, largeWidthMax, NextFloat(random));
+                float height = MathHelper.Lerp(largeHeightMin, largeHeightMax, NextFloat(random));
+                float angle = (NextFloat(random) - 0.5f) * MathHelper.TwoPi;
+                float intensity = MathHelper.Lerp(0.07f, 0.16f, NextFloat(random));
+                RasterizeMark(mask, textureSize, cx, cy, width, height, angle, intensity, MarkType.Speck);
+            }
+
+            for (int i = 0; i < mediumCount; i++)
+            {
+                float cx = NextFloat(random) * textureSize;
+                float cy = NextFloat(random) * textureSize;
+                float width = MathHelper.Lerp(mediumWidthMin, mediumWidthMax, NextFloat(random));
+                float height = MathHelper.Lerp(mediumHeightMin, mediumHeightMax, NextFloat(random));
+                float angle = (NextFloat(random) - 0.5f) * MathHelper.TwoPi;
+                float intensity = MathHelper.Lerp(0.05f, 0.13f, NextFloat(random));
+                RasterizeMark(mask, textureSize, cx, cy, width, height, angle, intensity, MarkType.Speck);
+            }
+
+            ApplySeparableBlur(mask, textureSize, MathF.Max(6f, textureSize * 0.007f));
+            for (int i = 0; i < mask.Length; i++)
+            {
+                mask[i] = Saturate(mask[i] * 1.18f);
+            }
+
+            return mask;
+        }
+
+        private static float[] BuildFogBodyTearMask(FogVisualParameters parameters, int textureSize)
+        {
+            float[] mask = new float[textureSize * textureSize];
+            Random random = new Random(parameters.DetailSeed ^ unchecked((int)0x2E7D1357));
+            int clusterCount = Math.Max(18, textureSize / 34);
+            float lengthMin = textureSize * 0.05f;
+            float lengthMax = textureSize * 0.16f;
+            float widthMin = textureSize * 0.010f;
+            float widthMax = textureSize * 0.035f;
+
+            for (int i = 0; i < clusterCount; i++)
+            {
+                float cx = NextFloat(random) * textureSize;
+                float cy = NextFloat(random) * textureSize;
+                float angle = (NextFloat(random) - 0.5f) * MathHelper.TwoPi;
+                float length = MathHelper.Lerp(lengthMin, lengthMax, NextFloat(random));
+                float width = MathHelper.Lerp(widthMin, widthMax, NextFloat(random));
+                float intensity = MathHelper.Lerp(0.08f, 0.18f, NextFloat(random));
+
+                RasterizeMark(mask, textureSize, cx, cy, length, width, angle, intensity, MarkType.Speck);
+
+                Vector2 axis = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                Vector2 normal = new Vector2(-axis.Y, axis.X);
+                int satelliteCount = 2 + (NextFloat(random) > 0.55f ? 1 : 0);
+                for (int j = 0; j < satelliteCount; j++)
+                {
+                    float along = MathHelper.Lerp(-0.24f, 0.24f, NextFloat(random)) * length;
+                    float across = MathHelper.Lerp(-0.35f, 0.35f, NextFloat(random)) * width * 2.8f;
+                    float satelliteLength = length * MathHelper.Lerp(0.35f, 0.72f, NextFloat(random));
+                    float satelliteWidth = width * MathHelper.Lerp(1.2f, 2.6f, NextFloat(random));
+                    float satelliteAngle = angle + MathHelper.Lerp(-0.45f, 0.45f, NextFloat(random));
+                    float satelliteIntensity = intensity * MathHelper.Lerp(0.45f, 0.85f, NextFloat(random));
+                    float satelliteX = cx + (axis.X * along) + (normal.X * across);
+                    float satelliteY = cy + (axis.Y * along) + (normal.Y * across);
+                    RasterizeMark(
+                        mask,
+                        textureSize,
+                        satelliteX,
+                        satelliteY,
+                        satelliteLength,
+                        satelliteWidth,
+                        satelliteAngle,
+                        satelliteIntensity,
+                        MarkType.Speck);
+                }
+            }
+
+            ApplySeparableBlur(mask, textureSize, MathF.Max(4f, textureSize * 0.0045f));
+            for (int i = 0; i < mask.Length; i++)
+            {
+                mask[i] = Saturate(mask[i] * 1.10f);
+            }
+
+            return mask;
         }
 
         private static float[] BuildDetailMask(FogVisualParameters parameters, int textureSize)
@@ -3404,6 +3587,7 @@ namespace op.io
         private static int ComputeFogBodyHash(FogVisualParameters parameters, float effectiveDetailMaskScale)
         {
             HashCode hash = new HashCode();
+            hash.Add(FogBodyTextureRecipeVersion);
             hash.Add(parameters.BaseColor.PackedValue);
             hash.Add(parameters.StableWorldScale);
             hash.Add(parameters.BroadScale);
@@ -3472,12 +3656,14 @@ namespace op.io
         {
             FogVisualParameters defaults = FogVisualParameters.CreateDefaults();
 
-            if (parameters.BaseColor.PackedValue == 0u)
+            if (parameters.BaseColor.PackedValue == 0u &&
+                parameters.StableWorldScale == 0f &&
+                parameters.BroadScale == 0f &&
+                parameters.DetailMaskScale == 0f)
             {
                 parameters.BaseColor = defaults.BaseColor;
             }
 
-            parameters.BaseColor = new Color(parameters.BaseColor.R, parameters.BaseColor.G, parameters.BaseColor.B, (byte)255);
             parameters.StableWorldScale = ClampPositiveFinite(parameters.StableWorldScale, defaults.StableWorldScale, 0.0001f, 0.4f);
             parameters.BroadScale = ClampPositiveFinite(parameters.BroadScale, defaults.BroadScale, 0.01f, 10f);
             parameters.BroadAmp = ClampVector3Finite(parameters.BroadAmp, defaults.BroadAmp, Vector3.Zero, new Vector3(0.2f, 0.2f, 0.2f));

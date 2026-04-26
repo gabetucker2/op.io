@@ -43,12 +43,30 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int BarPreviewGap   = 2;
         private const int BorderAccentW   = 3;    // left color border on each bar row entry
         private const int SplitBtnSize    = 12;   // split-out button for Drag Bar mode
+        private const int SegmentPanelH   = 22;
+        private const int RelationDropdownW = 144;
+        private const int RelationDropdownH = 26;
+        private const int RelationClearBtnMinW = 30;
+        private const int RelationClearBtnMaxW = 46;
+        private const int RelationClearBtnH = 18;
+        private const float RelationArrowThickness = 3f;
+        private const float RelationArrowHeadLength = 12f;
+        private const float RelationArrowHeadAngle = 0.52f;
+        private const float PreviewChangeVisibleSeconds = 1.25f;
+        private const float PreviewChangeEpsilon = 0.001f;
 
         // ── Session state ────────────────────────────────────────────────────
         private static List<BarConfigManager.BarEntry> _snapshot;
         private static List<BarConfigManager.BarEntry> _local;
+        private static readonly Dictionary<string, List<BarConfigManager.BarEntry>> _snapshotByGroup = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, List<BarConfigManager.BarEntry>> _localByGroup = new(StringComparer.OrdinalIgnoreCase);
         private static bool _sessionStarted;
         private static bool _snapshotBarsVisible;
+        private static string _selectedGroupKey = BarConfigManager.AllDestructiblesGroupKey;
+        private static readonly UIDropdown _groupDropdown = new();
+        private static string _tooltipRowKey;
+        private static string _tooltipRowLabel;
+        private static GameObject _previewSource;
 
         // ── Simulated stat values ────────────────────────────────────────────
         private static float _simHealth;
@@ -64,6 +82,8 @@ namespace op.io.UI.BlockScripts.Blocks
         private static float _simHealthRegenDelay = 5f;
         private static float _simShieldRegenDelay = 3f;
         private static float _simTime;
+        private static readonly Dictionary<BarType, float> _simPrevBarValues = new();
+        private static readonly Dictionary<BarType, float> _simLastChangeTimes = new();
 
         // ── Shared FunColInterface (covers entire list area) ─────────────────
         private static FunColInterface _listFunCol;
@@ -75,8 +95,39 @@ namespace op.io.UI.BlockScripts.Blocks
         private const int ColSegments = 2;  // Red    — configure segment count/visibility
 
         // ── Segment editing state ────────────────────────────────────────────
+        private const int ColRelations = 3; // Orange - configure bar visibility relations
+
         private static string _editingSegBarType;
         private static string _segInputBuffer = "";
+
+        private struct RelationDragState
+        {
+            public bool Active;
+            public BarOverlayTarget DependentTarget;
+            public BarOverlayTarget HoverTarget;
+            public Point Cursor;
+        }
+
+        private struct RelationDropdownState
+        {
+            public bool Active;
+            public BarOverlayTarget DependentTarget;
+            public BarOverlayTarget SourceTarget;
+        }
+
+        private readonly struct RelationRemoveButton
+        {
+            public RelationRemoveButton(Rectangle bounds, BarType sourceType, BarConfigManager.BarRelationName relationName)
+            {
+                Bounds = bounds;
+                SourceType = sourceType;
+                RelationName = relationName;
+            }
+
+            public Rectangle Bounds { get; }
+            public BarType SourceType { get; }
+            public BarConfigManager.BarRelationName RelationName { get; }
+        }
 
         // ── Drag state ───────────────────────────────────────────────────────
         private struct DragState
@@ -91,7 +142,12 @@ namespace op.io.UI.BlockScripts.Blocks
         }
         private static DragState _drag;
         private static MouseState _prevMouse;
+        private static KeyboardState _prevKeyboardState;
         private static Point _lastMousePosition;
+        private static RelationDragState _relationDrag;
+        private static RelationDropdownState _relationDropdownState;
+        private static readonly UIDropdown _relationDropdown = new();
+        private static readonly List<RelationRemoveButton> _relationRemoveButtons = new();
 
         // ── Cached resources ─────────────────────────────────────────────────
         private static Texture2D _pixel;
@@ -109,6 +165,19 @@ namespace op.io.UI.BlockScripts.Blocks
         }
         private static readonly List<BarRowBounds> _rowBounds = new();
         private static readonly List<(BarType Type, int BarRow, Rectangle Rect)> _splitBtnRects = new();
+        private static readonly List<(BarType Type, int BarRow, Rectangle Rect)> _clearRelationBtnRects = new();
+        private struct BarOverlayTarget
+        {
+            public bool Active;
+            public int BarRow;
+            public BarType BarType;
+            public Rectangle RowRect;
+            public Rectangle EntryRect;
+        }
+        private static BarOverlayTarget _segmentTarget;
+        private static Rectangle _segmentOverlayRect;
+        private static BarOverlayTarget _relationTarget;
+        private static Rectangle _relationOverlayRect;
 
         // ── Section label rects (for section-level drag detection) ────────────
         private static Rectangle _showSectionRect;
@@ -122,10 +191,47 @@ namespace op.io.UI.BlockScripts.Blocks
         // Public API
         // ─────────────────────────────────────────────────────────────────────
 
+        public static string GetHoveredRowKey() => _tooltipRowKey;
+        public static string GetHoveredRowLabel() => _tooltipRowLabel;
+
+        public static bool TryGetTooltipEntries(string rowKey, out (string Text, string DataType)[] entries)
+        {
+            entries = null;
+            if (string.IsNullOrWhiteSpace(rowKey) ||
+                !TryParseRelationTooltipKey(rowKey, out string groupKey, out BarType barType))
+            {
+                return false;
+            }
+
+            if (!_localByGroup.TryGetValue(groupKey, out List<BarConfigManager.BarEntry> localEntries))
+            {
+                localEntries = BarConfigManager.CloneGroup(groupKey);
+            }
+
+            BarConfigManager.BarEntry entry = localEntries.FirstOrDefault(candidate => candidate.Type == barType);
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (!entry.HasVisibilityRelations)
+            {
+                entries = [("No linked bars. This bar will never show.", string.Empty)];
+                return true;
+            }
+
+            entries = entry.VisibilityRelations
+                .Where(relation => relation != null)
+                .Select(relation => (BarConfigManager.DescribeVisibilityRelation(entry.Type, relation), string.Empty))
+                .ToArray();
+            return entries.Length > 0;
+        }
+
         public static void Update(GameTime gameTime, Rectangle contentBounds,
             MouseState mouseState, MouseState previousMouseState)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            KeyboardState keyboardState = Keyboard.GetState();
             _simTime += dt;
             _previewRotation += dt * 0.4f;
 
@@ -141,6 +247,7 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsureSession();
             EnsureListFunCol();
             UpdateSimRegen(dt);
+            UpdateSimChangeTracking();
 
             var groups  = GroupByRow(_local);
             var shown   = groups.Where(g => !g[0].IsHidden).ToList();
@@ -160,22 +267,43 @@ namespace op.io.UI.BlockScripts.Blocks
             _cachedListBounds = listViewport;
 
             bool isDragging = _drag.Active;
-            _listFunCol.Update(_cachedListBounds, mouseState, dt, suppressHover: isDragging || blockLocked || !BlockManager.DockingModeEnabled || BlockManager.IsCursorInAnyDragBar);
+            _listFunCol.Update(_cachedListBounds, mouseState, dt, suppressHover: isDragging || blockLocked || BlockManager.IsCursorInAnyDragBar);
+
+            if (blockLocked)
+            {
+                _segmentTarget = default;
+                _segmentOverlayRect = Rectangle.Empty;
+                _relationTarget = default;
+                _relationOverlayRect = Rectangle.Empty;
+                ResetRelationUi();
+            }
+            else
+            {
+                UpdateOverlayTargets(mouseState.Position);
+            }
+
+            UpdateGroupDropdown(mouseState, previousMouseState, keyboardState, blockLocked, contentBounds);
 
             if (!blockLocked)
             {
                 HandleTopBarClick(mouseState, previousMouseState, contentBounds);
-                HandleSegmentInput(mouseState, previousMouseState, shown, hidden);
-                HandleSplitButtonClick(mouseState, previousMouseState);
-                HandleDrag(mouseState, previousMouseState, shown, hidden);
-                HandleButtons(mouseState, previousMouseState, contentBounds, shown, hidden);
+                HandleSegmentInput(mouseState, previousMouseState);
+                bool relationUiBlocking = HandleRelationInput(mouseState, previousMouseState, keyboardState, _prevKeyboardState);
+                if (!relationUiBlocking)
+                {
+                    HandleSplitButtonClick(mouseState, previousMouseState);
+                    HandleDrag(mouseState, previousMouseState, shown, hidden);
+                    HandleButtons(mouseState, previousMouseState, contentBounds, shown, hidden);
+                }
             }
 
             float listContentH = CalculateTotalHeight(shown, hidden);
             _scroll.Update(listViewport, listContentH, BlockManager.GetScrollMouseState(blockLocked, mouseState, previousMouseState), previousMouseState);
 
             _prevMouse = mouseState;
+            _prevKeyboardState = keyboardState;
             _lastMousePosition = mouseState.Position;
+            UpdateRelationTooltipState();
         }
 
         public static void Draw(SpriteBatch sb, Rectangle contentBounds)
@@ -212,6 +340,7 @@ namespace op.io.UI.BlockScripts.Blocks
             // ── Scrolled list items ───────────────────────────────────────────
             _rowBounds.Clear();
             _splitBtnRects.Clear();
+            _clearRelationBtnRects.Clear();
             var groups = GroupByRow(_local);
             var shown  = groups.Where(g => !g[0].IsHidden).ToList();
             var hidden = groups.Where(g =>  g[0].IsHidden).ToList();
@@ -246,8 +375,10 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             // ── Overlays ──────────────────────────────────────────────────────
-            if (_listFunCol.HoveredColumn == ColSegments)
+            if (_segmentTarget.Active)
                 DrawSegmentSettingsOverlay(sb);
+
+            DrawRelationInteraction(sb);
 
             DrawDropIndicators(sb, shown, hidden);
 
@@ -259,6 +390,8 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawButtons(sb, x, buttonsY, w, blockLocked);
 
             _scroll.Draw(sb, blockLocked);
+            DrawRelationDropdown(sb);
+            _groupDropdown.DrawOptionsOverlay(sb);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -269,31 +402,28 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             if (_sessionStarted) return;
 
-            _snapshot            = BarConfigManager.CloneGlobal();
-            _local               = BarConfigManager.CloneGlobal();
+            _snapshotByGroup.Clear();
+            _localByGroup.Clear();
+            foreach (BarConfigManager.BarConfigGroupDefinition group in BarConfigManager.GetGroupDefinitions())
+            {
+                List<BarConfigManager.BarEntry> snapshot = BarConfigManager.CloneGroup(group.Key);
+                _snapshotByGroup[group.Key] = snapshot;
+                _localByGroup[group.Key] = CloneBarEntries(snapshot);
+            }
+
+            _selectedGroupKey    = BarConfigManager.GetDefaultGroupKey();
+            SyncSelectedGroupBuffers();
+            EnsureGroupDropdownOptions();
             _snapshotBarsVisible = BarConfigManager.BarsVisible;
+            ReseedPreviewSimulation();
 
-            var player = FindPlayer();
-            if (player != null)
-            {
-                _simMaxHealth        = Math.Max(1f, player.MaxHealth);
-                _simMaxShield        = player.MaxShield;
-                _simMaxXP            = Math.Max(0f, player.MaxXP);
-                _simHealth           = player.CurrentHealth;
-                _simShield           = player.CurrentShield;
-                _simXP               = player.CurrentXP;
-                _simHealthRegen      = player.BodyAttributes.HealthRegen;
-                _simShieldRegen      = player.BodyAttributes.ShieldRegen;
-                _simHealthRegenDelay = player.BodyAttributes.HealthRegenDelay;
-                _simShieldRegenDelay = player.BodyAttributes.ShieldRegenDelay;
-            }
-            else
-            {
-                _simHealth = _simMaxHealth;
-                _simShield = _simMaxShield;
-                _simXP     = 0f;
-            }
-
+            _simPrevBarValues.Clear();
+            _simLastChangeTimes.Clear();
+            _segmentTarget = default;
+            _segmentOverlayRect = Rectangle.Empty;
+            _tooltipRowKey = null;
+            _tooltipRowLabel = null;
+            ResetRelationUi();
             _sessionStarted = true;
         }
 
@@ -315,9 +445,16 @@ namespace op.io.UI.BlockScripts.Blocks
                 {
                     ShowTextWhenExpanded = true,
                     ExpandedInstruction  = "Hover to edit bar settings"
+                },
+                new DragHandleFeature("Link Bars")
+                {
+                    ShowTextWhenExpanded = true,
+                    ExpandedInstruction  = "Drag controlled bar to source bar"
                 }
             );
             _listFunCol.SuppressTooltipWarnings = true;
+            _listFunCol.LockHoveredColumnUntilExit = true;
+            _listFunCol.HoveredColumnFillsFieldWhileLocked = true;
         }
 
         private static Agent FindPlayer()
@@ -327,6 +464,246 @@ namespace op.io.UI.BlockScripts.Blocks
             foreach (var obj in objs)
                 if (obj is Agent a && a.IsPlayer) return a;
             return null;
+        }
+
+        private static void EnsureGroupDropdownOptions()
+        {
+            IEnumerable<UIDropdown.Option> options = BarConfigManager.GetGroupDefinitions()
+                .OrderBy(group => group.RenderOrder)
+                .Select(group => new UIDropdown.Option(group.Key, group.Label));
+            _groupDropdown.SetOptions(options, _selectedGroupKey);
+        }
+
+        private static void SyncSelectedGroupBuffers()
+        {
+            _selectedGroupKey = BarConfigManager.NormalizeGroupKey(_selectedGroupKey);
+            if (!_snapshotByGroup.TryGetValue(_selectedGroupKey, out _))
+            {
+                _snapshotByGroup[_selectedGroupKey] = BarConfigManager.CloneGroup(_selectedGroupKey);
+            }
+
+            if (!_localByGroup.TryGetValue(_selectedGroupKey, out _))
+            {
+                _localByGroup[_selectedGroupKey] = CloneBarEntries(_snapshotByGroup[_selectedGroupKey]);
+            }
+
+            _snapshot = _snapshotByGroup[_selectedGroupKey];
+            _local = _localByGroup[_selectedGroupKey];
+        }
+
+        private static void UpdateGroupDropdown(MouseState mouse, MouseState prev, KeyboardState keyboardState, bool blockLocked, Rectangle contentBounds)
+        {
+            EnsureGroupDropdownOptions();
+            GetTopBarLayout(contentBounds, out Rectangle groupRect, out _, out _);
+            _groupDropdown.Bounds = groupRect;
+
+            if (_groupDropdown.Update(mouse, prev, keyboardState, _prevKeyboardState, out string selectedGroupId, isDisabled: blockLocked))
+            {
+                SelectGroup(selectedGroupId);
+            }
+        }
+
+        private static void SelectGroup(string groupKey)
+        {
+            string normalizedGroupKey = BarConfigManager.NormalizeGroupKey(groupKey);
+            if (string.Equals(_selectedGroupKey, normalizedGroupKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _selectedGroupKey = normalizedGroupKey;
+            SyncSelectedGroupBuffers();
+            EnsureGroupDropdownOptions();
+            _groupDropdown.Close();
+            _editingSegBarType = null;
+            _segInputBuffer = string.Empty;
+            _segmentTarget = default;
+            _segmentOverlayRect = Rectangle.Empty;
+            ResetRelationUi();
+            ReseedPreviewSimulation();
+        }
+
+        private static void ReseedPreviewSimulation()
+        {
+            _previewSource = FindPreviewSource(_selectedGroupKey);
+            GameObject source = _previewSource ?? FindPlayer();
+
+            if (source != null)
+            {
+                _simMaxHealth        = Math.Max(1f, source.MaxHealth);
+                _simMaxShield        = Math.Max(0f, source.MaxShield);
+                _simMaxXP            = Math.Max(0f, source.MaxXP);
+                _simHealth           = MathHelper.Clamp(source.CurrentHealth, 0f, _simMaxHealth);
+                _simShield           = MathHelper.Clamp(source.CurrentShield, 0f, _simMaxShield);
+                _simXP               = MathHelper.Clamp(source.CurrentXP, 0f, Math.Max(0f, _simMaxXP));
+                _simHealthRegen      = source.HealthRegen;
+                _simShieldRegen      = source.ShieldRegen;
+                _simHealthRegenDelay = source.HealthRegenDelay;
+                _simShieldRegenDelay = source.ShieldRegenDelay;
+
+                if (source is Agent agent)
+                {
+                    _simHealthRegen      = agent.BodyAttributes.HealthRegen;
+                    _simShieldRegen      = agent.BodyAttributes.ShieldRegen;
+                    _simHealthRegenDelay = agent.BodyAttributes.HealthRegenDelay;
+                    _simShieldRegenDelay = agent.BodyAttributes.ShieldRegenDelay;
+                }
+            }
+            else
+            {
+                _simMaxHealth = 100f;
+                _simMaxShield = 10f;
+                _simMaxXP = 100f;
+                _simHealth = _simMaxHealth;
+                _simShield = _simMaxShield;
+                _simXP = 0f;
+                _simHealthRegen = 5f;
+                _simShieldRegen = 3f;
+                _simHealthRegenDelay = 5f;
+                _simShieldRegenDelay = 3f;
+            }
+
+            _simLastHealthDmgTime = float.NegativeInfinity;
+            _simLastShieldDmgTime = float.NegativeInfinity;
+            _simPrevBarValues.Clear();
+            _simLastChangeTimes.Clear();
+        }
+
+        private static GameObject FindPreviewSource(string groupKey)
+        {
+            var objects = Core.Instance?.GameObjects;
+            if (objects == null)
+            {
+                return null;
+            }
+
+            Agent player = FindPlayer();
+            if (player?.Shape != null &&
+                BarConfigManager.DoesObjectMatchGroup(player, groupKey, includeDescendants: true))
+            {
+                return player;
+            }
+
+            foreach (GameObject obj in objects)
+            {
+                if (obj?.Shape == null || !obj.IsDestructible)
+                {
+                    continue;
+                }
+
+                if (BarConfigManager.DoesObjectMatchGroup(obj, groupKey, includeDescendants: true))
+                {
+                    return obj;
+                }
+            }
+
+            return objects.FirstOrDefault(obj => obj?.Shape != null && obj.IsDestructible);
+        }
+
+        private static bool IsGroupDirty(string groupKey)
+        {
+            string normalizedGroupKey = BarConfigManager.NormalizeGroupKey(groupKey);
+            return _snapshotByGroup.TryGetValue(normalizedGroupKey, out List<BarConfigManager.BarEntry> snapshot) &&
+                _localByGroup.TryGetValue(normalizedGroupKey, out List<BarConfigManager.BarEntry> local) &&
+                !BarEntryListsEqual(snapshot, local);
+        }
+
+        private static void RefreshCleanDescendantGroups(string changedGroupKey)
+        {
+            string normalizedChangedGroupKey = BarConfigManager.NormalizeGroupKey(changedGroupKey);
+            foreach (BarConfigManager.BarConfigGroupDefinition group in BarConfigManager.GetGroupDefinitions())
+            {
+                if (string.Equals(group.Key, normalizedChangedGroupKey, StringComparison.OrdinalIgnoreCase) ||
+                    !IsDescendantGroup(group.Key, normalizedChangedGroupKey) ||
+                    IsGroupDirty(group.Key))
+                {
+                    continue;
+                }
+
+                List<BarConfigManager.BarEntry> snapshot = BarConfigManager.CloneGroup(group.Key);
+                _snapshotByGroup[group.Key] = snapshot;
+                _localByGroup[group.Key] = CloneBarEntries(snapshot);
+            }
+
+            SyncSelectedGroupBuffers();
+        }
+
+        private static bool IsDescendantGroup(string groupKey, string ancestorGroupKey)
+        {
+            string current = BarConfigManager.NormalizeGroupKey(groupKey);
+            string target = BarConfigManager.NormalizeGroupKey(ancestorGroupKey);
+            if (string.Equals(current, target, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            Dictionary<string, string> parents = BarConfigManager.GetGroupDefinitions()
+                .ToDictionary(group => group.Key, group => group.ParentKey, StringComparer.OrdinalIgnoreCase);
+
+            while (!string.IsNullOrWhiteSpace(current) && parents.TryGetValue(current, out string parentKey))
+            {
+                if (string.IsNullOrWhiteSpace(parentKey))
+                {
+                    return false;
+                }
+
+                if (string.Equals(parentKey, target, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                current = parentKey;
+            }
+
+            return false;
+        }
+
+        private static List<BarConfigManager.BarEntry> CloneBarEntries(IEnumerable<BarConfigManager.BarEntry> entries)
+        {
+            return entries?.Select(entry => entry?.Clone()).Where(entry => entry != null).ToList() ?? new();
+        }
+
+        private static bool BarEntryListsEqual(IReadOnlyList<BarConfigManager.BarEntry> left, IReadOnlyList<BarConfigManager.BarEntry> right)
+        {
+            if (ReferenceEquals(left, right))
+            {
+                return true;
+            }
+
+            if (left == null || right == null || left.Count != right.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < left.Count; i++)
+            {
+                BarConfigManager.BarEntry a = left[i];
+                BarConfigManager.BarEntry b = right[i];
+                if (a == null || b == null)
+                {
+                    if (!ReferenceEquals(a, b))
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                if (a.Type != b.Type ||
+                    a.BarRow != b.BarRow ||
+                    a.PositionInRow != b.PositionInRow ||
+                    a.SegmentCount != b.SegmentCount ||
+                    a.SegmentsEnabled != b.SegmentsEnabled ||
+                    a.IsHidden != b.IsHidden ||
+                    a.ShowPercent != b.ShowPercent ||
+                    MathF.Abs(a.VisibilityFadeOutSeconds - b.VisibilityFadeOutSeconds) > 0.0001f ||
+                    BarConfigManager.EncodeVisibilityRelations(a.VisibilityRelations) != BarConfigManager.EncodeVisibilityRelations(b.VisibilityRelations))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -366,16 +743,45 @@ namespace op.io.UI.BlockScripts.Blocks
         // Drawing: top bar
         // ─────────────────────────────────────────────────────────────────────
 
+        private static void GetTopBarLayout(Rectangle contentBounds, out Rectangle groupRect, out Rectangle toggleRect, out Rectangle simRect)
+        {
+            int x = contentBounds.X + Padding;
+            int y = contentBounds.Y + PreviewHeight + Padding;
+            int w = contentBounds.Width - Padding * 2;
+            int h = TopBarH - 4;
+            int gap = 6;
+            int minGroupWidth = Math.Min(140, Math.Max(90, w / 2));
+            int maxGroupWidth = Math.Max(minGroupWidth, w - 180);
+            int groupW = Math.Clamp((int)MathF.Round(w * 0.38f), minGroupWidth, maxGroupWidth);
+            int remainingW = Math.Max(80, w - groupW - gap * 2);
+            int toggleW = Math.Clamp((int)MathF.Round(remainingW * 0.36f), 90, Math.Max(90, remainingW / 2));
+            int simW = Math.Max(80, w - groupW - toggleW - gap * 2);
+
+            groupRect = new Rectangle(x, y + 2, groupW, h);
+            toggleRect = new Rectangle(groupRect.Right + gap, y + 2, toggleW, h);
+            simRect = new Rectangle(toggleRect.Right + gap, y + 2, simW, h);
+        }
+
         private static void DrawTopBtnRow(SpriteBatch sb, int x, int y, int w, bool blockLocked)
         {
             bool barsOn  = BarConfigManager.BarsVisible;
             Point mouse  = _lastMousePosition;
-            int btnH     = TopBarH - 4;
-            int gap      = 6;
-            int btnW     = (w - gap) / 2;
+            int h = TopBarH - 4;
+            int gap = 6;
+            int minGroupWidth = Math.Min(140, Math.Max(90, w / 2));
+            int maxGroupWidth = Math.Max(minGroupWidth, w - 180);
+            int groupW = Math.Clamp((int)MathF.Round(w * 0.38f), minGroupWidth, maxGroupWidth);
+            int remainingW = Math.Max(80, w - groupW - gap * 2);
+            int toggleW = Math.Clamp((int)MathF.Round(remainingW * 0.36f), 90, Math.Max(90, remainingW / 2));
+            int simW = Math.Max(80, w - groupW - toggleW - gap * 2);
 
-            // Bars ON/OFF button (left half)
-            var toggleRect = new Rectangle(x, y + 2, btnW, btnH);
+            Rectangle groupRect = new(x, y + 2, groupW, h);
+            Rectangle toggleRect = new(groupRect.Right + gap, y + 2, toggleW, h);
+            Rectangle simRect = new(toggleRect.Right + gap, y + 2, simW, h);
+
+            _groupDropdown.Bounds = groupRect;
+            _groupDropdown.Draw(sb, drawOptions: false, isDisabled: blockLocked);
+
             bool toggleHov = !blockLocked && UIButtonRenderer.IsHovered(toggleRect, mouse);
             UIButtonRenderer.Draw(sb, toggleRect,
                 barsOn ? "Bars ON" : "Bars OFF",
@@ -385,8 +791,6 @@ namespace op.io.UI.BlockScripts.Blocks
                 fillOverride:       barsOn ? ColorPalette.IndicatorActive * 0.75f  : ColorPalette.IndicatorInactive * 0.68f,
                 hoverFillOverride:  barsOn ? ColorPalette.IndicatorActive * 0.95f  : ColorPalette.IndicatorInactive * 0.88f);
 
-            // Simulate Damage button (right half)
-            var simRect = new Rectangle(x + btnW + gap, y + 2, w - btnW - gap, btnH);
             bool simHov = !blockLocked && UIButtonRenderer.IsHovered(simRect, mouse);
             UIButtonRenderer.Draw(sb, simRect,
                 "Simulate Damage",
@@ -408,34 +812,32 @@ namespace op.io.UI.BlockScripts.Blocks
 
             int cx = previewBounds.X + previewBounds.Width  / 2;
             int cy = previewBounds.Y + previewBounds.Height / 2;
+            int previewRadius = _previewSource?.Shape != null
+                ? Math.Max(_previewSource.Shape.Width, _previewSource.Shape.Height) / 2
+                : PreviewPlayerR;
 
-            // Draw player using actual Shape if available, else fallback circle
-            DrawPreviewPlayer(sb, cx, cy);
+            DrawPreviewSource(sb, cx, cy);
 
             // Bars below dummy player — width matches player diameter for proportionality
-            int barW = Math.Min(previewBounds.Width - Padding * 4, PreviewPlayerR * 2);
+            int barW = Math.Min(previewBounds.Width - Padding * 4, Math.Max(previewRadius * 2, PreviewPlayerR * 2));
             int barX = cx - barW / 2;
-            int barY = cy + PreviewPlayerR + BarPreviewGap;
+            int barY = cy + previewRadius + BarPreviewGap;
 
             var groups = GroupByRow(_local);
             foreach (var rowEntries in groups)
             {
-                var visible = rowEntries.Where(e => !e.IsHidden).ToList();
+                var visible = rowEntries.Where(ShouldPreviewEntryRender).ToList();
                 if (visible.Count == 0) continue;
 
                 // Compute per-entry max values for proportional width allocation
                 float totalMax = 0f;
                 foreach (var entry in visible)
                 {
-                    float entryMax = entry.Type switch
+                    if (!TryGetSimBarValue(entry.Type, out _, out float entryMax))
                     {
-                        BarType.Health      => _simMaxHealth,
-                        BarType.Shield      => _simMaxShield,
-                        BarType.XP          => _simMaxXP,
-                        BarType.HealthRegen => _simHealthRegenDelay,
-                        BarType.ShieldRegen => _simShieldRegenDelay,
-                        _                   => 0f
-                    };
+                        continue;
+                    }
+
                     totalMax += Math.Max(0f, entryMax);
                 }
                 if (totalMax <= 0f) totalMax = Math.Max(1f, visible.Count);
@@ -444,15 +846,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 for (int vi = 0; vi < visible.Count; vi++)
                 {
                     var entry = visible[vi];
-                    float entryMax = entry.Type switch
+                    if (!TryGetSimBarValue(entry.Type, out _, out float entryMax))
                     {
-                        BarType.Health      => _simMaxHealth,
-                        BarType.Shield      => _simMaxShield,
-                        BarType.XP          => _simMaxXP,
-                        BarType.HealthRegen => _simHealthRegenDelay,
-                        BarType.ShieldRegen => _simShieldRegenDelay,
-                        _                   => 0f
-                    };
+                        continue;
+                    }
+
                     bool isLast = vi == visible.Count - 1;
                     int bw = isLast ? (barX + barW - bx) : (int)(barW * Math.Max(0f, entryMax) / totalMax);
                     int barH = HealthBarManager.BarHeight;
@@ -463,10 +861,9 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawPreviewPlayer(SpriteBatch sb, int cx, int cy)
+        private static void DrawPreviewSource(SpriteBatch sb, int cx, int cy)
         {
-            var player = FindPlayer();
-            if (player?.Shape != null)
+            if (_previewSource is Agent player && player.Shape != null)
             {
                 var previewPos = new Vector2(cx, cy);
                 float rot = _previewAimAngle;
@@ -505,6 +902,10 @@ namespace op.io.UI.BlockScripts.Blocks
                 }
                 player.Shape.DrawAt(sb, previewPos, rot);
             }
+            else if (_previewSource?.Shape != null)
+            {
+                _previewSource.Shape.DrawAt(sb, new Vector2(cx, cy), _previewRotation);
+            }
             else
             {
                 // Fallback: filled circle + orientation line
@@ -524,16 +925,33 @@ namespace op.io.UI.BlockScripts.Blocks
             int x, int y, int w, int h)
         {
             float current, max;
+            float previewSegmentPts = 0f;
+            int previewSegmentCount = entry.SegmentsEnabled ? Math.Max(1, entry.SegmentCount) : 0;
             switch (entry.Type)
             {
-                case BarType.Health: current = _simHealth; max = _simMaxHealth; break;
-                case BarType.Shield: current = _simShield; max = _simMaxShield; break;
-                case BarType.XP:    current = _simXP;    max = _simMaxXP;    break;
+                case BarType.Health:
+                    current = _simHealth;
+                    max = _simMaxHealth;
+                    previewSegmentPts = entry.SegmentsEnabled ? HealthBarManager.SegmentSize : 0f;
+                    break;
+                case BarType.Shield:
+                    current = _simShield;
+                    max = _simMaxShield;
+                    previewSegmentPts = entry.SegmentsEnabled ? HealthBarManager.SegmentSize : 0f;
+                    break;
+                case BarType.XP:
+                    current = _simXP;
+                    max = _simMaxXP;
+                    previewSegmentPts = entry.SegmentsEnabled ? HealthBarManager.SegmentSize : 0f;
+                    break;
                 case BarType.HealthRegen:
                 {
                     if (_simHealthRegenDelay <= 0f || _simHealthRegen <= 0f) return;
                     float elapsed = MathHelper.Clamp(_simTime - _simLastHealthDmgTime, 0f, _simHealthRegenDelay);
                     current = elapsed; max = _simHealthRegenDelay;
+                    previewSegmentPts = entry.SegmentsEnabled && previewSegmentCount > 1
+                        ? max / previewSegmentCount
+                        : 0f;
                     break;
                 }
                 case BarType.ShieldRegen:
@@ -541,6 +959,9 @@ namespace op.io.UI.BlockScripts.Blocks
                     if (_simShieldRegenDelay <= 0f || _simShieldRegen <= 0f) return;
                     float elapsed = MathHelper.Clamp(_simTime - _simLastShieldDmgTime, 0f, _simShieldRegenDelay);
                     current = elapsed; max = _simShieldRegenDelay;
+                    previewSegmentPts = entry.SegmentsEnabled && previewSegmentCount > 1
+                        ? max / previewSegmentCount
+                        : 0f;
                     break;
                 }
                 default: return;
@@ -551,7 +972,7 @@ namespace op.io.UI.BlockScripts.Blocks
             Color fill = entry.Type == BarType.Health
                 ? Color.Lerp(HealthBarManager.HealthFillLow, HealthBarManager.HealthFillHigh, ratio)
                 : GetBarColor(entry.Type);
-            HealthBarManager.DrawBarPreview(sb, _pixel, x, y, w, h, current, max, fill);
+            HealthBarManager.DrawBarPreview(sb, _pixel, x, y, w, h, current, max, fill, previewSegmentPts, previewSegmentCount);
 
             // Value label centered in bar
             UIStyle.UIFont font = UIStyle.FontTech;
@@ -590,12 +1011,20 @@ namespace op.io.UI.BlockScripts.Blocks
             DrawOutline(sb, headerRect, UIStyle.BlockBorder, 1);
 
             UIStyle.UIFont font = UIStyle.FontTech;
-            string[] shortNames = { "Drag Row", "Drag Bar", "Bar Settings" };
+            string[] shortNames = { "Drag Row", "Drag Bar", "Bar Settings", "Link Bars" };
             string[] instrNames =
             {
                 "Drag to reorder row",
-                "Drag to merge / split bars",
-                "Hover row → bar settings"
+                "Drag bar to merge",
+                "Hover bar for settings",
+                "Drag bar -> source bar"
+            };
+            string[] instrFallbacks =
+            {
+                "Reorder rows",
+                "Drag to merge",
+                "Hover to edit",
+                "Drag to link"
             };
 
             for (int i = 0; i < shortNames.Length; i++)
@@ -610,6 +1039,15 @@ namespace op.io.UI.BlockScripts.Blocks
 
                 if (font.IsAvailable)
                 {
+                    if (expanded)
+                    {
+                        Vector2 primarySize = font.MeasureString(text);
+                        if (primarySize.X + 4 > colBounds.Width)
+                        {
+                            text = instrFallbacks[i];
+                        }
+                    }
+
                     Vector2 ts = font.MeasureString(text);
                     if (ts.X + 4 <= colBounds.Width)
                     {
@@ -617,10 +1055,17 @@ namespace op.io.UI.BlockScripts.Blocks
                         float ty = y            + (ColHeaderH        - ts.Y) / 2f;
                         font.DrawString(sb, text, new Vector2(tx, ty), tc);
                     }
-                    else if (!expanded)
+                    else
                     {
-                        // Try abbrev fallback
-                        string abbrev = i == 0 ? "Row" : i == 1 ? "Drag" : "Set";
+                        string abbrev;
+                        if (expanded)
+                        {
+                            abbrev = i == 0 ? "Reorder" : i == 1 ? "Merge" : i == 2 ? "Edit" : "Link";
+                        }
+                        else
+                        {
+                            abbrev = i == 0 ? "Row" : i == 1 ? "Drag" : i == 2 ? "Set" : "Link";
+                        }
                         Vector2 ts2 = font.MeasureString(abbrev);
                         if (ts2.X + 4 <= colBounds.Width)
                         {
@@ -714,6 +1159,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 int hovCol = _listFunCol?.HoveredColumn ?? -1;
                 if ((hovCol == ColDragRow || hovCol == ColDragBar) && rowRec.Contains(_lastMousePosition))
                     DrawHoverHighlight(sb, eb);
+                else if ((hovCol == ColSegments || hovCol == ColRelations) && eb.Contains(_lastMousePosition))
+                    DrawHoverHighlight(sb, eb);
 
                 // Split button: appears per-bar when Drag Bar is active and row has multiple bars
                 if (hovCol == ColDragBar && rowEntries.Count > 1)
@@ -724,17 +1171,26 @@ namespace op.io.UI.BlockScripts.Blocks
                     _splitBtnRects.Add((entry.Type, barRow, splitRect));
                     Color splitBg = splitRect.Contains(_lastMousePosition)
                         ? ColorPalette.ButtonPrimaryHover : ColorPalette.ButtonPrimary;
-                    DrawRect(sb, splitRect, splitBg);
-                    DrawOutline(sb, splitRect, FunColInterface.GetColumnColor(ColDragBar), 1);
-                    UIStyle.UIFont sfont = UIStyle.FontTech;
-                    if (sfont.IsAvailable)
-                    {
-                        const string splitGlyph = "<";
-                        Vector2 gs = sfont.MeasureString(splitGlyph);
-                        sfont.DrawString(sb, splitGlyph,
-                            new Vector2(sbX + (SplitBtnSize - gs.X) / 2f, sbY + (SplitBtnSize - gs.Y) / 2f),
-                            Color.White * 0.9f);
-                    }
+                    DrawInlineActionButton(sb, splitRect, "<", splitBg, FunColInterface.GetColumnColor(ColDragBar), Color.White * 0.9f);
+                }
+
+                if (hovCol == ColRelations)
+                {
+                    Rectangle clearRect = GetRelationClearButtonRect(eb);
+                    _clearRelationBtnRects.Add((entry.Type, barRow, clearRect));
+                    bool hasRelations = entry.HasVisibilityRelations;
+                    bool hoveredClear = clearRect.Contains(_lastMousePosition);
+                    Color clearFill = hasRelations
+                        ? (hoveredClear ? ColorPalette.Warning : ColorPalette.ButtonNeutral)
+                        : ColorPalette.BlockBackground * 0.7f;
+                    Color clearOutline = hasRelations
+                        ? FunColInterface.GetColumnColor(ColRelations)
+                        : UIStyle.BlockBorder;
+                    Color clearText = hasRelations
+                        ? Color.White * 0.92f
+                        : UIStyle.MutedTextColor;
+                    string clearLabel = clearRect.Width >= 38 ? "Clear" : "Clr";
+                    DrawInlineActionButton(sb, clearRect, clearLabel, clearFill, clearOutline, clearText);
                 }
 
                 ex += ew;
@@ -751,32 +1207,21 @@ namespace op.io.UI.BlockScripts.Blocks
         private static void DrawSegmentSettingsOverlay(SpriteBatch sb)
         {
             UIStyle.UIFont font = UIStyle.FontTech;
-            if (!font.IsAvailable || _pixel == null) return;
+            if (!font.IsAvailable || _pixel == null || !_segmentTarget.Active) return;
+            if (!TryGetLocalEntry(_segmentTarget.BarRow, _segmentTarget.BarType, out BarConfigManager.BarEntry entry)) return;
 
-            Point mouse = _lastMousePosition;
-            var hovRow  = _rowBounds.FirstOrDefault(r => r.RowRect.Contains(mouse));
-            if (hovRow.RowRect == Rectangle.Empty) return;
+            Rectangle panel = _segmentOverlayRect == Rectangle.Empty ? GetSegmentOverlayRect(_segmentTarget) : _segmentOverlayRect;
+            if (panel == Rectangle.Empty) return;
 
-            var entry = _local.FirstOrDefault(e => e.BarRow == hovRow.BarRow);
-            if (entry == null) return;
-
-            // Draw overlay below (or above) the row
-            const int panelH = 22;
-            int panelY = hovRow.RowRect.Bottom;
-            int panelX = hovRow.RowRect.X;
-            int panelW = hovRow.RowRect.Width;
-
-            var panel = new Rectangle(panelX, panelY, panelW, panelH);
             DrawRect(sb, panel, ColorPalette.OverlayBackground);
             DrawOutline(sb, panel, FunColInterface.GetColumnColor(ColSegments), 1);
 
             string key = entry.Type.ToString();
-            int fx = panelX + 4;
-            int fy = panelY + (panelH - (int)font.LineHeight) / 2;
+            int fx = panel.X + 4;
+            int fy = panel.Y + (panel.Height - (int)font.LineHeight) / 2;
 
-            // Segments-enabled checkbox
             int checkSize = 12;
-            var checkRect = new Rectangle(fx, panelY + (panelH - checkSize) / 2, checkSize, checkSize);
+            var checkRect = new Rectangle(fx, panel.Y + (panel.Height - checkSize) / 2, checkSize, checkSize);
             DrawRect(sb, checkRect, entry.SegmentsEnabled ? ColorPalette.IndicatorActive : ColorPalette.ToggleIdle);
             DrawOutline(sb, checkRect, UIStyle.BlockBorder, 1);
             fx += checkSize + 4;
@@ -786,14 +1231,14 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (entry.SegmentsEnabled)
             {
-                int arrowY = panelY + (panelH - ArrowBtnSize) / 2;
+                int arrowY = panel.Y + (panel.Height - ArrowBtnSize) / 2;
 
                 DrawRect(sb, new Rectangle(fx, arrowY, ArrowBtnSize, ArrowBtnSize), ColorPalette.ButtonNeutral);
                 font.DrawString(sb, "-", new Vector2(fx + ArrowBtnSize / 2f - 3, arrowY + 1), UIStyle.TextColor);
                 fx += ArrowBtnSize + 2;
 
-                string val      = _editingSegBarType == key ? _segInputBuffer : entry.SegmentCount.ToString();
-                var inputRect   = new Rectangle(fx, arrowY, SegInputWidth, ArrowBtnSize);
+                string val = _editingSegBarType == key ? _segInputBuffer : entry.SegmentCount.ToString();
+                var inputRect = new Rectangle(fx, arrowY, SegInputWidth, ArrowBtnSize);
                 DrawRect(sb, inputRect, ColorPalette.ChatInputField);
                 DrawOutline(sb, inputRect, _editingSegBarType == key ? UIStyle.AccentColor : UIStyle.BlockBorder, 1);
                 font.DrawString(sb, val,
@@ -805,14 +1250,119 @@ namespace op.io.UI.BlockScripts.Blocks
                 fx += ArrowBtnSize + 2;
             }
 
-            // % Text toggle
             fx += 6;
             int pctCheckSize = 12;
-            var pctCheckRect = new Rectangle(fx, panelY + (panelH - pctCheckSize) / 2, pctCheckSize, pctCheckSize);
+            var pctCheckRect = new Rectangle(fx, panel.Y + (panel.Height - pctCheckSize) / 2, pctCheckSize, pctCheckSize);
             DrawRect(sb, pctCheckRect, entry.ShowPercent ? ColorPalette.IndicatorActive : ColorPalette.ToggleIdle);
             DrawOutline(sb, pctCheckRect, UIStyle.BlockBorder, 1);
             fx += pctCheckSize + 4;
             font.DrawString(sb, "% Text", new Vector2(fx, fy), UIStyle.MutedTextColor);
+        }
+
+        private static void DrawRelationInteraction(SpriteBatch sb)
+        {
+            _relationRemoveButtons.Clear();
+
+            if (_pixel == null)
+            {
+                return;
+            }
+
+            if (_relationDrag.Active)
+            {
+                if (_relationDrag.HoverTarget.Active)
+                {
+                    DrawRelationConnection(sb, _relationDrag.DependentTarget, _relationDrag.HoverTarget, FunColInterface.GetColumnColor(ColRelations));
+                }
+                else
+                {
+                    DrawRelationArrow(
+                        sb,
+                        GetEntryCenter(_relationDrag.DependentTarget.EntryRect),
+                        _relationDrag.Cursor.ToVector2(),
+                        FunColInterface.GetColumnColor(ColRelations));
+                }
+                return;
+            }
+
+            if (_relationDropdownState.Active)
+            {
+                DrawRelationConnection(sb, _relationDropdownState.DependentTarget, _relationDropdownState.SourceTarget, FunColInterface.GetColumnColor(ColRelations));
+                return;
+            }
+
+            if (!_relationTarget.Active ||
+                !TryGetLocalEntry(_relationTarget.BarRow, _relationTarget.BarType, out BarConfigManager.BarEntry entry))
+            {
+                return;
+            }
+
+            DrawOutline(sb, _relationTarget.EntryRect, FunColInterface.GetColumnColor(ColRelations) * 0.90f, 2);
+        }
+
+        private static void DrawRelationDropdown(SpriteBatch sb)
+        {
+            if (!_relationDropdownState.Active)
+            {
+                return;
+            }
+
+            _relationDropdown.Draw(sb, drawOptions: false);
+            _relationDropdown.DrawOptionsOverlay(sb);
+        }
+
+        private static void DrawRelationOverlay(
+            SpriteBatch sb,
+            BarOverlayTarget target,
+            BarConfigManager.BarEntry entry,
+            Rectangle panel)
+        {
+            _ = sb;
+            _ = target;
+            _ = entry;
+            _ = panel;
+        }
+
+        private static void UpdateRelationTooltipState()
+        {
+            _tooltipRowKey = null;
+            _tooltipRowLabel = null;
+
+            if (_relationDrag.Active ||
+                _relationDropdownState.Active ||
+                !_relationTarget.Active ||
+                (_listFunCol?.HoveredColumn ?? -1) != ColRelations ||
+                !TryGetLocalEntry(_relationTarget.BarRow, _relationTarget.BarType, out BarConfigManager.BarEntry entry))
+            {
+                return;
+            }
+
+            _tooltipRowKey = BuildRelationTooltipKey(_selectedGroupKey, entry.Type);
+            _tooltipRowLabel = $"{BarConfigManager.GetGroupLabel(_selectedGroupKey)} {BarConfigManager.GetBarShortLabel(entry.Type)}";
+        }
+
+        private static string BuildRelationTooltipKey(string groupKey, BarType barType)
+        {
+            return $"bars_relation:{BarConfigManager.NormalizeGroupKey(groupKey)}:{barType}";
+        }
+
+        private static bool TryParseRelationTooltipKey(string rowKey, out string groupKey, out BarType barType)
+        {
+            groupKey = null;
+            barType = default;
+            if (string.IsNullOrWhiteSpace(rowKey) || !rowKey.StartsWith("bars_relation:", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string[] parts = rowKey.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length != 3 || !Enum.TryParse(parts[2], true, out barType))
+            {
+                return false;
+            }
+
+            groupKey = BarConfigManager.NormalizeGroupKey(parts[1]);
+            return true;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -899,9 +1449,100 @@ namespace op.io.UI.BlockScripts.Blocks
             font.DrawString(sb, text, new Vector2(ox, oy), Color.White);
         }
 
+        private static void DrawInlineActionButton(SpriteBatch sb, Rectangle rect, string label, Color fill, Color outline, Color textColor)
+        {
+            if (rect.Width <= 0 || rect.Height <= 0)
+            {
+                return;
+            }
+
+            DrawRect(sb, rect, fill);
+            DrawOutline(sb, rect, outline, 1);
+
+            UIStyle.UIFont font = UIStyle.FontTech;
+            if (!font.IsAvailable || string.IsNullOrWhiteSpace(label))
+            {
+                return;
+            }
+
+            Vector2 size = font.MeasureString(label);
+            float tx = rect.X + (rect.Width - size.X) / 2f;
+            float ty = rect.Y + (rect.Height - size.Y) / 2f;
+            font.DrawString(sb, label, new Vector2(tx, ty), textColor);
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // Drawing: drop indicators
         // ─────────────────────────────────────────────────────────────────────
+
+        private static void DrawRelationConnection(SpriteBatch sb, BarOverlayTarget dependentTarget, BarOverlayTarget sourceTarget, Color color)
+        {
+            if (!dependentTarget.Active || !sourceTarget.Active)
+            {
+                return;
+            }
+
+            DrawOutline(sb, dependentTarget.EntryRect, color * 0.90f, 2);
+            DrawOutline(sb, sourceTarget.EntryRect, GetBarColor(sourceTarget.BarType) * 0.90f, 2);
+            DrawRelationArrow(sb, GetEntryCenter(dependentTarget.EntryRect), GetEntryCenter(sourceTarget.EntryRect), color);
+        }
+
+        private static Vector2 GetEntryCenter(Rectangle rect)
+        {
+            return new Vector2(rect.X + (rect.Width / 2f), rect.Y + (rect.Height / 2f));
+        }
+
+        private static void DrawRelationArrow(SpriteBatch sb, Vector2 start, Vector2 end, Color color)
+        {
+            Vector2 delta = end - start;
+            if (delta.LengthSquared() < 1f)
+            {
+                return;
+            }
+
+            Vector2 direction = Vector2.Normalize(delta);
+            Vector2 arrowTip = end - (direction * 6f);
+            Vector2 arrowBase = start + (direction * 10f);
+            if ((arrowTip - arrowBase).LengthSquared() < 1f)
+            {
+                return;
+            }
+
+            DrawLine(sb, arrowBase, arrowTip, color, RelationArrowThickness);
+
+            float angle = MathF.Atan2(direction.Y, direction.X);
+            Vector2 left = arrowTip - new Vector2(MathF.Cos(angle - RelationArrowHeadAngle), MathF.Sin(angle - RelationArrowHeadAngle)) * RelationArrowHeadLength;
+            Vector2 right = arrowTip - new Vector2(MathF.Cos(angle + RelationArrowHeadAngle), MathF.Sin(angle + RelationArrowHeadAngle)) * RelationArrowHeadLength;
+            DrawLine(sb, arrowTip, left, color, RelationArrowThickness);
+            DrawLine(sb, arrowTip, right, color, RelationArrowThickness);
+        }
+
+        private static void DrawLine(SpriteBatch sb, Vector2 start, Vector2 end, Color color, float thickness)
+        {
+            if (_pixel == null)
+            {
+                return;
+            }
+
+            Vector2 delta = end - start;
+            float length = delta.Length();
+            if (length <= 0.001f)
+            {
+                return;
+            }
+
+            float angle = MathF.Atan2(delta.Y, delta.X);
+            sb.Draw(
+                _pixel,
+                start,
+                null,
+                color,
+                angle,
+                Vector2.Zero,
+                new Vector2(length, MathF.Max(1f, thickness)),
+                SpriteEffects.None,
+                0f);
+        }
 
         private static void DrawDropIndicators(SpriteBatch sb,
             List<List<BarConfigManager.BarEntry>> shown,
@@ -940,22 +1581,13 @@ namespace op.io.UI.BlockScripts.Blocks
                            prev.LeftButton  == ButtonState.Pressed;
             if (!clicked) return;
 
-            int x = contentBounds.X + Padding;
-            int w = contentBounds.Width - Padding * 2;
-            int y = contentBounds.Y + PreviewHeight + Padding;  // button row is below preview
-
-            int btnH = TopBarH - 4;
-            int gap  = 6;
-            int btnW = (w - gap) / 2;
-
-            var toggleRect = new Rectangle(x, y + 2, btnW, btnH);
+            GetTopBarLayout(contentBounds, out _, out Rectangle toggleRect, out Rectangle simRect);
             if (toggleRect.Contains(mouse.Position))
             {
                 BarConfigManager.BarsVisible = !BarConfigManager.BarsVisible;
                 return;
             }
 
-            var simRect = new Rectangle(x + btnW + gap, y + 2, w - btnW - gap, btnH);
             if (simRect.Contains(mouse.Position))
                 SimulateDamage();
         }
@@ -995,33 +1627,33 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void HandleSegmentInput(MouseState mouse, MouseState prev,
-            List<List<BarConfigManager.BarEntry>> shown,
-            List<List<BarConfigManager.BarEntry>> hidden)
+        private static void HandleSegmentInput(MouseState mouse, MouseState prev)
         {
-            if (_listFunCol?.HoveredColumn != ColSegments) return;
-
             bool clicked = mouse.LeftButton == ButtonState.Released &&
                            prev.LeftButton  == ButtonState.Pressed;
-            if (!clicked) return;
+            bool overlayFocused = _segmentTarget.Active && _segmentOverlayRect.Contains(mouse.Position);
+            bool allowOverlay = _listFunCol?.HoveredColumn == ColSegments || overlayFocused;
 
-            // Find the row the mouse is in
-            var hovRow = _rowBounds.FirstOrDefault(r => r.RowRect.Contains(mouse.Position));
-            if (hovRow.RowRect == Rectangle.Empty) return;
+            if (!allowOverlay)
+            {
+                if (clicked && _editingSegBarType != null)
+                {
+                    CommitSegInput();
+                    _editingSegBarType = null;
+                }
+                return;
+            }
 
-            var entry = _local.FirstOrDefault(e => e.BarRow == hovRow.BarRow);
-            if (entry == null) return;
+            if (!clicked || !_segmentTarget.Active || _segmentOverlayRect == Rectangle.Empty) return;
+            if (!TryGetLocalEntry(_segmentTarget.BarRow, _segmentTarget.BarType, out BarConfigManager.BarEntry entry)) return;
 
             string key = entry.Type.ToString();
-            const int panelH = 22;
-            int panelY = hovRow.RowRect.Bottom;
-            int panelX = hovRow.RowRect.X;
-            int panelW = hovRow.RowRect.Width;
+            Rectangle panel = _segmentOverlayRect;
 
             // Segments-enabled checkbox
-            int fx = panelX + 4;
+            int fx = panel.X + 4;
             int checkSize = 12;
-            var checkRect = new Rectangle(fx, panelY + (panelH - checkSize) / 2, checkSize, checkSize);
+            var checkRect = new Rectangle(fx, panel.Y + (panel.Height - checkSize) / 2, checkSize, checkSize);
             if (checkRect.Contains(mouse.Position))
             {
                 entry.SegmentsEnabled = !entry.SegmentsEnabled;
@@ -1035,7 +1667,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (entry.SegmentsEnabled)
             {
-                int arrowY = panelY + (panelH - ArrowBtnSize) / 2;
+                int arrowY = panel.Y + (panel.Height - ArrowBtnSize) / 2;
 
                 var downRect = new Rectangle(fx, arrowY, ArrowBtnSize, ArrowBtnSize);
                 if (downRect.Contains(mouse.Position)) { entry.SegmentCount = Math.Max(1, entry.SegmentCount - 1); return; }
@@ -1058,7 +1690,7 @@ namespace op.io.UI.BlockScripts.Blocks
             // % Text checkbox (always reachable regardless of SegmentsEnabled)
             fx += 6;
             int pctCheckSize = 12;
-            var pctCheckRect = new Rectangle(fx, panelY + (panelH - pctCheckSize) / 2, pctCheckSize, pctCheckSize);
+            var pctCheckRect = new Rectangle(fx, panel.Y + (panel.Height - pctCheckSize) / 2, pctCheckSize, pctCheckSize);
             if (pctCheckRect.Contains(mouse.Position))
             {
                 entry.ShowPercent = !entry.ShowPercent;
@@ -1069,6 +1701,118 @@ namespace op.io.UI.BlockScripts.Blocks
             if (_editingSegBarType != null) { CommitSegInput(); _editingSegBarType = null; }
         }
 
+        private static bool HandleRelationInput(
+            MouseState mouse,
+            MouseState prev,
+            KeyboardState keyboardState,
+            KeyboardState previousKeyboardState)
+        {
+            bool leftPressed = mouse.LeftButton == ButtonState.Pressed &&
+                               prev.LeftButton == ButtonState.Released;
+            bool leftReleased = mouse.LeftButton == ButtonState.Released &&
+                                prev.LeftButton == ButtonState.Pressed;
+
+            if (leftReleased && TryHandleRelationClearClick(mouse.Position))
+            {
+                return true;
+            }
+
+            if (_relationDropdownState.Active)
+            {
+                bool pointerOverDropdown = _relationDropdown.IsPointerOverDropdown(mouse.Position);
+                bool selectionChanged = _relationDropdown.Update(
+                    mouse,
+                    prev,
+                    keyboardState,
+                    previousKeyboardState,
+                    out string selectionChangedId);
+
+                if (selectionChanged)
+                {
+                    ApplyPendingRelationSelection(selectionChangedId);
+                    ResetRelationUi();
+                    return true;
+                }
+
+                bool clickedOutsideDropdown = leftPressed && !pointerOverDropdown;
+                bool escapePressed = keyboardState.IsKeyDown(Keys.Escape) && previousKeyboardState.IsKeyUp(Keys.Escape);
+                if (clickedOutsideDropdown || escapePressed)
+                {
+                    ResetRelationUi();
+                }
+
+                return true;
+            }
+
+            if (_relationDrag.Active)
+            {
+                _relationDrag.Cursor = mouse.Position;
+                _relationDrag.HoverTarget = TryGetBarEntryAtPoint(mouse.Position, out BarOverlayTarget hoverTarget)
+                    ? hoverTarget
+                    : default;
+
+                if (leftReleased)
+                {
+                    if (_relationDrag.HoverTarget.Active)
+                    {
+                        OpenRelationDropdown(_relationDrag.DependentTarget, _relationDrag.HoverTarget, mouse.Position);
+                    }
+                    else
+                    {
+                        ResetRelationUi();
+                    }
+                }
+
+                return true;
+            }
+
+            if ((_listFunCol?.HoveredColumn ?? -1) != ColRelations)
+            {
+                return false;
+            }
+
+            if (leftPressed && TryGetRelationClearButtonAtPoint(mouse.Position, out _, out _))
+            {
+                return true;
+            }
+
+            if (!leftPressed)
+            {
+                return false;
+            }
+
+            if (!TryGetBarEntryAtPoint(mouse.Position, out BarOverlayTarget dependentTarget))
+            {
+                return false;
+            }
+
+            _relationDrag = new RelationDragState
+            {
+                Active = true,
+                DependentTarget = dependentTarget,
+                HoverTarget = dependentTarget,
+                Cursor = mouse.Position
+            };
+            return true;
+        }
+
+        private static bool TryHandleRelationClearClick(Point pointer)
+        {
+            if (!TryGetRelationClearButtonAtPoint(pointer, out BarType barType, out int barRow) ||
+                !TryGetLocalEntry(barRow, barType, out BarConfigManager.BarEntry entry))
+            {
+                return false;
+            }
+
+            if (!entry.HasVisibilityRelations)
+            {
+                return false;
+            }
+
+            BarConfigManager.ClearVisibilityRelations(entry);
+            return true;
+        }
+
         private static void CommitSegInput()
         {
             if (string.IsNullOrWhiteSpace(_segInputBuffer)) return;
@@ -1076,6 +1820,117 @@ namespace op.io.UI.BlockScripts.Blocks
             val = Math.Max(1, val);
             var entry = _local.FirstOrDefault(e => e.Type.ToString() == _editingSegBarType);
             if (entry != null) entry.SegmentCount = val;
+        }
+
+        private static void OpenRelationDropdown(BarOverlayTarget dependentTarget, BarOverlayTarget sourceTarget, Point pointer)
+        {
+            _relationDrag = default;
+
+            if (!TryGetLocalEntry(dependentTarget.BarRow, dependentTarget.BarType, out BarConfigManager.BarEntry entry))
+            {
+                ResetRelationUi();
+                return;
+            }
+
+            List<UIDropdown.Option> options = GetRelationDropdownOptions(dependentTarget, sourceTarget).ToList();
+            BarConfigManager.BarRelation existingRelation = entry.VisibilityRelations?
+                .FirstOrDefault(r => r != null && r.SourceType == sourceTarget.BarType && options.Any(o => o.Id == GetRelationDropdownId(r.RelationName)));
+            string selectedId = existingRelation != null
+                ? GetRelationDropdownId(existingRelation.RelationName)
+                : GetRelationDropdownId(BarConfigManager.BarRelationName.BelowFull);
+
+            _relationDropdown.Bounds = GetRelationDropdownBounds(pointer, options.Count);
+            _relationDropdown.SetOptions(options, selectedId);
+            _relationDropdown.Open();
+
+            _relationDropdownState = new RelationDropdownState
+            {
+                Active = true,
+                DependentTarget = dependentTarget,
+                SourceTarget = sourceTarget
+            };
+        }
+
+        private static IEnumerable<UIDropdown.Option> GetRelationDropdownOptions(
+            BarOverlayTarget dependentTarget,
+            BarOverlayTarget sourceTarget)
+        {
+            yield return new UIDropdown.Option(
+                GetRelationDropdownId(BarConfigManager.BarRelationName.BelowFull),
+                BarConfigManager.GetRelationLabel(BarConfigManager.BarRelationName.BelowFull));
+            yield return new UIDropdown.Option(
+                GetRelationDropdownId(BarConfigManager.BarRelationName.Empty),
+                BarConfigManager.GetRelationLabel(BarConfigManager.BarRelationName.Empty));
+            yield return new UIDropdown.Option(
+                GetRelationDropdownId(BarConfigManager.BarRelationName.Change),
+                BarConfigManager.GetRelationLabel(BarConfigManager.BarRelationName.Change));
+
+            if (dependentTarget.BarType == sourceTarget.BarType)
+            {
+                yield return new UIDropdown.Option(
+                    GetRelationDropdownId(BarConfigManager.BarRelationName.Always),
+                    BarConfigManager.GetRelationLabel(BarConfigManager.BarRelationName.Always));
+            }
+        }
+
+        private static Rectangle GetRelationDropdownBounds(Point pointer, int optionCount)
+        {
+            int x = pointer.X + 10;
+            int y = pointer.Y - (RelationDropdownH / 2);
+
+            if (_cachedListBounds != Rectangle.Empty)
+            {
+                int optionHeight = Math.Max(24, (int)MathF.Ceiling(UIStyle.FontBody.IsAvailable ? UIStyle.FontBody.LineHeight + 8f : 24f));
+                int listHeight = optionHeight * Math.Max(1, optionCount);
+                int maxX = Math.Max(_cachedListBounds.X, _cachedListBounds.Right - RelationDropdownW);
+                int maxY = Math.Max(_cachedListBounds.Y, _cachedListBounds.Bottom - RelationDropdownH - 4 - listHeight);
+                x = Math.Clamp(x, _cachedListBounds.X, maxX);
+                y = Math.Clamp(y, _cachedListBounds.Y, maxY);
+            }
+
+            return new Rectangle(x, y, RelationDropdownW, RelationDropdownH);
+        }
+
+        private static void ApplyPendingRelationSelection(string selectionChangedId)
+        {
+            if (!_relationDropdownState.Active ||
+                string.IsNullOrWhiteSpace(selectionChangedId) ||
+                !TryGetLocalEntry(_relationDropdownState.DependentTarget.BarRow, _relationDropdownState.DependentTarget.BarType, out BarConfigManager.BarEntry entry))
+            {
+                return;
+            }
+
+            BarConfigManager.AddVisibilityRelation(
+                entry,
+                _relationDropdownState.SourceTarget.BarType,
+                GetRelationFromDropdownId(selectionChangedId));
+        }
+
+        private static string GetRelationDropdownId(BarConfigManager.BarRelationName relationName) => relationName switch
+        {
+            BarConfigManager.BarRelationName.BelowFull => "not_full",
+            BarConfigManager.BarRelationName.Empty => "empty",
+            BarConfigManager.BarRelationName.Change => "changed",
+            BarConfigManager.BarRelationName.Always => "always",
+            _ => relationName.ToString()
+        };
+
+        private static BarConfigManager.BarRelationName GetRelationFromDropdownId(string relationId) => relationId switch
+        {
+            "not_full" => BarConfigManager.BarRelationName.BelowFull,
+            "empty" => BarConfigManager.BarRelationName.Empty,
+            "changed" => BarConfigManager.BarRelationName.Change,
+            "always" => BarConfigManager.BarRelationName.Always,
+            _ => BarConfigManager.BarRelationName.BelowFull
+        };
+
+        private static void ResetRelationUi()
+        {
+            _relationDrag = default;
+            _relationDropdownState = default;
+            _relationDropdown.Close();
+            _relationDropdown.Bounds = Rectangle.Empty;
+            _relationRemoveButtons.Clear();
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -1303,23 +2158,294 @@ namespace op.io.UI.BlockScripts.Blocks
         // Save / Apply / Discard
         // ─────────────────────────────────────────────────────────────────────
 
+        private static void UpdateSimChangeTracking()
+        {
+            TrackSimBarChange(BarType.Health, _simHealth);
+            TrackSimBarChange(BarType.Shield, _simShield);
+            TrackSimBarChange(BarType.XP, _simXP);
+            TrackSimBarChange(BarType.HealthRegen, GetHealthRegenPreviewValue());
+            TrackSimBarChange(BarType.ShieldRegen, GetShieldRegenPreviewValue());
+        }
+
+        private static void TrackSimBarChange(BarType type, float value)
+        {
+            if (!_simPrevBarValues.TryGetValue(type, out float previousValue) ||
+                MathF.Abs(previousValue - value) > PreviewChangeEpsilon)
+            {
+                _simLastChangeTimes[type] = _simTime;
+            }
+
+            _simPrevBarValues[type] = value;
+        }
+
+        private static bool TryGetSimBarValue(BarType type, out float current, out float max)
+        {
+            current = 0f;
+            max = 0f;
+
+            switch (type)
+            {
+                case BarType.Health:
+                    current = _simHealth;
+                    max = _simMaxHealth;
+                    return max > 0f;
+
+                case BarType.Shield:
+                    current = _simShield;
+                    max = _simMaxShield;
+                    return max > 0f;
+
+                case BarType.XP:
+                    current = _simXP;
+                    max = _simMaxXP;
+                    return max > 0f;
+
+                case BarType.HealthRegen:
+                    if (_simHealthRegen <= 0f || _simHealthRegenDelay <= 0f)
+                    {
+                        return false;
+                    }
+
+                    current = GetHealthRegenPreviewValue();
+                    max = _simHealthRegenDelay;
+                    return max > 0f;
+
+                case BarType.ShieldRegen:
+                    if (_simShieldRegen <= 0f || _simShieldRegenDelay <= 0f)
+                    {
+                        return false;
+                    }
+
+                    current = GetShieldRegenPreviewValue();
+                    max = _simShieldRegenDelay;
+                    return max > 0f;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static float GetHealthRegenPreviewValue()
+        {
+            if (_simHealthRegenDelay <= 0f)
+            {
+                return 0f;
+            }
+
+            return MathHelper.Clamp(_simTime - _simLastHealthDmgTime, 0f, _simHealthRegenDelay);
+        }
+
+        private static float GetShieldRegenPreviewValue()
+        {
+            if (_simShieldRegenDelay <= 0f)
+            {
+                return 0f;
+            }
+
+            return MathHelper.Clamp(_simTime - _simLastShieldDmgTime, 0f, _simShieldRegenDelay);
+        }
+
+        private static BarConfigManager.BarSourceState GetSimBarSourceState(BarType type)
+        {
+            bool isKnown = _simPrevBarValues.ContainsKey(type);
+            bool changedRecently = _simLastChangeTimes.TryGetValue(type, out float changeTime) &&
+                                   _simTime - changeTime <= PreviewChangeVisibleSeconds;
+
+            if (!TryGetSimBarValue(type, out float current, out float max))
+            {
+                return new BarConfigManager.BarSourceState(0f, 0f, changedRecently, isKnown);
+            }
+
+            return new BarConfigManager.BarSourceState(current, max, changedRecently, isKnown);
+        }
+
+        private static bool ShouldPreviewEntryRender(BarConfigManager.BarEntry entry)
+        {
+            return entry != null &&
+                   !entry.IsHidden &&
+                   TryGetSimBarValue(entry.Type, out _, out _) &&
+                   BarConfigManager.AreVisibilityRelationsActive(entry, GetSimBarSourceState);
+        }
+
+        private static void UpdateOverlayTargets(Point mouse)
+        {
+            _segmentTarget = TryResolveOverlayTarget(mouse, ColSegments, _segmentTarget, _segmentOverlayRect, out BarOverlayTarget segmentTarget)
+                ? segmentTarget
+                : default;
+            _segmentOverlayRect = _segmentTarget.Active ? GetSegmentOverlayRect(_segmentTarget) : Rectangle.Empty;
+
+            if (_relationDrag.Active || _relationDropdownState.Active)
+            {
+                _relationTarget = default;
+                _relationOverlayRect = Rectangle.Empty;
+                return;
+            }
+
+            _relationTarget = _listFunCol?.HoveredColumn == ColRelations &&
+                              TryGetBarEntryAtPoint(mouse, out BarOverlayTarget relationTarget)
+                ? relationTarget
+                : default;
+            _relationOverlayRect = Rectangle.Empty;
+        }
+
+        private static bool TryResolveOverlayTarget(
+            Point mouse,
+            int overlayColumn,
+            BarOverlayTarget existingTarget,
+            Rectangle existingOverlayRect,
+            out BarOverlayTarget target)
+        {
+            target = default;
+
+            if (_listFunCol?.HoveredColumn == overlayColumn && TryGetBarEntryAtPoint(mouse, out target))
+            {
+                return true;
+            }
+
+            if (existingTarget.Active && existingOverlayRect.Contains(mouse))
+            {
+                target = existingTarget;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGetBarEntryAtPoint(Point point, out BarOverlayTarget target)
+        {
+            foreach (BarRowBounds row in _rowBounds)
+            {
+                foreach ((BarType type, Rectangle bounds) in row.Entries)
+                {
+                    if (!bounds.Contains(point))
+                    {
+                        continue;
+                    }
+
+                    target = new BarOverlayTarget
+                    {
+                        Active = true,
+                        BarRow = row.BarRow,
+                        BarType = type,
+                        RowRect = row.RowRect,
+                        EntryRect = bounds
+                    };
+                    return true;
+                }
+            }
+
+            target = default;
+            return false;
+        }
+
+        private static Rectangle GetSegmentOverlayRect(BarOverlayTarget target)
+            => GetOverlayRect(target.RowRect, SegmentPanelH);
+
+        private static Rectangle GetRelationOverlayRect(BarOverlayTarget target)
+        {
+            _ = target;
+            return Rectangle.Empty;
+        }
+
+        private static int GetRelationOverlayHeight(BarConfigManager.BarEntry entry)
+        {
+            _ = entry;
+            return 0;
+        }
+
+        private static bool TryGetRelationRemoveButtonRect(Rectangle panel, int relationIndex, out Rectangle buttonRect)
+        {
+            _ = panel;
+            _ = relationIndex;
+            buttonRect = Rectangle.Empty;
+            return false;
+        }
+
+        private static Rectangle GetRelationClearButtonRect(Rectangle entryRect)
+        {
+            if (entryRect == Rectangle.Empty)
+            {
+                return Rectangle.Empty;
+            }
+
+            int availableWidth = Math.Max(18, entryRect.Width - BorderAccentW - 8);
+            int buttonWidth = Math.Max(RelationClearBtnMinW, entryRect.Width / 3);
+            buttonWidth = Math.Min(buttonWidth, Math.Min(RelationClearBtnMaxW, availableWidth));
+            buttonWidth = Math.Max(18, buttonWidth);
+
+            int x = Math.Max(entryRect.X + BorderAccentW + 2, entryRect.Right - buttonWidth - 4);
+            int y = entryRect.Y + ((entryRect.Height - RelationClearBtnH) / 2);
+            return new Rectangle(x, y, buttonWidth, RelationClearBtnH);
+        }
+
+        private static bool TryGetRelationClearButtonAtPoint(Point point, out BarType barType, out int barRow)
+        {
+            foreach ((BarType type, int row, Rectangle rect) in _clearRelationBtnRects)
+            {
+                if (!rect.Contains(point))
+                {
+                    continue;
+                }
+
+                barType = type;
+                barRow = row;
+                return true;
+            }
+
+            barType = default;
+            barRow = default;
+            return false;
+        }
+
+        private static Rectangle GetOverlayRect(Rectangle rowRect, int overlayHeight)
+        {
+            if (rowRect == Rectangle.Empty || overlayHeight <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int y = rowRect.Bottom;
+            if (_cachedListBounds != Rectangle.Empty && y + overlayHeight > _cachedListBounds.Bottom)
+            {
+                y = Math.Max(_cachedListBounds.Y, rowRect.Y - overlayHeight);
+            }
+
+            return new Rectangle(rowRect.X, y, rowRect.Width, overlayHeight);
+        }
+
+        private static bool TryGetLocalEntry(int barRow, BarType type, out BarConfigManager.BarEntry entry)
+        {
+            entry = _local.FirstOrDefault(e => e.BarRow == barRow && e.Type == type);
+            return entry != null;
+        }
+
         private static void DoApply()
         {
-            BarConfigManager.ApplyGlobal(_local);
+            ResetRelationUi();
+            BarConfigManager.ApplyGroup(_selectedGroupKey, _local);
+            RefreshCleanDescendantGroups(_selectedGroupKey);
         }
 
         private static void DoSave()
         {
-            BarConfigManager.Save(_local);
-            _snapshot            = _local.Select(e => e.Clone()).ToList();
+            ResetRelationUi();
+            BarConfigManager.Save(_selectedGroupKey, _local);
+            _snapshot            = CloneBarEntries(_local);
+            _snapshotByGroup[_selectedGroupKey] = _snapshot;
+            _local               = CloneBarEntries(_local);
+            _localByGroup[_selectedGroupKey] = _local;
             _snapshotBarsVisible = BarConfigManager.BarsVisible;
+            RefreshCleanDescendantGroups(_selectedGroupKey);
         }
 
         private static void DoDiscard()
         {
-            _local = _snapshot.Select(e => e.Clone()).ToList();
+            ResetRelationUi();
+            _local = CloneBarEntries(_snapshot);
+            _localByGroup[_selectedGroupKey] = _local;
             BarConfigManager.BarsVisible = _snapshotBarsVisible;
-            BarConfigManager.ApplyGlobal(_local);
+            BarConfigManager.ApplyGroup(_selectedGroupKey, _local);
+            RefreshCleanDescendantGroups(_selectedGroupKey);
         }
 
         // ─────────────────────────────────────────────────────────────────────

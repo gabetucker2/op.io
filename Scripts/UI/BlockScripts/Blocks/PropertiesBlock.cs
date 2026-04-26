@@ -542,7 +542,7 @@ namespace op.io.UI.BlockScripts.Blocks
             bool hasHealth = target.MaxHealth > 0f;
             bool hasShield = target.MaxShield > 0f;
             bool hasXP     = target.MaxXP    > 0f;
-            var allRowGroups = BarConfigManager.GetGroupedByRow();
+            var allRowGroups = BarConfigManager.GetGroupedByRow(target.Source);
             var previewBarRows = new List<List<BarConfigManager.BarEntry>>();
             foreach (var group in allRowGroups)
             {

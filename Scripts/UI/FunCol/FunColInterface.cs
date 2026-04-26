@@ -34,6 +34,19 @@ namespace op.io.UI.FunCol
         /// </summary>
         public bool DisableExpansion { get; set; } = true;
 
+        /// <summary>
+        /// When true and <see cref="DisableExpansion"/> is also true, the hovered column is
+        /// chosen once on panel entry and stays locked until the cursor exits the field.
+        /// </summary>
+        public bool LockHoveredColumnUntilExit { get; set; } = false;
+
+        /// <summary>
+        /// When true, the active hovered column color fills the entire field instead of only
+        /// its configured slice. Intended for committed mode-selection panels.
+        /// Only applies when <see cref="LockHoveredColumnUntilExit"/> is enabled.
+        /// </summary>
+        public bool HoveredColumnFillsFieldWhileLocked { get; set; } = false;
+
         /// <summary>When true, no colored backgrounds are drawn for columns.</summary>
         public bool DisableColors { get; set; } = false;
 
@@ -241,12 +254,32 @@ namespace op.io.UI.FunCol
             CheckTooltipWarnings();
             int n = _features.Length;
             if (n == 0) return;
+            bool wasInField = _isInField;
 
             if (suppressHover || DisableExpansion)
             {
-                _isInField     = !suppressHover && fieldBounds.Contains(mouse.Position);
-                _hoveredColumn = _isInField ? GetColumnAtX(fieldBounds, mouse.Position.X) : -1;
-                if (suppressHover) { _isInField = false; _hoveredColumn = -1; }
+                _isInField = !suppressHover && fieldBounds.Contains(mouse.Position);
+
+                if (suppressHover)
+                {
+                    _isInField = false;
+                    _hoveredColumn = -1;
+                }
+                else if (DisableExpansion && LockHoveredColumnUntilExit)
+                {
+                    if (!_isInField)
+                    {
+                        _hoveredColumn = -1;
+                    }
+                    else if (!wasInField || _hoveredColumn < 0 || _hoveredColumn >= n)
+                    {
+                        _hoveredColumn = GetColumnAtX(fieldBounds, mouse.Position.X);
+                    }
+                }
+                else
+                {
+                    _hoveredColumn = _isInField ? GetColumnAtX(fieldBounds, mouse.Position.X) : -1;
+                }
             }
             else
             {
@@ -500,6 +533,20 @@ namespace op.io.UI.FunCol
             {
                 Color dragColor = GetColumnColor(0);
                 sb.Draw(pixel, fieldBounds, dragColor * 0.32f);
+                return;
+            }
+
+            bool fillWithHoveredColor =
+                DisableExpansion &&
+                LockHoveredColumnUntilExit &&
+                HoveredColumnFillsFieldWhileLocked &&
+                _isInField &&
+                _hoveredColumn >= 0 &&
+                _hoveredColumn < n;
+            if (fillWithHoveredColor)
+            {
+                Color hoverColor = GetColumnColor(_hoveredColumn);
+                sb.Draw(pixel, fieldBounds, hoverColor * 0.30f);
                 return;
             }
 

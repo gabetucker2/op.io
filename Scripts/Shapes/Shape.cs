@@ -106,19 +106,19 @@ namespace op.io
             _renderer.DrawFlash(spriteBatch, GO);
         }
 
-        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation)
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, bool applyWorldTint = false)
         {
-            _renderer.DrawAt(spriteBatch, position, rotation);
+            _renderer.DrawAt(spriteBatch, position, rotation, applyWorldTint);
         }
 
-        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale)
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, bool applyWorldTint = false)
         {
-            _renderer.DrawAt(spriteBatch, position, rotation, scale);
+            _renderer.DrawAt(spriteBatch, position, rotation, scale, applyWorldTint);
         }
 
-        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity)
+        public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity, bool applyWorldTint = false)
         {
-            _renderer.DrawAt(spriteBatch, position, rotation, scale, opacity);
+            _renderer.DrawAt(spriteBatch, position, rotation, scale, opacity, applyWorldTint);
         }
 
         // Dispose method to clean up resources

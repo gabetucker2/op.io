@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace op.io.UI.BlockScripts.Blocks
@@ -6,6 +7,10 @@ namespace op.io.UI.BlockScripts.Blocks
     internal static class GameBlock
     {
         public const string BlockTitle = "Game";
+
+        public static void Initialize(ContentManager content)
+        {
+        }
 
         public static void Draw(SpriteBatch spriteBatch, Rectangle contentBounds, Texture2D worldTexture)
         {

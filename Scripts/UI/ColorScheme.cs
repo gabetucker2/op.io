@@ -632,7 +632,7 @@ namespace op.io
             Add(new ColorOption(ColorRole.HealthBarLow, "Health bar (low)", "Gameplay", new Color(220, 50, 50), "Bar fill when health is low."));
             Add(new ColorOption(ColorRole.HealthBarHigh, "Health bar (high)", "Gameplay", new Color(60, 200, 60), "Bar fill when health is full."));
             Add(new ColorOption(ColorRole.ShieldBar, "Shield bar", "Gameplay", new Color(0, 180, 255), "Shield bar fill color."));
-            Add(new ColorOption(ColorRole.XPBar, "XP bar", "Gameplay", new Color(50, 220, 80), "Experience bar fill color."));
+            Add(new ColorOption(ColorRole.XPBar, "XP bar", "Gameplay", new Color(50, 255, 80), "Experience bar fill color."));
             Add(new ColorOption(ColorRole.BarBackground, "Bar background", "Gameplay", new Color(64, 64, 64), "Empty portion of health/shield/XP bars."));
             Add(new ColorOption(ColorRole.DamageNumber, "Damage number", "Gameplay", new Color(255, 20, 20), "Floating damage text color."));
             Add(new ColorOption(ColorRole.BarRegenTick, "Regen tick", "Gameplay", new Color(220, 200, 75), "Health regeneration tick flash."));

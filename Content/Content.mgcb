@@ -16,6 +16,10 @@
 /importer:EffectImporter
 /processor:EffectProcessor
 /build:Effects/GameBlockOcean.fx
+#begin Effects/GameBlockTint.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/build:Effects/GameBlockTint.fx
 #begin Fonts/Bebas.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor

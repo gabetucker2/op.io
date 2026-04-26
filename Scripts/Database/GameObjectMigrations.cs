@@ -37,14 +37,21 @@ namespace op.io
                 EnsureHealthBarSegmentSize();
                 EnsureAgentsMaxXP();
                 EnsureBarConfigTable();
+                EnsureBarConfigGroupOverridesTable();
                 EnsureBarConfigIsHidden();
+                EnsureBarConfigVisibilityRelations();
+                EnsureBarConfigVisibilityFade();
                 EnsureRegenBarConfigs();
                 EnsureBarsVisibleSetting();
                 EnsureBarsInPropertiesPanel();
                 EnsureDefaultDockingSetupVisibilityDefaults();
+                EnsureDockingSetupAuxiliaryBlocks();
                 EnsureBarConfigShowPercent();
                 EnsureBarConfigDefaultHidden();
+                EnsureBarConfigDefaultRelations();
                 EnsureShieldAboveHealth();
+                EnsurePlainDefaultXpBar();
+                EnsureBrightGreenDefaultXpBarColor();
                 EnsureFarmBodyCollisionDamage();
                 EnsureAgentsAccelerationDelay();
                 EnsureAgentsRotationDelay();
@@ -508,22 +515,54 @@ AND BulletDamage IN (4, 10, 15);");
                     BarRow          INTEGER NOT NULL DEFAULT 0,
                     PositionInRow   INTEGER NOT NULL DEFAULT 0,
                     SegmentCount    INTEGER NOT NULL DEFAULT 10,
-                    SegmentsEnabled INTEGER NOT NULL DEFAULT 1
+                    SegmentsEnabled INTEGER NOT NULL DEFAULT 1,
+                    IsHidden        INTEGER NOT NULL DEFAULT 0,
+                    VisibilityRelations TEXT NOT NULL DEFAULT '',
+                    ShowPercent     INTEGER NOT NULL DEFAULT 0,
+                    VisibilityFade  TEXT    NOT NULL DEFAULT '0.18'
                 );");
 
-            DatabaseQuery.ExecuteNonQuery("INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled) VALUES ('Shield', 0, 0, 10, 1);");
-            DatabaseQuery.ExecuteNonQuery("INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled) VALUES ('Health', 1, 0, 10, 1);");
-            DatabaseQuery.ExecuteNonQuery("INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled) VALUES ('XP',     2, 0, 10, 1);");
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
+                "VALUES ('Shield', 0, 0, 10, 1, 0, 'Shield:BelowFull|Health:BelowFull', 0, '0.18');");
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
+                "VALUES ('Health', 1, 0, 10, 1, 0, 'Shield:Empty', 0, '0.18');");
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
+                "VALUES ('XP', 2, 0, 10, 0, 0, 'XP:Change', 0, '0.18');");
 
             DebugLogger.PrintDatabase("EnsureBarConfigTable: BarConfig seeded.");
+        }
+
+        private static void EnsureBarConfigGroupOverridesTable()
+        {
+            DatabaseQuery.ExecuteNonQuery(@"
+                CREATE TABLE IF NOT EXISTS BarConfigGroupOverrides (
+                    GroupKey TEXT NOT NULL,
+                    BarType TEXT NOT NULL,
+                    BarRow INTEGER NOT NULL DEFAULT 0,
+                    PositionInRow INTEGER NOT NULL DEFAULT 0,
+                    SegmentCount INTEGER NOT NULL DEFAULT 10,
+                    SegmentsEnabled INTEGER NOT NULL DEFAULT 1,
+                    IsHidden INTEGER NOT NULL DEFAULT 0,
+                    VisibilityRelations TEXT NOT NULL DEFAULT '',
+                    ShowPercent INTEGER NOT NULL DEFAULT 0,
+                    VisibilityFade TEXT NOT NULL DEFAULT '0.18',
+                    PRIMARY KEY (GroupKey, BarType)
+                );");
         }
 
         private static void EnsureRegenBarConfigs()
         {
             // Seed HealthRegen and ShieldRegen rows into BarConfig if missing.
-            // They default to row 2, hidden = 0. Users can reposition/hide them in BarsBlock.
-            DatabaseQuery.ExecuteNonQuery("INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden) VALUES ('HealthRegen', 2, 0, 10, 1, 0);");
-            DatabaseQuery.ExecuteNonQuery("INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden) VALUES ('ShieldRegen', 2, 1, 10, 1, 0);");
+            // They default to the hidden section and can be repositioned in BarsBlock.
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
+                "VALUES ('HealthRegen', 3, 0, 10, 1, 1, '', 0, '0.18');");
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
+                "VALUES ('ShieldRegen', 3, 1, 10, 1, 1, '', 0, '0.18');");
             DebugLogger.PrintDatabase("EnsureRegenBarConfigs: HealthRegen/ShieldRegen rows present.");
         }
 
@@ -533,6 +572,22 @@ AND BulletDamage IN (4, 10, 15);");
             DatabaseQuery.ExecuteNonQuery(
                 "ALTER TABLE BarConfig ADD COLUMN IsHidden INTEGER NOT NULL DEFAULT 0;");
             DebugLogger.PrintDatabase("EnsureBarConfigIsHidden: added IsHidden column to BarConfig.");
+        }
+
+        private static void EnsureBarConfigVisibilityRelations()
+        {
+            if (ColumnExists("BarConfig", "VisibilityRelations")) return;
+            DatabaseQuery.ExecuteNonQuery(
+                "ALTER TABLE BarConfig ADD COLUMN VisibilityRelations TEXT NOT NULL DEFAULT '';");
+            DebugLogger.PrintDatabase("EnsureBarConfigVisibilityRelations: added VisibilityRelations column to BarConfig.");
+        }
+
+        private static void EnsureBarConfigVisibilityFade()
+        {
+            if (ColumnExists("BarConfig", "VisibilityFade")) return;
+            DatabaseQuery.ExecuteNonQuery(
+                "ALTER TABLE BarConfig ADD COLUMN VisibilityFade TEXT NOT NULL DEFAULT '0.18';");
+            DebugLogger.PrintDatabase("EnsureBarConfigVisibilityFade: added VisibilityFade column to BarConfig.");
         }
 
         private static void EnsureBarsVisibleSetting()
@@ -722,6 +777,433 @@ AND BulletDamage IN (4, 10, 15);");
             return true;
         }
 
+        private static bool EnsureMenuToggleEntry(JsonArray menu, string kind, bool defaultVisible)
+        {
+            if (menu == null || string.IsNullOrWhiteSpace(kind))
+            {
+                return false;
+            }
+
+            foreach (JsonNode node in menu)
+            {
+                if (node is not JsonObject entry)
+                {
+                    continue;
+                }
+
+                string entryKind = entry["kind"]?.ToString();
+                if (!string.Equals(entryKind, kind, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                bool changed = false;
+                if (!string.Equals(entry["mode"]?.ToString(), "Toggle", StringComparison.OrdinalIgnoreCase))
+                {
+                    entry["mode"] = "Toggle";
+                    changed = true;
+                }
+
+                if (!int.TryParse(entry["count"]?.ToString(), out int count) || count != 0)
+                {
+                    entry["count"] = 0;
+                    changed = true;
+                }
+
+                if (!bool.TryParse(entry["visible"]?.ToString(), out _))
+                {
+                    entry["visible"] = defaultVisible;
+                    changed = true;
+                }
+
+                return changed;
+            }
+
+            menu.Add(new JsonObject
+            {
+                ["kind"] = kind,
+                ["mode"] = "Toggle",
+                ["count"] = 0,
+                ["visible"] = defaultVisible
+            });
+            return true;
+        }
+
+        private static void EnsureDockingSetupAuxiliaryBlocks()
+        {
+            try
+            {
+                var rows = DatabaseQuery.ExecuteQuery(
+                    "SELECT RowKey, RowData FROM BlockDockingSetups WHERE RowKey <> 'BlockLock' AND RowKey NOT LIKE '__%';");
+                if (rows.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (Dictionary<string, object> row in rows)
+                {
+                    string rowKey = row.TryGetValue("RowKey", out object keyValue) ? keyValue?.ToString() : null;
+                    string payload = row.TryGetValue("RowData", out object dataValue) ? dataValue?.ToString() : null;
+                    if (string.IsNullOrWhiteSpace(rowKey) || string.IsNullOrWhiteSpace(payload))
+                    {
+                        continue;
+                    }
+
+                    JsonNode root = JsonNode.Parse(payload);
+                    if (root is not JsonObject rootObject)
+                    {
+                        continue;
+                    }
+
+                    JsonArray menu = rootObject["menu"] as JsonArray;
+                    JsonArray panels = rootObject["panels"] as JsonArray;
+                    JsonArray overlays = rootObject["overlays"] as JsonArray;
+                    if (menu == null)
+                    {
+                        menu = new JsonArray();
+                        rootObject["menu"] = menu;
+                    }
+
+                    if (panels == null)
+                    {
+                        panels = new JsonArray();
+                        rootObject["panels"] = panels;
+                    }
+
+                    bool updated = false;
+                    updated |= EnsureMenuToggleEntry(menu, "Bars", true);
+                    updated |= UpsertMenuToggleVisibility(menu, "Ambience", true);
+                    updated |= EnsureMenuToggleEntry(menu, "Interact", true);
+                    updated |= UpsertMenuToggleVisibility(menu, "ControlSetups", false);
+                    updated |= UpsertMenuToggleVisibility(menu, "DockingSetups", false);
+                    updated |= UpsertMenuToggleVisibility(menu, "Notes", false);
+                    updated |= UpsertMenuToggleVisibility(menu, "Specs", false);
+                    updated |= UpsertMenuToggleVisibility(menu, "DebugLogs", false);
+                    updated |= UpsertMenuToggleVisibility(menu, "Chat", false);
+                    updated |= UpsertMenuToggleVisibility(menu, "Performance", false);
+                    updated |= MoveBlockToPanel(panels, "properties", "bars", "properties");
+                    updated |= MoveBlockToPanel(panels, "controls", "interact");
+                    updated |= MoveBlockToPanel(panels, "controls", "ambience", "controls");
+                    updated |= MoveBlockToPanel(panels, "controls", "controlsetups", "ambience");
+                    updated |= MoveBlockToPanel(panels, "colors", "dockingsetups", "colors");
+                    updated |= MoveBlockToPanel(panels, "backend", "notes", "backend");
+                    updated |= MoveBlockToPanel(panels, "backend", "specs", "notes");
+                    updated |= MoveBlockToPanel(panels, "backend", "debuglogs", "specs");
+                    updated |= MoveBlockToPanel(panels, "backend", "chat", "debuglogs");
+                    updated |= MoveBlockToPanel(panels, "backend", "performance", "chat");
+                    if (string.Equals(rowKey, "Default", StringComparison.OrdinalIgnoreCase))
+                    {
+                        updated |= SetPanelActiveBlock(panels, "controls", "ambience");
+                    }
+                    updated |= RemoveBlocksFromOverlays(overlays,
+                        "bars",
+                        "interact",
+                        "ambience",
+                        "controlsetups",
+                        "dockingsetups",
+                        "notes",
+                        "specs",
+                        "debuglogs",
+                        "chat",
+                        "performance");
+
+                    if (!updated)
+                    {
+                        continue;
+                    }
+
+                    string normalized = rootObject.ToJsonString(new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+
+                    DatabaseQuery.ExecuteNonQuery(
+                        "UPDATE BlockDockingSetups SET RowData = @data WHERE RowKey = @rowKey;",
+                        new Dictionary<string, object>
+                        {
+                            ["@data"] = normalized,
+                            ["@rowKey"] = rowKey
+                        });
+                }
+
+                DebugLogger.PrintDatabase("EnsureDockingSetupAuxiliaryBlocks: normalized anchored support tabs, panel membership, and overlay exclusions.");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"EnsureDockingSetupAuxiliaryBlocks failed: {ex.Message}");
+            }
+        }
+
+        private static bool SetPanelActiveBlock(JsonArray panels, string panelId, string blockId)
+        {
+            if (panels == null || string.IsNullOrWhiteSpace(panelId) || string.IsNullOrWhiteSpace(blockId))
+            {
+                return false;
+            }
+
+            foreach (JsonNode node in panels)
+            {
+                if (node is not JsonObject panel)
+                {
+                    continue;
+                }
+
+                if (!string.Equals(panel["id"]?.ToString(), panelId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                JsonArray blocks = panel["blocks"] as JsonArray;
+                if (blocks == null)
+                {
+                    return false;
+                }
+
+                bool containsBlock = false;
+                foreach (JsonNode blockNode in blocks)
+                {
+                    if (string.Equals(blockNode?.ToString(), blockId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        containsBlock = true;
+                        break;
+                    }
+                }
+                if (!containsBlock)
+                {
+                    return false;
+                }
+
+                string currentActive = panel["active"]?.ToString();
+                if (string.Equals(currentActive, blockId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                panel["active"] = blockId;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool MoveBlockToPanel(JsonArray panels, string panelId, string blockId, string insertAfterBlockId = null)
+        {
+            if (panels == null || string.IsNullOrWhiteSpace(panelId) || string.IsNullOrWhiteSpace(blockId))
+            {
+                return false;
+            }
+
+            JsonObject targetPanel = null;
+            JsonArray targetBlocks = null;
+            string containingPanelId = null;
+
+            foreach (JsonNode node in panels)
+            {
+                if (node is not JsonObject panel)
+                {
+                    continue;
+                }
+
+                string existingPanelId = panel["id"]?.ToString();
+                if (string.Equals(existingPanelId, panelId, StringComparison.OrdinalIgnoreCase))
+                {
+                    targetPanel = panel;
+                    targetBlocks = panel["blocks"] as JsonArray;
+                }
+
+                JsonArray existingBlocks = panel["blocks"] as JsonArray;
+                if (existingBlocks == null)
+                {
+                    continue;
+                }
+
+                foreach (JsonNode blockNode in existingBlocks)
+                {
+                    if (string.Equals(blockNode?.ToString(), blockId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        containingPanelId = existingPanelId;
+                        break;
+                    }
+                }
+
+                if (containingPanelId != null && targetPanel != null)
+                {
+                    break;
+                }
+            }
+
+            bool alreadyAnchored = string.Equals(containingPanelId, panelId, StringComparison.OrdinalIgnoreCase) &&
+                IsBlockPositionedAfterAnchor(targetBlocks, blockId, insertAfterBlockId);
+            if (alreadyAnchored)
+            {
+                return false;
+            }
+
+            bool changed = RemoveBlockFromPanels(panels, blockId);
+
+            if (targetPanel == null)
+            {
+                targetBlocks = new JsonArray();
+                targetPanel = new JsonObject
+                {
+                    ["id"] = panelId,
+                    ["active"] = string.IsNullOrWhiteSpace(insertAfterBlockId) ? blockId : insertAfterBlockId,
+                    ["blocks"] = targetBlocks
+                };
+                panels.Add(targetPanel);
+                changed = true;
+            }
+            else if (targetBlocks == null)
+            {
+                targetBlocks = new JsonArray();
+                targetPanel["blocks"] = targetBlocks;
+                changed = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(insertAfterBlockId) &&
+                !BlocksContain(targetBlocks, insertAfterBlockId))
+            {
+                targetBlocks.Insert(0, insertAfterBlockId);
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(insertAfterBlockId))
+            {
+                targetBlocks.Add(blockId);
+                return true;
+            }
+
+            for (int i = 0; i < targetBlocks.Count; i++)
+            {
+                if (!string.Equals(targetBlocks[i]?.ToString(), insertAfterBlockId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                targetBlocks.Insert(i + 1, blockId);
+                return true;
+            }
+
+            targetBlocks.Add(blockId);
+            return true;
+        }
+
+        private static bool RemoveBlockFromPanels(JsonArray panels, string blockId)
+        {
+            if (panels == null || string.IsNullOrWhiteSpace(blockId))
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (JsonNode node in panels)
+            {
+                if (node is not JsonObject panel)
+                {
+                    continue;
+                }
+
+                JsonArray blocks = panel["blocks"] as JsonArray;
+                if (blocks == null)
+                {
+                    continue;
+                }
+
+                for (int i = blocks.Count - 1; i >= 0; i--)
+                {
+                    if (!string.Equals(blocks[i]?.ToString(), blockId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    blocks.RemoveAt(i);
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool RemoveBlocksFromOverlays(JsonArray overlays, params string[] blockIds)
+        {
+            if (overlays == null || blockIds == null || blockIds.Length == 0)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            for (int i = overlays.Count - 1; i >= 0; i--)
+            {
+                if (overlays[i] is not JsonObject overlay)
+                {
+                    continue;
+                }
+
+                string overlayBlockId = overlay["blockId"]?.ToString();
+                if (string.IsNullOrWhiteSpace(overlayBlockId))
+                {
+                    continue;
+                }
+
+                foreach (string blockId in blockIds)
+                {
+                    if (!string.Equals(overlayBlockId, blockId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    overlays.RemoveAt(i);
+                    changed = true;
+                    break;
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool IsBlockPositionedAfterAnchor(JsonArray blocks, string blockId, string anchorBlockId)
+        {
+            if (blocks == null || string.IsNullOrWhiteSpace(blockId))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(anchorBlockId))
+            {
+                return BlocksContain(blocks, blockId);
+            }
+
+            for (int i = 0; i < blocks.Count - 1; i++)
+            {
+                if (!string.Equals(blocks[i]?.ToString(), anchorBlockId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return string.Equals(blocks[i + 1]?.ToString(), blockId, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
+        }
+
+        private static bool BlocksContain(JsonArray blocks, string blockId)
+        {
+            if (blocks == null || string.IsNullOrWhiteSpace(blockId))
+            {
+                return false;
+            }
+
+            foreach (JsonNode blockNode in blocks)
+            {
+                if (string.Equals(blockNode?.ToString(), blockId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static void EnsureBarConfigShowPercent()
         {
             if (ColumnExists("BarConfig", "ShowPercent")) return;
@@ -741,6 +1223,33 @@ AND BulletDamage IN (4, 10, 15);");
             DebugLogger.PrintDatabase("EnsureBarConfigDefaultHidden: hid XP, HealthRegen, ShieldRegen bars by default.");
         }
 
+        private static void EnsureBarConfigDefaultRelations()
+        {
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".barconfig_relations_v1_applied");
+            if (System.IO.File.Exists(marker)) return;
+
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET VisibilityRelations = 'Shield:BelowFull|Health:BelowFull'
+                WHERE BarType = 'Shield'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) = '';");
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET VisibilityRelations = 'Shield:Empty'
+                WHERE BarType = 'Health'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) = '';");
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET VisibilityRelations = 'XP:Change'
+                WHERE BarType = 'XP'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) = '';");
+
+            DatabaseQuery.ExecuteNonQuery("UPDATE BarConfig SET IsHidden = 0 WHERE BarType = 'XP';");
+
+            System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            DebugLogger.PrintDatabase("EnsureBarConfigDefaultRelations: seeded default Shield/Health/XP visibility relations and unhid XP.");
+        }
+
         private static void EnsureShieldAboveHealth()
         {
             string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".barconfig_shield_above_health_applied");
@@ -756,6 +1265,42 @@ AND BulletDamage IN (4, 10, 15);");
 
             System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
             DebugLogger.PrintDatabase("EnsureShieldAboveHealth: Shield row 0, Health row 1, XP row 2, regens row 3.");
+        }
+
+        private static void EnsurePlainDefaultXpBar()
+        {
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".barconfig_xp_plain_v1_applied");
+            if (System.IO.File.Exists(marker)) return;
+
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET SegmentsEnabled = 0
+                WHERE BarType = 'XP'
+                  AND BarRow = 2
+                  AND PositionInRow = 0
+                  AND SegmentCount = 10
+                  AND COALESCE(SegmentsEnabled, 1) = 1
+                  AND COALESCE(IsHidden, 0) = 0
+                  AND COALESCE(ShowPercent, 0) = 0
+                  AND TRIM(COALESCE(VisibilityRelations, '')) = 'XP:Change';");
+
+            System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            DebugLogger.PrintDatabase("EnsurePlainDefaultXpBar: disabled segment ticks for default XP bars so they render as a plain fill.");
+        }
+
+        private static void EnsureBrightGreenDefaultXpBarColor()
+        {
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".colorscheme_xpbar_default_v1_applied");
+            if (System.IO.File.Exists(marker)) return;
+
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BlockColorScheme
+                SET RowData = '#32FF50FF'
+                WHERE RowKey IN ('XPBar', 'Scheme:DarkMode::XPBar', 'Scheme:LightMode::XPBar')
+                  AND UPPER(TRIM(COALESCE(RowData, ''))) = '#32DC50FF';");
+
+            System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            DebugLogger.PrintDatabase("EnsureBrightGreenDefaultXpBarColor: updated built-in XP bar defaults to #32FF50FF when still using the old seed color.");
         }
 
         private static void EnsureFarmBodyCollisionDamage()

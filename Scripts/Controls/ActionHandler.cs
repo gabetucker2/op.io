@@ -156,7 +156,15 @@ namespace op.io
             float bulletKnockback = AttributeDerived.BulletKnockback(bulletPenetration, BulletManager.BulletKnockbackScalar);
             float bulletRecoil = AttributeDerived.BulletRecoil(bulletMass, bulletKnockback, BulletManager.BulletRecoilScalar);
             float recoilSpeed = bulletRecoil * RecoilMassScale;
-            Vector2 recoilDir = new Vector2(MathF.Cos(agent.Rotation + MathF.PI), MathF.Sin(agent.Rotation + MathF.PI));
+            Vector2 recoilDir;
+            if (agent.TryGetBarrelWorldSegment(agent.ActiveBarrelIndex, out _, out _, out Vector2 barrelDirection, out _, out _))
+            {
+                recoilDir = -barrelDirection;
+            }
+            else
+            {
+                recoilDir = new Vector2(MathF.Cos(agent.Rotation + MathF.PI), MathF.Sin(agent.Rotation + MathF.PI));
+            }
             agent.PhysicsVelocity += recoilSpeed * recoilDir;
 
             float rs = agent.BarrelAttributes.ReloadSpeed;

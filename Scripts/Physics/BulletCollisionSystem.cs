@@ -67,6 +67,126 @@ namespace op.io
             public bool   IsNewContact;
         }
 
+        private static Vector2 GetFrameVelocity(Vector2 previousPosition, Vector2 position, Vector2 fallbackVelocity, float deltaTime)
+        {
+            if (deltaTime > 1e-6f)
+            {
+                Vector2 frameVelocity = (position - previousPosition) / deltaTime;
+                if (frameVelocity.LengthSquared() > 1e-6f)
+                {
+                    return frameVelocity;
+                }
+            }
+
+            return fallbackVelocity;
+        }
+
+        private static Vector2 ResolveImpactDirection(Bullet bullet, Vector2 fallbackNormal)
+        {
+            Vector2 direction = bullet?.Velocity ?? Vector2.Zero;
+            if (direction.LengthSquared() <= 1e-6f && bullet != null)
+            {
+                direction = bullet.Position - bullet.PreviousPosition;
+            }
+
+            if (direction.LengthSquared() <= 1e-6f && fallbackNormal.LengthSquared() > 1e-6f)
+            {
+                direction = -fallbackNormal;
+            }
+
+            return direction.LengthSquared() > 1e-6f
+                ? Vector2.Normalize(direction)
+                : Vector2.UnitX;
+        }
+
+        private static float ResolveDynamicPushMass(Bullet bullet)
+        {
+            if (bullet == null)
+            {
+                return 0.0001f;
+            }
+
+            // Dynamic targets should always inherit some baseline bullet momentum
+            // from the bullet's real mass. BulletKnockback then amplifies that shove
+            // instead of being the sole source of any target motion.
+            float bulletMass = MathF.Max(bullet.Mass, 0.0001f);
+            float knockbackBonus = MathF.Max(bullet.BulletKnockback, 0f);
+            return bulletMass + knockbackBonus;
+        }
+
+        private static float ResolveDynamicTransferSpeed(Bullet bullet, float approachSpeed, float enemyMass)
+        {
+            if (bullet == null || approachSpeed <= 0f)
+            {
+                return 0f;
+            }
+
+            float mEnemy = MathF.Max(enemyMass, 0.0001f);
+            float mPush = ResolveDynamicPushMass(bullet);
+            float pushTotal = mPush + mEnemy;
+            if (pushTotal <= 0f)
+            {
+                return 0f;
+            }
+
+            // Reuse the existing dynamic-target attenuation scalar so world objects
+            // and agents share the same baseline bullet momentum tuning.
+            return approachSpeed * mPush / pushTotal * BulletManager.BulletDynamicKnockbackScalar;
+        }
+
+        private static void ApplyImpactKnockback(Contact contact, float deltaTime)
+        {
+            if (!contact.IsNewContact)
+            {
+                return;
+            }
+
+            Bullet bullet = contact.Bullet;
+            Agent enemy = contact.Enemy;
+            if (bullet == null || enemy == null || !enemy.DynamicPhysics)
+            {
+                return;
+            }
+
+            float clampedTEnter = MathHelper.Clamp(contact.TEnter, 0f, 1f);
+            Vector2 impactBulletPos = Vector2.Lerp(bullet.PreviousPosition, bullet.Position, clampedTEnter);
+            Vector2 impactEnemyPos = Vector2.Lerp(enemy.PreviousPosition, enemy.Position, clampedTEnter);
+            Vector2 normal = impactBulletPos - impactEnemyPos;
+
+            Vector2 bulletVelocity = GetFrameVelocity(bullet.PreviousPosition, bullet.Position, bullet.Velocity, deltaTime);
+            Vector2 enemyVelocity = GetFrameVelocity(enemy.PreviousPosition, enemy.Position, enemy.PhysicsVelocity, deltaTime);
+            Vector2 relativeVelocity = bulletVelocity - enemyVelocity;
+
+            if (normal.LengthSquared() > 1e-6f)
+            {
+                normal = Vector2.Normalize(normal);
+            }
+            else if (relativeVelocity.LengthSquared() > 1e-6f)
+            {
+                normal = -Vector2.Normalize(relativeVelocity);
+            }
+            else
+            {
+                normal = Vector2.UnitX;
+            }
+
+            Vector2 impactDirection = ResolveImpactDirection(bullet, normal);
+            float approachSpeed = Vector2.Dot(bulletVelocity, impactDirection) - Vector2.Dot(enemyVelocity, impactDirection);
+            if (approachSpeed <= 0f)
+            {
+                return;
+            }
+
+            float transferSpeed = ResolveDynamicTransferSpeed(bullet, approachSpeed, enemy.Mass);
+            if (transferSpeed <= 0f)
+            {
+                return;
+            }
+
+            enemy.PhysicsVelocity += impactDirection * transferSpeed;
+            enemy.Position += impactDirection * transferSpeed * deltaTime;
+        }
+
         public static void Update(float deltaTime)
         {
             if (deltaTime <= 0f) return;
@@ -91,7 +211,7 @@ namespace op.io
             {
                 foreach (var bullet in bullets)
                 {
-                    if (bullet == null || bullet.IsDying || bullet.CurrentPenetrationHP <= 0f) continue;
+                    if (bullet == null || bullet.IsDying || bullet.IsBarrelLocked || bullet.CurrentPenetrationHP <= 0f) continue;
 
                     float br = bullet.Shape != null ? bullet.Shape.Width * 0.5f : BulletRadius;
 
@@ -175,6 +295,7 @@ namespace op.io
                             bullet.TriggerHitFlash();
                             DamageNumberManager.Notify(contact.Enemy.ID, contact.Enemy.Position, totalDealt, sourceId: bullet.SourceID, isNewHit: true);
                             contact.Enemy.DeathImpulse = bullet.Velocity;
+                            ApplyImpactKnockback(contact, deltaTime);
                         }
 
                         // Penetration HP drains regardless so embedded bullets still expire.
@@ -204,6 +325,7 @@ namespace op.io
                 Bullet bullet = contact.Bullet;
                 Agent  enemy  = contact.Enemy;
                 if (bullet == null || enemy == null) continue;
+                if (bullet.IsBarrelLocked) continue;
                 if (bullet.IsOwnerImmune && enemy.ID == bullet.OwnerID) continue;
 
                 float   br    = bullet.Shape != null ? bullet.Shape.Width * 0.5f : BulletRadius;
@@ -216,20 +338,29 @@ namespace op.io
 
                 Vector2 normal = dist > 1e-6f ? diff / dist : Vector2.UnitX;
 
-                // BulletKnockback determines how much the bullet pushes the enemy;
-                // the bullet's real mass still governs how much the enemy pushes the bullet.
-                float mPush     = MathF.Max(bullet.BulletKnockback, 0.0001f);
+                // Dynamic targets inherit baseline push from bullet mass, while
+                // BulletKnockback adds extra shove on top for dedicated knockback builds.
+                float mPush     = ResolveDynamicPushMass(bullet);
                 float mBullet   = MathF.Max(bullet.Mass, 0.0001f);
                 float mEnemy    = MathF.Max(enemy.Mass,  0.0001f);
 
                 // Position correction: bullet pushed by enemy using real mass ratio,
-                // enemy pushed by bullet using knockback as effective mass.
+                // enemy pushed by bullet using dynamic push mass.
                 float pushTotal = mPush + mEnemy;
                 bullet.Position += normal * (overlap * mEnemy / (mBullet + mEnemy));
                 enemy.Position  -= normal * (overlap * mPush  / pushTotal);
 
                 // Inelastic velocity drain on bullet (still uses real mass)
                 float vDotN = Vector2.Dot(bullet.Velocity, normal);
+                Vector2 enemyVelocity = GetFrameVelocity(enemy.PreviousPosition, enemy.Position, enemy.PhysicsVelocity, deltaTime);
+                Vector2 impactDirection = ResolveImpactDirection(bullet, normal);
+                float approachSpeed = Vector2.Dot(bullet.Velocity, impactDirection) - Vector2.Dot(enemyVelocity, impactDirection);
+                if (enemy.DynamicPhysics && approachSpeed > 0f)
+                {
+                    float transferSpeed = ResolveDynamicTransferSpeed(bullet, approachSpeed, mEnemy);
+                    enemy.PhysicsVelocity += impactDirection * transferSpeed;
+                }
+
                 if (vDotN < 0f)
                     bullet.Velocity -= (vDotN * mEnemy / (mBullet + mEnemy)) * normal;
                 ClampBulletSpeed(bullet);
@@ -242,14 +373,14 @@ namespace op.io
             for (int i = 0; i < bullets.Count; i++)
             {
                 Bullet ba = bullets[i];
-                if (ba == null || ba.IsDying || IsBulletExpired(ba)) continue;
+                if (ba == null || ba.IsDying || ba.IsBarrelLocked || IsBulletExpired(ba)) continue;
 
                 float ra = ba.Shape != null ? ba.Shape.Width * 0.5f : BulletRadius;
 
                 for (int j = i + 1; j < bullets.Count; j++)
                 {
                     Bullet bb = bullets[j];
-                    if (bb == null || bb.IsDying || IsBulletExpired(bb)) continue;
+                    if (bb == null || bb.IsDying || bb.IsBarrelLocked || IsBulletExpired(bb)) continue;
 
                     // Skip collision between same-owner bullets while either is still immune.
                     if (ba.OwnerID == bb.OwnerID && (ba.IsOwnerImmune || bb.IsOwnerImmune)) continue;

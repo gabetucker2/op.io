@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using op.io.UI.BlockScripts.Blocks;
 
 namespace op.io
 {
@@ -42,6 +43,8 @@ namespace op.io
             DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
             BlockManager.OnGraphicsReady();
             GameBlockOceanBackground.Initialize(Core.Instance.GraphicsDevice, Core.Instance.Content);
+            AmbienceSettings.Initialize();
+            GameBlock.Initialize(Core.Instance.Content);
             XPClumpManager.LoadContent(Core.Instance.GraphicsDevice);
 
             if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)

@@ -10,6 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Tools\PhysicsHarness\**\*.cs" />
+
     <!-- Ensure the Data folder is copied to the output directory -->
     <None Update="Data\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

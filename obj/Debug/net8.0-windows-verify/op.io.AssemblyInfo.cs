@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("op.io")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cc8704fcf2476cd14624ad83adef83daa81cd00f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+12ff58addf1cd52a7a863ecaff7f9453baf98191")]
 [assembly: System.Reflection.AssemblyProductAttribute("op.io")]
 [assembly: System.Reflection.AssemblyTitleAttribute("op.io")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

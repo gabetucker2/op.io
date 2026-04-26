@@ -34,7 +34,7 @@ namespace op.io
 
             foreach (var bullet in bullets)
             {
-                if (bullet == null || bullet.IsDying) continue;
+                if (bullet == null || bullet.IsDying || bullet.IsBarrelLocked) continue;
 
                 foreach (var obj in gameObjects)
                 {
@@ -130,14 +130,15 @@ namespace op.io
                 obj.DeathImpulse = bullet.Velocity;
             }
 
-            // Transfer approach momentum from bullet to object, scaled by mass ratio and
-            // BulletFarmKnockbackScalar.  As mObject → ∞ or mBullet → 0 the transfer
-            // tends to zero; the scalar provides an additional tuneable attenuator so
-            // light bullets don't disproportionately shove heavy farm objects.
+            // Transfer approach momentum from bullet to the dynamic target, scaled by mass
+            // ratio and the shared dynamic-target knockback scalar. As mObject → ∞ or
+            // mBullet → 0 the transfer tends to zero; the scalar provides an additional
+            // tuneable attenuator so light bullets don't disproportionately shove heavy
+            // dynamic objects.
             float vInward = -vDotN; // positive when bullet is moving toward the object
             if (vInward > 0f)
             {
-                float transferSpeed = vInward * mBullet / totalMass * BulletManager.BulletFarmKnockbackScalar;
+                float transferSpeed = vInward * mBullet / totalMass * BulletManager.BulletDynamicKnockbackScalar;
                 obj.PhysicsVelocity += -separationNormal * transferSpeed;
             }
         }

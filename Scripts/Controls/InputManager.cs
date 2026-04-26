@@ -81,7 +81,7 @@ namespace op.io
 
             ControlKeyMigrations.EnsureApplied();
 
-            var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, MetaControl, LockMode FROM ControlKey;");
+            var controls = DatabaseQuery.ExecuteQuery("SELECT SettingKey, InputKey, InputType, MetaControl, LockMode, COALESCE(BindingRequired, 0) AS BindingRequired FROM ControlKey;");
             foreach (var control in controls)
             {
                 string settingKey = control["SettingKey"].ToString();
@@ -89,6 +89,7 @@ namespace op.io
                 InputType inputType = ParseInputType(control["InputType"]?.ToString());
                 bool isMetaControl = false;
                 bool lockMode = false;
+                bool bindingRequired = false;
                 if (control.TryGetValue("MetaControl", out object metaValue) && metaValue != null && metaValue != DBNull.Value)
                 {
                     try
@@ -113,6 +114,18 @@ namespace op.io
                     }
                 }
 
+                if (control.TryGetValue("BindingRequired", out object bindingRequiredValue) && bindingRequiredValue != null && bindingRequiredValue != DBNull.Value)
+                {
+                    try
+                    {
+                        bindingRequired = Convert.ToInt32(bindingRequiredValue) != 0;
+                    }
+                    catch
+                    {
+                        bindingRequired = false;
+                    }
+                }
+
                 if (ControlKeyRules.RequiresSwitchSemantics(settingKey) && !IsSwitchType(inputType))
                 {
                     inputType = InputType.SaveSwitch;
@@ -122,7 +135,7 @@ namespace op.io
                 {
                     // No binding assigned — valid unbound state, skip silently.
                 }
-                else if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, lockMode, out ControlBinding binding))
+                else if (TryCreateBinding(settingKey, inputKey, inputType, isMetaControl, lockMode, bindingRequired, out ControlBinding binding))
                 {
                     _controlBindings[settingKey] = binding;
                 }
@@ -133,7 +146,7 @@ namespace op.io
             }
 
             if (!_controlBindings.ContainsKey(BlockMenuKey) &&
-                TryCreateBinding(BlockMenuKey, "Shift + X", InputType.SaveSwitch, true, false, out ControlBinding defaultBinding))
+                TryCreateBinding(BlockMenuKey, "Shift + X", InputType.SaveSwitch, true, false, true, out ControlBinding defaultBinding))
             {
                 _controlBindings[BlockMenuKey] = defaultBinding;
             }
@@ -407,7 +420,7 @@ namespace op.io
                 newType = InputType.SaveSwitch;
             }
 
-            ControlBinding updated = new(binding.SettingKey, newType, binding.Tokens, binding.DisplayLabel, binding.IsMetaControl, binding.LockMode);
+            ControlBinding updated = new(binding.SettingKey, newType, binding.Tokens, binding.DisplayLabel, binding.IsMetaControl, binding.LockMode, binding.BindingRequired);
             _controlBindings[settingKey] = updated;
             if (IsSwitchType(newType))
             {
@@ -451,7 +464,7 @@ namespace op.io
                     return false;
                 }
 
-                if (!TryCreateBinding(settingKey, newInputKey, inferredType, record.MetaControl, record.LockMode, out ControlBinding created))
+                if (!TryCreateBinding(settingKey, newInputKey, inferredType, record.MetaControl, record.LockMode, record.BindingRequired, out ControlBinding created))
                 {
                     return false;
                 }
@@ -469,7 +482,7 @@ namespace op.io
                 targetType = InputType.SaveSwitch;
             }
 
-            if (!TryCreateBinding(settingKey, newInputKey, targetType, binding.IsMetaControl, binding.LockMode, out ControlBinding updated))
+            if (!TryCreateBinding(settingKey, newInputKey, targetType, binding.IsMetaControl, binding.LockMode, binding.BindingRequired, out ControlBinding updated))
             {
                 return false;
             }
@@ -499,6 +512,11 @@ namespace op.io
             }
 
             if (binding.LockMode)
+            {
+                return false;
+            }
+
+            if (binding.BindingRequired)
             {
                 return false;
             }
@@ -709,7 +727,7 @@ namespace op.io
             return string.Empty;
         }
 
-        private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, bool lockMode, out ControlBinding binding)
+        private static bool TryCreateBinding(string settingKey, string inputKey, InputType inputType, bool isMetaControl, bool lockMode, bool bindingRequired, out ControlBinding binding)
         {
             binding = null;
             if (string.IsNullOrWhiteSpace(settingKey) || string.IsNullOrWhiteSpace(inputKey))
@@ -751,7 +769,7 @@ namespace op.io
             }
 
             string displayLabel = string.Join(" + ", tokens.Select(t => t.DisplayName));
-            binding = new ControlBinding(settingKey, inputType, tokens, displayLabel, isMetaControl, lockMode);
+            binding = new ControlBinding(settingKey, inputType, tokens, displayLabel, isMetaControl, lockMode, bindingRequired);
             return true;
         }
 
@@ -812,7 +830,7 @@ namespace op.io
 
         private sealed class ControlBinding
         {
-            public ControlBinding(string settingKey, InputType inputType, IReadOnlyList<InputBindingToken> tokens, string displayLabel, bool isMetaControl, bool lockMode)
+            public ControlBinding(string settingKey, InputType inputType, IReadOnlyList<InputBindingToken> tokens, string displayLabel, bool isMetaControl, bool lockMode, bool bindingRequired)
             {
                 SettingKey = settingKey;
                 InputType = inputType;
@@ -820,6 +838,7 @@ namespace op.io
                 DisplayLabel = string.IsNullOrWhiteSpace(displayLabel) ? string.Join(" + ", tokens) : displayLabel;
                 IsMetaControl = isMetaControl;
                 LockMode = lockMode;
+                BindingRequired = bindingRequired;
             }
 
             public string SettingKey { get; }
@@ -828,6 +847,7 @@ namespace op.io
             public string DisplayLabel { get; }
             public bool IsMetaControl { get; }
             public bool LockMode { get; }
+            public bool BindingRequired { get; }
             public int TokenCount => Tokens?.Count ?? 0;
 
             public bool IsActive()

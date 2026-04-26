@@ -9,6 +9,7 @@
 
 float4x4 MatrixTransform;
 float4 BaseColor;
+float4 WaveColor;
 float TimeSeconds;
 float FieldScale;
 float BackgroundVariationStrength;
@@ -283,7 +284,9 @@ float4 applyOceanColor(float backgroundField, float hn, float sn, float crestMas
     float backgroundLuminance = 0.982f + ((0.040f * backgroundFactor) * compressedBackground);
     float waveLuminance = 1.0f + (0.011f * (hn - 0.5f)) + (0.009f * (sn - 0.5f));
     float3 water = saturate(BaseColor.rgb * (backgroundLuminance * waveLuminance));
-    return float4(lerp(water, float3(1.0f, 1.0f, 1.0f), saturate(0.97f * crestMask)), 1.0f);
+    float waveMix = saturate(0.97f * crestMask);
+    float alpha = lerp(BaseColor.a, WaveColor.a, waveMix);
+    return float4(lerp(water, saturate(WaveColor.rgb), waveMix), alpha);
 }
 
 VertexShaderOutput MainVS(VertexShaderInput input)

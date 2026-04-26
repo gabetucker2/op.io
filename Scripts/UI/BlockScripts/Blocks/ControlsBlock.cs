@@ -82,6 +82,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static bool _rebindUnbindHovered;
         private static bool _rebindCancelHovered;
         private static bool _rebindPendingUnbind;
+        private static bool _rebindBindingRequired;
 
         private const int TypeTogglePadding = 2;
         private const int TypeIndicatorDiameter = 10;
@@ -688,6 +689,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                     }
 
                     bool toggleLocked = InputManager.IsTypeLocked(actionLabel) || IsFloatType(parsedType);
+                    bool bindingRequired = ControlKeyData.GetControl(actionLabel)?.BindingRequired ?? false;
 
                     string parsedTypeLabel = parsedType.ToString();
                     if (!string.Equals(typeLabel, parsedTypeLabel, StringComparison.OrdinalIgnoreCase))
@@ -717,7 +719,8 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                         KeyValueBounds = Rectangle.Empty,
                         EnumValueBounds = Rectangle.Empty,
                         TriggerAutoFire = triggerAuto,
-                        ToggleLocked = toggleLocked
+                        ToggleLocked = toggleLocked,
+                        BindingRequired = bindingRequired
                     });
 
                     fallbackOrder++;
@@ -2537,7 +2540,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
 
             bool leftReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool pointerOnConfirm = _rebindConfirmHovered;
-            bool pointerOnUnbind = _rebindUnbindHovered;
+            bool pointerOnUnbind = _rebindUnbindHovered && !_rebindBindingRequired;
             bool pointerOnCancel = _rebindCancelHovered;
 
             if (leftReleased && pointerOnCancel)
@@ -2649,7 +2652,9 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             bodyFont.DrawString(spriteBatch, pendingText, new Vector2(textX, textY), pendingColor);
             textY += lineHeight + 8f;
 
-            string footer = "Confirm to save and close.";
+            string footer = _rebindBindingRequired
+                ? "Confirm to save and close. This control must keep a binding."
+                : "Confirm to save and close.";
             bodyFont.DrawString(spriteBatch, footer, new Vector2(textX, textY), UIStyle.MutedTextColor);
 
             if (!string.IsNullOrWhiteSpace(_rebindConflictWarning))
@@ -2658,7 +2663,13 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                 bodyFont.DrawString(spriteBatch, _rebindConflictWarning, new Vector2(textX, textY), ColorPalette.Warning);
             }
 
-            UIButtonRenderer.Draw(spriteBatch, _rebindUnbindButtonBounds, "Unbind", UIButtonRenderer.ButtonStyle.Grey, _rebindUnbindHovered);
+            UIButtonRenderer.Draw(
+                spriteBatch,
+                _rebindUnbindButtonBounds,
+                "Unbind",
+                UIButtonRenderer.ButtonStyle.Grey,
+                _rebindUnbindHovered && !_rebindBindingRequired,
+                isDisabled: _rebindBindingRequired);
             UIButtonRenderer.Draw(spriteBatch, _rebindConfirmButtonBounds, "Confirm", UIButtonRenderer.ButtonStyle.Blue, _rebindConfirmHovered);
         }
 
@@ -2707,6 +2718,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             _rebindPendingDisplay = _rebindCurrentInput;
             _rebindCaptured = false;
             _rebindPendingUnbind = false;
+            _rebindBindingRequired = row.BindingRequired;
             _suppressNextCapture = true;
             _rebindModalBounds = Rectangle.Empty;
             _rebindConfirmButtonBounds = Rectangle.Empty;
@@ -2779,11 +2791,19 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
 
         private static void TryApplyUnbind()
         {
+            if (_rebindBindingRequired)
+            {
+                _rebindConflictWarning = "This control must keep a toggle key assigned.";
+                return;
+            }
+
             try
             {
                 if (!InputManager.TryUnbind(_rebindAction))
                 {
                     DebugLogger.PrintWarning($"Failed to unbind '{_rebindAction}'.");
+                    _rebindConflictWarning = "Unable to unbind this control.";
+                    return;
                 }
 
                 int index = GetRowIndex(_rebindAction);
@@ -2800,11 +2820,11 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Failed to unbind keybind '{_rebindAction}': {ex.Message}");
+                _rebindConflictWarning = "Unable to unbind this control.";
+                return;
             }
-            finally
-            {
-                ResetRebindOverlay();
-            }
+
+            ResetRebindOverlay();
         }
 
         private static void ResetRebindOverlay()
@@ -2826,6 +2846,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             _rebindUnbindHovered = false;
             _rebindCancelHovered = false;
             _rebindPendingUnbind = false;
+            _rebindBindingRequired = false;
         }
 
         private static void EnsureRebindLayout()
@@ -3155,6 +3176,12 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
 
         private static void SetPendingUnbind()
         {
+            if (_rebindBindingRequired)
+            {
+                _rebindConflictWarning = "This control must keep a toggle key assigned.";
+                return;
+            }
+
             _rebindPendingDisplay = "Unbound";
             _rebindPendingCanonical = string.Empty;
             _rebindCaptured = true;
@@ -3194,6 +3221,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             public bool IsDragging;
             public bool TriggerAutoFire;
             public bool ToggleLocked;
+            public bool BindingRequired;
             public bool IsSwitchType => ControlsBlock.IsSwitchType(InputType);
             public bool IsPersistentSwitch => ControlsBlock.IsPersistentSwitch(InputType);
             public bool IsToggleCandidate => !IsPersistentSwitch && InputType != InputType.Trigger && !ToggleLocked;

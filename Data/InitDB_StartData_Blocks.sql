@@ -1,6 +1,48 @@
 -- InitDB_StartData_Blocks.sql
 -- Default lock states and render orders for block tables managed by BlockDataStore.
 
+CREATE TABLE IF NOT EXISTS BlockControls (
+    RowKey TEXT PRIMARY KEY,
+    RenderOrder INTEGER,
+    IsLocked INTEGER NOT NULL DEFAULT 0,
+    RowData TEXT
+);
+
+CREATE TABLE IF NOT EXISTS BlockBackend (
+    RowKey TEXT PRIMARY KEY,
+    RenderOrder INTEGER,
+    IsLocked INTEGER NOT NULL DEFAULT 0,
+    RowData TEXT
+);
+
+CREATE TABLE IF NOT EXISTS BlockSpecs (
+    RowKey TEXT PRIMARY KEY,
+    RenderOrder INTEGER,
+    IsLocked INTEGER NOT NULL DEFAULT 0,
+    RowData TEXT
+);
+
+CREATE TABLE IF NOT EXISTS BlockColorScheme (
+    RowKey TEXT PRIMARY KEY,
+    RenderOrder INTEGER,
+    IsLocked INTEGER NOT NULL DEFAULT 0,
+    RowData TEXT
+);
+
+CREATE TABLE IF NOT EXISTS BlockAmbience (
+    RowKey TEXT PRIMARY KEY,
+    RenderOrder INTEGER,
+    IsLocked INTEGER NOT NULL DEFAULT 0,
+    RowData TEXT
+);
+
+CREATE TABLE IF NOT EXISTS BlockDockingSetups (
+    RowKey TEXT PRIMARY KEY,
+    RenderOrder INTEGER,
+    IsLocked INTEGER NOT NULL DEFAULT 0,
+    RowData TEXT
+);
+
 -----------------------------------------------------------------------
 -- Controls block
 -----------------------------------------------------------------------
@@ -108,7 +150,7 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked)
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('HealthBarLow', '#DC3232FF', 47, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('HealthBarHigh', '#3CC83CFF', 48, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ShieldBar', '#00B4FFFF', 49, 0);
-INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('XPBar', '#32DC50FF', 50, 0);
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('XPBar', '#32FF50FF', 50, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('BarBackground', '#404040FF', 51, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('DamageNumber', '#FF1414FF', 52, 0);
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData, RenderOrder, IsLocked) VALUES ('BarRegenTick', '#DCC84BFF', 53, 0);
@@ -187,7 +229,7 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMo
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::HealthBarLow', '#DC3232FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::HealthBarHigh', '#3CC83CFF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::ShieldBar', '#00B4FFFF');
-INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::XPBar', '#32DC50FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::XPBar', '#32FF50FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::BarBackground', '#404040FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::DamageNumber', '#FF1414FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:DarkMode::BarRegenTick', '#DCC84BFF');
@@ -259,7 +301,7 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightM
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::HealthBarLow', '#DC3232FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::HealthBarHigh', '#3CC83CFF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::ShieldBar', '#00B4FFFF');
-INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::XPBar', '#32DC50FF');
+INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::XPBar', '#32FF50FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::BarBackground', '#404040FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::DamageNumber', '#FF1414FF');
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::BarRegenTick', '#DCC84BFF');
@@ -282,6 +324,15 @@ INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightM
 INSERT OR REPLACE INTO BlockColorScheme (RowKey, RowData) VALUES ('Scheme:LightMode::SliderFill', '#4A6CD2FF');
 
 -----------------------------------------------------------------------
+-- Ambience block
+-----------------------------------------------------------------------
+INSERT OR REPLACE INTO BlockAmbience (RowKey, IsLocked) VALUES ('BlockLock', 1); -- default locked state stored at block-level
+INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceFogOfWarColor', '#B8A684FF', 1, 0);
+INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceOceanWaterColor', '#28B0CEFF', 2, 0);
+INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceBackgroundWavesColor', '#FFFFFFFF', 3, 0);
+INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceWorldTintColor', '#808080FF', 4, 0);
+
+-----------------------------------------------------------------------
 -- Docking setups block
 -----------------------------------------------------------------------
 INSERT OR REPLACE INTO BlockDockingSetups (RowKey, IsLocked) VALUES ('BlockLock', 1); -- default locked state stored at block-level
@@ -296,6 +347,7 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
     { "kind": "Game", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Properties", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "ColorScheme", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Ambience", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Controls", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Notes", "mode": "Toggle", "count": 0, "visible": false },
     { "kind": "ControlSetups", "mode": "Toggle", "count": 0, "visible": false },
@@ -311,7 +363,7 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
   "panels": [
     { "id": "colors", "active": "colors", "blocks": ["colors", "notes", "dockingsetups"] },
     { "id": "game", "active": "game", "blocks": ["game"] },
-    { "id": "controls", "active": "interact", "blocks": ["interact", "controls"] },
+    { "id": "controls", "active": "ambience", "blocks": ["interact", "controls", "ambience"] },
     { "id": "backend", "active": "backend", "blocks": ["backend", "debuglogs", "chat", "specs"] },
     { "id": "blank", "active": "blank", "blocks": ["blank"] },
     { "id": "properties", "active": "properties", "blocks": ["properties", "bars"] }

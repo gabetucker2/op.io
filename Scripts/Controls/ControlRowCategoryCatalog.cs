@@ -23,6 +23,7 @@ namespace op.io
         public const string CombatCategoryKey = "Combat";
         public const string CameraCategoryKey = "Camera";
         public const string InterfaceCategoryKey = "Interface";
+        public const string BlockControlsCategoryKey = "BlockControls";
         public const string SystemCategoryKey = "System";
         public const string MiscCategoryKey = "Misc";
 
@@ -32,8 +33,9 @@ namespace op.io
             new(CombatCategoryKey, "Combat", 1),
             new(CameraCategoryKey, "Camera", 2),
             new(InterfaceCategoryKey, "Interface", 3),
-            new(SystemCategoryKey, "System", 4),
-            new(MiscCategoryKey, "Misc", 5),
+            new(BlockControlsCategoryKey, "Block controls", 4),
+            new(SystemCategoryKey, "System", 5),
+            new(MiscCategoryKey, "Misc", 6),
         ];
 
         private static readonly Dictionary<string, ControlRowCategoryDefinition> _categoriesByKey = BuildCategoryLookup();
@@ -65,6 +67,13 @@ namespace op.io
 
         public static string GetDefaultCategoryKey(string settingKey)
         {
+            if (string.Equals(settingKey, ControlKeyMigrations.BlockMenuKey, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(settingKey, ControlKeyMigrations.LegacyPanelMenuKey, StringComparison.OrdinalIgnoreCase) ||
+                ControlKeyRules.IsGeneratedBlockVisibilityControlKey(settingKey))
+            {
+                return BlockControlsCategoryKey;
+            }
+
             if (!string.IsNullOrWhiteSpace(settingKey) &&
                 _categoriesBySettingKey.TryGetValue(settingKey.Trim(), out string category))
             {

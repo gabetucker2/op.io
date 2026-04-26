@@ -43,6 +43,7 @@ namespace op.io
 
                 DatabaseConfig.ConfigureDatabase(existingConnection);
                 EnsureBlockTables(existingConnection);
+                EnsureBlockSeedData(existingConnection);
                 DatabaseManager.CloseConnection(existingConnection);
                 _alreadyInitialized = true;
                 return;
@@ -69,6 +70,7 @@ namespace op.io
 
             // Insert Data
             LoadStartData(connection);
+            EnsureBlockSeedData(connection);
 
             DebugLogger.PrintDatabase("Database initialization complete.");
             DatabaseManager.CloseConnection(connection);
@@ -96,13 +98,20 @@ namespace op.io
             {
                 BlockDataStore.EnsureTables(
                     connection,
+                    DockBlockKind.Properties,
                     DockBlockKind.Controls,
+                    DockBlockKind.Notes,
                     DockBlockKind.ControlSetups,
                     DockBlockKind.Backend,
                     DockBlockKind.Specs,
                     DockBlockKind.ColorScheme,
+                    DockBlockKind.Ambience,
                     DockBlockKind.DockingSetups,
-                    DockBlockKind.DebugLogs);
+                    DockBlockKind.DebugLogs,
+                    DockBlockKind.Bars,
+                    DockBlockKind.Chat,
+                    DockBlockKind.Performance,
+                    DockBlockKind.Interact);
                 DebugLogger.PrintDatabase("Ensured block tables for lock/order persistence.");
             }
             catch (Exception ex)
@@ -201,6 +210,18 @@ namespace op.io
                     ("PlayerSightRadius",
                         "Current sight radius used for the player vision territory in world units.",
                         "float"),
+                    (AmbienceSettings.FogOfWarRowKey,
+                        "Base color currently applied to hidden fog-of-war territory. Edit it live in the Ambience block.",
+                        "Color"),
+                    (AmbienceSettings.OceanWaterRowKey,
+                        "Base color currently driving the ocean water shader. Edit it live in the Ambience block.",
+                        "Color"),
+                    (AmbienceSettings.BackgroundWavesRowKey,
+                        "Highlight color for the background wave crests in the ocean ambience. Edit it live in the Ambience block.",
+                        "Color"),
+                    (AmbienceSettings.WorldTintRowKey,
+                        "Gameplay object tint color. Mid-gray is neutral; warmer or cooler colors shift object colors already drawn in the world.",
+                        "Color"),
                     ("FogFrontierBorderThickness",
                         "Reference world-space thickness used to normalize all fog frontier band widths and perturbation amplitudes.",
                         "float"),
@@ -294,6 +315,168 @@ namespace op.io
             SQLScriptExecutor.RunSQLScript(connection, dataPathFarms);
             SQLScriptExecutor.RunSQLScript(connection, dataPathBarrels);
             SQLScriptExecutor.RunSQLScript(connection, dataPathBodies);
+        }
+
+        private static void EnsureBlockSeedData(SQLiteConnection connection)
+        {
+            if (connection == null)
+            {
+                return;
+            }
+
+            try
+            {
+                EnsureAmbienceBlockSeedData(connection);
+                EnsureDockingSetupSeedData(connection);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed ensuring block seed data: {ex.Message}");
+            }
+        }
+
+        private static void EnsureAmbienceBlockSeedData(SQLiteConnection connection)
+        {
+            BlockDataStore.EnsureTables(connection, DockBlockKind.Ambience);
+
+            using SQLiteTransaction transaction = connection.BeginTransaction();
+            using var command = new SQLiteCommand(@"
+INSERT OR IGNORE INTO BlockAmbience (RowKey, IsLocked) VALUES ('BlockLock', 1);
+INSERT OR IGNORE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceFogOfWarColor', '#B8A684FF', 1, 0);
+INSERT OR IGNORE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceOceanWaterColor', '#28B0CEFF', 2, 0);
+UPDATE BlockAmbience SET RenderOrder = 4 WHERE RowKey = 'AmbienceWorldTintColor' AND RenderOrder = 3;
+INSERT OR IGNORE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceBackgroundWavesColor', '#FFFFFFFF', 3, 0);
+INSERT OR IGNORE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceWorldTintColor', '#808080FF', 4, 0);",
+                connection,
+                transaction);
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+
+        private static void EnsureDockingSetupSeedData(SQLiteConnection connection)
+        {
+            BlockDataStore.EnsureTables(connection, DockBlockKind.DockingSetups);
+
+            using SQLiteTransaction transaction = connection.BeginTransaction();
+
+            using (var insertDefault = new SQLiteCommand(@"
+INSERT OR IGNORE INTO BlockDockingSetups (RowKey, IsLocked) VALUES ('BlockLock', 1);
+INSERT OR IGNORE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', @defaultPayload);",
+                connection,
+                transaction))
+            {
+                insertDefault.Parameters.AddWithValue("@defaultPayload", GetDefaultDockingSetupPayload());
+                insertDefault.ExecuteNonQuery();
+            }
+
+            string activeSetupName = null;
+            using (var selectActive = new SQLiteCommand(
+                "SELECT RowData FROM BlockDockingSetups WHERE RowKey = '__ActiveSetup' LIMIT 1;",
+                connection,
+                transaction))
+            {
+                object active = selectActive.ExecuteScalar();
+                activeSetupName = active?.ToString()?.Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(activeSetupName))
+            {
+                using var selectFallback = new SQLiteCommand(@"
+SELECT RowKey
+FROM BlockDockingSetups
+WHERE RowKey <> 'BlockLock' AND RowKey <> '__ActiveSetup'
+ORDER BY CASE WHEN RowKey = 'Default' THEN 0 ELSE 1 END, RowKey ASC
+LIMIT 1;",
+                    connection,
+                    transaction);
+                activeSetupName = selectFallback.ExecuteScalar()?.ToString()?.Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(activeSetupName))
+            {
+                activeSetupName = "Default";
+            }
+
+            using var upsertActive = new SQLiteCommand(@"
+INSERT INTO BlockDockingSetups (RowKey, RowData)
+VALUES ('__ActiveSetup', @activeName)
+ON CONFLICT(RowKey) DO UPDATE SET RowData = CASE
+    WHEN TRIM(COALESCE(BlockDockingSetups.RowData, '')) = '' THEN excluded.RowData
+    ELSE BlockDockingSetups.RowData
+END;",
+                connection,
+                transaction);
+            upsertActive.Parameters.AddWithValue("@activeName", activeSetupName);
+            upsertActive.ExecuteNonQuery();
+
+            transaction.Commit();
+        }
+
+        private static string GetDefaultDockingSetupPayload()
+        {
+            return """
+{
+  "version": 3,
+  "menu": [
+    { "kind": "Blank", "mode": "Count", "count": 0, "visible": false },
+    { "kind": "Game", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Properties", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "ColorScheme", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Ambience", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Controls", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Notes", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "ControlSetups", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "DockingSetups", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Backend", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Specs", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "DebugLogs", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Chat", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Performance", "mode": "Toggle", "count": 0, "visible": false },
+    { "kind": "Bars", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Interact", "mode": "Toggle", "count": 0, "visible": true }
+  ],
+  "panels": [
+    { "id": "colors", "active": "colors", "blocks": ["colors", "notes", "dockingsetups"] },
+    { "id": "game", "active": "game", "blocks": ["game"] },
+    { "id": "controls", "active": "ambience", "blocks": ["interact", "controls", "ambience"] },
+    { "id": "backend", "active": "backend", "blocks": ["backend", "debuglogs", "chat", "specs"] },
+    { "id": "blank", "active": "blank", "blocks": ["blank"] },
+    { "id": "properties", "active": "properties", "blocks": ["properties", "bars"] }
+  ],
+  "layout": {
+    "type": "Split",
+    "orientation": "Vertical",
+    "ratio": 0.67,
+    "first": {
+      "type": "Split",
+      "orientation": "Horizontal",
+      "ratio": 0.36,
+      "first": { "type": "Panel", "panel": "game" }
+    },
+    "second": {
+      "type": "Split",
+      "orientation": "Horizontal",
+      "ratio": 0.7,
+      "first": {
+        "type": "Split",
+        "orientation": "Horizontal",
+        "ratio": 0.26,
+        "first": { "type": "Panel", "panel": "properties" },
+        "second": { "type": "Panel", "panel": "controls" }
+      },
+      "second": {
+        "type": "Split",
+        "orientation": "Horizontal",
+        "ratio": 0.42,
+        "first": { "type": "Panel", "panel": "colors" },
+        "second": { "type": "Panel", "panel": "backend" }
+      }
+    }
+  },
+  "overlays": [],
+  "blockOpacities": {}
+}
+""";
         }
 
         private static void VerifyTablesExistence(SQLiteConnection connection)

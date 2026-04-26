@@ -298,6 +298,16 @@ namespace op.io
             _isOpen = false;
         }
 
+        public void Open()
+        {
+            if (Bounds == Rectangle.Empty || !HasOptions)
+            {
+                return;
+            }
+
+            _isOpen = true;
+        }
+
         private string GetSelectedLabel()
         {
             Option match = _options.FirstOrDefault(o => string.Equals(o.Id, SelectedId, StringComparison.OrdinalIgnoreCase));

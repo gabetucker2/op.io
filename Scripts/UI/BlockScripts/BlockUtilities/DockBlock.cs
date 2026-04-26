@@ -5,21 +5,22 @@ namespace op.io
 {
     public enum DockBlockKind
     {
-        Game,
-        Blank,
-        Properties,
-        ColorScheme,
-        Controls,
-        Notes,
-        ControlSetups,
-        DockingSetups,
-        Backend,
-        Specs,
-        DebugLogs,
-        Bars,
-        Chat,
-        Performance,
-        Interact
+        Game = 0,
+        Blank = 1,
+        Properties = 2,
+        ColorScheme = 3,
+        Controls = 4,
+        Notes = 5,
+        ControlSetups = 6,
+        DockingSetups = 7,
+        Backend = 8,
+        Specs = 9,
+        DebugLogs = 10,
+        Bars = 11,
+        Chat = 12,
+        Performance = 13,
+        Interact = 14,
+        Ambience = 15
     }
 
     /// <summary>
