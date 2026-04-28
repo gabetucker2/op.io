@@ -25,6 +25,7 @@ namespace op.io
                 case "Polygon":
                     return GeneratePolygonVertices();
                 case "Rectangle":
+                case "Texture":
                     return GenerateRectangleVertices();
                 case "Circle":
                     return GenerateCircleVertices();

@@ -277,7 +277,7 @@ namespace op.io
         // Spawns a bullet from an agent using its active barrel attributes and current rotation.
         public static void SpawnBullet(Agent agent)
         {
-            if (agent == null || agent.BarrelCount == 0) return;
+            if (agent == null || agent.IsDeadOrDying || agent.BarrelCount == 0) return;
 
             Attributes_Barrel attrs = agent.BarrelAttributes;
             float speed = attrs.BulletSpeed >= 0 ? attrs.BulletSpeed : DefaultBulletSpeed;

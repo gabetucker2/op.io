@@ -114,6 +114,15 @@ namespace op.io
         [JsonPropertyName("control")]                  public float Control                  { get; set; }
         [JsonPropertyName("sight")]                    public float Sight                    { get; set; }
         [JsonPropertyName("bodyActionBuff")]           public float BodyActionBuff           { get; set; }
+        [JsonPropertyName("fillR")]                    public byte? FillR                    { get; set; }
+        [JsonPropertyName("fillG")]                    public byte? FillG                    { get; set; }
+        [JsonPropertyName("fillB")]                    public byte? FillB                    { get; set; }
+        [JsonPropertyName("fillA")]                    public byte? FillA                    { get; set; }
+        [JsonPropertyName("outlineR")]                 public byte? OutlineR                 { get; set; }
+        [JsonPropertyName("outlineG")]                 public byte? OutlineG                 { get; set; }
+        [JsonPropertyName("outlineB")]                 public byte? OutlineB                 { get; set; }
+        [JsonPropertyName("outlineA")]                 public byte? OutlineA                 { get; set; }
+        [JsonPropertyName("outlineWidth")]             public int? OutlineWidth              { get; set; }
 
         public Attributes_Body ToAttributes() => new()
         {
@@ -135,7 +144,22 @@ namespace op.io
             BodyActionBuff            = BodyActionBuff,
         };
 
-        public static BodyBuildData FromAttributes(Attributes_Body a, string name = null) => new()
+        public Color? ToFillColor()
+            => FillR.HasValue && FillG.HasValue && FillB.HasValue && FillA.HasValue
+                ? new Color(FillR.Value, FillG.Value, FillB.Value, FillA.Value)
+                : null;
+
+        public Color? ToOutlineColor()
+            => OutlineR.HasValue && OutlineG.HasValue && OutlineB.HasValue && OutlineA.HasValue
+                ? new Color(OutlineR.Value, OutlineG.Value, OutlineB.Value, OutlineA.Value)
+                : null;
+
+        public static BodyBuildData FromAttributes(
+            Attributes_Body a,
+            string name = null,
+            Color? fillColor = null,
+            Color? outlineColor = null,
+            int? outlineWidth = null) => new()
         {
             Name                      = name,
             Mass                      = a.Mass,
@@ -154,6 +178,15 @@ namespace op.io
             Control                   = a.Control,
             Sight                     = a.Sight,
             BodyActionBuff            = a.BodyActionBuff,
+            FillR                     = fillColor?.R,
+            FillG                     = fillColor?.G,
+            FillB                     = fillColor?.B,
+            FillA                     = fillColor?.A,
+            OutlineR                  = outlineColor?.R,
+            OutlineG                  = outlineColor?.G,
+            OutlineB                  = outlineColor?.B,
+            OutlineA                  = outlineColor?.A,
+            OutlineWidth              = outlineWidth,
         };
     }
 
@@ -216,13 +249,22 @@ namespace op.io
             unitAttrs.Name = agent.Name; // always snapshot from the authoritative field
             var build = new UnitBuild
             {
-                Body = BodyBuildData.FromAttributes(agent.BodyAttributes),
+                Body = BodyBuildData.FromAttributes(
+                    agent.BodyAttributes,
+                    fillColor: agent.FillColor,
+                    outlineColor: agent.OutlineColor,
+                    outlineWidth: agent.OutlineWidth),
                 Unit = UnitBuildData.FromAttributes(unitAttrs),
             };
             foreach (var slot in agent.Barrels)
                 build.Barrels.Add(BarrelBuildData.FromAttributes(slot.Attrs, slot.Name));
             foreach (var slot in agent.Bodies)
-                build.Bodies.Add(BodyBuildData.FromAttributes(slot.Attrs, slot.Name));
+                build.Bodies.Add(BodyBuildData.FromAttributes(
+                    slot.Attrs,
+                    slot.Name,
+                    slot.FillColor,
+                    slot.OutlineColor,
+                    slot.OutlineWidth));
             return build;
         }
 
@@ -249,14 +291,23 @@ namespace op.io
                 for (int i = 0; i < build.Bodies.Count; i++)
                 {
                     var bodyData = build.Bodies[i];
-                    agent.AddBody(bodyData.ToAttributes());
+                    agent.AddBody(
+                        bodyData.ToAttributes(),
+                        bodyData.ToFillColor(),
+                        bodyData.ToOutlineColor(),
+                        bodyData.OutlineWidth);
                     if (!string.IsNullOrEmpty(bodyData.Name))
                         agent.Bodies[i].Name = bodyData.Name;
                 }
             }
             else
             {
-                agent.BodyAttributes = build.Body.ToAttributes();
+                agent.ClearBodies();
+                agent.AddBody(
+                    build.Body.ToAttributes(),
+                    build.Body.ToFillColor(),
+                    build.Body.ToOutlineColor(),
+                    build.Body.OutlineWidth);
             }
 
             agent.UnitAttributes   = build.Unit.ToAttributes(); // setter syncs Name → GameObject.Name

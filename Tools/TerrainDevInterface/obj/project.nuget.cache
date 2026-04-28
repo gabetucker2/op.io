@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "WymhZa5NedA=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\gabeq\\OneDrive\\Desktop\\Coding_Projects\\op.io\\Tools\\TerrainDevInterface\\TerrainDevInterface.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\gabeq\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.25\\microsoft.netcore.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\gabeq\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.25\\microsoft.windowsdesktop.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\gabeq\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.25\\microsoft.aspnetcore.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\gabeq\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.25\\microsoft.netcore.app.host.win-x64.8.0.25.nupkg.sha512"
+  ],
+  "logs": []
+}

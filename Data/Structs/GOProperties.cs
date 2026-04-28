@@ -47,6 +47,7 @@ namespace op.io
                 BoolValue = false;
                 IsHidden = isHidden;
                 AffectsList = affectsList ?? Array.Empty<string>();
+                ItemTooltipKeys = Array.Empty<string>();
             }
 
             // ── Color swatch ──────────────────────────────────────────────────────
@@ -66,10 +67,11 @@ namespace op.io
                 BoolValue = false;
                 IsHidden = isHidden;
                 AffectsList = Array.Empty<string>();
+                ItemTooltipKeys = Array.Empty<string>();
             }
 
             // ── Bullet list ───────────────────────────────────────────────────────
-            public Row(string label, string[] items)
+            public Row(string label, string[] items, string[] itemTooltipKeys = null)
             {
                 Kind = RowKind.BulletList;
                 Label = label ?? string.Empty;
@@ -85,6 +87,7 @@ namespace op.io
                 BoolValue = false;
                 IsHidden = false;
                 AffectsList = Array.Empty<string>();
+                ItemTooltipKeys = itemTooltipKeys ?? Array.Empty<string>();
             }
 
             // ── Bar graph ─────────────────────────────────────────────────────────
@@ -104,6 +107,7 @@ namespace op.io
                 BoolValue = false;
                 IsHidden = false;
                 AffectsList = Array.Empty<string>();
+                ItemTooltipKeys = Array.Empty<string>();
             }
 
             // ── Combined health+shield bar ────────────────────────────────────────
@@ -123,6 +127,7 @@ namespace op.io
                 BoolValue = false;
                 IsHidden = false;
                 AffectsList = Array.Empty<string>();
+                ItemTooltipKeys = Array.Empty<string>();
             }
 
             // ── Boolean indicator ─────────────────────────────────────────────────
@@ -142,6 +147,7 @@ namespace op.io
                 BoolValue = boolValue;
                 IsHidden = isHidden;
                 AffectsList = Array.Empty<string>();
+                ItemTooltipKeys = Array.Empty<string>();
             }
 
             public RowKind Kind { get; }
@@ -161,6 +167,8 @@ namespace op.io
             public bool    IsHidden { get; }
             /// <summary>List of other attributes this hidden attribute affects (shown in 3rd column).</summary>
             public string[] AffectsList { get; }
+            /// <summary>Optional per-item tooltip keys for bullet-list rows.</summary>
+            public string[] ItemTooltipKeys { get; }
 
             public int LineCount => Kind == RowKind.BulletList ? Math.Max(1, Items?.Length ?? 1) : 1;
         }
@@ -218,6 +226,14 @@ namespace op.io
             {
                 if (!HasTarget)
                     yield break;
+
+                if (_target.IsTerrain)
+                {
+                    yield return new Section("Terrain", TerrainOverviewRows(), 0);
+                    yield return new Section("Generation", TerrainGenerationRows(), 1);
+                    yield return new Section("Runtime", TerrainRuntimeRows(), 1);
+                    yield break;
+                }
 
                 Agent agent = _target.Source as Agent;
 
@@ -290,8 +306,8 @@ namespace op.io
             yield return new Row("Body Coll. Damage",  $"{a.BodyCollisionDamage:0.##}");
             yield return new Row("Body Penetration",   $"{a.BodyPenetration:0.##}");
 
-            float kScale = CollisionResolver.KnockbackMassScale;
-            yield return new Row("Body Knockback",     $"{AttributeDerived.BodyKnockback(a.Mass, kScale):0.##}",
+            float bounceTransfer = CollisionResolver.CollisionBounceMomentumTransfer;
+            yield return new Row("Body Knockback",     $"{AttributeDerived.BodyKnockback(a.Mass, bounceTransfer):0.##}",
                                  isHidden: true, affectsList: AttributeDerived.AffectsBodyKnockback);
 
             // ── Resistance group ──────────────────────────────────────────────────
@@ -360,6 +376,50 @@ namespace op.io
         }
 
         // ── Object-level rows: identity, flags ───────────────────────────────────
+
+        private IEnumerable<Row> TerrainOverviewRows()
+        {
+            TerrainInspectionSnapshot terrain = _target.Terrain;
+            yield return new Row("Name", "Terrain");
+            yield return new Row("ID", TerrainInspectionSnapshot.SharedTerrainId.ToString());
+            yield return new Row("Type", terrain.IsBoundary ? "Finite map boundary" : "Procedural terrain");
+            yield return new Row("Hover Position", CentifootUnits.FormatVector2(terrain.HoverWorldPosition, "0.###"));
+            yield return new Row("Region", terrain.IsBoundary ? "Outside playable square" : terrain.IsLand ? "Land" : "Water");
+            yield return new Row("Field Value", float.IsNaN(terrain.FieldValue) ? "Boundary" : terrain.FieldValue.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+            yield return new Row("Terrain Color", terrain.TerrainColor, ToHex(terrain.TerrainColor));
+            yield return new Row("World Bounds", terrain.WorldBounds);
+        }
+
+        private IEnumerable<Row> TerrainGenerationRows()
+        {
+            TerrainInspectionSnapshot terrain = _target.Terrain;
+            yield return new Row("Seed", terrain.Seed.ToString());
+            yield return new Row("Seed Anchor", terrain.SeedAnchor);
+            yield return new Row("Chunk Size", CentifootUnits.FormatDistance(terrain.ChunkWorldSize));
+            yield return new Row("Feature Scale", $"{terrain.FeatureWorldScaleMultiplier:0.##}x");
+            yield return new Row("Octogonal Cut", $"{terrain.OctogonalCornerCutCellRatio:0.###} cells");
+            yield return new Row("Center Chunk", terrain.CenterChunk);
+            yield return new Row("Visible Chunks", terrain.VisibleChunkWindow);
+            yield return new Row("Collider Chunks", terrain.ColliderChunkWindow);
+        }
+
+        private IEnumerable<Row> TerrainRuntimeRows()
+        {
+            TerrainInspectionSnapshot terrain = _target.Terrain;
+            yield return new Row("Resident Chunks", terrain.ResidentChunkCount.ToString());
+            yield return new Row("Terrain Components", terrain.ResidentComponentCount.ToString());
+            yield return new Row("Edge Loops", terrain.ResidentEdgeLoopCount.ToString());
+            yield return new Row("Vector Triangles", terrain.VisualTriangleCount.ToString());
+            yield return new Row("Resident Colliders", terrain.ResidentColliderCount.ToString());
+            yield return new Row("Active Colliders", terrain.ActiveColliderCount.ToString());
+            yield return new Row("Collider Candidates", terrain.ColliderActivationCandidateCount.ToString());
+            yield return new Row("Pending Chunks", terrain.PendingChunkCount.ToString());
+            yield return new Row("Chunk Builds In Flight", terrain.ChunkBuildsInFlight);
+            yield return new Row("Materializing", terrain.MaterializationInFlight);
+            yield return new Row("Restart Pending", terrain.MaterializationRestartPending);
+            yield return new Row("Last Build Time", $"{terrain.LastMaterializationMilliseconds:0.###} ms");
+            yield return new Row("Preload Margin", CentifootUnits.FormatDistance(terrain.PreloadMarginWorldUnits));
+        }
 
         private IEnumerable<Row> GameObjectRows()
         {
@@ -517,24 +577,33 @@ namespace op.io
         private readonly Row BuildFlagsRow()
         {
             List<string> parts = new();
-            if (_target.IsPlayer)
-                parts.Add("Player");
-            if (_target.IsPrototype)
-                parts.Add("Prototype");
-            parts.Add(_target.DynamicPhysics ? "Dynamic" : "Static");
-            parts.Add(_target.IsCollidable ? "Collidable" : "Non-collidable");
-            parts.Add(_target.IsDestructible ? "Destructible" : "Indestructible");
-            if (_target.IsInteract)
+            List<string> tooltipKeys = new();
+            GOFlags flags = _target.Source?.GOProperties.Flags ?? 0;
+
+            void AddFlag(string label)
             {
-                parts.Add("Interact");
-                if (_target.IsZoneBlock)
-                    parts.Add("  ZoneBlock");
+                parts.Add(label);
+                tooltipKeys.Add("props_flag:" + label.Trim());
             }
-            else if (_target.IsZoneBlock)
+
+            if (flags.HasFlag(GOFlags.Player) || _target.IsPlayer)
+                AddFlag("Player");
+            if (flags.HasFlag(GOFlags.Prototype) || _target.IsPrototype)
+                AddFlag("Prototype");
+            AddFlag(flags.HasFlag(GOFlags.Dynamic) ? "Dynamic" : "Static");
+            AddFlag(flags.HasFlag(GOFlags.Collidable) ? "Collidable" : "Non-collidable");
+            AddFlag(flags.HasFlag(GOFlags.Destructible) ? "Destructible" : "Indestructible");
+            if (flags.HasFlag(GOFlags.Interact) || _target.IsInteract)
             {
-                parts.Add("ZoneBlock");
+                AddFlag("Interact");
+                if (flags.HasFlag(GOFlags.ZoneBlock) || _target.IsZoneBlock)
+                    AddFlag("ZoneBlock");
             }
-            return new Row("Flags", parts.ToArray());
+            else if (flags.HasFlag(GOFlags.ZoneBlock) || _target.IsZoneBlock)
+            {
+                AddFlag("ZoneBlock");
+            }
+            return new Row("Flags", parts.ToArray(), tooltipKeys.ToArray());
         }
 
         private static string BuildBulletSourceBarrelLabel(Bullet bullet)

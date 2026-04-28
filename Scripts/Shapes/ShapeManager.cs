@@ -7,9 +7,12 @@ namespace op.io
 {
     public class ShapeManager
     {
+        private const float RenderCullMarginWorldUnits = 192f;
         private static ShapeManager _instance;
 
         public static ShapeManager Instance => _instance ??= new ShapeManager();
+        public static int RegisteredWorldObjectCount { get; private set; }
+        public static int DrawnWorldObjectCount { get; private set; }
 
         // Reusable sorted list to avoid per-frame allocations.
         private readonly List<GameObject> _sortedObjects = new();
@@ -21,9 +24,11 @@ namespace op.io
 
         public void DrawFlashes(SpriteBatch spriteBatch)
         {
+            ResolveRenderCullBounds(out bool canCull, out float minX, out float maxX, out float minY, out float maxY);
             foreach (GameObject gameObject in GameObjectRegister.GetRegisteredGameObjects())
             {
                 if (gameObject.Shape == null || gameObject.Shape.IsPrototype || gameObject.HitFlash <= 0f) continue;
+                if (canCull && IsCulledForRender(gameObject, minX, maxX, minY, maxY)) continue;
                 gameObject.Shape.DrawFlash(spriteBatch, gameObject);
             }
             // Also flash bullets — they are not in GameObjectRegister
@@ -38,7 +43,27 @@ namespace op.io
         public void DrawShapes(SpriteBatch spriteBatch)
         {
             _sortedObjects.Clear();
-            _sortedObjects.AddRange(GameObjectRegister.GetRegisteredGameObjects());
+            ResolveRenderCullBounds(out bool canCull, out float minX, out float maxX, out float minY, out float maxY);
+            List<GameObject> registeredObjects = GameObjectRegister.GetRegisteredGameObjects();
+            RegisteredWorldObjectCount = registeredObjects.Count;
+            DrawnWorldObjectCount = 0;
+
+            for (int i = 0; i < registeredObjects.Count; i++)
+            {
+                GameObject gameObject = registeredObjects[i];
+                if (gameObject?.Shape == null)
+                {
+                    continue;
+                }
+
+                if (canCull && IsCulledForRender(gameObject, minX, maxX, minY, maxY))
+                {
+                    continue;
+                }
+
+                _sortedObjects.Add(gameObject);
+            }
+
             _sortedObjects.Sort(static (a, b) => a.DrawLayer.CompareTo(b.DrawLayer));
 
             foreach (GameObject gameObject in _sortedObjects)
@@ -111,6 +136,7 @@ namespace op.io
 
 DrawAgentBody:
                 gameObject.Shape.Draw(spriteBatch, gameObject);
+                DrawnWorldObjectCount++;
 
                 if (DebugModeHandler.DEBUGENABLED && gameObject == Core.Instance.Player)
                 {
@@ -118,6 +144,39 @@ DrawAgentBody:
                     DebugRenderer.DrawRotationPointer(spriteBatch, (Agent)gameObject);
                 }
             }
+        }
+
+        private static void ResolveRenderCullBounds(out bool canCull, out float minX, out float maxX, out float minY, out float maxY)
+        {
+            canCull = GameRenderer.TryGetVisibleWorldBounds(BlockManager.GetCameraTransform(), out minX, out maxX, out minY, out maxY);
+            if (!canCull)
+            {
+                minX = maxX = minY = maxY = 0f;
+                return;
+            }
+
+            minX -= RenderCullMarginWorldUnits;
+            maxX += RenderCullMarginWorldUnits;
+            minY -= RenderCullMarginWorldUnits;
+            maxY += RenderCullMarginWorldUnits;
+        }
+
+        private static bool IsCulledForRender(GameObject gameObject, float minX, float maxX, float minY, float maxY)
+        {
+            if (gameObject?.Shape == null)
+            {
+                return true;
+            }
+
+            float radius = MathF.Max(gameObject.BoundingRadius, 2f);
+            float objectMinX = gameObject.Position.X - radius;
+            float objectMaxX = gameObject.Position.X + radius;
+            float objectMinY = gameObject.Position.Y - radius;
+            float objectMaxY = gameObject.Position.Y + radius;
+            return objectMaxX < minX ||
+                objectMinX > maxX ||
+                objectMaxY < minY ||
+                objectMinY > maxY;
         }
     }
 }

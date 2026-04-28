@@ -9,6 +9,11 @@ namespace op.io
         private const string RenderOrderColumnName = "RenderOrder";
         private const string RenderCategoryColumnName = "RenderCategory";
         private const string RenderCategoryOrderColumnName = "RenderCategoryOrder";
+        private static readonly object CacheSync = new();
+        private static readonly Dictionary<string, ControlKeyRecord> CachedControlRecords = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> MissingControlRecords = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> CachedColumnNames = new(StringComparer.OrdinalIgnoreCase);
+        private static bool _columnCacheLoaded;
 
         internal sealed class ControlKeyRecord
         {
@@ -29,6 +34,16 @@ namespace op.io
         public static ControlKeyRecord GetControl(string settingKey)
         {
             if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return null;
+            }
+
+            if (TryGetCachedControl(settingKey, out ControlKeyRecord cachedRecord, out bool knownMissing))
+            {
+                return cachedRecord;
+            }
+
+            if (knownMissing)
             {
                 return null;
             }
@@ -57,6 +72,7 @@ LIMIT 1;";
             var rows = DatabaseQuery.ExecuteQuery(sql, parameters);
             if (rows.Count == 0)
             {
+                CacheMissingControl(settingKey);
                 return null;
             }
 
@@ -66,7 +82,7 @@ LIMIT 1;";
             {
                 try { floatStart = Convert.ToSingle(floatObj); } catch { }
             }
-            return new ControlKeyRecord
+            ControlKeyRecord record = new()
             {
                 SettingKey = row["SettingKey"]?.ToString(),
                 InputKey = row["InputKey"]?.ToString(),
@@ -87,6 +103,8 @@ LIMIT 1;";
                     ? enumDisabledValue?.ToString() ?? string.Empty
                     : string.Empty
             };
+            CacheControl(record);
+            return record;
         }
 
         public static void InsertControl(ControlKeyRecord record)
@@ -193,6 +211,7 @@ INSERT INTO ControlKey ({string.Join(", ", columns)})
 VALUES ({string.Join(", ", values)});";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(record.SettingKey);
         }
 
         public static void EnsureControlExists(ControlKeyRecord record)
@@ -225,6 +244,7 @@ VALUES ({string.Join(", ", values)});";
 
             const string sql = "UPDATE ControlKey SET InputType = @inputType WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void SetInputKey(string settingKey, string inputKey)
@@ -242,6 +262,7 @@ VALUES ({string.Join(", ", values)});";
 
             const string sql = "UPDATE ControlKey SET InputKey = @inputKey WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void EnsureSwitchStartState(string settingKey, int defaultValue)
@@ -258,6 +279,7 @@ SET SwitchStartState = COALESCE(SwitchStartState, @defaultState)
 WHERE SettingKey = @settingKey;";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void SetSwitchStartState(string settingKey, int value)
@@ -275,6 +297,7 @@ WHERE SettingKey = @settingKey;";
 
             const string sql = "UPDATE ControlKey SET SwitchStartState = @value WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void EnsureInputKey(string settingKey, string inputKey)
@@ -297,6 +320,7 @@ WHERE SettingKey = @settingKey
   AND (InputKey IS NULL OR TRIM(InputKey) = '');";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void SetBindingRequired(string settingKey, bool required)
@@ -314,6 +338,7 @@ WHERE SettingKey = @settingKey
 
             const string sql = "UPDATE ControlKey SET BindingRequired = @required WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void EnsureFloatStartState(string settingKey, float defaultValue)
@@ -330,6 +355,7 @@ SET FloatStartState = COALESCE(FloatStartState, @defaultValue)
 WHERE SettingKey = @settingKey;";
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static void ClearSwitchStartState(string settingKey)
@@ -346,6 +372,7 @@ WHERE SettingKey = @settingKey;";
 
             const string sql = "UPDATE ControlKey SET SwitchStartState = NULL WHERE SettingKey = @settingKey;";
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateControlCache(settingKey);
         }
 
         public static bool ColumnExists(string columnName)
@@ -355,11 +382,11 @@ WHERE SettingKey = @settingKey;";
                 return false;
             }
 
-            const string sql = "PRAGMA table_info(ControlKey);";
-            var rows = DatabaseQuery.ExecuteQuery(sql);
-            return rows.Any(row =>
-                row.TryGetValue("name", out object value) &&
-                string.Equals(Convert.ToString(value), columnName, StringComparison.OrdinalIgnoreCase));
+            EnsureColumnCacheLoaded();
+            lock (CacheSync)
+            {
+                return CachedColumnNames.Contains(columnName);
+            }
         }
 
         public static void AddColumn(string columnName, string definition)
@@ -370,6 +397,8 @@ WHERE SettingKey = @settingKey;";
             }
 
             DatabaseQuery.ExecuteNonQuery($"ALTER TABLE ControlKey ADD COLUMN {columnName} {definition};");
+            InvalidateColumnCache();
+            InvalidateAllControlCaches();
         }
 
         public static void NormalizeRenderOrderValues()
@@ -408,6 +437,8 @@ WHERE SettingKey = @settingKey;";
 
                 DatabaseQuery.ExecuteNonQuery(@"UPDATE ControlKey SET RenderOrder = @order WHERE SettingKey = @settingKey;", parameters);
             }
+
+            InvalidateAllControlCaches();
         }
 
         public static void UpdateRenderOrders(IReadOnlyList<(string SettingKey, int Order)> updates)
@@ -431,6 +462,7 @@ WHERE SettingKey = @settingKey;";
                 };
 
                 DatabaseQuery.ExecuteNonQuery(@"UPDATE ControlKey SET RenderOrder = @order WHERE SettingKey = @settingKey;", parameters);
+                InvalidateControlCache(settingKey);
             }
         }
 
@@ -493,6 +525,7 @@ WHERE SettingKey = @settingKey;";
 
                 sql += " WHERE SettingKey = @settingKey;";
                 DatabaseQuery.ExecuteNonQuery(sql, parameters);
+                InvalidateControlCache(update.SettingKey);
             }
         }
 
@@ -553,6 +586,118 @@ SET MetaControl = CASE WHEN SettingKey IN ({placeholderList}) THEN 1 ELSE 0 END;
             }
 
             DatabaseQuery.ExecuteNonQuery(sql, parameters);
+            InvalidateAllControlCaches();
+        }
+
+        private static bool TryGetCachedControl(string settingKey, out ControlKeyRecord record, out bool knownMissing)
+        {
+            lock (CacheSync)
+            {
+                if (CachedControlRecords.TryGetValue(settingKey, out record))
+                {
+                    knownMissing = false;
+                    return true;
+                }
+
+                knownMissing = MissingControlRecords.Contains(settingKey);
+                record = null;
+                return false;
+            }
+        }
+
+        private static void CacheControl(ControlKeyRecord record)
+        {
+            if (record == null || string.IsNullOrWhiteSpace(record.SettingKey))
+            {
+                return;
+            }
+
+            lock (CacheSync)
+            {
+                CachedControlRecords[record.SettingKey] = record;
+                MissingControlRecords.Remove(record.SettingKey);
+            }
+        }
+
+        private static void CacheMissingControl(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            lock (CacheSync)
+            {
+                CachedControlRecords.Remove(settingKey);
+                MissingControlRecords.Add(settingKey);
+            }
+        }
+
+        private static void InvalidateControlCache(string settingKey)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey))
+            {
+                return;
+            }
+
+            lock (CacheSync)
+            {
+                CachedControlRecords.Remove(settingKey);
+                MissingControlRecords.Remove(settingKey);
+            }
+        }
+
+        private static void InvalidateAllControlCaches()
+        {
+            lock (CacheSync)
+            {
+                CachedControlRecords.Clear();
+                MissingControlRecords.Clear();
+            }
+        }
+
+        private static void EnsureColumnCacheLoaded()
+        {
+            lock (CacheSync)
+            {
+                if (_columnCacheLoaded)
+                {
+                    return;
+                }
+            }
+
+            const string sql = "PRAGMA table_info(ControlKey);";
+            var rows = DatabaseQuery.ExecuteQuery(sql);
+            HashSet<string> loadedColumns = new(StringComparer.OrdinalIgnoreCase);
+            foreach (Dictionary<string, object> row in rows)
+            {
+                if (!row.TryGetValue("name", out object value))
+                {
+                    continue;
+                }
+
+                string columnName = Convert.ToString(value);
+                if (!string.IsNullOrWhiteSpace(columnName))
+                {
+                    loadedColumns.Add(columnName);
+                }
+            }
+
+            lock (CacheSync)
+            {
+                CachedColumnNames.Clear();
+                CachedColumnNames.UnionWith(loadedColumns);
+                _columnCacheLoaded = true;
+            }
+        }
+
+        private static void InvalidateColumnCache()
+        {
+            lock (CacheSync)
+            {
+                CachedColumnNames.Clear();
+                _columnCacheLoaded = false;
+            }
         }
     }
 }

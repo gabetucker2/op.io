@@ -8,6 +8,7 @@ INSERT INTO BarSettings (SettingKey, Value) VALUES ('HealthBarHeight',     '4');
 INSERT INTO BarSettings (SettingKey, Value) VALUES ('HealthBarOffsetY',    '8');            -- pixels below object edge
 INSERT INTO BarSettings (SettingKey, Value) VALUES ('HealthBarSegmentSize','10');           -- HP per segment tick (LoL-style)
 INSERT INTO BarSettings (SettingKey, Value) VALUES ('HealthBarAnim',       '0.15|0.0|0.40'); -- fadeIn | hold | fadeOut (seconds)
+INSERT INTO BarSettings (SettingKey, Value) VALUES ('YourBarRevealSeconds','5');            -- seconds a timed YourBar reveal stays visible before fade
 
 ---------------------------------------------------------------------------------------------------------------------------
 -- In-game health bar fill gradient (low health → high health)

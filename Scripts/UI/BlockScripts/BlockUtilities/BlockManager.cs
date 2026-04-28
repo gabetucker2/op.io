@@ -581,6 +581,7 @@ namespace op.io
             // ── Camera pan (middle-mouse drag) ────────────────────────────────────
             bool middleJustPressed = mouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released;
             bool middleHeld = mouseState.MiddleButton == ButtonState.Pressed;
+
             if (middleJustPressed && IsCursorWithinGameBlock())
             {
                 _cameraPanAnchorRaw    = ToGameSpaceRaw(mouseState.Position);

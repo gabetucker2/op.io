@@ -108,11 +108,12 @@ namespace op.io
         public static float MaxHealth(float mass) => mass * MaxHealthPerMass;
 
         /// <summary>
-        /// Body knockback impulse magnitude per collision frame.
-        /// Formula: mass × KnockbackMassScale (loaded from PhysicsSettings).
+        /// Body knockback impulse budget for wall-style bounces.
+        /// Formula: mass x CollisionBounceMomentumTransfer (loaded from PhysicsSettings).
         /// </summary>
-        public static float BodyKnockback(float mass, float knockbackMassScale)
-            => mass * knockbackMassScale;
+        /// Uses CollisionBounceMomentumTransfer from PhysicsSettings.
+        public static float BodyKnockback(float mass, float collisionBounceMomentumTransfer)
+            => mass * collisionBounceMomentumTransfer;
 
         /// <summary>
         /// Circle body radius in pixels. Formula: sqrt(mass) × BodyRadiusScalar.

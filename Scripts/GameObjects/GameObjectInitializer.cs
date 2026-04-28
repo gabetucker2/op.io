@@ -7,6 +7,9 @@ namespace op.io
 {
     public static class GameObjectInitializer
     {
+        private const int FarmSpawnPlacementMaxAttempts = 48;
+        private const float FarmSpawnClearancePaddingWorldUnits = 10f;
+
         public static void Initialize()
         {
             DebugLogger.PrintGO("Initializing GameObjects...");
@@ -22,6 +25,8 @@ namespace op.io
             InitializeBlocks();
             InitializeAgents();
             InitializeZoneBlocks();
+            ResolveTerrainSpawnOverlaps();
+            ResolveStartupCollidableOverlaps();
 
             DebugLogger.PrintGO($"Initialization complete. Total GameObjects: {Core.Instance.GameObjects.Count}, StaticObjects: {Core.Instance.StaticObjects.Count}");
         }
@@ -134,6 +139,8 @@ namespace op.io
                     GameObject farm = matchingData.IsManual
                         ? CloneFarmAtPosition(farmArchetype, new Vector2(matchingData.ManualX, matchingData.ManualY), 0f, random)
                         : CloneFarmWithRandomPosition(farmArchetype, random, viewportWidth, viewportHeight);
+
+                    ResolveFarmSpawnPosition(farm, farms, random, viewportWidth, viewportHeight);
                     farms.Add(farm);
 
                     // Log every 50th farm instantiation for debugging
@@ -153,10 +160,12 @@ namespace op.io
         private static GameObject CloneFarmWithRandomPosition(FarmGameObject archetype, Random random, int viewportWidth, int viewportHeight)
         {
             SimpleGameObject baseObject = archetype.BaseObject;
-            int maxX = Math.Max(1, viewportWidth  - baseObject.Geometry.Width);
-            int maxY = Math.Max(1, viewportHeight - baseObject.Geometry.Height);
-
-            Vector2 newPosition = new Vector2(random.Next(0, maxX), random.Next(0, maxY));
+            Vector2 newPosition = BuildRandomFarmSpawnCandidate(
+                baseObject.Geometry.Width,
+                baseObject.Geometry.Height,
+                viewportWidth,
+                viewportHeight,
+                random);
             float newRotation   = (float)(random.NextDouble() * MathF.Tau);
 
             SimpleGameObject instance = archetype.CreateInstance(GameObjectManager.GetNextID(), newPosition, newRotation);
@@ -195,6 +204,122 @@ namespace op.io
             }
 
             return farmObject;
+        }
+
+        private static void ResolveFarmSpawnPosition(
+            GameObject farmObject,
+            IReadOnlyList<GameObject> pendingFarms,
+            Random random,
+            int viewportWidth,
+            int viewportHeight)
+        {
+            if (farmObject == null || farmObject.Shape == null)
+            {
+                return;
+            }
+
+            float clearanceRadius = MathF.Max(12f, farmObject.BoundingRadius + FarmSpawnClearancePaddingWorldUnits);
+            Vector2 initialPosition = farmObject.Position;
+
+            if (TryApplyFarmSpawnCandidate(farmObject, pendingFarms, initialPosition, clearanceRadius))
+            {
+                return;
+            }
+
+            for (int attempt = 0; attempt < FarmSpawnPlacementMaxAttempts; attempt++)
+            {
+                Vector2 candidate = BuildRandomFarmSpawnCandidate(farmObject.Shape.Width, farmObject.Shape.Height, viewportWidth, viewportHeight, random);
+                if (TryApplyFarmSpawnCandidate(farmObject, pendingFarms, candidate, clearanceRadius))
+                {
+                    return;
+                }
+            }
+
+            ApplyFarmSpawnState(farmObject, initialPosition);
+        }
+
+        private static Vector2 BuildRandomFarmSpawnCandidate(int width, int height, int viewportWidth, int viewportHeight, Random random)
+        {
+            int maxX = Math.Max(1, viewportWidth - width);
+            int maxY = Math.Max(1, viewportHeight - height);
+            return new Vector2(random.Next(0, maxX), random.Next(0, maxY));
+        }
+
+        private static bool TryApplyFarmSpawnCandidate(
+            GameObject farmObject,
+            IReadOnlyList<GameObject> pendingFarms,
+            Vector2 candidatePosition,
+            float clearanceRadius)
+        {
+            Vector2 terrainSafePosition = GameBlockTerrainBackground.ResolveNearestTerrainFreeWorldPosition(
+                candidatePosition,
+                clearanceRadius);
+            if (DoesFarmSpawnOverlap(farmObject, terrainSafePosition, pendingFarms))
+            {
+                return false;
+            }
+
+            ApplyFarmSpawnState(farmObject, terrainSafePosition);
+            return true;
+        }
+
+        private static void ApplyFarmSpawnState(GameObject farmObject, Vector2 position)
+        {
+            farmObject.Position = position;
+            farmObject.PreviousPosition = position;
+            farmObject.PhysicsVelocity = Vector2.Zero;
+        }
+
+        private static bool DoesFarmSpawnOverlap(GameObject farmObject, Vector2 candidatePosition, IReadOnlyList<GameObject> pendingFarms)
+        {
+            if (farmObject == null || farmObject.Shape == null)
+            {
+                return false;
+            }
+
+            foreach (GameObject existing in Core.Instance.GameObjects)
+            {
+                if (WouldFarmOverlapExisting(farmObject, candidatePosition, existing))
+                {
+                    return true;
+                }
+            }
+
+            if (pendingFarms == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < pendingFarms.Count; i++)
+            {
+                if (WouldFarmOverlapExisting(farmObject, candidatePosition, pendingFarms[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool WouldFarmOverlapExisting(GameObject farmObject, Vector2 candidatePosition, GameObject existingObject)
+        {
+            if (existingObject == null ||
+                existingObject == farmObject ||
+                !existingObject.IsCollidable ||
+                existingObject.Shape == null)
+            {
+                return false;
+            }
+
+            float combinedRadius = farmObject.BoundingRadius + existingObject.BoundingRadius + FarmSpawnClearancePaddingWorldUnits;
+            if (Vector2.DistanceSquared(candidatePosition, existingObject.Position) > combinedRadius * combinedRadius)
+            {
+                return false;
+            }
+
+            Vector2[] farmVertices = farmObject.Shape.GetTransformedVertices(candidatePosition, farmObject.Rotation);
+            Vector2[] existingVertices = existingObject.Shape.GetTransformedVertices(existingObject.Position, existingObject.Rotation);
+            return SATCollisionUtil.TryGetCollision(farmVertices, existingVertices, out _);
         }
 
         private static void ApplyFarmStats(GameObject farmObject, FarmData data)
@@ -263,7 +388,11 @@ namespace op.io
                             agent.ClearBodies();
                             for (int bi = 0; bi < bodies.Count; bi++)
                             {
-                                agent.AddBody(bodies[bi].Attrs);
+                                agent.AddBody(
+                                    bodies[bi].Attrs,
+                                    bodies[bi].FillColor,
+                                    bodies[bi].OutlineColor,
+                                    bodies[bi].OutlineWidth);
                                 if (!string.IsNullOrEmpty(bodies[bi].Name))
                                     agent.Bodies[bi].Name = bodies[bi].Name;
                             }
@@ -333,6 +462,85 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"Exception in InitializeZoneBlocks: {ex.Message}");
+            }
+        }
+
+        private static void ResolveTerrainSpawnOverlaps()
+        {
+            try
+            {
+                if (Core.Instance?.GameObjects == null || Core.Instance.GameObjects.Count == 0)
+                {
+                    GameBlockTerrainBackground.SetTerrainSpawnRelocationCount(0);
+                    return;
+                }
+
+                int relocationCount = 0;
+                foreach (GameObject gameObject in Core.Instance.GameObjects)
+                {
+                    if (gameObject == null ||
+                        gameObject.Shape == null ||
+                        !gameObject.DynamicPhysics ||
+                        !gameObject.IsCollidable)
+                    {
+                        continue;
+                    }
+
+                    float clearanceRadius = MathF.Max(12f, gameObject.BoundingRadius + 6f);
+                    Vector2 originalPosition = gameObject.Position;
+                    Vector2 resolvedPosition = GameBlockTerrainBackground.ResolveNearestTerrainFreeWorldPosition(
+                        originalPosition,
+                        clearanceRadius);
+                    if (Vector2.DistanceSquared(resolvedPosition, originalPosition) <= 0.25f)
+                    {
+                        continue;
+                    }
+
+                    gameObject.Position = resolvedPosition;
+                    gameObject.PreviousPosition = resolvedPosition;
+                    gameObject.PhysicsVelocity = Vector2.Zero;
+                    if (gameObject is Agent agent)
+                    {
+                        agent.MovementVelocity = Vector2.Zero;
+                    }
+
+                    relocationCount++;
+                    DebugLogger.PrintGO(
+                        $"Terrain spawn relocation: ID={gameObject.ID}, Name={gameObject.Name}, From={originalPosition}, To={resolvedPosition}, Clearance={clearanceRadius:0.##}");
+                }
+
+                GameBlockTerrainBackground.SetTerrainSpawnRelocationCount(relocationCount);
+                if (relocationCount > 0)
+                {
+                    DebugLogger.PrintGO($"Terrain spawn overlap resolution relocated {relocationCount} dynamic objects.");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in ResolveTerrainSpawnOverlaps: {ex.Message}");
+            }
+        }
+
+        private static void ResolveStartupCollidableOverlaps()
+        {
+            try
+            {
+                if (Core.Instance?.GameObjects == null || Core.Instance.GameObjects.Count == 0)
+                {
+                    return;
+                }
+
+                CollisionResolver.ResolveStartupOverlaps(Core.Instance.GameObjects);
+                if (CollisionResolver.StartupOverlapResolvedPairCount > 0)
+                {
+                    DebugLogger.PrintGO(
+                        $"Startup collidable overlap resolution separated {CollisionResolver.StartupOverlapResolvedPairCount} pairs " +
+                        $"across {CollisionResolver.StartupOverlapIterationCount} iterations.");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in ResolveStartupCollidableOverlaps: {ex.Message}");
             }
         }
     }

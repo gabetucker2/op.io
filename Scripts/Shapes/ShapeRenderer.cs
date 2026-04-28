@@ -9,6 +9,7 @@ namespace op.io
         private Texture2D _texture;
         private Texture2D _flashTexture;
         private Vector2 _origin;
+        private Vector2 _worldScale = Vector2.One;
 
         public void LoadContent(Shape shape, GraphicsDevice graphicsDevice)
         {
@@ -18,46 +19,58 @@ namespace op.io
                 return;
             }
 
-            int textureWidth = shape.Width + 2 * shape.OutlineWidth;
-            int textureHeight = shape.Height + 2 * shape.OutlineWidth;
+            int textureWidth = shape.HasCustomTexture
+                ? shape.CustomTextureWidth
+                : shape.Width + 2 * shape.OutlineWidth;
+            int textureHeight = shape.HasCustomTexture
+                ? shape.CustomTextureHeight
+                : shape.Height + 2 * shape.OutlineWidth;
             _texture = new Texture2D(graphicsDevice, textureWidth, textureHeight);
             Color[] data = new Color[textureWidth * textureHeight];
+            _worldScale = shape.TextureWorldScale;
 
-            for (int y = 0; y < textureHeight; y++)
+            if (shape.HasCustomTexture)
             {
-                for (int x = 0; x < textureWidth; x++)
+                Array.Copy(shape.CustomTextureData, data, data.Length);
+            }
+            else
+            {
+                for (int y = 0; y < textureHeight; y++)
                 {
-                    bool isOutline = (x < shape.OutlineWidth || x >= textureWidth - shape.OutlineWidth || y < shape.OutlineWidth || y >= textureHeight - shape.OutlineWidth);
-
-                    if (shape.ShapeType == "Rectangle")
+                    for (int x = 0; x < textureWidth; x++)
                     {
-                        data[y * textureWidth + x] = isOutline ? shape.OutlineColor : shape.FillColor;
-                    }
-                    else if (shape.ShapeType == "Circle")
-                    {
-                        Vector2 center = new Vector2(textureWidth / 2f, textureHeight / 2f);
-                        float dx = x - center.X;
-                        float dy = y - center.Y;
-                        float dist = MathF.Sqrt(dx * dx + dy * dy);
+                        bool isOutline = (x < shape.OutlineWidth || x >= textureWidth - shape.OutlineWidth || y < shape.OutlineWidth || y >= textureHeight - shape.OutlineWidth);
 
-                        float outer = MathF.Min(shape.Width, shape.Height) / 2f + shape.OutlineWidth;
-                        float inner = MathF.Min(shape.Width, shape.Height) / 2f;
+                        if (shape.ShapeType == "Rectangle")
+                        {
+                            data[y * textureWidth + x] = isOutline ? shape.OutlineColor : shape.FillColor;
+                        }
+                        else if (shape.ShapeType == "Circle")
+                        {
+                            Vector2 center = new Vector2(textureWidth / 2f, textureHeight / 2f);
+                            float dx = x - center.X;
+                            float dy = y - center.Y;
+                            float dist = MathF.Sqrt(dx * dx + dy * dy);
 
-                        bool isInside = dist <= inner;
-                        bool isOutlineCircle = dist > inner && dist <= outer;
+                            float outer = MathF.Min(shape.Width, shape.Height) / 2f + shape.OutlineWidth;
+                            float inner = MathF.Min(shape.Width, shape.Height) / 2f;
 
-                        data[y * textureWidth + x] = isInside ? shape.FillColor : (isOutlineCircle ? shape.OutlineColor : Color.Transparent);
-                    }
-                    else if (shape.ShapeType == "Polygon" && shape.Sides >= 3)
-                    {
-                        bool inside = RenderPolygonPixel(x, y, textureWidth, textureHeight, shape.Sides, MathF.Min(shape.Width, shape.Height) / 2f);
-                        bool inOutline = !inside && RenderPolygonPixel(x, y, textureWidth, textureHeight, shape.Sides, MathF.Min(shape.Width, shape.Height) / 2f + shape.OutlineWidth);
+                            bool isInside = dist <= inner;
+                            bool isOutlineCircle = dist > inner && dist <= outer;
 
-                        data[y * textureWidth + x] = inside ? shape.FillColor : (inOutline ? shape.OutlineColor : Color.Transparent);
-                    }
-                    else
-                    {
-                        DebugLogger.PrintError($"Invalid shape type: {shape.ShapeType} with {shape.Sides} sides. Cannot render texture.");
+                            data[y * textureWidth + x] = isInside ? shape.FillColor : (isOutlineCircle ? shape.OutlineColor : Color.Transparent);
+                        }
+                        else if (shape.ShapeType == "Polygon" && shape.Sides >= 3)
+                        {
+                            bool inside = RenderPolygonPixel(x, y, textureWidth, textureHeight, shape.Sides, MathF.Min(shape.Width, shape.Height) / 2f);
+                            bool inOutline = !inside && RenderPolygonPixel(x, y, textureWidth, textureHeight, shape.Sides, MathF.Min(shape.Width, shape.Height) / 2f + shape.OutlineWidth);
+
+                            data[y * textureWidth + x] = inside ? shape.FillColor : (inOutline ? shape.OutlineColor : Color.Transparent);
+                        }
+                        else
+                        {
+                            DebugLogger.PrintError($"Invalid shape type: {shape.ShapeType} with {shape.Sides} sides. Cannot render texture.");
+                        }
                     }
                 }
             }
@@ -101,7 +114,7 @@ namespace op.io
 
             float scale = MathF.Max(0f, GO.DeathFadeScale);
             Color drawColor = AmbienceSettings.ApplyWorldTint(Color.White * GO.Opacity);
-            spriteBatch.Draw(_texture, GO.Position, null, drawColor, GO.Rotation, _origin, scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(_texture, GO.Position, null, drawColor, GO.Rotation, _origin, _worldScale * scale, SpriteEffects.None, 0f);
         }
 
         public void DrawFlash(SpriteBatch spriteBatch, GameObject GO)
@@ -126,7 +139,7 @@ namespace op.io
             }
 
             Color drawColor = applyWorldTint ? AmbienceSettings.ApplyWorldTint(Color.White) : Color.White;
-            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, 1f, SpriteEffects.None, 0f);
+            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, _worldScale, SpriteEffects.None, 0f);
         }
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, bool applyWorldTint = false)
@@ -138,7 +151,7 @@ namespace op.io
             }
 
             Color drawColor = applyWorldTint ? AmbienceSettings.ApplyWorldTint(Color.White) : Color.White;
-            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale * _worldScale, SpriteEffects.None, 0f);
         }
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity, bool applyWorldTint = false)
@@ -155,7 +168,7 @@ namespace op.io
                 drawColor = AmbienceSettings.ApplyWorldTint(drawColor);
             }
 
-            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale * _worldScale, SpriteEffects.None, 0f);
         }
 
         public void Dispose()

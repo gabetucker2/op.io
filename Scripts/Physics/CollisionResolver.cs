@@ -6,8 +6,21 @@ namespace op.io
 {
     public static class CollisionResolver
     {
+        private const float BroadPhaseCellSizeWorldUnits = 256f;
+        private const float MinCollisionVectorLengthSq = 1e-8f;
+        private const float DefaultCollisionBounceMomentumTransfer = 0.35f;
         private static HashSet<long> _prevContacts = new();
         private static HashSet<long> _currContacts = new();
+        private static readonly List<GameObject> _dynamicColliders = new();
+        private static readonly Dictionary<long, List<GameObject>> _spatialHashCells = new();
+        private static readonly Stack<List<GameObject>> _availableCellObjectLists = new();
+        private static readonly List<long> _activeCellKeys = new();
+        private static readonly HashSet<long> _evaluatedPairKeys = new();
+
+        public static int BroadPhaseActiveCollidableCount { get; private set; }
+        public static int BroadPhaseCandidatePairCount { get; private set; }
+        public static int StartupOverlapResolvedPairCount { get; private set; }
+        public static int StartupOverlapIterationCount { get; private set; }
 
         private static float? _cachedKnockbackMassScale;
         public static float KnockbackMassScale
@@ -18,6 +31,26 @@ namespace op.io
                     _cachedKnockbackMassScale = DatabaseFetch.GetValue<float>(
                         "PhysicsSettings", "Value", "SettingKey", "KnockbackMassScale");
                 return _cachedKnockbackMassScale.Value;
+            }
+        }
+
+        private static float? _cachedCollisionBounceMomentumTransfer;
+        public static float CollisionBounceMomentumTransfer
+        {
+            get
+            {
+                if (!_cachedCollisionBounceMomentumTransfer.HasValue)
+                {
+                    float configured = DatabaseFetch.GetSetting(
+                        "PhysicsSettings",
+                        "Value",
+                        "SettingKey",
+                        "CollisionBounceMomentumTransfer",
+                        DefaultCollisionBounceMomentumTransfer);
+                    _cachedCollisionBounceMomentumTransfer = MathHelper.Clamp(configured, 0f, 2f);
+                }
+
+                return _cachedCollisionBounceMomentumTransfer.Value;
             }
         }
 
@@ -49,123 +82,61 @@ namespace op.io
             }
 
             _currContacts.Clear();
+            BuildBroadPhase(gameObjects);
 
-            // Loop through all game objects to resolve collisions
-            for (int i = 0; i < gameObjects.Count; i++)
+            for (int i = 0; i < _dynamicColliders.Count; i++)
             {
-                var objA = gameObjects[i];
-
-                for (int j = i + 1; j < gameObjects.Count; j++)
+                GameObject objA = _dynamicColliders[i];
+                if (!TryGetOccupiedCellRange(objA, out int minCellX, out int maxCellX, out int minCellY, out int maxCellY))
                 {
-                    var objB = gameObjects[j];
+                    continue;
+                }
 
-                    // Skip if either object is not collidable
-                    if (!objA.IsCollidable || !objB.IsCollidable)
-                        continue;
-
-                    // Two static objects can never move, so they can't begin overlapping after init.
-                    // Skip the expensive collision test entirely for static-static pairs.
-                    if (!objA.DynamicPhysics && !objB.DynamicPhysics)
-                        continue;
-
-                    // Check if there is a collision between objA and objB
-                    if (CollisionManager.TryGetCollision(objA, objB, out Vector2 mtv))
+                for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                {
+                    for (int cellX = minCellX; cellX <= maxCellX; cellX++)
                     {
-                        long key          = ContactKey(objA.ID, objB.ID);
-                        bool isNewContact = _currContacts.Add(key) && !_prevContacts.Contains(key);
-
-                        // If at least one object is dynamic, apply physics resolution
-                        if (objA.DynamicPhysics || objB.DynamicPhysics)
-                            HandlePhysicsCollision(objA, objB, mtv, isNewContact);
-
-                        // Apply agent body collision damage to destructible non-agent objects.
-                        // Guard health > 0 so already-dead objects don't continue accumulating damage
-                        // before the death scan removes them next frame.
-                        Agent agentA = objA as Agent;
-                        Agent agentB = objB as Agent;
-
-                        if (agentA != null && !(objB is Agent))
+                        long cellKey = ComposeCellKey(cellX, cellY);
+                        if (!_spatialHashCells.TryGetValue(cellKey, out List<GameObject> cellObjects))
                         {
-                            // Agent A damages non-agent B (only if destructible). Agent takes
-                            // reciprocal self-damage only when B itself deals collision damage.
-                            float dmgToB = agentA.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
-                            if (objB.IsDestructible && objB.CurrentHealth > 0f)
-                            {
-                                float dealtToB = objB.ApplyDamage(dmgToB, agentA.ID);
-                                objB.TriggerHitFlash();
-                                DamageNumberManager.Notify(objB.ID, objB.Position, dealtToB, sourceId: agentA.ID, isNewHit: isNewContact);
-                                objB.DeathImpulse = (agentA.Position - agentA.PreviousPosition) / Core.DELTATIME;
-                            }
-                            float dmgToA = objB.BodyCollisionDamage * Core.DELTATIME;
-                            if (dmgToA > 0f && objB.BodyCollisionDamage > 0f)
-                            {
-                                float dealtToA = agentA.ApplyDamage(dmgToA, objB.ID);
-                                agentA.TriggerHitFlash();
-                                DamageNumberManager.Notify(agentA.ID, agentA.Position, dealtToA, sourceId: objB.ID, isNewHit: isNewContact);
-                                agentA.DeathImpulse = (objB.Position - objB.PreviousPosition) / Core.DELTATIME;
-                            }
+                            continue;
                         }
-                        else if (agentB != null && !(objA is Agent))
-                        {
-                            // Agent B damages non-agent A (only if destructible). Agent takes
-                            // reciprocal self-damage only when A itself deals collision damage.
-                            float dmgToA = agentB.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
-                            if (objA.IsDestructible && objA.CurrentHealth > 0f)
-                            {
-                                float dealtToA = objA.ApplyDamage(dmgToA, agentB.ID);
-                                objA.TriggerHitFlash();
-                                DamageNumberManager.Notify(objA.ID, objA.Position, dealtToA, sourceId: agentB.ID, isNewHit: isNewContact);
-                                objA.DeathImpulse = (agentB.Position - agentB.PreviousPosition) / Core.DELTATIME;
-                            }
-                            float dmgToB = objA.BodyCollisionDamage * Core.DELTATIME;
-                            if (dmgToB > 0f && objA.BodyCollisionDamage > 0f)
-                            {
-                                float dealtToB = agentB.ApplyDamage(dmgToB, objA.ID);
-                                agentB.TriggerHitFlash();
-                                DamageNumberManager.Notify(agentB.ID, agentB.Position, dealtToB, sourceId: objA.ID, isNewHit: isNewContact);
-                                agentB.DeathImpulse = (objA.Position - objA.PreviousPosition) / Core.DELTATIME;
-                            }
-                        }
-                        else if (agentA != null && agentB != null)
-                        {
-                            // Agent vs Agent: each deals their own BodyCollisionDamage to the other.
-                            float dmgToA = agentB.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
-                            float dmgToB = agentA.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
 
-                            if (dmgToA > 0f)
-                            {
-                                float dealtToA = agentA.ApplyDamage(dmgToA, agentB.ID);
-                                agentA.TriggerHitFlash();
-                                DamageNumberManager.Notify(agentA.ID, agentA.Position, dealtToA, sourceId: agentB.ID, isNewHit: isNewContact);
-                                agentA.DeathImpulse = (agentB.Position - agentB.PreviousPosition) / Core.DELTATIME;
-                            }
-                            if (dmgToB > 0f)
-                            {
-                                float dealtToB = agentB.ApplyDamage(dmgToB, agentA.ID);
-                                agentB.TriggerHitFlash();
-                                DamageNumberManager.Notify(agentB.ID, agentB.Position, dealtToB, sourceId: agentA.ID, isNewHit: isNewContact);
-                                agentB.DeathImpulse = (agentA.Position - agentA.PreviousPosition) / Core.DELTATIME;
-                            }
-                        }
-                        else if (agentA == null && agentB == null)
+                        for (int objectIndex = 0; objectIndex < cellObjects.Count; objectIndex++)
                         {
-                            // Non-agent vs non-agent (e.g. two farm objects): mutual collision damage.
-                            float dmgA = objA.BodyCollisionDamage * Core.DELTATIME;
-                            float dmgB = objB.BodyCollisionDamage * Core.DELTATIME;
-
-                            if (dmgA > 0f && objB.IsDestructible && objB.CurrentHealth > 0f)
+                            GameObject objB = cellObjects[objectIndex];
+                            if (objB == null || objB == objA || !objB.IsCollidable)
                             {
-                                float dealtToB = objB.ApplyDamage(dmgA, objA.ID);
-                                objB.TriggerHitFlash();
-                                DamageNumberManager.Notify(objB.ID, objB.Position, dealtToB, sourceId: objA.ID, isNewHit: isNewContact);
-                                objB.DeathImpulse = (objA.Position - objA.PreviousPosition) / Core.DELTATIME;
+                                continue;
                             }
-                            if (dmgB > 0f && objA.IsDestructible && objA.CurrentHealth > 0f)
+
+                            if (!objA.DynamicPhysics && !objB.DynamicPhysics)
                             {
-                                float dealtToA = objA.ApplyDamage(dmgB, objB.ID);
-                                objA.TriggerHitFlash();
-                                DamageNumberManager.Notify(objA.ID, objA.Position, dealtToA, sourceId: objB.ID, isNewHit: isNewContact);
-                                objA.DeathImpulse = (objB.Position - objB.PreviousPosition) / Core.DELTATIME;
+                                continue;
+                            }
+
+                            long pairKey = ContactKey(objA.ID, objB.ID);
+                            if (!_evaluatedPairKeys.Add(pairKey))
+                            {
+                                continue;
+                            }
+
+                            if (!BroadPhaseOverlaps(objA, objB))
+                            {
+                                continue;
+                            }
+
+                            BroadPhaseCandidatePairCount++;
+                            if (CollisionManager.TryGetCollision(objA, objB, out Vector2 mtv))
+                            {
+                                bool isNewContact = _currContacts.Add(pairKey) && !_prevContacts.Contains(pairKey);
+
+                                if (objA.DynamicPhysics || objB.DynamicPhysics)
+                                {
+                                    HandlePhysicsCollision(objA, objB, mtv, isNewContact);
+                                }
+
+                                ApplyCollisionDamage(objA, objB, isNewContact);
                             }
                         }
                     }
@@ -175,9 +146,283 @@ namespace op.io
             (_prevContacts, _currContacts) = (_currContacts, _prevContacts);
         }
 
+        public static void ResolveStartupOverlaps(List<GameObject> gameObjects, int maxIterations = 32)
+        {
+            StartupOverlapResolvedPairCount = 0;
+            StartupOverlapIterationCount = 0;
+
+            if (gameObjects == null || gameObjects.Count == 0 || maxIterations <= 0)
+            {
+                return;
+            }
+
+            for (int iteration = 0; iteration < maxIterations; iteration++)
+            {
+                bool separatedAnyPair = false;
+                BuildBroadPhase(gameObjects);
+
+                for (int i = 0; i < _dynamicColliders.Count; i++)
+                {
+                    GameObject objA = _dynamicColliders[i];
+                    if (!TryGetOccupiedCellRange(objA, out int minCellX, out int maxCellX, out int minCellY, out int maxCellY))
+                    {
+                        continue;
+                    }
+
+                    for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                    {
+                        for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+                        {
+                            long cellKey = ComposeCellKey(cellX, cellY);
+                            if (!_spatialHashCells.TryGetValue(cellKey, out List<GameObject> cellObjects))
+                            {
+                                continue;
+                            }
+
+                            for (int objectIndex = 0; objectIndex < cellObjects.Count; objectIndex++)
+                            {
+                                GameObject objB = cellObjects[objectIndex];
+                                if (objB == null || objB == objA || !objB.IsCollidable)
+                                {
+                                    continue;
+                                }
+
+                                long pairKey = ContactKey(objA.ID, objB.ID);
+                                if (!_evaluatedPairKeys.Add(pairKey))
+                                {
+                                    continue;
+                                }
+
+                                if (!BroadPhaseOverlaps(objA, objB))
+                                {
+                                    continue;
+                                }
+
+                                if (!CollisionManager.TryGetCollision(objA, objB, out Vector2 mtv))
+                                {
+                                    continue;
+                                }
+
+                                if (!SeparateOverlapWithoutImpulse(objA, objB, mtv))
+                                {
+                                    continue;
+                                }
+
+                                separatedAnyPair = true;
+                                StartupOverlapResolvedPairCount++;
+                            }
+                        }
+                    }
+                }
+
+                if (!separatedAnyPair)
+                {
+                    return;
+                }
+
+                StartupOverlapIterationCount = iteration + 1;
+            }
+
+            StartupOverlapIterationCount = maxIterations;
+        }
+
+        private static void BuildBroadPhase(List<GameObject> gameObjects)
+        {
+            _dynamicColliders.Clear();
+            _evaluatedPairKeys.Clear();
+            BroadPhaseActiveCollidableCount = 0;
+            BroadPhaseCandidatePairCount = 0;
+
+            for (int i = 0; i < _activeCellKeys.Count; i++)
+            {
+                long cellKey = _activeCellKeys[i];
+                if (!_spatialHashCells.TryGetValue(cellKey, out List<GameObject> cellObjects))
+                {
+                    continue;
+                }
+
+                cellObjects.Clear();
+                _spatialHashCells.Remove(cellKey);
+                _availableCellObjectLists.Push(cellObjects);
+            }
+
+            _activeCellKeys.Clear();
+
+            for (int i = 0; i < gameObjects.Count; i++)
+            {
+                GameObject gameObject = gameObjects[i];
+                if (gameObject == null || !gameObject.IsCollidable || gameObject.Shape == null)
+                {
+                    continue;
+                }
+
+                BroadPhaseActiveCollidableCount++;
+                if (gameObject.DynamicPhysics)
+                {
+                    _dynamicColliders.Add(gameObject);
+                }
+
+                if (!TryGetOccupiedCellRange(gameObject, out int minCellX, out int maxCellX, out int minCellY, out int maxCellY))
+                {
+                    continue;
+                }
+
+                for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+                {
+                    for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+                    {
+                        long cellKey = ComposeCellKey(cellX, cellY);
+                        if (!_spatialHashCells.TryGetValue(cellKey, out List<GameObject> cellObjects))
+                        {
+                            cellObjects = _availableCellObjectLists.Count > 0
+                                ? _availableCellObjectLists.Pop()
+                                : new List<GameObject>();
+                            _spatialHashCells[cellKey] = cellObjects;
+                            _activeCellKeys.Add(cellKey);
+                        }
+
+                        cellObjects.Add(gameObject);
+                    }
+                }
+            }
+        }
+
+        private static bool TryGetOccupiedCellRange(GameObject gameObject, out int minCellX, out int maxCellX, out int minCellY, out int maxCellY)
+        {
+            minCellX = 0;
+            maxCellX = 0;
+            minCellY = 0;
+            maxCellY = 0;
+
+            if (gameObject == null)
+            {
+                return false;
+            }
+
+            SanitizeDynamicPhysicsState(gameObject);
+            if (!IsFiniteVector(gameObject.Position))
+            {
+                return false;
+            }
+
+            float radius = MathF.Max(gameObject?.BoundingRadius ?? 0f, 2f);
+            if (!float.IsFinite(radius))
+            {
+                return false;
+            }
+
+            minCellX = (int)MathF.Floor((gameObject.Position.X - radius) / BroadPhaseCellSizeWorldUnits);
+            maxCellX = (int)MathF.Floor((gameObject.Position.X + radius) / BroadPhaseCellSizeWorldUnits);
+            minCellY = (int)MathF.Floor((gameObject.Position.Y - radius) / BroadPhaseCellSizeWorldUnits);
+            maxCellY = (int)MathF.Floor((gameObject.Position.Y + radius) / BroadPhaseCellSizeWorldUnits);
+            return true;
+        }
+
+        private static long ComposeCellKey(int cellX, int cellY)
+        {
+            return ((long)cellX << 32) | (uint)cellY;
+        }
+
+        private static bool BroadPhaseOverlaps(GameObject objA, GameObject objB)
+        {
+            float radiusA = MathF.Max(objA.BoundingRadius, 2f);
+            float radiusB = MathF.Max(objB.BoundingRadius, 2f);
+            float combinedRadius = radiusA + radiusB;
+            return Vector2.DistanceSquared(objA.Position, objB.Position) <= combinedRadius * combinedRadius;
+        }
+
+        private static void ApplyCollisionDamage(GameObject objA, GameObject objB, bool isNewContact)
+        {
+            Agent agentA = objA as Agent;
+            Agent agentB = objB as Agent;
+
+            if (agentA != null && !(objB is Agent))
+            {
+                float dmgToB = agentA.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
+                if (objB.IsDestructible && objB.CurrentHealth > 0f)
+                {
+                    float dealtToB = objB.ApplyDamage(dmgToB, agentA.ID);
+                    objB.TriggerHitFlash();
+                    DamageNumberManager.Notify(objB.ID, objB.Position, dealtToB, sourceId: agentA.ID, isNewHit: isNewContact);
+                    objB.DeathImpulse = (agentA.Position - agentA.PreviousPosition) / Core.DELTATIME;
+                }
+
+                float dmgToA = objB.BodyCollisionDamage * Core.DELTATIME;
+                if (dmgToA > 0f && objB.BodyCollisionDamage > 0f)
+                {
+                    float dealtToA = agentA.ApplyDamage(dmgToA, objB.ID);
+                    agentA.TriggerHitFlash();
+                    DamageNumberManager.Notify(agentA.ID, agentA.Position, dealtToA, sourceId: objB.ID, isNewHit: isNewContact);
+                    agentA.DeathImpulse = (objB.Position - objB.PreviousPosition) / Core.DELTATIME;
+                }
+            }
+            else if (agentB != null && !(objA is Agent))
+            {
+                float dmgToA = agentB.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
+                if (objA.IsDestructible && objA.CurrentHealth > 0f)
+                {
+                    float dealtToA = objA.ApplyDamage(dmgToA, agentB.ID);
+                    objA.TriggerHitFlash();
+                    DamageNumberManager.Notify(objA.ID, objA.Position, dealtToA, sourceId: agentB.ID, isNewHit: isNewContact);
+                    objA.DeathImpulse = (agentB.Position - agentB.PreviousPosition) / Core.DELTATIME;
+                }
+
+                float dmgToB = objA.BodyCollisionDamage * Core.DELTATIME;
+                if (dmgToB > 0f && objA.BodyCollisionDamage > 0f)
+                {
+                    float dealtToB = agentB.ApplyDamage(dmgToB, objA.ID);
+                    agentB.TriggerHitFlash();
+                    DamageNumberManager.Notify(agentB.ID, agentB.Position, dealtToB, sourceId: objA.ID, isNewHit: isNewContact);
+                    agentB.DeathImpulse = (objA.Position - objA.PreviousPosition) / Core.DELTATIME;
+                }
+            }
+            else if (agentA != null && agentB != null)
+            {
+                float dmgToA = agentB.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
+                float dmgToB = agentA.BodyAttributes.BodyCollisionDamage * Core.DELTATIME;
+
+                if (dmgToA > 0f)
+                {
+                    float dealtToA = agentA.ApplyDamage(dmgToA, agentB.ID);
+                    agentA.TriggerHitFlash();
+                    DamageNumberManager.Notify(agentA.ID, agentA.Position, dealtToA, sourceId: agentB.ID, isNewHit: isNewContact);
+                    agentA.DeathImpulse = (agentB.Position - agentB.PreviousPosition) / Core.DELTATIME;
+                }
+
+                if (dmgToB > 0f)
+                {
+                    float dealtToB = agentB.ApplyDamage(dmgToB, agentA.ID);
+                    agentB.TriggerHitFlash();
+                    DamageNumberManager.Notify(agentB.ID, agentB.Position, dealtToB, sourceId: agentA.ID, isNewHit: isNewContact);
+                    agentB.DeathImpulse = (agentA.Position - agentA.PreviousPosition) / Core.DELTATIME;
+                }
+            }
+            else if (agentA == null && agentB == null)
+            {
+                float dmgA = objA.BodyCollisionDamage * Core.DELTATIME;
+                float dmgB = objB.BodyCollisionDamage * Core.DELTATIME;
+
+                if (dmgA > 0f && objB.IsDestructible && objB.CurrentHealth > 0f)
+                {
+                    float dealtToB = objB.ApplyDamage(dmgA, objA.ID);
+                    objB.TriggerHitFlash();
+                    DamageNumberManager.Notify(objB.ID, objB.Position, dealtToB, sourceId: objA.ID, isNewHit: isNewContact);
+                    objB.DeathImpulse = (objA.Position - objA.PreviousPosition) / Core.DELTATIME;
+                }
+
+                if (dmgB > 0f && objA.IsDestructible && objA.CurrentHealth > 0f)
+                {
+                    float dealtToA = objA.ApplyDamage(dmgB, objB.ID);
+                    objA.TriggerHitFlash();
+                    DamageNumberManager.Notify(objA.ID, objA.Position, dealtToA, sourceId: objB.ID, isNewHit: isNewContact);
+                    objA.DeathImpulse = (objB.Position - objB.PreviousPosition) / Core.DELTATIME;
+                }
+            }
+        }
+
         private static void HandlePhysicsCollision(GameObject objA, GameObject objB, Vector2 minimumTranslationVector, bool isNewContact)
         {
-            if (minimumTranslationVector == Vector2.Zero)
+            if (!TryResolveCollisionVector(minimumTranslationVector, out Vector2 n, out float overlap))
                 return;
 
             bool aStatic = !objA.DynamicPhysics;
@@ -185,22 +430,29 @@ namespace op.io
 
             float mA = aStatic ? float.PositiveInfinity : Math.Max(objA.Mass, 0.0001f);
             float mB = bStatic ? float.PositiveInfinity : Math.Max(objB.Mass, 0.0001f);
-
-            // Collision normal: points from A toward B.
-            // Position correction pushes A in -n and B in +n to separate them.
-            Vector2 n = Vector2.Normalize(minimumTranslationVector);
+            Vector2 preResolveVelocityA = ComputeFrameVelocity(objA, aStatic);
+            Vector2 preResolveVelocityB = ComputeFrameVelocity(objB, bStatic);
+            Vector2 separationVector = n * overlap;
 
             // === Position separation ===
             if (!aStatic && !bStatic)
             {
                 float totalMass = mA + mB;
-                objA.Position -= minimumTranslationVector * (mB / totalMass);
-                objB.Position += minimumTranslationVector * (mA / totalMass);
+                objA.Position -= separationVector * (mB / totalMass);
+                objB.Position += separationVector * (mA / totalMass);
+                RemoveInwardAgentMovementVelocity(objA, -n);
+                RemoveInwardAgentMovementVelocity(objB, n);
             }
             else if (aStatic)
-                objB.Position += minimumTranslationVector;
+            {
+                objB.Position += separationVector;
+                RemoveInwardAgentMovementVelocity(objB, n);
+            }
             else if (bStatic)
-                objA.Position -= minimumTranslationVector;
+            {
+                objA.Position -= separationVector;
+                RemoveInwardAgentMovementVelocity(objA, -n);
+            }
             else
             {
                 DebugLogger.PrintWarning($"Two static object collision: ID={objA.ID} and ID={objB.ID}");
@@ -211,48 +463,184 @@ namespace op.io
             float invMassB   = bStatic ? 0f : 1f / mB;
             float invMassSum = invMassA + invMassB;
             if (invMassSum < 1e-6f) return;
-
-            float scale = KnockbackMassScale;
-            float kA    = mA * scale;
-            float kB    = mB * scale;
+            bool suppressImpulse = objA.SuppressCollisionImpulse || objB.SuppressCollisionImpulse;
 
             // === Velocity impulse (applied once per contact to prevent runaway accumulation) ===
             // On sustained contact, position correction keeps objects apart each frame;
             // the velocity impulse fires only on the first frame of contact so objects
             // receive a clean "push" rather than accelerating every frame.
-            if (isNewContact)
+            if (isNewContact && !suppressImpulse)
             {
-                // Total frame velocity from position delta: captures agent input movement
-                // plus any prior-frame PhysicsVelocity, giving true approach speed.
-                // PreviousPosition was snapshotted in GameUpdater before all movement this frame.
-                Vector2 vA = aStatic ? Vector2.Zero
-                                     : (objA.Position - objA.PreviousPosition) / Core.DELTATIME;
-                Vector2 vB = bStatic ? Vector2.Zero
-                                     : (objB.Position - objB.PreviousPosition) / Core.DELTATIME;
+                // Use the pre-depenetration frame velocities. Spawn overlaps and resting
+                // contacts should not manufacture approach speed from the resolver's own
+                // position correction.
+                Vector2 vA = preResolveVelocityA;
+                Vector2 vB = preResolveVelocityB;
 
                 // Relative approach velocity along the collision normal (positive = A approaching B).
                 float vRelN = Vector2.Dot(vA - vB, n);
 
-                // e is effectively always 1 for any normal mass — collisions are fully elastic.
-                float e = Math.Min((kA + kB) * 0.5f, 1f);
+                // CollisionBounceMomentumTransfer is a momentum fraction, not elastic restitution.
+                float momentumTransfer = CollisionBounceMomentumTransfer;
 
                 // Standard velocity-based impulse — only applies when objects are approaching.
                 if (vRelN > 0f)
                 {
-                    float j = (1f + e) * vRelN / invMassSum;
+                    float j = momentumTransfer * vRelN / invMassSum;
                     if (!aStatic) objA.PhysicsVelocity -= j * invMassA * n;
                     if (!bStatic) objB.PhysicsVelocity += j * invMassB * n;
                 }
             }
 
-            // === Knockback impulse (applied every contact frame) ===
-            // Fires on every frame of sustained contact so knockback accumulates
-            // throughout the collision rather than only on the first contact frame.
-            // Exclude static objects from kEff: their mass is PositiveInfinity and would
-            // produce NaN/Infinity velocity, corrupting positions and killing the player.
-            float kEff = (aStatic ? 0f : kA) + (bStatic ? 0f : kB);
-            if (!aStatic && kEff > 0f) objA.PhysicsVelocity -= kEff * invMassA * n;
-            if (!bStatic && kEff > 0f) objB.PhysicsVelocity += kEff * invMassB * n;
+            // Resting/startup overlaps should only depenetrate. Continuous contact knockback
+            // creates energy from a static overlap and can cascade into invalid launch-state
+            // physics when several non-destructible colliders spawn intersecting.
+            SanitizeDynamicPhysicsState(objA);
+            SanitizeDynamicPhysicsState(objB);
+        }
+
+        private static void RemoveInwardAgentMovementVelocity(GameObject gameObject, Vector2 escapeDirection)
+        {
+            if (gameObject is not Agent agent ||
+                !gameObject.DynamicPhysics ||
+                !IsFiniteVector(escapeDirection) ||
+                !IsFiniteVector(agent.MovementVelocity))
+            {
+                return;
+            }
+
+            float escapeLengthSquared = escapeDirection.LengthSquared();
+            if (!float.IsFinite(escapeLengthSquared) || escapeLengthSquared <= MinCollisionVectorLengthSq)
+            {
+                return;
+            }
+
+            Vector2 escapeNormal = escapeDirection / MathF.Sqrt(escapeLengthSquared);
+            float outwardSpeed = Vector2.Dot(agent.MovementVelocity, escapeNormal);
+            if (outwardSpeed < 0f)
+            {
+                agent.MovementVelocity -= escapeNormal * outwardSpeed;
+                if (!IsFiniteVector(agent.MovementVelocity) || agent.MovementVelocity.LengthSquared() < 1f)
+                {
+                    agent.MovementVelocity = Vector2.Zero;
+                }
+            }
+        }
+
+        private static bool SeparateOverlapWithoutImpulse(GameObject objA, GameObject objB, Vector2 minimumTranslationVector)
+        {
+            if (!TryResolveCollisionVector(minimumTranslationVector, out Vector2 n, out float overlap))
+            {
+                return false;
+            }
+
+            bool aStatic = objA == null || !objA.DynamicPhysics;
+            bool bStatic = objB == null || !objB.DynamicPhysics;
+            if (aStatic && bStatic)
+            {
+                return false;
+            }
+
+            float mA = aStatic ? float.PositiveInfinity : Math.Max(objA.Mass, 0.0001f);
+            float mB = bStatic ? float.PositiveInfinity : Math.Max(objB.Mass, 0.0001f);
+            Vector2 separationVector = n * overlap;
+
+            if (!aStatic && !bStatic)
+            {
+                float totalMass = mA + mB;
+                objA.Position -= separationVector * (mB / totalMass);
+                objB.Position += separationVector * (mA / totalMass);
+            }
+            else if (aStatic)
+            {
+                objB.Position += separationVector;
+            }
+            else
+            {
+                objA.Position -= separationVector;
+            }
+
+            SanitizePostStartupOverlapState(objA);
+            SanitizePostStartupOverlapState(objB);
+            return true;
+        }
+
+        private static Vector2 ComputeFrameVelocity(GameObject gameObject, bool isStatic)
+        {
+            if (isStatic || gameObject == null || Core.DELTATIME <= 0f)
+            {
+                return Vector2.Zero;
+            }
+
+            Vector2 frameVelocity = (gameObject.Position - gameObject.PreviousPosition) / Core.DELTATIME;
+            return IsFiniteVector(frameVelocity) ? frameVelocity : Vector2.Zero;
+        }
+
+        private static bool TryResolveCollisionVector(Vector2 collisionVector, out Vector2 normal, out float overlap)
+        {
+            normal = Vector2.Zero;
+            overlap = 0f;
+
+            if (!IsFiniteVector(collisionVector))
+            {
+                return false;
+            }
+
+            float lengthSquared = collisionVector.LengthSquared();
+            if (!float.IsFinite(lengthSquared) || lengthSquared <= MinCollisionVectorLengthSq)
+            {
+                return false;
+            }
+
+            overlap = MathF.Sqrt(lengthSquared);
+            normal = collisionVector / overlap;
+            return IsFiniteVector(normal);
+        }
+
+        private static void SanitizeDynamicPhysicsState(GameObject gameObject)
+        {
+            if (gameObject == null || !gameObject.DynamicPhysics)
+            {
+                return;
+            }
+
+            if (!IsFiniteVector(gameObject.Position))
+            {
+                gameObject.Position = IsFiniteVector(gameObject.PreviousPosition)
+                    ? gameObject.PreviousPosition
+                    : Vector2.Zero;
+            }
+
+            if (!IsFiniteVector(gameObject.PreviousPosition))
+            {
+                gameObject.PreviousPosition = gameObject.Position;
+            }
+
+            if (!IsFiniteVector(gameObject.PhysicsVelocity))
+            {
+                gameObject.PhysicsVelocity = Vector2.Zero;
+            }
+        }
+
+        private static void SanitizePostStartupOverlapState(GameObject gameObject)
+        {
+            SanitizeDynamicPhysicsState(gameObject);
+            if (gameObject == null || !gameObject.DynamicPhysics)
+            {
+                return;
+            }
+
+            gameObject.PreviousPosition = gameObject.Position;
+            gameObject.PhysicsVelocity = Vector2.Zero;
+            if (gameObject is Agent agent)
+            {
+                agent.MovementVelocity = Vector2.Zero;
+            }
+        }
+
+        private static bool IsFiniteVector(Vector2 value)
+        {
+            return float.IsFinite(value.X) && float.IsFinite(value.Y);
         }
     }
 }

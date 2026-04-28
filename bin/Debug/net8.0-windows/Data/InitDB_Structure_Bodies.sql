@@ -32,7 +32,17 @@ CREATE TABLE IF NOT EXISTS BodyPrototypes (
     -- Vision group
     Sight                     REAL    DEFAULT 0,
     -- Action buff
-    BodyActionBuff            REAL    DEFAULT 0
+    BodyActionBuff            REAL    DEFAULT 0,
+    -- Optional body-specific appearance (-1 = fall back to the agent base visuals)
+    FillR                     INTEGER DEFAULT -1,
+    FillG                     INTEGER DEFAULT -1,
+    FillB                     INTEGER DEFAULT -1,
+    FillA                     INTEGER DEFAULT -1,
+    OutlineR                  INTEGER DEFAULT -1,
+    OutlineG                  INTEGER DEFAULT -1,
+    OutlineB                  INTEGER DEFAULT -1,
+    OutlineA                  INTEGER DEFAULT -1,
+    OutlineWidth              INTEGER DEFAULT -1
 );
 
 -- ================================

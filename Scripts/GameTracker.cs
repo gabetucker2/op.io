@@ -39,9 +39,15 @@ namespace op.io
         public static bool WindowGameplayFocus  => InputManager.HasWindowGameplayFocus;
         public static bool WindowChromeLeftClickSuppressed => InputTypeManager.WindowChromeLeftClickSuppressed;
         public static float DoubleTapSuppressionSeconds => InputTypeManager.DoubleTapSuppressionSeconds;
+        public static bool LogSessionActive => LogFileHandler.IsSessionActive;
+        public static string LogDirectory => LogFileHandler.LogsDirectoryPath;
+        public static string LogFile => LogFileHandler.CurrentLogFileName;
+        public static string RedFlagsFile => LogFileHandler.CurrentRedFlagsFileName;
+        public static int MaxLogFiles => LogFileHandler.MaxLogFiles;
         public static string AmbienceFogOfWarColor => AmbienceSettings.FogOfWarHex;
         public static string AmbienceOceanWaterColor => AmbienceSettings.OceanWaterHex;
         public static string AmbienceBackgroundWavesColor => AmbienceSettings.BackgroundWavesHex;
+        public static string AmbienceTerrainColor => AmbienceSettings.TerrainHex;
         public static string AmbienceWorldTintColor => AmbienceSettings.WorldTintHex;
         public static bool GameBlockOceanShaderReady => GameBlockOceanBackground.ShaderReady;
         public static bool GameBlockOceanUsingShaderPath => GameBlockOceanBackground.UsingShaderPath;
@@ -68,6 +74,47 @@ namespace op.io
         public static float GameBlockOceanLastResolvedRenderScale => GameBlockOceanBackground.LastResolvedRenderScale;
         public static float GameBlockOceanLastCameraZoom => GameBlockOceanBackground.LastCameraZoom;
         public static string GameBlockOceanRenderTextureResolution => GameBlockOceanBackground.RenderTextureResolution;
+        public static int TerrainWorldSeed => GameBlockTerrainBackground.TerrainWorldSeed;
+        public static int TerrainResidentChunkCount => GameBlockTerrainBackground.TerrainResidentChunkCount;
+        public static int TerrainResidentComponentCount => GameBlockTerrainBackground.TerrainResidentComponentCount;
+        public static int TerrainResidentEdgeLoopCount => GameBlockTerrainBackground.TerrainResidentEdgeLoopCount;
+        public static int TerrainResidentColliderCount => GameBlockTerrainBackground.TerrainResidentColliderCount;
+        public static int TerrainResidentVisualTriangleCount => GameBlockTerrainBackground.TerrainResidentVisualTriangleCount;
+        public static int TerrainActiveColliderCount => GameBlockTerrainBackground.TerrainActiveColliderCount;
+        public static int TerrainColliderActivationCandidateCount => GameBlockTerrainBackground.TerrainColliderActivationCandidateCount;
+        public static int TerrainSpawnRelocationCount => GameBlockTerrainBackground.TerrainSpawnRelocationCount;
+        public static int TerrainCollisionIntrusionCorrectionCount => GameBlockTerrainBackground.TerrainCollisionIntrusionCorrectionCount;
+        public static int TerrainPendingChunkCount => GameBlockTerrainBackground.TerrainPendingChunkCount;
+        public static int TerrainPendingCriticalChunkCount => GameBlockTerrainBackground.TerrainPendingCriticalChunkCount;
+        public static int TerrainDiscardedStaleMaterializationCount => GameBlockTerrainBackground.TerrainDiscardedStaleMaterializationCount;
+        public static bool TerrainChunkBuildsInFlight => GameBlockTerrainBackground.TerrainChunkBuildsInFlight;
+        public static bool TerrainMaterializationInFlight => GameBlockTerrainBackground.TerrainMaterializationInFlight;
+        public static bool TerrainMaterializationRestartPending => GameBlockTerrainBackground.TerrainMaterializationRestartPending;
+        public static double TerrainLastMaterializationMilliseconds => GameBlockTerrainBackground.TerrainLastMaterializationMilliseconds;
+        public static bool TerrainStartupVisibleTerrainReady => GameBlockTerrainBackground.TerrainStartupVisibleTerrainReady;
+        public static string TerrainStartupReadinessSummary => GameBlockTerrainBackground.TerrainStartupReadinessSummary;
+        public static float TerrainChunkWorldSize => GameBlockTerrainBackground.TerrainChunkWorldSize;
+        public static float TerrainFeatureWorldScaleMultiplier => GameBlockTerrainBackground.TerrainFeatureWorldScaleMultiplier;
+        public static float TerrainArchipelagoMacroCellSize => GameBlockTerrainBackground.TerrainArchipelagoMacroCellSize;
+        public static float TerrainArchipelagoSubstrateCellSize => GameBlockTerrainBackground.TerrainArchipelagoSubstrateCellSize;
+        public static float TerrainArchipelagoEnclosureCellSize => GameBlockTerrainBackground.TerrainArchipelagoEnclosureCellSize;
+        public static float TerrainArchipelagoLandformCellSize => GameBlockTerrainBackground.TerrainArchipelagoLandformCellSize;
+        public static string TerrainGenerationPipeline => GameBlockTerrainBackground.TerrainGenerationPipeline;
+        public static string TerrainLandformSelectionMode => GameBlockTerrainBackground.TerrainLandformSelectionMode;
+        public static string TerrainLagoonOpeningTarget => GameBlockTerrainBackground.TerrainLagoonOpeningTarget;
+        public static float TerrainLagoonBasinCutStrength => GameBlockTerrainBackground.TerrainLagoonBasinCutStrength;
+        public static float TerrainRegionalTidalChannelCutStrength => GameBlockTerrainBackground.TerrainRegionalTidalChannelCutStrength;
+        public static int TerrainContourResolutionMultiplier => GameBlockTerrainBackground.TerrainContourResolutionMultiplierSetting;
+        public static int TerrainTargetVisualTextureOversample => GameBlockTerrainBackground.TerrainTargetVisualTextureOversample;
+        public static float TerrainOctogonalCornerCutCellRatio => GameBlockTerrainBackground.TerrainOctogonalCornerCutCellRatio;
+        public static float TerrainPreloadMarginWorldUnits => GameBlockTerrainBackground.TerrainPreloadMarginWorldUnits;
+        public static string TerrainWorldBounds => GameBlockTerrainBackground.TerrainWorldBoundsSummary;
+        public static string TerrainSeedAnchor => GameBlockTerrainBackground.TerrainSeedAnchor;
+        public static string TerrainStreamingFocus => GameBlockTerrainBackground.TerrainStreamingFocus;
+        public static string TerrainStreamingLandformSignature => GameBlockTerrainBackground.TerrainStreamingLandformSignature;
+        public static string TerrainCenterChunk => GameBlockTerrainBackground.TerrainCenterChunk;
+        public static string TerrainVisibleChunkWindow => GameBlockTerrainBackground.TerrainVisibleChunkWindow;
+        public static string TerrainColliderChunkWindow => GameBlockTerrainBackground.TerrainColliderChunkWindow;
 
         /// <summary>
         /// Shows the DockBlockCategory (Standard / Overlay / Dynamic) of the
@@ -92,6 +139,8 @@ namespace op.io
         public static float BulletDynamicKnockbackScalar => BulletManager.BulletDynamicKnockbackScalar;
         public static float BulletFarmKnockbackScalar   => BulletManager.BulletFarmKnockbackScalar;
         public static float OwnerImmunityDuration       => BulletManager.OwnerImmunityDuration;
+        public static int WorldRenderRegisteredObjectCount => ShapeManager.RegisteredWorldObjectCount;
+        public static int WorldRenderDrawnObjectCount => ShapeManager.DrawnWorldObjectCount;
         // XP clump runtime telemetry
         public static int   XPClumpCount                => XPClumpManager.ActiveClumpCount;
         public static int   XPUnstableClumpCount        => XPClumpManager.ActiveUnstableClumpCount;
@@ -117,6 +166,11 @@ namespace op.io
         public static float DefaultBulletPenHP      => BulletManager.DefaultBulletHealth;
         // Physics (DB-driven)
         public static float PhysicsFrictionRate     => PhysicsManager.FrictionRate;
+        public static float CollisionBounceMomentumTransfer => CollisionResolver.CollisionBounceMomentumTransfer;
+        public static int PhysicsBroadPhaseActiveCollidableCount => CollisionResolver.BroadPhaseActiveCollidableCount;
+        public static int PhysicsBroadPhaseCandidatePairCount => CollisionResolver.BroadPhaseCandidatePairCount;
+        public static int PhysicsStartupOverlapResolvedPairCount => CollisionResolver.StartupOverlapResolvedPairCount;
+        public static int PhysicsStartupOverlapIterationCount => CollisionResolver.StartupOverlapIterationCount;
         // Code-defined constants
         public static string AngularAccelFactor     => "4";
         public static string BarrelSwitchSpeed      => "15 /s";
@@ -124,6 +178,19 @@ namespace op.io
         public static string ActiveBodyName        => Core.Instance?.Player is Agent p && p.BodyCount > 0
             ? (p.Bodies[p.ActiveBodyIndex].Name ?? $"Body {p.ActiveBodyIndex + 1}")
             : "None";
+        public static bool   PlayerDeadOrDying     => Core.Instance?.Player?.IsDeadOrDying ?? false;
+        public static bool   PlayerGameplayInputSuppressed => InputManager.IsPlayerGameplayInputSuppressed;
+        public static bool   BodyTransitionAnimating => Core.Instance?.Player?.BodyTransitionAnimating ?? false;
+        public static float  BodyTransitionProgress => Core.Instance?.Player?.BodyTransitionProgress ?? 0f;
+        public static float  BodyTransitionCooldownRemaining => Core.Instance?.Player?.BodyTransitionCooldownRemaining ?? 0f;
+        public static float  BodyTransitionDurationSeconds => Agent.BodyTransitionDurationSeconds;
+        public static float  BodyTransitionBufferSeconds => Agent.BodyTransitionBufferSeconds;
+        public static bool   YourBarRevealActive => HealthBarManager.YourBarRevealActive;
+        public static bool   YourBarControlSwitchMode => HealthBarManager.YourBarControlSwitchMode;
+        public static float  YourBarRevealRemainingSeconds => HealthBarManager.YourBarRevealRemainingSeconds;
+        public static float  YourBarRevealSeconds => HealthBarManager.YourBarRevealSeconds;
+        public static bool   YourBarVisible => HealthBarManager.YourBarVisible;
+        public static float  YourBarVisibilityAlpha => HealthBarManager.YourBarVisibilityAlpha;
         public static float  PlayerSightRadius     => FogOfWarManager.PlayerSightRadius;
         public static bool   FogOfWarEnabled       => FogOfWarManager.IsFogEnabled;
         public static bool   FogOfWarActive        => FogOfWarManager.IsFogActive;
@@ -233,6 +300,11 @@ namespace op.io
                 return "Ambience";
             }
 
+            if (variableName.StartsWith("Terrain", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Terrain";
+            }
+
             if (variableName.StartsWith("XP", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("PendingFarm", StringComparison.OrdinalIgnoreCase))
             {
@@ -248,9 +320,22 @@ namespace op.io
                 return "Combat";
             }
 
-            if (variableName.StartsWith("Physics", StringComparison.OrdinalIgnoreCase))
+            if (variableName.StartsWith("Physics", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Collision", StringComparison.OrdinalIgnoreCase))
             {
                 return "Physics";
+            }
+
+            if (variableName.StartsWith("WorldRender", StringComparison.OrdinalIgnoreCase))
+            {
+                return "UI";
+            }
+
+            if (variableName.StartsWith("Log", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("RedFlags", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("MaxLog", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Debug";
             }
 
             if (variableName.StartsWith("Window", StringComparison.OrdinalIgnoreCase) ||
@@ -268,6 +353,8 @@ namespace op.io
             }
 
             if (variableName.StartsWith("ActiveBody", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("BodyTransition", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("YourBar", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("Centifoot", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("DistanceUnit", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("Angular", StringComparison.OrdinalIgnoreCase) ||
@@ -289,6 +376,8 @@ namespace op.io
             return variableName switch
             {
                 nameof(PlayerSightRadius) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainChunkWorldSize) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainPreloadMarginWorldUnits) => CentifootUnits.FormatDistance(numericValue),
                 nameof(XPClumpDeadZoneRadius) => CentifootUnits.FormatDistance(numericValue),
                 nameof(XPClumpPullZoneRadius) => CentifootUnits.FormatDistance(numericValue),
                 nameof(XPClumpAbsorbZoneRadius) => CentifootUnits.FormatDistance(numericValue),

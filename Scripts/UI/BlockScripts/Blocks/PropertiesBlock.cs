@@ -109,7 +109,7 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Action Buff"]           = "Buff multiplier applied to action-based abilities",
             // Hidden Body Attributes (Agent)
             ["Max Health"]            = "Maximum health capacity of this unit",
-            ["Body Knockback"]        = "Force applied to other objects on collision",
+            ["Body Knockback"]        = "Momentum budget converted into bounce impulse during body collisions",
             ["Rotation Speed"]        = "Maximum rotation rate in degrees per second",
             ["Accel. Speed"]          = "Acceleration force applied per second",
             // Barrel Attributes (non-hidden)
@@ -149,6 +149,33 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Outline"]               = "Outline color of this object or barrel",
             // Flags (GameObject)
             ["Flags"]                 = "Tags describing this object's role and physics behavior",
+            // Terrain
+            ["Hover Position"]        = "World-space point currently being sampled for the shared terrain inspection target",
+            ["Region"]                = "Whether the sampled terrain point is land, water, or the finite map boundary",
+            ["Field Value"]           = "Procedural scalar field value at the sampled point; values above sea level become terrain",
+            ["Terrain Color"]         = "Current terrain fill color from the Ambience block",
+            ["World Bounds"]          = "Finite playable square; outside this square is treated as terrain boundary",
+            ["Seed"]                  = "World seed used to regenerate deterministic terrain chunks without saving chunk payloads",
+            ["Seed Anchor"]           = "Seed-derived offset used so spawn starts near useful coastline",
+            ["Chunk Size"]            = "World-space dimensions of each deterministic terrain chunk",
+            ["Feature Scale"]         = "Scale multiplier applied to generated terrain landforms",
+            ["Octogonal Cut"]         = "Corner cut size used when extracting geometric terrain contours",
+            ["Center Chunk"]          = "Terrain chunk currently centered under the camera",
+            ["Visible Chunks"]        = "Chunk-coordinate window intersecting the current camera view",
+            ["Collider Chunks"]       = "Chunk-coordinate window currently materialized for collision proxies",
+            ["Resident Chunks"]       = "Loaded terrain chunks currently cached in memory",
+            ["Terrain Components"]    = "Contiguous terrain landmass components currently resident",
+            ["Edge Loops"]            = "Resident vector contour loops used for terrain visuals and inspection",
+            ["Vector Triangles"]      = "Resident triangle count used for vector terrain rendering",
+            ["Resident Colliders"]    = "Static terrain collider proxy count currently resident",
+            ["Active Colliders"]      = "Terrain collider proxies currently active near dynamic objects",
+            ["Collider Candidates"]   = "Terrain collider proxies considered for activation this frame",
+            ["Pending Chunks"]        = "Terrain chunks queued or building in the background",
+            ["Chunk Builds In Flight"] = "Whether deterministic chunk generation tasks are currently running",
+            ["Materializing"]         = "Whether resident terrain visual/collider materialization is currently running",
+            ["Restart Pending"]       = "Whether terrain materialization needs to restart after the current task completes",
+            ["Last Build Time"]       = "Most recent terrain materialization duration",
+            ["Preload Margin"]        = "World-space margin loaded ahead of the visible camera area",
             // Farm Attributes
             ["FloatAmplitude"]        = "Amplitude of the sine-wave float animation",
             ["FloatSpeed"]            = "Direction-reversal frequency in cycles per second",
@@ -180,7 +207,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             ["Radius"]                 = "= √mass × BodyRadiusScalar",
             ["Max Health"]             = "= mass × 33.33",
-            ["Body Knockback"]         = "= mass × KnockbackMassScale",
+            ["Body Knockback"]         = "= mass x CollisionBounceMomentumTransfer",
             ["Rotation Speed"]         = "= BaseRotDelay / control",
             ["Accel. Speed"]           = "= BaseAccelDelay / control",
             ["Bullet Knockback"]       = "= bulletPenetration × BulletKnockbackScalar",
@@ -195,6 +222,20 @@ namespace op.io.UI.BlockScripts.Blocks
             ["Bullet Dmg Resist"]      = "= bulletMass × 0",
             ["Barrel Width"]           = "= 2 × √bulletMass × BulletRadiusScalar",
             ["Barrel Height"]          = "= max(4, bulletSpeed × BarrelHeightScalar)",
+        };
+
+        private static readonly Dictionary<string, string> _flagDescriptions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Player"] = "This game object is the player-controlled agent.",
+            ["Prototype"] = "This object is a prototype/template used for spawning or saved build data.",
+            ["Dynamic"] = "Dynamic physics is enabled, so movement and collision impulses can move this object.",
+            ["Static"] = "Static physics body. The collision resolver treats it as immovable and pushes dynamic objects away.",
+            ["Collidable"] = "This object participates in broad-phase and SAT collision resolution.",
+            ["Non-collidable"] = "This object is ignored by physics collision resolution.",
+            ["Destructible"] = "This object has health-style state and can be damaged or killed.",
+            ["Indestructible"] = "This object is not removed by health damage.",
+            ["Interact"] = "This object can participate in interaction/trigger logic.",
+            ["ZoneBlock"] = "Area trigger for Dynamic Interact block content. ZoneBlocks imply Interact and are treated as static, non-collidable triggers."
         };
 
         /// <summary>
@@ -222,6 +263,11 @@ namespace op.io.UI.BlockScripts.Blocks
                         entries.Add((equation, string.Empty));
                     yield return ("props_attr:" + label, entries.ToArray());
                 }
+            }
+
+            foreach (var (label, desc) in _flagDescriptions)
+            {
+                yield return ("props_flag:" + label, [(desc, string.Empty)]);
             }
         }
 
@@ -536,6 +582,12 @@ namespace op.io.UI.BlockScripts.Blocks
             if (previewBounds == Rectangle.Empty || spriteBatch.GraphicsDevice == null)
                 return;
 
+            if (target.IsTerrain)
+            {
+                DrawTerrainPreview(spriteBatch, previewBounds, target);
+                return;
+            }
+
             DrawRect(spriteBatch, previewBounds, ColorPalette.BlockBackground * 0.9f);
 
             // Determine which bar rows are visible for this target
@@ -707,6 +759,46 @@ namespace op.io.UI.BlockScripts.Blocks
                     DrawPreviewBarRow(spriteBatch, barX, barY, barW, barH, rowEntries, target);
                     barY += barH + barG;
                 }
+            }
+
+            DrawRectOutline(spriteBatch, previewBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+        }
+
+        private static void DrawTerrainPreview(SpriteBatch spriteBatch, Rectangle previewBounds, InspectableObjectInfo target)
+        {
+            DrawRect(spriteBatch, previewBounds, ColorPalette.BlockBackground * 0.9f);
+
+            TerrainInspectionSnapshot terrain = target.Terrain;
+            int swatchPadding = Math.Max(10, previewBounds.Width / 10);
+            Rectangle swatchBounds = new(
+                previewBounds.X + swatchPadding,
+                previewBounds.Y + swatchPadding,
+                previewBounds.Width - (swatchPadding * 2),
+                Math.Max(32, previewBounds.Height / 2));
+
+            DrawRect(spriteBatch, swatchBounds, terrain.TerrainColor);
+            DrawRectOutline(spriteBatch, swatchBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
+
+            UIStyle.UIFont heading = UIStyle.FontHBody;
+            UIStyle.UIFont tech = UIStyle.FontTech;
+            if (heading.IsAvailable)
+            {
+                string label = "Shared Terrain";
+                Vector2 labelSize = heading.MeasureString(label);
+                Vector2 labelPosition = new(
+                    previewBounds.X + (previewBounds.Width - labelSize.X) / 2f,
+                    swatchBounds.Bottom + HeaderSpacing);
+                heading.DrawString(spriteBatch, label, labelPosition, UIStyle.TextColor);
+            }
+
+            if (tech.IsAvailable)
+            {
+                string detail = terrain.IsBoundary ? "Finite boundary" : "Procedural land";
+                Vector2 detailSize = tech.MeasureString(detail);
+                Vector2 detailPosition = new(
+                    previewBounds.X + (previewBounds.Width - detailSize.X) / 2f,
+                    previewBounds.Bottom - detailSize.Y - Padding);
+                tech.DrawString(spriteBatch, detail, detailPosition, UIStyle.MutedTextColor);
             }
 
             DrawRectOutline(spriteBatch, previewBounds, UIStyle.BlockBorder, UIStyle.BlockBorderThickness);
@@ -950,7 +1042,22 @@ namespace op.io.UI.BlockScripts.Blocks
                     if (IsRowVisible(y, rowH, clipBounds))
                     {
                         if (row.Kind == Properties.RowKind.BulletList)
-                            DrawBulletListRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Items);
+                        {
+                            int hoveredItemIndex = DrawBulletListRow(
+                                spriteBatch,
+                                tech,
+                                clipBounds.X + indent,
+                                y,
+                                row.Label,
+                                row.Items);
+                            if (hoveredItemIndex >= 0 &&
+                                hoveredItemIndex < row.ItemTooltipKeys.Length &&
+                                !string.IsNullOrWhiteSpace(row.ItemTooltipKeys[hoveredItemIndex]))
+                            {
+                                _hoveredPropRowKey = row.ItemTooltipKeys[hoveredItemIndex];
+                                _hoveredPropRowLabel = row.Items[hoveredItemIndex].Trim();
+                            }
+                        }
                         else if (row.Kind == Properties.RowKind.Color)
                             DrawColorRow(spriteBatch, tech, clipBounds.X + indent, y, row.Label, row.Color, row.Value);
                         else if (row.Kind == Properties.RowKind.BarGraph)
@@ -1091,21 +1198,37 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
-        private static void DrawBulletListRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y, string label, string[] items)
+        private static int DrawBulletListRow(SpriteBatch spriteBatch, UIStyle.UIFont font, float x, float y, string label, string[] items)
         {
             if (items == null || items.Length == 0)
-                return;
+                return -1;
 
             font.DrawString(spriteBatch, label, new Vector2(x, y), UIStyle.MutedTextColor);
 
             Vector2 labelSize = font.MeasureString(label);
             float bulletX = x + Math.Max(labelSize.X + Padding, 120f);
+            Point pointer = _lastMouseState.Position;
+            int hoveredIndex = -1;
 
             for (int i = 0; i < items.Length; i++)
             {
                 float lineY = y + i * (font.LineHeight + RowSpacing);
-                font.DrawString(spriteBatch, $"- {items[i]}", new Vector2(bulletX, lineY), UIStyle.TextColor);
+                string itemText = $"- {items[i]}";
+                font.DrawString(spriteBatch, itemText, new Vector2(bulletX, lineY), UIStyle.TextColor);
+
+                Vector2 itemSize = font.MeasureString(itemText);
+                Rectangle itemBounds = new(
+                    (int)bulletX,
+                    (int)lineY,
+                    Math.Max(1, (int)MathF.Ceiling(itemSize.X)),
+                    Math.Max(1, (int)MathF.Ceiling(font.LineHeight)));
+                if (itemBounds.Contains(pointer))
+                {
+                    hoveredIndex = i;
+                }
             }
+
+            return hoveredIndex;
         }
 
         private static bool IsRowVisible(float y, float height, Rectangle bounds)

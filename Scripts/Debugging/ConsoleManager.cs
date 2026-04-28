@@ -279,7 +279,9 @@ namespace op.io
 
                 try
                 {
-                    LogFileHandler.AppendLog($"[ConsoleError] {payload}");
+                    string message = $"[ConsoleError] {payload}";
+                    LogFileHandler.AppendLog(message);
+                    LogFileHandler.AppendRedFlagLog(message);
                 }
                 catch
                 {

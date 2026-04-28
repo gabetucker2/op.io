@@ -10,6 +10,7 @@ namespace op.io
         public const string FogOfWarRowKey = "AmbienceFogOfWarColor";
         public const string OceanWaterRowKey = "AmbienceOceanWaterColor";
         public const string BackgroundWavesRowKey = "AmbienceBackgroundWavesColor";
+        public const string TerrainRowKey = "AmbienceTerrainColor";
         public const string WorldTintRowKey = "AmbienceWorldTintColor";
 
         private const float WorldTintOffsetStrength = 0.25f;
@@ -18,11 +19,13 @@ namespace op.io
         private static Color _defaultFogOfWarColor;
         private static Color _defaultOceanWaterColor;
         private static Color _defaultBackgroundWavesColor;
+        private static readonly Color DefaultTerrainColor = new(0, 0, 0, 255);
         private static readonly Color DefaultWorldTintColor = new(128, 128, 128, 255);
 
         public static Color FogOfWarColor { get; private set; }
         public static Color OceanWaterColor { get; private set; }
         public static Color BackgroundWavesColor { get; private set; }
+        public static Color TerrainColor { get; private set; }
         public static Color WorldTintColor { get; private set; }
 
         public static string FogOfWarHex
@@ -52,6 +55,15 @@ namespace op.io
             }
         }
 
+        public static string TerrainHex
+        {
+            get
+            {
+                EnsureInitialized();
+                return ColorScheme.ToHex(TerrainColor);
+            }
+        }
+
         public static string WorldTintHex
         {
             get
@@ -77,6 +89,7 @@ namespace op.io
             FogOfWarColor = LoadColor(data, FogOfWarRowKey, _defaultFogOfWarColor, persistIfMissing: true);
             OceanWaterColor = LoadColor(data, OceanWaterRowKey, _defaultOceanWaterColor, persistIfMissing: true);
             BackgroundWavesColor = LoadColor(data, BackgroundWavesRowKey, _defaultBackgroundWavesColor, persistIfMissing: true);
+            TerrainColor = LoadColor(data, TerrainRowKey, DefaultTerrainColor, persistIfMissing: true);
             WorldTintColor = LoadColor(data, WorldTintRowKey, DefaultWorldTintColor, persistIfMissing: true);
 
             ApplyFogOfWarColor(FogOfWarColor);
@@ -115,6 +128,16 @@ namespace op.io
             if (persist)
             {
                 PersistColor(BackgroundWavesRowKey, BackgroundWavesColor);
+            }
+        }
+
+        public static void SetTerrainColor(Color color, bool persist)
+        {
+            EnsureInitialized();
+            TerrainColor = color;
+            if (persist)
+            {
+                PersistColor(TerrainRowKey, TerrainColor);
             }
         }
 

@@ -6,118 +6,207 @@ namespace op.io
 {
     public class Agent : GameObject
     {
-        // ── Body slot ───────────────────────────────────────────────────────────
-        // Holds one body's attributes and optional display name.
         public class BodySlot
         {
             public Attributes_Body Attrs;
-            /// <summary>Custom display name (null = use default "Body N").</summary>
             public string Name;
+            public Color FillColor;
+            public Color OutlineColor;
+            public int OutlineWidth;
 
-            public BodySlot(Attributes_Body attrs)
+            public BodySlot(Attributes_Body attrs, Color fillColor, Color outlineColor, int outlineWidth)
             {
                 Attrs = attrs;
+                FillColor = fillColor;
+                OutlineColor = outlineColor;
+                OutlineWidth = Math.Max(0, outlineWidth);
             }
         }
 
-        // ── Body list & switching ───────────────────────────────────────────────
         private readonly List<BodySlot> _bodies = new();
         public IReadOnlyList<BodySlot> Bodies => _bodies;
         public int BodyCount => _bodies.Count;
-        public int ActiveBodyIndex { get; private set; } = 0;
+        public int ActiveBodyIndex { get; private set; }
+        public bool BodyTransitionAnimating { get; private set; }
+        public float BodyTransitionProgress =>
+            BodyTransitionAnimating
+                ? MathHelper.Clamp(_bodyTransitionElapsedSeconds / MathF.Max(BodyTransitionDurationSeconds, 0.0001f), 0f, 1f)
+                : 1f;
+        public float BodyTransitionCooldownRemaining => MathF.Max(0f, _bodyTransitionCooldownRemaining);
 
-        /// <summary>
-        /// Attaches a new body to this agent. The first body added becomes the
-        /// active one and its attributes are applied immediately.
-        /// </summary>
-        public void AddBody(Attributes_Body attrs)
+        private int _bodyTransitionTargetIndex;
+        private float _bodyTransitionElapsedSeconds;
+        private float _bodyTransitionCooldownRemaining;
+        private Attributes_Body _bodyTransitionFromAttributes;
+        private Color _bodyTransitionFromFillColor;
+        private Color _bodyTransitionFromOutlineColor;
+        private int _bodyTransitionFromOutlineWidth;
+
+        private static float? _cachedBodyTransitionDurationSeconds;
+        private static float? _cachedBodyTransitionBufferSeconds;
+        public static float BodyTransitionDurationSeconds =>
+            _cachedBodyTransitionDurationSeconds ??= MathF.Max(0f, DatabaseFetch.GetSetting(
+                "FXSettings", "Value", "SettingKey", "BodyTransitionDurationSeconds", 0.3f));
+        public static float BodyTransitionBufferSeconds =>
+            _cachedBodyTransitionBufferSeconds ??= MathF.Max(0f, DatabaseFetch.GetSetting(
+                "FXSettings", "Value", "SettingKey", "BodyTransitionBufferSeconds", 0.5f));
+
+        public void AddBody(
+            Attributes_Body attrs,
+            Color? fillColor = null,
+            Color? outlineColor = null,
+            int? outlineWidth = null)
         {
-            _bodies.Add(new BodySlot(attrs));
+            Color resolvedFillColor = fillColor ?? FillColor;
+            Color resolvedOutlineColor = outlineColor ?? OutlineColor;
+            int resolvedOutlineWidth = outlineWidth ?? OutlineWidth;
+
+            _bodies.Add(new BodySlot(attrs, resolvedFillColor, resolvedOutlineColor, resolvedOutlineWidth));
             if (_bodies.Count == 1)
+            {
                 ApplyBodyAttributes(0);
+            }
         }
 
-        /// <summary>
-        /// Removes all body slots and resets the active index.
-        /// Call before re-applying a build from JSON deserialization.
-        /// </summary>
         public void ClearBodies()
         {
             _bodies.Clear();
             ActiveBodyIndex = 0;
+            _bodyTransitionTargetIndex = 0;
+            _bodyTransitionElapsedSeconds = 0f;
+            _bodyTransitionCooldownRemaining = 0f;
+            BodyTransitionAnimating = false;
         }
 
-        /// <summary>
-        /// Rotates to the previous body slot (Ctrl+Q).
-        /// No-op when fewer than 2 bodies are equipped.
-        /// </summary>
-        public void SwitchBodyLeft()
+        public bool SwitchBodyLeft()
         {
-            if (BodyCount < 2) return;
+            if (BodyCount < 2)
+            {
+                return false;
+            }
+
             int newIndex = (ActiveBodyIndex - 1 + BodyCount) % BodyCount;
-            ApplyBodyAttributes(newIndex);
+            return SwitchBodyToIndex(newIndex);
         }
 
-        /// <summary>
-        /// Rotates to the next body slot (Ctrl+E).
-        /// No-op when fewer than 2 bodies are equipped.
-        /// </summary>
-        public void SwitchBodyRight()
+        public bool SwitchBodyRight()
         {
-            if (BodyCount < 2) return;
+            if (BodyCount < 2)
+            {
+                return false;
+            }
+
             int newIndex = (ActiveBodyIndex + 1) % BodyCount;
-            ApplyBodyAttributes(newIndex);
+            return SwitchBodyToIndex(newIndex);
         }
 
-        /// <summary>
-        /// Applies the body attributes at the given index to this agent,
-        /// updating all derived stats (health, shield, regen, mass, etc.).
-        /// Health is clamped to the new maximum rather than reset.
-        /// </summary>
+        public bool SwitchBodyToIndex(int index)
+        {
+            if (index < 0 || index >= BodyCount)
+            {
+                return false;
+            }
+
+            if (BodyCount < 2 || BodyTransitionAnimating || _bodyTransitionCooldownRemaining > 0f)
+            {
+                return false;
+            }
+
+            if (index == ActiveBodyIndex)
+            {
+                return false;
+            }
+
+            BodySlot targetSlot = _bodies[index];
+            _bodyTransitionTargetIndex = index;
+            _bodyTransitionElapsedSeconds = 0f;
+            _bodyTransitionFromAttributes = BodyAttributes;
+            _bodyTransitionFromFillColor = FillColor;
+            _bodyTransitionFromOutlineColor = OutlineColor;
+            _bodyTransitionFromOutlineWidth = OutlineWidth;
+            ActiveBodyIndex = index;
+
+            if (BodyTransitionDurationSeconds <= 0f)
+            {
+                ApplyResolvedBodyState(
+                    targetSlot.Attrs,
+                    targetSlot.FillColor,
+                    targetSlot.OutlineColor,
+                    targetSlot.OutlineWidth);
+                BodyTransitionAnimating = false;
+                _bodyTransitionCooldownRemaining = BodyTransitionBufferSeconds;
+                return true;
+            }
+
+            BodyTransitionAnimating = true;
+            return true;
+        }
+
         private void ApplyBodyAttributes(int index)
         {
-            if (index < 0 || index >= BodyCount) return;
+            if (index < 0 || index >= BodyCount)
+            {
+                return;
+            }
+
             ActiveBodyIndex = index;
-            Attributes_Body body = _bodies[index].Attrs;
-            BodyAttributes = body;
+            _bodyTransitionTargetIndex = index;
+            _bodyTransitionElapsedSeconds = 0f;
+            _bodyTransitionCooldownRemaining = 0f;
+            BodyTransitionAnimating = false;
 
-            float newMaxHp = AttributeDerived.MaxHealth(body.Mass);
-            // Preserve health ratio when switching bodies
-            float hpRatio = MaxHealth > 0f ? CurrentHealth / MaxHealth : 1f;
-            MaxHealth = newMaxHp;
-            CurrentHealth = MathF.Min(hpRatio * newMaxHp, newMaxHp);
-
-            MaxShield = body.MaxShield;
-            CurrentShield = MathF.Min(CurrentShield, body.MaxShield);
-            HealthRegen = body.HealthRegen;
-            HealthRegenDelay = body.HealthRegenDelay;
-            ShieldRegen = body.ShieldRegen;
-            ShieldRegenDelay = body.ShieldRegenDelay;
-            Mass = body.Mass;
-
-            UpdateCircleDimensions(body.Mass);
+            BodySlot slot = _bodies[index];
+            ApplyResolvedBodyState(
+                slot.Attrs,
+                slot.FillColor,
+                slot.OutlineColor,
+                slot.OutlineWidth);
         }
 
-        /// <summary>
-        /// For circle shapes, recomputes Width/Height from the derived body radius.
-        /// </summary>
-        public void UpdateCircleDimensions(float mass)
+        public void UpdateCircleDimensions(
+            float mass,
+            Color? fillColor = null,
+            Color? outlineColor = null,
+            int? outlineWidth = null)
         {
-            if (Shape == null || Shape.ShapeType != "Circle") return;
+            FillColor = fillColor ?? FillColor;
+            OutlineColor = outlineColor ?? OutlineColor;
+            OutlineWidth = outlineWidth.HasValue ? Math.Max(0, outlineWidth.Value) : OutlineWidth;
+
+            if (Shape == null)
+            {
+                return;
+            }
+
+            if (Shape.ShapeType != "Circle")
+            {
+                Shape.UpdateDimensions(
+                    Shape.Width,
+                    Shape.Height,
+                    Core.Instance?.GraphicsDevice,
+                    FillColor,
+                    OutlineColor,
+                    OutlineWidth);
+                return;
+            }
+
             float radius = AttributeDerived.BodyRadius(mass, CollisionResolver.BodyRadiusScalar);
             int diameter = Math.Max(1, (int)MathF.Round(2f * radius));
-            Shape.UpdateDimensions(diameter, diameter, Core.Instance.GraphicsDevice);
+            Shape.UpdateDimensions(
+                diameter,
+                diameter,
+                Core.Instance?.GraphicsDevice,
+                FillColor,
+                OutlineColor,
+                OutlineWidth);
         }
 
-        // ── Barrel slot ─────────────────────────────────────────────────────────
-        // Holds one barrel's attributes, full-size shape, and animated height scale.
         public class BarrelSlot
         {
             public Attributes_Barrel Attrs;
             public Shape FullShape;
             public float CurrentHeightScale;
             public float TargetHeightScale;
-            /// <summary>Custom display name (null = use default "Barrel N").</summary>
             public string Name;
 
             public BarrelSlot(Attributes_Barrel attrs, Shape shape, float initialScale)
@@ -129,35 +218,28 @@ namespace op.io
             }
         }
 
-        // ── Barrel list & carousel ───────────────────────────────────────────────
         private readonly List<BarrelSlot> _barrels = new();
         public IReadOnlyList<BarrelSlot> Barrels => _barrels;
         public int BarrelCount => _barrels.Count;
-        public int ActiveBarrelIndex { get; private set; } = 0;
+        public int ActiveBarrelIndex { get; private set; }
 
-        // Carousel angle tracks the cumulative rotation of the barrel ring (radians).
-        // Barrel i is displayed at: agentRotation + i*(2π/N) - _carouselAngle
-        private float _carouselAngle = 0f;
-        private float _targetCarouselAngle = 0f;
+        private float _carouselAngle;
+        private float _targetCarouselAngle;
         public float CarouselAngle => _carouselAngle;
 
         private const float StandbyHeightScale = 0.18f;
-        private const float SwitchAnimSpeed = 15f; // exponential lerp speed (units/s)
+        private const float SwitchAnimSpeed = 15f;
 
-        // Computed: delegates to the active barrel (or default when none equipped).
         public Attributes_Barrel BarrelAttributes => BarrelCount > 0 ? _barrels[ActiveBarrelIndex].Attrs : default;
         public Shape BarrelShape => BarrelCount > 0 ? _barrels[ActiveBarrelIndex].FullShape : null;
-        // Legacy compat: BarrelObject is surfaced as null; callers that checked for
-        // null already handle this gracefully (e.g. GOProperties.BarrelTransformRows).
         public GameObject BarrelObject => null;
 
-        // ── Agent-specific properties ────────────────────────────────────────────
         public float TriggerCooldown { get; set; }
         public float SwitchCooldown { get; set; }
 
-        private int GetMode(int _mode, string modeSettingName)
+        private int GetMode(int mode, string modeSettingName)
         {
-            if (_mode == -1)
+            if (mode == -1)
             {
                 if (ControlStateManager.ContainsSwitchState(modeSettingName))
                 {
@@ -169,7 +251,7 @@ namespace op.io
                 }
             }
 
-            return _mode;
+            return mode;
         }
 
         private int _crouchMode = -1;
@@ -198,13 +280,15 @@ namespace op.io
             {
                 _unitAttributes = value;
                 if (!string.IsNullOrWhiteSpace(value.Name))
+                {
                     Name = value.Name;
+                }
             }
         }
 
         private float _baseSpeed;
-        private static float? cachedTriggerCooldown = null;
-        private static float? cachedSwitchCooldown = null;
+        private static float? _cachedTriggerCooldown;
+        private static float? _cachedSwitchCooldown;
 
         public float BaseSpeed
         {
@@ -213,16 +297,19 @@ namespace op.io
             {
                 _baseSpeed = value;
                 if (value < 0)
+                {
                     DebugLogger.PrintWarning($"BaseSpeed updated to negative value: {value}");
+                }
             }
         }
 
-        public new float Speed => BaseSpeed * InputManager.SpeedMultiplier();
+        public new float Speed => IsDeadOrDying
+            ? 0f
+            : AttributeDerived.BodySpeed(BodyAttributes.Speed, BaseSpeed) * InputManager.SpeedMultiplier();
 
-        // Current input-driven movement velocity (pixels/sec), built up by the acceleration system.
         public Vector2 MovementVelocity { get; set; }
+        public bool IsDeadOrDying => IsDying || CurrentHealth <= 0f;
 
-        // ── Constructor ──────────────────────────────────────────────────────────
         public Agent(
             int id,
             string name,
@@ -239,104 +326,96 @@ namespace op.io
             Color outlineColor,
             int outlineWidth,
             Attributes_Barrel barrelAttributes = default,
-            Attributes_Body bodyAttributes = default
-        )
+            Attributes_Body bodyAttributes = default)
             : base(id, name, position, rotation, mass, isDestructible, isCollidable, dynamicPhysics, shape, fillColor, outlineColor, outlineWidth)
         {
-            TriggerCooldown = 0;
-            SwitchCooldown = 0;
+            TriggerCooldown = 0f;
+            SwitchCooldown = 0f;
             IsCrouching = false;
             IsSprinting = false;
             IsPlayer = isPlayer;
             DrawLayer = 200;
             BaseSpeed = baseSpeed;
-            BodyAttributes    = bodyAttributes;
-            float maxHp       = AttributeDerived.MaxHealth(bodyAttributes.Mass);
-            CurrentHealth     = maxHp;
-            MaxHealth         = maxHp;
-            CurrentShield     = bodyAttributes.MaxShield;
-            MaxShield         = bodyAttributes.MaxShield;
-            HealthRegen       = bodyAttributes.HealthRegen;
-            HealthRegenDelay  = bodyAttributes.HealthRegenDelay;
-            ShieldRegen       = bodyAttributes.ShieldRegen;
-            ShieldRegenDelay  = bodyAttributes.ShieldRegenDelay;
+            BodyAttributes = bodyAttributes;
 
-            // Seed the first barrel using the passed-in attributes (default = use
-            // physics-settings fallbacks at fire time).  Callers may add further
-            // barrels via AddBarrel().
+            float maxHp = AttributeDerived.MaxHealth(bodyAttributes.Mass);
+            CurrentHealth = maxHp;
+            MaxHealth = maxHp;
+            CurrentShield = bodyAttributes.MaxShield;
+            MaxShield = bodyAttributes.MaxShield;
+            HealthRegen = bodyAttributes.HealthRegen;
+            HealthRegenDelay = bodyAttributes.HealthRegenDelay;
+            ShieldRegen = bodyAttributes.ShieldRegen;
+            ShieldRegenDelay = bodyAttributes.ShieldRegenDelay;
+
             AddBarrel(barrelAttributes);
 
             DebugLogger.PrintPlayer($"Agent created with TriggerCooldown: {TriggerCooldown}, SwitchCooldown: {SwitchCooldown}");
         }
 
-        // ── Barrel management ────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Attaches a new barrel to this agent. The first barrel added is always
-        /// the active one; subsequent barrels start in standby (very small height).
-        /// </summary>
         public void AddBarrel(Attributes_Barrel attrs)
         {
             float bulletMass = attrs.BulletMass > 0f ? attrs.BulletMass : BulletManager.DefaultBulletMass;
             float bulletSpeed = attrs.BulletSpeed > 0f ? attrs.BulletSpeed : BulletManager.DefaultBulletSpeed;
 
-            int bw = Math.Max(1, (int)MathF.Round(AttributeDerived.BarrelWidth(bulletMass, BulletManager.BulletRadiusScalar)));
-            int bl = Math.Max(4, (int)MathF.Round(AttributeDerived.BarrelHeight(bulletSpeed, BulletManager.BarrelHeightScalar)));
+            int barrelWidth = Math.Max(1, (int)MathF.Round(AttributeDerived.BarrelWidth(bulletMass, BulletManager.BulletRadiusScalar)));
+            int barrelLength = Math.Max(4, (int)MathF.Round(AttributeDerived.BarrelHeight(bulletSpeed, BulletManager.BarrelHeightScalar)));
 
             float initialScale = _barrels.Count == 0 ? 1f : StandbyHeightScale;
 
-            var shape = new Shape("Rectangle", bl, bw, 0,
-                new Color(192, 192, 192), new Color(64, 64, 64), 1)
+            var shape = new Shape(
+                "Rectangle",
+                barrelLength,
+                barrelWidth,
+                0,
+                new Color(192, 192, 192),
+                new Color(64, 64, 64),
+                1)
             {
                 SkipHover = true
             };
 
-            // Load GPU content immediately if the graphics device is already ready
-            // (e.g. barrels added at runtime rather than during initialization).
             if (Core.Instance?.GraphicsDevice != null)
+            {
                 shape.LoadContent(Core.Instance.GraphicsDevice);
+            }
 
             _barrels.Add(new BarrelSlot(attrs, shape, initialScale));
             RefreshTargetScales();
         }
 
-        /// <summary>
-        /// Removes all barrels, disposing their shapes, and resets carousel state.
-        /// Call before re-applying a build from JSON deserialization.
-        /// </summary>
         public void ClearBarrels()
         {
-            foreach (var slot in _barrels)
+            foreach (BarrelSlot slot in _barrels)
+            {
                 slot.FullShape?.Dispose();
+            }
+
             _barrels.Clear();
             ActiveBarrelIndex = 0;
             _carouselAngle = 0f;
             _targetCarouselAngle = 0f;
         }
 
-        /// <summary>
-        /// Rotates the barrel carousel left (Q key).
-        /// All barrels rotate clockwise; the barrel previously counter-clockwise of
-        /// the active slot advances to the primary (forward-facing) position.
-        /// No-op when fewer than 2 barrels are equipped.
-        /// </summary>
         public void SwitchBarrelLeft()
         {
-            if (BarrelCount < 2) return;
+            if (BarrelCount < 2)
+            {
+                return;
+            }
+
             ActiveBarrelIndex = (ActiveBarrelIndex - 1 + BarrelCount) % BarrelCount;
             _targetCarouselAngle -= MathF.Tau / BarrelCount;
             RefreshTargetScales();
         }
 
-        /// <summary>
-        /// Rotates the barrel carousel right (E key).
-        /// All barrels rotate counter-clockwise; the barrel previously clockwise of
-        /// the active slot advances to the primary position.
-        /// No-op when fewer than 2 barrels are equipped.
-        /// </summary>
         public void SwitchBarrelRight()
         {
-            if (BarrelCount < 2) return;
+            if (BarrelCount < 2)
+            {
+                return;
+            }
+
             ActiveBarrelIndex = (ActiveBarrelIndex + 1) % BarrelCount;
             _targetCarouselAngle += MathF.Tau / BarrelCount;
             RefreshTargetScales();
@@ -345,7 +424,9 @@ namespace op.io
         private void RefreshTargetScales()
         {
             for (int i = 0; i < _barrels.Count; i++)
-                _barrels[i].TargetHeightScale = (i == ActiveBarrelIndex) ? 1f : StandbyHeightScale;
+            {
+                _barrels[i].TargetHeightScale = i == ActiveBarrelIndex ? 1f : StandbyHeightScale;
+            }
         }
 
         public bool TryGetBarrelWorldTransform(
@@ -421,73 +502,216 @@ namespace op.io
                 : Vector2.Zero;
         }
 
-        // ── Cooldown loading ─────────────────────────────────────────────────────
         public void LoadTriggerCooldown()
         {
-            if (!cachedTriggerCooldown.HasValue)
+            if (!_cachedTriggerCooldown.HasValue)
             {
                 TriggerCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "TriggerCooldown");
-                if (TriggerCooldown == 0)
+                if (TriggerCooldown == 0f)
+                {
                     DebugLogger.PrintError("TriggerCooldown is 0 after loading from the database.");
+                }
+
                 DebugLogger.PrintPlayer($"TriggerCooldown loaded: {TriggerCooldown}");
-                cachedTriggerCooldown = TriggerCooldown;
+                _cachedTriggerCooldown = TriggerCooldown;
             }
             else
             {
-                TriggerCooldown = cachedTriggerCooldown.Value;
+                TriggerCooldown = _cachedTriggerCooldown.Value;
                 DebugLogger.PrintPlayer($"Loaded from cache: TriggerCooldown: {TriggerCooldown}");
             }
         }
 
         public void LoadSwitchCooldown()
         {
-            if (!cachedSwitchCooldown.HasValue)
+            if (!_cachedSwitchCooldown.HasValue)
             {
                 SwitchCooldown = DatabaseFetch.GetValue<float>("ControlSettings", "Value", "SettingKey", "SwitchCooldown");
-                if (SwitchCooldown == 0)
+                if (SwitchCooldown == 0f)
+                {
                     DebugLogger.PrintError("SwitchCooldown is 0 after loading from the database.");
+                }
+
                 DebugLogger.PrintPlayer($"SwitchCooldown loaded: {SwitchCooldown}");
-                cachedSwitchCooldown = SwitchCooldown;
+                _cachedSwitchCooldown = SwitchCooldown;
             }
             else
             {
-                SwitchCooldown = cachedSwitchCooldown.Value;
+                SwitchCooldown = _cachedSwitchCooldown.Value;
                 DebugLogger.PrintPlayer($"Loaded from cache: SwitchCooldown: {SwitchCooldown}");
             }
         }
 
-        // ── Flags ────────────────────────────────────────────────────────────────
         protected override GOFlags ComputeFlags()
         {
-            GOFlags f = base.ComputeFlags();
-            if (IsPlayer) f |= GOFlags.Player;
-            return f;
+            GOFlags flags = base.ComputeFlags();
+            if (IsPlayer)
+            {
+                flags |= GOFlags.Player;
+            }
+
+            return flags;
         }
 
-        // ── Update ───────────────────────────────────────────────────────────────
         public override void Update()
         {
-            base.Update(); // applies PhysicsVelocity, HitFlash decay, rotation
+            bool suppressDeadPlayerMotion = IsPlayer && IsDeadOrDying;
+            if (suppressDeadPlayerMotion)
+            {
+                MovementVelocity = Vector2.Zero;
+                PhysicsVelocity = Vector2.Zero;
+            }
 
-            if (TriggerCooldown > 0)
+            base.Update();
+
+            if (suppressDeadPlayerMotion)
+            {
+                MovementVelocity = Vector2.Zero;
+                PhysicsVelocity = Vector2.Zero;
+            }
+
+            if (TriggerCooldown > 0f)
+            {
                 TriggerCooldown -= Core.DELTATIME;
+            }
 
-            if (SwitchCooldown > 0)
+            if (SwitchCooldown > 0f)
+            {
                 SwitchCooldown -= Core.DELTATIME;
+            }
 
-            // Animate carousel angle and barrel height scales toward their targets.
+            UpdateBodyTransition();
+
             float t = Math.Min(SwitchAnimSpeed * Core.DELTATIME, 1f);
 
             _carouselAngle += (_targetCarouselAngle - _carouselAngle) * t;
             if (MathF.Abs(_carouselAngle - _targetCarouselAngle) < 0.001f)
+            {
                 _carouselAngle = _targetCarouselAngle;
+            }
 
-            foreach (var slot in _barrels)
+            foreach (BarrelSlot slot in _barrels)
             {
                 slot.CurrentHeightScale += (slot.TargetHeightScale - slot.CurrentHeightScale) * t;
                 if (MathF.Abs(slot.CurrentHeightScale - slot.TargetHeightScale) < 0.001f)
+                {
                     slot.CurrentHeightScale = slot.TargetHeightScale;
+                }
             }
+        }
+
+        private void UpdateBodyTransition()
+        {
+            if (_bodyTransitionCooldownRemaining > 0f)
+            {
+                _bodyTransitionCooldownRemaining = MathF.Max(0f, _bodyTransitionCooldownRemaining - Core.DELTATIME);
+            }
+
+            if (!BodyTransitionAnimating)
+            {
+                return;
+            }
+
+            float duration = BodyTransitionDurationSeconds;
+            if (duration <= 0f)
+            {
+                BodyTransitionAnimating = false;
+                _bodyTransitionCooldownRemaining = BodyTransitionBufferSeconds;
+                return;
+            }
+
+            _bodyTransitionElapsedSeconds = MathF.Min(_bodyTransitionElapsedSeconds + Core.DELTATIME, duration);
+
+            BodySlot targetSlot = _bodies[_bodyTransitionTargetIndex];
+            float t = MathHelper.Clamp(_bodyTransitionElapsedSeconds / duration, 0f, 1f);
+            Attributes_Body blendedBody = LerpBodyAttributes(_bodyTransitionFromAttributes, targetSlot.Attrs, t);
+            Color blendedFillColor = Color.Lerp(_bodyTransitionFromFillColor, targetSlot.FillColor, t);
+            Color blendedOutlineColor = Color.Lerp(_bodyTransitionFromOutlineColor, targetSlot.OutlineColor, t);
+            int blendedOutlineWidth = (int)MathF.Round(MathHelper.Lerp(
+                _bodyTransitionFromOutlineWidth,
+                targetSlot.OutlineWidth,
+                t));
+
+            ApplyResolvedBodyState(
+                blendedBody,
+                blendedFillColor,
+                blendedOutlineColor,
+                blendedOutlineWidth);
+
+            if (t < 1f)
+            {
+                return;
+            }
+
+            BodyTransitionAnimating = false;
+            _bodyTransitionCooldownRemaining = BodyTransitionBufferSeconds;
+            ApplyResolvedBodyState(
+                targetSlot.Attrs,
+                targetSlot.FillColor,
+                targetSlot.OutlineColor,
+                targetSlot.OutlineWidth);
+        }
+
+        private void ApplyResolvedBodyState(
+            Attributes_Body body,
+            Color fillColor,
+            Color outlineColor,
+            int outlineWidth)
+        {
+            float previousMaxHealth = MaxHealth;
+            float newMaxHealth = AttributeDerived.MaxHealth(body.Mass);
+
+            BodyAttributes = body;
+            MaxHealth = newMaxHealth;
+            if (previousMaxHealth > 0f)
+            {
+                float healthScale = newMaxHealth / previousMaxHealth;
+                CurrentHealth = MathF.Min(CurrentHealth * healthScale, newMaxHealth);
+            }
+            else
+            {
+                CurrentHealth = MathF.Min(CurrentHealth, newMaxHealth);
+            }
+
+            MaxShield = MathF.Max(0f, body.MaxShield);
+            CurrentShield = MathF.Min(CurrentShield, MaxShield);
+            HealthRegen = body.HealthRegen;
+            HealthRegenDelay = body.HealthRegenDelay;
+            ShieldRegen = body.ShieldRegen;
+            ShieldRegenDelay = body.ShieldRegenDelay;
+            HealthArmor = body.HealthArmor;
+            ShieldArmor = body.ShieldArmor;
+            BodyCollisionDamage = body.BodyCollisionDamage;
+            BodyPenetration = body.BodyPenetration;
+            CollisionDamageResistance = body.CollisionDamageResistance;
+            BulletDamageResistance = body.BulletDamageResistance;
+            Mass = body.Mass;
+
+            UpdateCircleDimensions(body.Mass, fillColor, outlineColor, outlineWidth);
+        }
+
+        private static Attributes_Body LerpBodyAttributes(Attributes_Body from, Attributes_Body to, float t)
+        {
+            t = MathHelper.Clamp(t, 0f, 1f);
+            return new Attributes_Body
+            {
+                Mass = MathHelper.Lerp(from.Mass, to.Mass, t),
+                HealthRegen = MathHelper.Lerp(from.HealthRegen, to.HealthRegen, t),
+                HealthRegenDelay = MathHelper.Lerp(from.HealthRegenDelay, to.HealthRegenDelay, t),
+                HealthArmor = MathHelper.Lerp(from.HealthArmor, to.HealthArmor, t),
+                MaxShield = MathHelper.Lerp(from.MaxShield, to.MaxShield, t),
+                ShieldRegen = MathHelper.Lerp(from.ShieldRegen, to.ShieldRegen, t),
+                ShieldRegenDelay = MathHelper.Lerp(from.ShieldRegenDelay, to.ShieldRegenDelay, t),
+                ShieldArmor = MathHelper.Lerp(from.ShieldArmor, to.ShieldArmor, t),
+                BodyCollisionDamage = MathHelper.Lerp(from.BodyCollisionDamage, to.BodyCollisionDamage, t),
+                BodyPenetration = MathHelper.Lerp(from.BodyPenetration, to.BodyPenetration, t),
+                CollisionDamageResistance = MathHelper.Lerp(from.CollisionDamageResistance, to.CollisionDamageResistance, t),
+                BulletDamageResistance = MathHelper.Lerp(from.BulletDamageResistance, to.BulletDamageResistance, t),
+                Speed = MathHelper.Lerp(from.Speed, to.Speed, t),
+                Control = MathHelper.Lerp(from.Control, to.Control, t),
+                Sight = MathHelper.Lerp(from.Sight, to.Sight, t),
+                BodyActionBuff = MathHelper.Lerp(from.BodyActionBuff, to.BodyActionBuff, t),
+            };
         }
     }
 }

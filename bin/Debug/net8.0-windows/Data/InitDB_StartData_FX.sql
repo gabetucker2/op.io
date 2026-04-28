@@ -11,6 +11,8 @@ INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeAnim',  '0.0|0.0|0.
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeScaleMultiplier',     '1.5');   -- final scale multiplier reached at the end of death fade (1.5 = +50%)
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeSpinMinDegPerSecond', '90');    -- minimum random death spin speed (degrees/second)
 INSERT INTO FXSettings (SettingKey, Value) VALUES ('DeathFadeSpinMaxDegPerSecond', '240');   -- maximum random death spin speed (degrees/second)
+INSERT INTO FXSettings (SettingKey, Value) VALUES ('BodyTransitionDurationSeconds', '0.3');  -- duration of a body-to-body lerp
+INSERT INTO FXSettings (SettingKey, Value) VALUES ('BodyTransitionBufferSeconds',   '0.5');  -- extra lockout after the transition completes
 
 ---------------------------------------------------------------------------------------------------------------------------
 -- Damage number behavior

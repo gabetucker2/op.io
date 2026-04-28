@@ -230,6 +230,11 @@ namespace op.io.UI.BlockScripts.Blocks
                 AmbienceSettings.BackgroundWavesColor,
                 "Highlight color of the ocean's background wave crests."));
             _rows.Add(new AmbienceRow(
+                AmbienceSettings.TerrainRowKey,
+                "Terrain",
+                AmbienceSettings.TerrainColor,
+                "Fill color for generated terrain, finite map borders, and the world beyond the playable square."));
+            _rows.Add(new AmbienceRow(
                 AmbienceSettings.WorldTintRowKey,
                 "World tint",
                 AmbienceSettings.WorldTintColor,
@@ -530,6 +535,12 @@ namespace op.io.UI.BlockScripts.Blocks
             if (string.Equals(rowKey, AmbienceSettings.BackgroundWavesRowKey, StringComparison.OrdinalIgnoreCase))
             {
                 AmbienceSettings.SetBackgroundWavesColor(color, persist);
+                return;
+            }
+
+            if (string.Equals(rowKey, AmbienceSettings.TerrainRowKey, StringComparison.OrdinalIgnoreCase))
+            {
+                AmbienceSettings.SetTerrainColor(color, persist);
                 return;
             }
 

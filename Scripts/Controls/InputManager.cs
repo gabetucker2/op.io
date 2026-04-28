@@ -19,6 +19,8 @@ namespace op.io
         private static readonly Dictionary<string, float> _cachedSpeedMultipliers = [];
         private static readonly Dictionary<string, bool> _triggerOverrides = new(StringComparer.OrdinalIgnoreCase);
         private static readonly HashSet<string> _latchedHoldControls = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> _loggedFrozenSuppressedCombos = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> _loggedFrozenSuppressedSwitches = new(StringComparer.OrdinalIgnoreCase);
         private static bool _holdLatchEnabled;
         private static float _holdLatchRotation;
         internal static bool IsHoldLatchActive => _holdLatchEnabled;
@@ -267,7 +269,36 @@ namespace op.io
         // Check if a specific input action is active
         public static bool IsInputActive(string settingKey)
         {
+            if (ShouldSuppressDeadPlayerInput(settingKey))
+            {
+                return false;
+            }
+
             return _controlBindings.TryGetValue(settingKey, out ControlBinding binding) && binding.IsActive();
+        }
+
+        public static bool IsPlayerGameplayInputSuppressed =>
+            Core.Instance?.Player?.IsDeadOrDying == true;
+
+        private static bool ShouldSuppressDeadPlayerInput(string settingKey)
+        {
+            if (!IsPlayerGameplayInputSuppressed || string.IsNullOrWhiteSpace(settingKey))
+            {
+                return false;
+            }
+
+            // Respawn must stay available while dead; camera controls stay available for spectating.
+            if (string.Equals(settingKey, ControlKeyMigrations.RespawnKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string category = ControlRowCategoryCatalog.GetDefaultCategoryKey(settingKey);
+            return string.Equals(category, ControlRowCategoryCatalog.MovementCategoryKey, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(category, ControlRowCategoryCatalog.CombatCategoryKey, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(settingKey, ControlKeyMigrations.HoldInputsKey, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(settingKey, ControlKeyMigrations.PreviousConfigurationKey, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(settingKey, ControlKeyMigrations.NextConfigurationKey, StringComparison.OrdinalIgnoreCase);
         }
 
         public static string GetBindingDisplayLabel(string settingKey)
@@ -885,7 +916,7 @@ namespace op.io
                     if (IsSwitchType(InputType) && Tokens.Count > 1 && anyTokenHeld)
                     {
                         InputTypeManager.ConsumeKeys(GetAllKeys(Tokens));
-                        DebugLogger.PrintDebug($"[INPUT] Suppressing combo '{DisplayLabel}' while binding disallowed; consumed keys.");
+                        LogFrozenSuppressedComboOnce(SettingKey, DisplayLabel);
                     }
 
                     // Preserve the current toggle state for switch bindings so the SwitchStateScanner
@@ -893,7 +924,7 @@ namespace op.io
                     if (IsSwitchType(InputType) && ControlStateManager.ContainsSwitchState(SettingKey))
                     {
                         bool preserved = ControlStateManager.GetSwitchState(SettingKey);
-                        DebugLogger.PrintDebug($"[INPUT] Switch '{SettingKey}' suppressed while frozen; preserving state={preserved}");
+                        LogFrozenSuppressedSwitchOnce(SettingKey, preserved);
                         return preserved;
                     }
 
@@ -1200,9 +1231,41 @@ namespace op.io
 
         private static bool Freeze(bool frozen, string reason)
         {
+            if (!frozen)
+            {
+                ClearFrozenSuppressionLogCache();
+            }
+
             GameTracker.FreezeGameInputs = frozen;
             GameTracker.FreezeGameInputsReason = reason;
             return frozen;
+        }
+
+        private static void LogFrozenSuppressedComboOnce(string settingKey, string displayLabel)
+        {
+            string cacheKey = string.IsNullOrWhiteSpace(settingKey) ? displayLabel : settingKey;
+            if (string.IsNullOrWhiteSpace(cacheKey) || !_loggedFrozenSuppressedCombos.Add(cacheKey))
+            {
+                return;
+            }
+
+            DebugLogger.PrintDebug($"[INPUT] Suppressing combo '{displayLabel}' while binding disallowed; consumed keys.");
+        }
+
+        private static void LogFrozenSuppressedSwitchOnce(string settingKey, bool preserved)
+        {
+            if (string.IsNullOrWhiteSpace(settingKey) || !_loggedFrozenSuppressedSwitches.Add(settingKey))
+            {
+                return;
+            }
+
+            DebugLogger.PrintDebug($"[INPUT] Switch '{settingKey}' suppressed while frozen; preserving state={preserved}");
+        }
+
+        private static void ClearFrozenSuppressionLogCache()
+        {
+            _loggedFrozenSuppressedCombos.Clear();
+            _loggedFrozenSuppressedSwitches.Clear();
         }
 
         internal static bool IsFocusModeBlocking()

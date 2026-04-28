@@ -7,6 +7,7 @@ namespace op.io
         [STAThread]
         static void Main(string[] args)
         {
+            LogFileHandler.InitializeSession();
             RuntimeErrorLogger.Initialize();
             using var game = new Core();
             game.Run();

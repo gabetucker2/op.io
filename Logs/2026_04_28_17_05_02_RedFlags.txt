@@ -1,0 +1,1 @@
+[ERROR] Player is null. Ensure that the player is initialized before accessing it. | Core.cs::get_Player @ Line 44

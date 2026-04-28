@@ -14,7 +14,7 @@ namespace op.io
         public const string PlayersGroupKey = "Players";
         public const string YourPlayerGroupKey = "YourPlayer";
 
-        public enum BarRelationName { BelowFull, Empty, Change, Always }
+        public enum BarRelationName { BelowFull, Empty, Change, Spawn, Always }
 
         public readonly struct BarConfigGroupDefinition
         {
@@ -38,14 +38,15 @@ namespace op.io
 
         public readonly struct BarSourceState
         {
-            public BarSourceState(float current, float max, bool changedRecently, bool isKnown)
+            public BarSourceState(float current, float max, bool changedRecently, bool spawnedRecently, bool isKnown)
             {
-                Current = current; Max = max; ChangedRecently = changedRecently; IsKnown = isKnown;
+                Current = current; Max = max; ChangedRecently = changedRecently; SpawnedRecently = spawnedRecently; IsKnown = isKnown;
             }
 
             public float Current { get; }
             public float Max { get; }
             public bool ChangedRecently { get; }
+            public bool SpawnedRecently { get; }
             public bool IsKnown { get; }
         }
 
@@ -182,7 +183,8 @@ namespace op.io
 
         public static bool IsVisibilityRelationActive(BarSourceState source, BarRelationName relationName) => relationName switch
         {
-            BarRelationName.Change => !source.IsKnown || source.ChangedRecently,
+            BarRelationName.Change => source.ChangedRecently,
+            BarRelationName.Spawn => source.SpawnedRecently,
             BarRelationName.BelowFull => source.Max > 0.001f && source.Current < source.Max - 0.001f,
             BarRelationName.Empty => source.Current <= 0.001f,
             BarRelationName.Always => true,
@@ -226,7 +228,8 @@ namespace op.io
             string sourceLabel = GetBarShortLabel(relation.SourceType);
             return relation.RelationName switch
             {
-                BarRelationName.Change => $"Shows when {sourceLabel} changed recently.",
+                BarRelationName.Change => $"Shows when {sourceLabel} changes.",
+                BarRelationName.Spawn => $"Shows on spawn when {sourceLabel} exists.",
                 BarRelationName.BelowFull => $"Shows when {sourceLabel} is not full.",
                 BarRelationName.Empty => $"Shows when {sourceLabel} is empty.",
                 BarRelationName.Always => relation.SourceType == dependentType ? $"Shows whenever {GetBarShortLabel(dependentType)} exists." : $"Shows whenever {sourceLabel} exists.",
@@ -237,6 +240,7 @@ namespace op.io
         public static string GetRelationLabel(BarRelationName relationName) => relationName switch
         {
             BarRelationName.Change => "changed",
+            BarRelationName.Spawn => "spawn",
             BarRelationName.BelowFull => "not full",
             BarRelationName.Empty => "empty",
             BarRelationName.Always => "always",

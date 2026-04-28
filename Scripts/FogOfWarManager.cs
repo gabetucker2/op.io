@@ -143,14 +143,14 @@ namespace op.io
         private const int DetailMaskTextureSize = 2048;
         private const int FrontierTextureSize = 1536;
         private const int FrontierTextureSizeMoveMedium = 1152;
-        private const int FrontierTextureSizeMoveFast = 896;
+        private const int FrontierTextureSizeMoveFast = 768;
         private const int FrontierRuntimeTextureSize = FrontierTextureSizeMoveFast;
         private const int FrontierDirectionBins = 8;
         private const int FrontierPhaseCount = 60;
         private const float FrontierFramesPerCentifoot = 30f;
         private const float FrontierDomainExtent = 1.18f;
-        private const float FrontierMinUpdateIntervalSeconds = 1f / 30f;
-        private const float FrontierFastUpdateIntervalSeconds = 1f / 90f;
+        private const float FrontierMinUpdateIntervalSeconds = 1f / 60f;
+        private const float FrontierFastUpdateIntervalSeconds = 1f / 144f;
         private const float FrontierMoveSpeedForMaxRateCentifootPerSecond = 80f;
         private const int EdgeNoiseTableSize = 512;
         private const int EdgeNoiseTableMask = EdgeNoiseTableSize - 1;
@@ -167,8 +167,8 @@ namespace op.io
         private const float ScoutSentryFallbackSightRatio = 1f / 3f;
         private const float DetailMaskTargetScreenPixelsAtFarthestZoom = 0.8f;
         private const float FrontierFieldBlurRadiusFloorTexels = 0.01f;
-        private const float FrontierCenterRefreshBorderRatio = 0.10f;
-        private const float FrontierRadiusRefreshBorderRatio = 0.08f;
+        private const float FrontierCenterRefreshBorderRatio = 0.04f;
+        private const float FrontierRadiusRefreshBorderRatio = 0.05f;
 
         private static readonly List<VisionSource> VisionSources = new();
         private static readonly object FrontierComputeSync = new();
@@ -402,6 +402,7 @@ namespace op.io
         private static float _phaseFrameCursor;
         private static int _activePhaseIndex;
         private static float _lastFrameMoveDistanceWorld;
+        private static float _frontierDesiredCenterRefreshDistanceWorld = 0.35f;
         private static float _frontierTargetUpdateIntervalSeconds = FrontierMinUpdateIntervalSeconds;
         private static int _frontierActiveTextureSize = FrontierTextureSize;
         private static float _frontierBuildMillisecondsLast;
@@ -458,6 +459,7 @@ namespace op.io
                 _phaseFrameCursor = 0f;
                 _activePhaseIndex = 0;
                 _lastFrameMoveDistanceWorld = 0f;
+                _frontierDesiredCenterRefreshDistanceWorld = 0.35f;
                 _frontierTargetUpdateIntervalSeconds = FrontierMinUpdateIntervalSeconds;
                 _frontierActiveTextureSize = FrontierTextureSize;
                 _frontierBuildMillisecondsLast = 0f;
@@ -614,6 +616,75 @@ namespace op.io
 
             return false;
         }
+
+        public static bool TryGetVisionWorldBounds(
+            float paddingWorldUnits,
+            out Vector2 center,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY,
+            out float maxRadius)
+        {
+            center = Vector2.Zero;
+            minX = maxX = minY = maxY = maxRadius = 0f;
+
+            if (!CollectVisionSources() || VisionSources.Count <= 0)
+            {
+                return false;
+            }
+
+            float padding = MathF.Max(0f, paddingWorldUnits);
+            bool foundSource = false;
+            Vector2 positionSum = Vector2.Zero;
+            int validSourceCount = 0;
+
+            for (int i = 0; i < VisionSources.Count; i++)
+            {
+                VisionSource source = VisionSources[i];
+                if (!float.IsFinite(source.Position.X) ||
+                    !float.IsFinite(source.Position.Y) ||
+                    !float.IsFinite(source.Radius))
+                {
+                    continue;
+                }
+
+                float radius = MathF.Max(0f, source.Radius) + padding;
+                float sourceMinX = source.Position.X - radius;
+                float sourceMaxX = source.Position.X + radius;
+                float sourceMinY = source.Position.Y - radius;
+                float sourceMaxY = source.Position.Y + radius;
+
+                if (!foundSource)
+                {
+                    minX = sourceMinX;
+                    maxX = sourceMaxX;
+                    minY = sourceMinY;
+                    maxY = sourceMaxY;
+                    foundSource = true;
+                }
+                else
+                {
+                    minX = MathF.Min(minX, sourceMinX);
+                    maxX = MathF.Max(maxX, sourceMaxX);
+                    minY = MathF.Min(minY, sourceMinY);
+                    maxY = MathF.Max(maxY, sourceMaxY);
+                }
+
+                positionSum += source.Position;
+                validSourceCount++;
+                maxRadius = MathF.Max(maxRadius, radius);
+            }
+
+            if (!foundSource || validSourceCount <= 0)
+            {
+                return false;
+            }
+
+            center = positionSum / validSourceCount;
+            return true;
+        }
+
         private static bool CollectVisionSources()
         {
             VisionSources.Clear();
@@ -996,6 +1067,7 @@ namespace op.io
             }
 
             float centerRefreshDistance = MathF.Max(1f, _visualParameters.BorderThickness * FrontierCenterRefreshBorderRatio);
+            centerRefreshDistance = MathF.Max(0.35f, MathF.Min(centerRefreshDistance, _frontierDesiredCenterRefreshDistanceWorld));
             float radiusRefreshDistance = MathF.Max(0.5f, _visualParameters.BorderThickness * FrontierRadiusRefreshBorderRatio);
 
             float centerDistanceSq = Vector2.DistanceSquared(_frontierSampleCenter, referenceCenter);
@@ -2175,6 +2247,7 @@ namespace op.io
                 _activePhaseIndex = 0;
                 _phaseFrameCursor = 0f;
                 _lastFrameMoveDistanceWorld = 0f;
+                _frontierDesiredCenterRefreshDistanceWorld = 0.35f;
                 _frontierTargetUpdateIntervalSeconds = FrontierMinUpdateIntervalSeconds;
                 return;
             }
@@ -2217,6 +2290,9 @@ namespace op.io
                 FrontierMinUpdateIntervalSeconds,
                 FrontierFastUpdateIntervalSeconds,
                 rateT);
+            _frontierDesiredCenterRefreshDistanceWorld = MathF.Max(
+                0.35f,
+                speedWorldPerSecond * _frontierTargetUpdateIntervalSeconds);
 
             if (speedWorldPerSecond > 0.0001f)
             {

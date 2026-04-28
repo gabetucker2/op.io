@@ -4,6 +4,97 @@ using Microsoft.Xna.Framework;
 
 namespace op.io
 {
+    public readonly struct TerrainInspectionSnapshot
+    {
+        public const int SharedTerrainId = -9001;
+
+        public TerrainInspectionSnapshot(
+            Vector2 hoverWorldPosition,
+            bool isBoundary,
+            bool isLand,
+            float fieldValue,
+            Color terrainColor,
+            int seed,
+            int residentChunkCount,
+            int residentComponentCount,
+            int residentEdgeLoopCount,
+            int residentColliderCount,
+            int activeColliderCount,
+            int visualTriangleCount,
+            int pendingChunkCount,
+            int colliderActivationCandidateCount,
+            bool chunkBuildsInFlight,
+            bool materializationInFlight,
+            bool materializationRestartPending,
+            double lastMaterializationMilliseconds,
+            float chunkWorldSize,
+            float featureWorldScaleMultiplier,
+            float preloadMarginWorldUnits,
+            float octogonalCornerCutCellRatio,
+            string worldBounds,
+            string seedAnchor,
+            string centerChunk,
+            string visibleChunkWindow,
+            string colliderChunkWindow)
+        {
+            HoverWorldPosition = hoverWorldPosition;
+            IsBoundary = isBoundary;
+            IsLand = isLand;
+            FieldValue = fieldValue;
+            TerrainColor = terrainColor;
+            Seed = seed;
+            ResidentChunkCount = residentChunkCount;
+            ResidentComponentCount = residentComponentCount;
+            ResidentEdgeLoopCount = residentEdgeLoopCount;
+            ResidentColliderCount = residentColliderCount;
+            ActiveColliderCount = activeColliderCount;
+            VisualTriangleCount = visualTriangleCount;
+            PendingChunkCount = pendingChunkCount;
+            ColliderActivationCandidateCount = colliderActivationCandidateCount;
+            ChunkBuildsInFlight = chunkBuildsInFlight;
+            MaterializationInFlight = materializationInFlight;
+            MaterializationRestartPending = materializationRestartPending;
+            LastMaterializationMilliseconds = lastMaterializationMilliseconds;
+            ChunkWorldSize = chunkWorldSize;
+            FeatureWorldScaleMultiplier = featureWorldScaleMultiplier;
+            PreloadMarginWorldUnits = preloadMarginWorldUnits;
+            OctogonalCornerCutCellRatio = octogonalCornerCutCellRatio;
+            WorldBounds = worldBounds ?? string.Empty;
+            SeedAnchor = seedAnchor ?? string.Empty;
+            CenterChunk = centerChunk ?? string.Empty;
+            VisibleChunkWindow = visibleChunkWindow ?? string.Empty;
+            ColliderChunkWindow = colliderChunkWindow ?? string.Empty;
+        }
+
+        public Vector2 HoverWorldPosition { get; }
+        public bool IsBoundary { get; }
+        public bool IsLand { get; }
+        public float FieldValue { get; }
+        public Color TerrainColor { get; }
+        public int Seed { get; }
+        public int ResidentChunkCount { get; }
+        public int ResidentComponentCount { get; }
+        public int ResidentEdgeLoopCount { get; }
+        public int ResidentColliderCount { get; }
+        public int ActiveColliderCount { get; }
+        public int VisualTriangleCount { get; }
+        public int PendingChunkCount { get; }
+        public int ColliderActivationCandidateCount { get; }
+        public bool ChunkBuildsInFlight { get; }
+        public bool MaterializationInFlight { get; }
+        public bool MaterializationRestartPending { get; }
+        public double LastMaterializationMilliseconds { get; }
+        public float ChunkWorldSize { get; }
+        public float FeatureWorldScaleMultiplier { get; }
+        public float PreloadMarginWorldUnits { get; }
+        public float OctogonalCornerCutCellRatio { get; }
+        public string WorldBounds { get; }
+        public string SeedAnchor { get; }
+        public string CenterChunk { get; }
+        public string VisibleChunkWindow { get; }
+        public string ColliderChunkWindow { get; }
+    }
+
     public sealed class InspectableObjectInfo
     {
         public InspectableObjectInfo(GameObject source)
@@ -12,7 +103,17 @@ namespace op.io
             Refresh();
         }
 
+        private InspectableObjectInfo(TerrainInspectionSnapshot terrain)
+        {
+            IsTerrain = true;
+            Terrain = terrain;
+            Position = terrain.HoverWorldPosition;
+            Refresh();
+        }
+
         public GameObject Source { get; }
+        public bool IsTerrain { get; private set; }
+        public TerrainInspectionSnapshot Terrain { get; private set; }
         public int Id { get; private set; }
         public string Name { get; private set; }
         public bool IsPrototype { get; private set; }
@@ -48,8 +149,60 @@ namespace op.io
 
         public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"ID {Id}" : Name;
 
+        public static InspectableObjectInfo CreateTerrain(TerrainInspectionSnapshot terrain)
+        {
+            return new InspectableObjectInfo(terrain);
+        }
+
         public void Refresh()
         {
+            if (IsTerrain)
+            {
+                if (!GameBlockTerrainBackground.TryBuildTerrainInspectionSnapshot(
+                    Position,
+                    requireTerrainHit: false,
+                    out TerrainInspectionSnapshot terrain))
+                {
+                    IsValid = false;
+                    return;
+                }
+
+                Terrain = terrain;
+                Id = TerrainInspectionSnapshot.SharedTerrainId;
+                Name = "Terrain";
+                IsPrototype = false;
+                Position = terrain.HoverWorldPosition;
+                ParentPosition = Vector2.Zero;
+                ObjectPosition = Position;
+                Rotation = 0f;
+                Mass = 0f;
+                IsCollidable = true;
+                IsDestructible = false;
+                DynamicPhysics = false;
+                IsInteract = false;
+                IsZoneBlock = false;
+                DrawLayer = GameBlockTerrainBackground.TerrainDrawLayerSetting;
+                Shape = null;
+                FillColor = terrain.TerrainColor;
+                OutlineColor = Color.Transparent;
+                OutlineWidth = 0;
+                Width = 0;
+                Height = 0;
+                Sides = 0;
+                IsPlayer = false;
+                CurrentXP = 0f;
+                MaxXP = 0f;
+                DeathPointReward = 0f;
+                CurrentHealth = 0f;
+                MaxHealth = 0f;
+                CurrentShield = 0f;
+                MaxShield = 0f;
+                LastHealthDamageTime = float.NegativeInfinity;
+                LastShieldDamageTime = float.NegativeInfinity;
+                IsValid = true;
+                return;
+            }
+
             if (Source == null || Source.Shape == null)
             {
                 IsValid = false;
@@ -102,6 +255,11 @@ namespace op.io
 
         public InspectableObjectInfo Clone()
         {
+            if (IsTerrain)
+            {
+                return CreateTerrain(Terrain);
+            }
+
             InspectableObjectInfo copy = new(Source);
             copy.Refresh();
             return copy;
@@ -115,7 +273,7 @@ namespace op.io
             List<GameObject> objects = GameObjectRegister.GetRegisteredGameObjects();
             if (objects == null || objects.Count == 0)
             {
-                return null;
+                return FindHoveredTerrain(gameCursorPosition);
             }
 
             InspectableObjectInfo best = null;
@@ -140,12 +298,32 @@ namespace op.io
                 }
             }
 
-            return best;
+            return best ?? FindHoveredTerrain(gameCursorPosition);
         }
 
         public static bool IsInspectableObject(GameObject gameObject)
         {
             return IsInspectable(gameObject);
+        }
+
+        public static bool IsInspectableTarget(InspectableObjectInfo target)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+
+            return target.IsValid && (target.IsTerrain || IsInspectable(target.Source));
+        }
+
+        private static InspectableObjectInfo FindHoveredTerrain(Vector2 gameCursorPosition)
+        {
+            return GameBlockTerrainBackground.TryBuildTerrainInspectionSnapshot(
+                gameCursorPosition,
+                requireTerrainHit: true,
+                out TerrainInspectionSnapshot terrain)
+                ? InspectableObjectInfo.CreateTerrain(terrain)
+                : null;
         }
 
         private static bool IsInspectable(GameObject gameObject)

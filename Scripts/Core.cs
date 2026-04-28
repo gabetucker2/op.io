@@ -95,11 +95,8 @@ namespace op.io
 
         protected override void LoadContent()
         {
-            try
-            {
-                GameRenderer.LoadGraphics();
-            }
-            finally
+            GameRenderer.LoadGraphics();
+            if (GameRenderer.PrepareStartupTerrainForWindowReveal())
             {
                 GameInitializer.RevealStartupWindow();
             }

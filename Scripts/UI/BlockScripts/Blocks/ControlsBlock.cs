@@ -1916,7 +1916,9 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             for (int i = 0; i < _keybindCache.Count; i++)
             {
                 var row = _keybindCache[i];
-                if (row.Bounds == Rectangle.Empty || IsPersistentSwitch(row.InputType) || row.InputType == InputType.Trigger || row.ToggleLocked)
+                bool triggerCanSwitch = row.InputType == InputType.Trigger &&
+                    ControlKeyRules.SupportsTriggerSwitchMode(row.Action);
+                if (row.Bounds == Rectangle.Empty || IsPersistentSwitch(row.InputType) || (row.InputType == InputType.Trigger && !triggerCanSwitch) || row.ToggleLocked)
                 {
                     row.TypeToggleBounds = Rectangle.Empty;
                     _keybindCache[i] = row;
@@ -2232,7 +2234,7 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
                 return false;
             }
 
-            if (row.InputType == InputType.Trigger)
+            if (row.InputType == InputType.Trigger && !ControlKeyRules.SupportsTriggerSwitchMode(settingKey))
             {
                 return false;
             }
@@ -2263,7 +2265,12 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             InputType nextType = row.InputType;
             bool triggerAuto = row.TriggerAutoFire;
 
-            if (row.InputType == InputType.Hold)
+            if (row.InputType == InputType.Trigger)
+            {
+                nextType = InputType.NoSaveSwitch;
+                triggerAuto = false;
+            }
+            else if (row.InputType == InputType.Hold)
             {
                 nextType = InputType.DoubleTapHold;
                 triggerAuto = false;
@@ -2280,7 +2287,9 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             }
             else if (row.InputType == InputType.DoubleTapToggle)
             {
-                nextType = InputType.Hold;
+                nextType = ControlKeyRules.SupportsTriggerSwitchMode(settingKey)
+                    ? InputType.Trigger
+                    : InputType.Hold;
                 triggerAuto = false;
             }
 
@@ -3224,7 +3233,8 @@ ORDER BY RenderCategoryOrder ASC, RenderCategory ASC, ControlOrder ASC, SettingK
             public bool BindingRequired;
             public bool IsSwitchType => ControlsBlock.IsSwitchType(InputType);
             public bool IsPersistentSwitch => ControlsBlock.IsPersistentSwitch(InputType);
-            public bool IsToggleCandidate => !IsPersistentSwitch && InputType != InputType.Trigger && !ToggleLocked;
+            public bool IsToggleCandidate => !IsPersistentSwitch && !ToggleLocked &&
+                (InputType != InputType.Trigger || ControlKeyRules.SupportsTriggerSwitchMode(Action));
         }
     }
 }

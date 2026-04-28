@@ -43,6 +43,7 @@ namespace op.io
                 EnsureBarConfigVisibilityFade();
                 EnsureRegenBarConfigs();
                 EnsureBarsVisibleSetting();
+                EnsureYourBarRevealSetting();
                 EnsureBarsInPropertiesPanel();
                 EnsureDefaultDockingSetupVisibilityDefaults();
                 EnsureDockingSetupAuxiliaryBlocks();
@@ -57,6 +58,7 @@ namespace op.io
                 EnsureAgentsRotationDelay();
                 EnsureDropBodyKnockback();
                 EnsureKnockbackMassScaleSetting();
+                EnsureCollisionBounceMomentumTransferSetting();
                 EnsureAgentsMass();
                 EnsureRecoilMassScaleSetting();
                 // Attribute hidden/normal framework migrations
@@ -65,6 +67,7 @@ namespace op.io
                 EnsureAgentsBodyActionBuff();
                 EnsureBodySightColumns();
                 EnsureScoutSentryVisionUnit();
+                EnsureBodyVisualColumns();
                 EnsureDropAgentsHiddenColumns();
                 EnsureDropBarrelHiddenColumns();
                 EnsurePlayerBodyCollisionDamage();
@@ -81,8 +84,13 @@ namespace op.io
                 EnsureBarrelBulletHealthColumn();
                 EnsureBodyRadiusScalarSetting();
                 EnsureDeathFadeFxSettings();
+                EnsureBodyTransitionFxSettings();
                 EnsureXPClumpFxSettings();
                 EnsureXPClumpBackendTooltips();
+                EnsureBodyTransitionBackendTooltips();
+                EnsureYourBarBackendTooltips();
+                EnsureTerrainWorldSeedSetting();
+                EnsureTerrainBackendTooltips();
                 _applied = true;
             }
             catch (Exception ex)
@@ -607,6 +615,18 @@ AND BulletDamage IN (4, 10, 15);");
             {
                 DebugLogger.PrintError($"EnsureBarsVisibleSetting failed: {ex.Message}");
             }
+        }
+
+        private static void EnsureYourBarRevealSetting()
+        {
+            if (SettingKeyExists("YourBarRevealSeconds", "BarSettings"))
+            {
+                return;
+            }
+
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT INTO BarSettings (SettingKey, Value) VALUES ('YourBarRevealSeconds', '5');");
+            DebugLogger.PrintDatabase("EnsureYourBarRevealSetting: inserted YourBarRevealSeconds = 5.");
         }
 
         private static void EnsureBarsInPropertiesPanel()
@@ -1381,6 +1401,16 @@ AND BulletDamage IN (4, 10, 15);");
             }
         }
 
+        private static void EnsureCollisionBounceMomentumTransferSetting()
+        {
+            if (!SettingKeyExists("CollisionBounceMomentumTransfer", "PhysicsSettings"))
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT INTO PhysicsSettings (SettingKey, Value) VALUES ('CollisionBounceMomentumTransfer', '0.35');");
+                DebugLogger.PrintDatabase("EnsureCollisionBounceMomentumTransferSetting: inserted CollisionBounceMomentumTransfer = 0.35.");
+            }
+        }
+
         private static void EnsureBarrelMassColumn()
         {
             if (ColumnExists("BarrelPrototypes", "BarrelMass")) return;
@@ -2029,6 +2059,78 @@ WHERE ID IN (SELECT ID FROM FarmData);";
             }
         }
 
+        private static void EnsureBodyVisualColumns()
+        {
+            if (!TableExists("BodyPrototypes"))
+            {
+                return;
+            }
+
+            (string Name, string TypeAndDefault)[] columns =
+            [
+                ("FillR", "INTEGER DEFAULT -1"),
+                ("FillG", "INTEGER DEFAULT -1"),
+                ("FillB", "INTEGER DEFAULT -1"),
+                ("FillA", "INTEGER DEFAULT -1"),
+                ("OutlineR", "INTEGER DEFAULT -1"),
+                ("OutlineG", "INTEGER DEFAULT -1"),
+                ("OutlineB", "INTEGER DEFAULT -1"),
+                ("OutlineA", "INTEGER DEFAULT -1"),
+                ("OutlineWidth", "INTEGER DEFAULT -1"),
+            ];
+
+            foreach ((string name, string typeAndDefault) in columns)
+            {
+                if (!ColumnExists("BodyPrototypes", name))
+                {
+                    DatabaseQuery.ExecuteNonQuery($"ALTER TABLE BodyPrototypes ADD COLUMN {name} {typeAndDefault};");
+                    DebugLogger.PrintDatabase($"EnsureBodyVisualColumns: added BodyPrototypes.{name}.");
+                }
+            }
+
+            DatabaseQuery.ExecuteNonQuery(@"
+UPDATE BodyPrototypes
+SET FillR = 0,
+    FillG = 255,
+    FillB = 255,
+    FillA = 255,
+    OutlineR = 0,
+    OutlineG = 150,
+    OutlineB = 150,
+    OutlineA = 255,
+    OutlineWidth = 5
+WHERE Name = 'Normal'
+  AND (COALESCE(FillA, -1) < 0 OR COALESCE(OutlineA, -1) < 0 OR COALESCE(OutlineWidth, -1) < 0);");
+
+            DatabaseQuery.ExecuteNonQuery(@"
+UPDATE BodyPrototypes
+SET FillR = 0,
+    FillG = 160,
+    FillB = 255,
+    FillA = 255,
+    OutlineR = 0,
+    OutlineG = 88,
+    OutlineB = 184,
+    OutlineA = 255,
+    OutlineWidth = 6
+WHERE Name = 'Tank'
+  AND (COALESCE(FillA, -1) < 0 OR COALESCE(OutlineA, -1) < 0 OR COALESCE(OutlineWidth, -1) < 0);");
+
+            DatabaseQuery.ExecuteNonQuery(@"
+UPDATE BodyPrototypes
+SET FillR = 96,
+    FillG = 255,
+    FillB = 160,
+    FillA = 255,
+    OutlineR = 24,
+    OutlineG = 140,
+    OutlineB = 88,
+    OutlineA = 255,
+    OutlineWidth = 4
+WHERE Name = 'ScoutSentryBody'
+  AND (COALESCE(FillA, -1) < 0 OR COALESCE(OutlineA, -1) < 0 OR COALESCE(OutlineWidth, -1) < 0);");
+        }
+
         private static void EnsureDeathFadeFxSettings()
         {
             (string key, string value)[] settings =
@@ -2048,6 +2150,27 @@ WHERE ID IN (SELECT ID FROM FarmData);";
                 DatabaseQuery.ExecuteNonQuery(
                     $"INSERT INTO FXSettings (SettingKey, Value) VALUES ('{key}', '{value}');");
                 DebugLogger.PrintDatabase($"EnsureDeathFadeFxSettings: inserted {key} = {value}.");
+            }
+        }
+
+        private static void EnsureBodyTransitionFxSettings()
+        {
+            (string key, string value)[] settings =
+            [
+                ("BodyTransitionDurationSeconds", "0.3"),
+                ("BodyTransitionBufferSeconds", "0.5"),
+            ];
+
+            foreach ((string key, string value) in settings)
+            {
+                if (SettingKeyExists(key, "FXSettings"))
+                {
+                    continue;
+                }
+
+                DatabaseQuery.ExecuteNonQuery(
+                    $"INSERT INTO FXSettings (SettingKey, Value) VALUES ('{key}', '{value}');");
+                DebugLogger.PrintDatabase($"EnsureBodyTransitionFxSettings: inserted {key} = {value}.");
             }
         }
 
@@ -2204,6 +2327,131 @@ WHERE ID IN (SELECT ID FROM FarmData);";
                 ("XPClumpClusterHomeostasisVariance", "How much pair-by-pair variance is injected into clump cluster homeostasis distance."),
                 ("XPClumpClusterInstabilityForce", "Tangential magnetic wobble force that keeps clump clusters fluid and irregular."),
                 ("XPClumpClusterInstabilityPulseHz", "Pulse frequency for magnetic wobble and dynamic homeostasis modulation in clump clusters."),
+            ];
+
+            foreach ((string key, string text) in entries)
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT OR REPLACE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
+                    new Dictionary<string, object>
+                    {
+                        ["@key"] = key,
+                        ["@text"] = text
+                    });
+            }
+        }
+
+        private static void EnsureBodyTransitionBackendTooltips()
+        {
+            if (!TableExists("UITooltips"))
+            {
+                return;
+            }
+
+            (string key, string text)[] entries =
+            [
+                ("BodyTransitionAnimating", "True while the player body is actively blending from the previous slot into the newly selected slot."),
+                ("BodyTransitionProgress", "Normalized progress through the active body transition lerp. 0 = just started, 1 = fully arrived."),
+                ("BodyTransitionCooldownRemaining", "Seconds remaining before another body change is allowed after the current transition finishes."),
+                ("BodyTransitionDurationSeconds", "Configured SQL duration for a full body transition lerp."),
+                ("BodyTransitionBufferSeconds", "Configured SQL lockout that begins after a body transition finishes."),
+            ];
+
+            foreach ((string key, string text) in entries)
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT OR REPLACE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
+                    new Dictionary<string, object>
+                    {
+                        ["@key"] = key,
+                        ["@text"] = text
+                    });
+            }
+        }
+
+        private static void EnsureYourBarBackendTooltips()
+        {
+            if (!TableExists("UITooltips"))
+            {
+                return;
+            }
+
+            (string key, string text)[] entries =
+            [
+                ("YourBarRevealActive", "True while the YourBar control is actively requesting your player's configured bar rows to stay visible."),
+                ("YourBarControlSwitchMode", "True when the YourBar control is currently configured as a switch-style input."),
+                ("YourBarRevealRemainingSeconds", "Seconds left in the timed YourBar reveal before the existing bar fade begins."),
+                ("YourBarRevealSeconds", "Configured duration for timed YourBar reveals."),
+                ("YourBarVisible", "True while at least one of your player's configured bar rows is currently visible or fading."),
+                ("YourBarVisibilityAlpha", "Highest current visibility alpha across your player's configured bar rows."),
+            ];
+
+            foreach ((string key, string text) in entries)
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT OR REPLACE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
+                    new Dictionary<string, object>
+                    {
+                        ["@key"] = key,
+                        ["@text"] = text
+                    });
+            }
+        }
+
+        private static void EnsureTerrainWorldSeedSetting()
+        {
+            if (SettingKeyExists("TerrainWorldSeed", "GeneralSettings"))
+            {
+                return;
+            }
+
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT INTO GeneralSettings (SettingKey, Value) VALUES ('TerrainWorldSeed', '1337');");
+            DebugLogger.PrintDatabase("EnsureTerrainWorldSeedSetting: inserted TerrainWorldSeed = 1337.");
+        }
+
+        private static void EnsureTerrainBackendTooltips()
+        {
+            if (!TableExists("UITooltips"))
+            {
+                return;
+            }
+
+            (string key, string text)[] entries =
+            [
+                ("TerrainWorldSeed", "Seed used with chunk coordinates to deterministically regenerate terrain without saving chunk payloads."),
+                ("TerrainResidentChunkCount", "How many terrain chunks are currently cached in memory, including water-only chunk records."),
+                ("TerrainResidentComponentCount", "How many connected terrain landmass render objects are currently resident after stitching loaded chunks together."),
+                ("TerrainResidentColliderCount", "How many static terrain collider proxy bodies are currently active in the existing SAT collision system."),
+                ("TerrainResidentVisualTriangleCount", "How many vector terrain fill triangles are currently resident for direct procedural terrain rendering."),
+                ("TerrainActiveColliderCount", "How many terrain collider proxy bodies are currently active near the camera and participating in world collisions this frame."),
+                ("TerrainSpawnRelocationCount", "How many dynamic startup objects were nudged out of terrain so legacy spawn placement remains valid with collideable land enabled."),
+                ("TerrainCollisionIntrusionCorrectionCount", "How many dynamic world objects were force-corrected back out of terrain this frame after collision resolution to prevent embeds and freeze-state glitches."),
+                ("TerrainPendingChunkCount", "How many terrain chunks are currently queued or building in the background."),
+                ("TerrainPendingCriticalChunkCount", "How many camera-or-fog-visible terrain chunks are still building; resident terrain visuals are held stable while this is above zero."),
+                ("TerrainDiscardedStaleMaterializationCount", "How many completed terrain mesh builds were discarded because the camera or vision window changed before they finished."),
+                ("TerrainChunkBuildsInFlight", "Shows whether any terrain chunk builds are currently in flight."),
+                ("TerrainChunkWorldSize", "World-space width and height covered by each deterministic terrain chunk."),
+                ("TerrainFeatureWorldScaleMultiplier", "Multiplier applied to terrain world-space feature size so islands, coasts, and reefs generate at a larger scale from the same seed."),
+                ("TerrainArchipelagoMacroCellSize", "Terrain-space size of the regional archipelago cluster mask that gates deep ocean, shelves, protected basins, and island cluster zones."),
+                ("TerrainArchipelagoSubstrateCellSize", "Legacy terrain-space substrate scale retained for telemetry; current lithology is blended from smooth process fields instead of hard substrate cells."),
+                ("TerrainArchipelagoEnclosureCellSize", "Terrain-space size of the larger enclosure-producer cells used by reef rings, barrier systems, island rings, and cove/ravine cuts."),
+                ("TerrainGenerationPipeline", "Current terrain generation order used by the layered archipelago sampler."),
+                ("TerrainLandformSelectionMode", "Whether terrain is generated from direct archetype placement or from layered geological processes with post-classification."),
+                ("TerrainLagoonOpeningTarget", "Target pass count used by opening producers so lagoons usually retain one or two navigable breaks instead of sealing shut."),
+                ("TerrainContourResolutionMultiplier", "Multiplier used when extracting procedural contour geometry from the sampled terrain field before simplifying it into vector terrain polygons and collider shells."),
+                ("TerrainTargetVisualTextureOversample", "Legacy terrain texture oversample setting. Vector terrain rendering keeps this at 0 because visuals are generated from polygon triangles instead of raster textures."),
+                ("TerrainPreloadMarginWorldUnits", "Extra world-space margin around the camera-and-fog-visible terrain streaming window that chunk loading prebuilds ahead of view."),
+                ("TerrainSeedAnchor", "Seed-derived terrain-space anchor applied before chunk sampling so the spawn region opens near generated land instead of empty ocean."),
+                ("TerrainStreamingFocus", "World position currently anchoring terrain chunk priority. Usually the player position."),
+                ("TerrainCenterChunk", "Chunk coordinate currently centered under the terrain streaming focus."),
+                ("TerrainVisibleChunkWindow", "Inclusive chunk-coordinate window currently required by the camera and fog-of-war vision sources before preload margin."),
+                ("WorldRenderRegisteredObjectCount", "How many world render game objects are currently registered with the shape renderer before camera culling."),
+                ("WorldRenderDrawnObjectCount", "How many world render game objects survived camera culling and were actually drawn this frame."),
+                ("PhysicsBroadPhaseActiveCollidableCount", "How many collidable world objects entered the spatial broad-phase this frame."),
+                ("PhysicsBroadPhaseCandidatePairCount", "How many collision candidate pairs survived broad-phase filtering and reached narrow-phase SAT tests this frame."),
+                ("PhysicsStartupOverlapResolvedPairCount", "How many collidable overlap pairs were separated once during startup before the first live gameplay frame."),
+                ("PhysicsStartupOverlapIterationCount", "How many startup depenetration passes were needed to settle collidable spawn overlaps before gameplay began."),
             ];
 
             foreach ((string key, string text) in entries)

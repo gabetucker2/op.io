@@ -43,6 +43,7 @@ namespace op.io
             DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
             BlockManager.OnGraphicsReady();
             GameBlockOceanBackground.Initialize(Core.Instance.GraphicsDevice, Core.Instance.Content);
+            GameBlockTerrainBackground.Initialize(Core.Instance.GraphicsDevice);
             AmbienceSettings.Initialize();
             GameBlock.Initialize(Core.Instance.Content);
             XPClumpManager.LoadContent(Core.Instance.GraphicsDevice);
@@ -75,6 +76,34 @@ namespace op.io
             }
 
             DebugLogger.Print("GameRenderer: Graphics and GameObjects loaded successfully.");
+        }
+
+        public static bool PrepareStartupTerrainForWindowReveal()
+        {
+            if (Core.Instance?.GraphicsDevice == null || Core.Instance.SpriteBatch == null)
+            {
+                DebugLogger.PrintWarning("Startup terrain preparation skipped: graphics are not ready.");
+                return false;
+            }
+
+            Matrix camMatrix = BlockManager.GetCameraTransform();
+            FogOfWarManager.Prepare(camMatrix);
+            Rectangle panelBounds = new(
+                0,
+                0,
+                Core.Instance.GraphicsDevice.Viewport.Width,
+                Core.Instance.GraphicsDevice.Viewport.Height);
+
+            bool ready = GameBlockTerrainBackground.PrepareStartupVisibleTerrain(
+                Core.Instance.GraphicsDevice,
+                panelBounds,
+                camMatrix);
+            if (!ready)
+            {
+                DebugLogger.PrintWarning($"Startup terrain preparation did not complete: {GameBlockTerrainBackground.TerrainStartupReadinessSummary}");
+            }
+
+            return ready;
         }
 
         public static void Draw()
@@ -116,6 +145,11 @@ namespace op.io
                 Core.Instance.GraphicsDevice.Viewport.Width,
                 Core.Instance.GraphicsDevice.Viewport.Height);
             GameBlockOceanBackground.Draw(Core.Instance.SpriteBatch, panelBounds, Core.GAMETIME, BlockManager.CameraZoom, camMatrix);
+            GameBlockTerrainBackground.Draw(Core.Instance.SpriteBatch, panelBounds, camMatrix);
+            if (GameBlockTerrainBackground.TerrainStartupVisibleTerrainReady)
+            {
+                GameInitializer.RevealStartupWindow();
+            }
 
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
 
@@ -199,7 +233,8 @@ namespace op.io
             float minY = visibleMinY;
             float maxY = visibleMaxY;
 
-            if (TryGetMapWorldBounds(out float mapMinX, out float mapMaxX, out float mapMinY, out float mapMaxY))
+            if (!GameBlockTerrainBackground.IsActive &&
+                TryGetMapWorldBounds(out float mapMinX, out float mapMaxX, out float mapMinY, out float mapMaxY))
             {
                 minX = MathF.Max(minX, mapMinX);
                 maxX = MathF.Min(maxX, mapMaxX);
@@ -311,7 +346,7 @@ namespace op.io
             _gridPixelTexture.SetData([Color.White]);
         }
 
-        private static bool TryGetVisibleWorldBounds(Matrix cameraMatrix, out float minX, out float maxX, out float minY, out float maxY)
+        public static bool TryGetVisibleWorldBounds(Matrix cameraMatrix, out float minX, out float maxX, out float minY, out float maxY)
         {
             minX = maxX = minY = maxY = 0f;
 

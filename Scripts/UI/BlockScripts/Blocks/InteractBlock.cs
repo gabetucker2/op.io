@@ -362,11 +362,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 int hitBody = HitTestBodyRow(bodyRowBounds, mouseState.Position, player);
                 if (hitBody >= 0 && hitBody != player.ActiveBodyIndex)
                 {
-                    // Switch to the clicked body using the public API
-                    while (player.ActiveBodyIndex != hitBody)
-                    {
-                        player.SwitchBodyRight();
-                    }
+                    player.SwitchBodyToIndex(hitBody);
                 }
                 clickHandled = true;
             }
@@ -1073,7 +1069,7 @@ namespace op.io.UI.BlockScripts.Blocks
             // ── Body Attributes ──────────────────────────────────────────────────
             Attributes_Body a = player.BodyAttributes;
             float control = a.Control > 0f ? a.Control : 1f;
-            float kScale = CollisionResolver.KnockbackMassScale;
+            float bounceTransfer = CollisionResolver.CollisionBounceMomentumTransfer;
 
             var attrs = new List<Properties.Row>
             {
@@ -1089,7 +1085,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 new("Dmg Shield Delay",  $"{a.ShieldRegenDelay:0.##}"),
                 new("Body Coll. Damage", $"{a.BodyCollisionDamage:0.##}"),
                 new("Body Penetration",  $"{a.BodyPenetration:0.##}"),
-                new("Body Knockback",    $"{AttributeDerived.BodyKnockback(a.Mass, kScale):0.##}",
+                new("Body Knockback",    $"{AttributeDerived.BodyKnockback(a.Mass, bounceTransfer):0.##}",
                     isHidden: true, affectsList: AttributeDerived.AffectsBodyKnockback),
                 new("Coll. Dmg Resist",  $"{a.CollisionDamageResistance:0.##}"),
                 new("Bullet Dmg Resist", $"{a.BulletDamageResistance:0.##}"),
@@ -1298,8 +1294,13 @@ namespace op.io.UI.BlockScripts.Blocks
                 float slotCenterY = centerY;
 
                 bool isActive = i == player.ActiveBodyIndex;
-                Color fillColor = isActive ? ColorPalette.Accent * 0.9f : ColorPalette.TextMuted * 0.4f;
-                Color outlineColor = isActive ? ColorPalette.Accent : UIStyle.BlockBorder;
+                Agent.BodySlot slot = player.Bodies[i];
+                Color fillColor = isActive
+                    ? slot.FillColor
+                    : Color.Lerp(slot.FillColor, ColorPalette.TextMuted, 0.55f) * 0.85f;
+                Color outlineColor = isActive
+                    ? slot.OutlineColor
+                    : Color.Lerp(slot.OutlineColor, UIStyle.BlockBorder, 0.55f);
 
                 Vector2 center = new(slotCenterX, slotCenterY);
                 DrawFilledCircle(spriteBatch, center, radius, fillColor);

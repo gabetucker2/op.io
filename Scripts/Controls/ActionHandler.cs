@@ -30,11 +30,13 @@ namespace op.io
                 return;
             }
 
+            Agent player = Core.Instance.Player;
+            bool playerCanAct = player != null && !player.IsDeadOrDying;
+
             // Fire Action — silently ignored when player has no barrels equipped
             if (InputManager.IsInputActive("Fire"))
             {
-                Agent player = Core.Instance.Player;
-                if (player != null && player.BarrelCount > 0)
+                if (playerCanAct && player.BarrelCount > 0)
                 {
                     Fire(player);
                 }
@@ -43,35 +45,30 @@ namespace op.io
             // Barrel carousel — Q rotates left (clockwise), E rotates right; no-op with <2 barrels
             if (InputManager.IsInputActive("BarrelLeft"))
             {
-                Agent player = Core.Instance.Player;
-                if (player != null && player.BarrelCount >= 2)
+                if (playerCanAct && player.BarrelCount >= 2)
                     player.SwitchBarrelLeft();
             }
             if (InputManager.IsInputActive("BarrelRight"))
             {
-                Agent player = Core.Instance.Player;
-                if (player != null && player.BarrelCount >= 2)
+                if (playerCanAct && player.BarrelCount >= 2)
                     player.SwitchBarrelRight();
             }
 
             // Body swap — Ctrl+Q rotates left, Ctrl+E rotates right; no-op with <2 bodies
             if (InputManager.IsInputActive(ControlKeyMigrations.BodyLeftKey))
             {
-                Agent bodyPlayer = Core.Instance.Player;
-                if (bodyPlayer != null && bodyPlayer.BodyCount >= 2)
-                    bodyPlayer.SwitchBodyLeft();
+                if (playerCanAct && player.BodyCount >= 2)
+                    player.SwitchBodyLeft();
             }
             if (InputManager.IsInputActive(ControlKeyMigrations.BodyRightKey))
             {
-                Agent bodyPlayer = Core.Instance.Player;
-                if (bodyPlayer != null && bodyPlayer.BodyCount >= 2)
-                    bodyPlayer.SwitchBodyRight();
+                if (playerCanAct && player.BodyCount >= 2)
+                    player.SwitchBodyRight();
             }
 
             // Respawn Action — only activates when the player is dead or dying.
             if (InputManager.IsInputActive(ControlKeyMigrations.RespawnKey))
             {
-                Agent player = Core.Instance.Player;
                 bool isAlive = player != null && !player.IsDying && player.CurrentHealth > 0f;
                 DebugLogger.PrintPlayer($"[Respawn] Shift+R detected. player={player?.ID.ToString() ?? "null"}, IsDying={player?.IsDying}, HP={player?.CurrentHealth:F1}, isAlive={isAlive}");
                 if (!isAlive)
@@ -96,9 +93,12 @@ namespace op.io
             // ReturnCursorToPlayer Handling
             if (InputManager.IsInputActive("ReturnCursorToPlayer"))
             {
-                Vector2 playerPosition = GameObjectFunctions.GetGOGlobalScreenPosition(Core.Instance.Player);
-                Cursor.Position = TypeConversionFunctions.Vector2ToPoint(playerPosition);
-                DebugLogger.PrintUI($"Cursor returned to player position: {playerPosition}");
+                if (player != null)
+                {
+                    Vector2 playerPosition = GameObjectFunctions.GetGOGlobalScreenPosition(player);
+                    Cursor.Position = TypeConversionFunctions.Vector2ToPoint(playerPosition);
+                    DebugLogger.PrintUI($"Cursor returned to player position: {playerPosition}");
+                }
             }
 
             // CameraSnapToPlayer (Shift+Space)
@@ -146,6 +146,13 @@ namespace op.io
         public static void Fire(Agent agent)
         {
             if (agent == null) return;
+            if (agent.IsDeadOrDying)
+            {
+                agent.MovementVelocity = Vector2.Zero;
+                if (agent.IsPlayer)
+                    agent.PhysicsVelocity = Vector2.Zero;
+                return;
+            }
             if (agent.BarrelCount == 0) return;
             if (agent.TriggerCooldown > 0) return;
 
@@ -210,7 +217,11 @@ namespace op.io
                 newPlayer.ClearBodies();
                 for (int bi = 0; bi < bodies.Count; bi++)
                 {
-                    newPlayer.AddBody(bodies[bi].Attrs);
+                    newPlayer.AddBody(
+                        bodies[bi].Attrs,
+                        bodies[bi].FillColor,
+                        bodies[bi].OutlineColor,
+                        bodies[bi].OutlineWidth);
                     if (!string.IsNullOrEmpty(bodies[bi].Name))
                         newPlayer.Bodies[bi].Name = bodies[bi].Name;
                 }
@@ -232,6 +243,13 @@ namespace op.io
             if (gameObject == null)
             {
                 DebugLogger.PrintError("Move failed: GameObject is null.");
+                return;
+            }
+
+            if (gameObject is Agent { IsDeadOrDying: true } agent)
+            {
+                agent.MovementVelocity = Vector2.Zero;
+                agent.PhysicsVelocity = Vector2.Zero;
                 return;
             }
 

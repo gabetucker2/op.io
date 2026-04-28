@@ -16,6 +16,71 @@ namespace op.io
         private static bool _initialized;
         private static int _maxLogFiles = DefaultMaxLogFiles;
 
+        public static string LogsDirectoryPath => LogsRoot;
+
+        public static bool InitializeSession()
+        {
+            try
+            {
+                EnsureInitialized();
+                return IsSessionActive;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool IsSessionActive
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    return _initialized &&
+                        !string.IsNullOrWhiteSpace(_currentLogFilePath) &&
+                        File.Exists(_currentLogFilePath);
+                }
+            }
+        }
+
+        public static string CurrentLogFileName
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    return string.IsNullOrWhiteSpace(_currentLogFilePath)
+                        ? "None"
+                        : Path.GetFileName(_currentLogFilePath);
+                }
+            }
+        }
+
+        public static string CurrentRedFlagsFileName
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    return string.IsNullOrWhiteSpace(_currentRedFlagsFilePath)
+                        ? "None"
+                        : Path.GetFileName(_currentRedFlagsFilePath);
+                }
+            }
+        }
+
+        public static int MaxLogFiles
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    return _maxLogFiles;
+                }
+            }
+        }
+
         public static string GetLogsDirectory()
         {
             try
@@ -92,7 +157,7 @@ namespace op.io
                 }
 
                 Directory.CreateDirectory(LogsRoot);
-                EnforceLogRetention();
+                EnforceLogRetention(reserveSlotForNewLog: true);
                 _currentLogFilePath = CreateLogFile();
                 _currentRedFlagsFilePath = CreateRedFlagsFile(_currentLogFilePath);
                 _initialized = true;
@@ -104,11 +169,11 @@ namespace op.io
             lock (SyncRoot)
             {
                 _maxLogFiles = maxLogFiles > 0 ? maxLogFiles : DefaultMaxLogFiles;
-                EnforceLogRetention();
+                EnforceLogRetention(reserveSlotForNewLog: false);
             }
         }
 
-        private static void EnforceLogRetention()
+        private static void EnforceLogRetention(bool reserveSlotForNewLog)
         {
             if (!Directory.Exists(LogsRoot))
             {
@@ -122,6 +187,11 @@ namespace op.io
             {
                 try
                 {
+                    if (string.Equals(path, _currentLogFilePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     logFiles.Add(new FileInfo(path));
                 }
                 catch
@@ -139,8 +209,12 @@ namespace op.io
             });
 
             int maxLogFiles = _maxLogFiles > 0 ? _maxLogFiles : DefaultMaxLogFiles;
+            bool hasCurrentLogFile = !string.IsNullOrWhiteSpace(_currentLogFilePath) && File.Exists(_currentLogFilePath);
+            int nonCurrentLogFileLimit = reserveSlotForNewLog || hasCurrentLogFile
+                ? Math.Max(0, maxLogFiles - 1)
+                : maxLogFiles;
 
-            while (logFiles.Count >= maxLogFiles)
+            while (logFiles.Count > nonCurrentLogFileLimit)
             {
                 FileInfo oldest = logFiles[0];
                 logFiles.RemoveAt(0);

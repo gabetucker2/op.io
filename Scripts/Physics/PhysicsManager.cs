@@ -50,6 +50,7 @@ namespace op.io
             }
 
             CollisionResolver.ResolveCollisions(gameObjects);
+            GameBlockTerrainBackground.ResolveDynamicTerrainIntrusions(gameObjects);
             // Future: ForcesManager, Gravity, Friction, etc.
         }
     }

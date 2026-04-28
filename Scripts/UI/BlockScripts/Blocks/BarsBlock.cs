@@ -84,6 +84,7 @@ namespace op.io.UI.BlockScripts.Blocks
         private static float _simTime;
         private static readonly Dictionary<BarType, float> _simPrevBarValues = new();
         private static readonly Dictionary<BarType, float> _simLastChangeTimes = new();
+        private static readonly Dictionary<BarType, float> _simLastSpawnTimes = new();
 
         // ── Shared FunColInterface (covers entire list area) ─────────────────
         private static FunColInterface _listFunCol;
@@ -419,6 +420,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _simPrevBarValues.Clear();
             _simLastChangeTimes.Clear();
+            _simLastSpawnTimes.Clear();
             _segmentTarget = default;
             _segmentOverlayRect = Rectangle.Empty;
             _tooltipRowKey = null;
@@ -567,6 +569,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _simLastShieldDmgTime = float.NegativeInfinity;
             _simPrevBarValues.Clear();
             _simLastChangeTimes.Clear();
+            _simLastSpawnTimes.Clear();
         }
 
         private static GameObject FindPreviewSource(string groupKey)
@@ -1864,6 +1867,9 @@ namespace op.io.UI.BlockScripts.Blocks
             yield return new UIDropdown.Option(
                 GetRelationDropdownId(BarConfigManager.BarRelationName.Change),
                 BarConfigManager.GetRelationLabel(BarConfigManager.BarRelationName.Change));
+            yield return new UIDropdown.Option(
+                GetRelationDropdownId(BarConfigManager.BarRelationName.Spawn),
+                BarConfigManager.GetRelationLabel(BarConfigManager.BarRelationName.Spawn));
 
             if (dependentTarget.BarType == sourceTarget.BarType)
             {
@@ -1911,6 +1917,7 @@ namespace op.io.UI.BlockScripts.Blocks
             BarConfigManager.BarRelationName.BelowFull => "not_full",
             BarConfigManager.BarRelationName.Empty => "empty",
             BarConfigManager.BarRelationName.Change => "changed",
+            BarConfigManager.BarRelationName.Spawn => "spawn",
             BarConfigManager.BarRelationName.Always => "always",
             _ => relationName.ToString()
         };
@@ -1920,6 +1927,7 @@ namespace op.io.UI.BlockScripts.Blocks
             "not_full" => BarConfigManager.BarRelationName.BelowFull,
             "empty" => BarConfigManager.BarRelationName.Empty,
             "changed" => BarConfigManager.BarRelationName.Change,
+            "spawn" => BarConfigManager.BarRelationName.Spawn,
             "always" => BarConfigManager.BarRelationName.Always,
             _ => BarConfigManager.BarRelationName.BelowFull
         };
@@ -2169,10 +2177,16 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void TrackSimBarChange(BarType type, float value)
         {
-            if (!_simPrevBarValues.TryGetValue(type, out float previousValue) ||
-                MathF.Abs(previousValue - value) > PreviewChangeEpsilon)
+            if (_simPrevBarValues.TryGetValue(type, out float previousValue))
             {
-                _simLastChangeTimes[type] = _simTime;
+                if (MathF.Abs(previousValue - value) > PreviewChangeEpsilon)
+                {
+                    _simLastChangeTimes[type] = _simTime;
+                }
+            }
+            else
+            {
+                _simLastSpawnTimes[type] = _simTime;
             }
 
             _simPrevBarValues[type] = value;
@@ -2250,13 +2264,15 @@ namespace op.io.UI.BlockScripts.Blocks
             bool isKnown = _simPrevBarValues.ContainsKey(type);
             bool changedRecently = _simLastChangeTimes.TryGetValue(type, out float changeTime) &&
                                    _simTime - changeTime <= PreviewChangeVisibleSeconds;
+            bool spawnedRecently = _simLastSpawnTimes.TryGetValue(type, out float spawnTime) &&
+                                   _simTime - spawnTime <= PreviewChangeVisibleSeconds;
 
             if (!TryGetSimBarValue(type, out float current, out float max))
             {
-                return new BarConfigManager.BarSourceState(0f, 0f, changedRecently, isKnown);
+                return new BarConfigManager.BarSourceState(0f, 0f, changedRecently, spawnedRecently, isKnown);
             }
 
-            return new BarConfigManager.BarSourceState(current, max, changedRecently, isKnown);
+            return new BarConfigManager.BarSourceState(current, max, changedRecently, spawnedRecently, isKnown);
         }
 
         private static bool ShouldPreviewEntryRender(BarConfigManager.BarEntry entry)

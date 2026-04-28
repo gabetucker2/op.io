@@ -29,6 +29,7 @@ namespace op.io
 
         private const float ChangeVisibilitySeconds = 1.25f;
         private const float ValueChangeEpsilon = 0.001f;
+        private const float DefaultYourBarRevealSeconds = 5f;
 
         private static readonly Dictionary<int, float> _alphas = new();
         private static readonly HashSet<int> _liveIds = new();
@@ -51,10 +52,15 @@ namespace op.io
         private static readonly Dictionary<int, float> _xpChangeTime = new();
         private static readonly Dictionary<int, float> _healthRegenChangeTime = new();
         private static readonly Dictionary<int, float> _shieldRegenChangeTime = new();
+        private static readonly Dictionary<long, float> _barSpawnTime = new();
 
         private static Texture2D _pixel;
         private static bool _lastHealthBarsEnabled = true;
         private static float _totalTime;
+        private static bool _yourBarRevealActive;
+        private static bool _yourBarSwitchMode;
+        private static float _yourBarRevealRemainingSeconds;
+        private static float _yourBarMaxVisibilityAlpha;
 
         private static bool HealthBarsEnabled =>
             !ControlStateManager.ContainsSwitchState(ControlKeyMigrations.HealthBarKey) ||
@@ -74,6 +80,23 @@ namespace op.io
 
         public static float FadeIn => Anim.FadeIn;
         public static float FadeOut => Anim.FadeOut;
+
+        private static float? _cachedYourBarRevealSeconds;
+        public static float YourBarRevealSeconds
+        {
+            get
+            {
+                _cachedYourBarRevealSeconds ??= DatabaseFetch.GetSetting<float>(
+                    "BarSettings", "Value", "SettingKey", "YourBarRevealSeconds", DefaultYourBarRevealSeconds);
+                return MathF.Max(0f, _cachedYourBarRevealSeconds.Value);
+            }
+        }
+
+        public static bool YourBarRevealActive => _yourBarRevealActive;
+        public static bool YourBarControlSwitchMode => _yourBarSwitchMode;
+        public static float YourBarRevealRemainingSeconds => _yourBarRevealRemainingSeconds;
+        public static float YourBarVisibilityAlpha => _yourBarMaxVisibilityAlpha;
+        public static bool YourBarVisible => BarConfigManager.BarsVisible && _yourBarMaxVisibilityAlpha > 0.001f;
 
         private static int? _cachedBarHeight;
         public static int BarHeight
@@ -124,6 +147,8 @@ namespace op.io
             }
 
             _totalTime += dt;
+            UpdateYourBarControl(dt);
+            _yourBarMaxVisibilityAlpha = 0f;
 
             float fadeIn = FadeIn;
             float fadeOut = FadeOut;
@@ -152,11 +177,11 @@ namespace op.io
                     _shieldDmgTime[id] = _totalTime;
                 }
 
-                TrackValueChange(_prevHealth, _healthChangeTime, id, obj.CurrentHealth);
-                TrackValueChange(_prevShield, _shieldChangeTime, id, obj.CurrentShield);
-                TrackValueChange(_prevXP, _xpChangeTime, id, obj.CurrentXP);
-                TrackValueChange(_prevHealthRegenProgress, _healthRegenChangeTime, id, GetHealthRegenProgressValue(obj));
-                TrackValueChange(_prevShieldRegenProgress, _shieldRegenChangeTime, id, GetShieldRegenProgressValue(obj));
+                TrackValueChange(BarType.Health, _prevHealth, _healthChangeTime, id, obj.CurrentHealth);
+                TrackValueChange(BarType.Shield, _prevShield, _shieldChangeTime, id, obj.CurrentShield);
+                TrackValueChange(BarType.XP, _prevXP, _xpChangeTime, id, obj.CurrentXP);
+                TrackValueChange(BarType.HealthRegen, _prevHealthRegenProgress, _healthRegenChangeTime, id, GetHealthRegenProgressValue(obj));
+                TrackValueChange(BarType.ShieldRegen, _prevShieldRegenProgress, _shieldRegenChangeTime, id, GetShieldRegenProgressValue(obj));
 
                 bool damaged = obj.CurrentHealth < obj.MaxHealth ||
                                (obj.MaxShield > 0f && obj.CurrentShield < obj.MaxShield);
@@ -195,7 +220,9 @@ namespace op.io
                     long barKey = GetBarVisibilityKey(id, entry.Type);
                     _liveBarKeys.Add(barKey);
 
-                    bool relationActive = BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
+                    bool relationActive = IsYourPlayerBar(obj)
+                        ? _yourBarRevealActive
+                        : BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
                     bool shouldBeVisible = relationActive && externalVisible;
                     float barAlpha = _barVisibilityAlphas.TryGetValue(barKey, out float existingAlpha)
                         ? existingAlpha
@@ -214,6 +241,10 @@ namespace op.io
                     }
 
                     _barVisibilityAlphas[barKey] = barAlpha;
+                    if (isPlayer && barAlpha > _yourBarMaxVisibilityAlpha)
+                    {
+                        _yourBarMaxVisibilityAlpha = barAlpha;
+                    }
                 }
             }
 
@@ -466,7 +497,9 @@ namespace op.io
                 return false;
             }
 
-            bool relationActive = BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
+            bool relationActive = IsYourPlayerBar(obj)
+                ? _yourBarRevealActive
+                : BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
             long barKey = GetBarVisibilityKey(obj.ID, entry.Type);
             float visibilityAlpha = _barVisibilityAlphas.TryGetValue(barKey, out float storedAlpha)
                 ? storedAlpha
@@ -479,6 +512,52 @@ namespace op.io
 
             resolved = new ResolvedBarRender(entry, current, max, finalAlpha);
             return true;
+        }
+
+        private static void UpdateYourBarControl(float dt)
+        {
+            ControlKeyData.ControlKeyRecord record = ControlKeyData.GetControl(ControlKeyMigrations.YourBarKey);
+            if (record == null)
+            {
+                _yourBarSwitchMode = false;
+                _yourBarRevealActive = true;
+                _yourBarRevealRemainingSeconds = 0f;
+                return;
+            }
+
+            _yourBarSwitchMode = IsSwitchInputType(record.InputType);
+            bool inputActive = InputManager.IsInputActive(ControlKeyMigrations.YourBarKey);
+
+            if (_yourBarSwitchMode)
+            {
+                _yourBarRevealActive = inputActive;
+                _yourBarRevealRemainingSeconds = 0f;
+                return;
+            }
+
+            if (inputActive)
+            {
+                _yourBarRevealRemainingSeconds = YourBarRevealSeconds;
+            }
+            else if (_yourBarRevealRemainingSeconds > 0f)
+            {
+                _yourBarRevealRemainingSeconds = MathF.Max(0f, _yourBarRevealRemainingSeconds - MathF.Max(0f, dt));
+            }
+
+            _yourBarRevealActive = _yourBarRevealRemainingSeconds > 0f;
+        }
+
+        private static bool IsSwitchInputType(string inputTypeLabel)
+        {
+            return string.Equals(inputTypeLabel, nameof(InputType.SaveSwitch), StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputTypeLabel, nameof(InputType.NoSaveSwitch), StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputTypeLabel, nameof(InputType.DoubleTapToggle), StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(inputTypeLabel, "Switch", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsYourPlayerBar(GameObject obj)
+        {
+            return obj is Agent agent && agent.IsPlayer;
         }
 
         private static bool TryGetBarBaseState(
@@ -571,6 +650,7 @@ namespace op.io
             bool isKnown = false;
             bool changedRecently = false;
             int id = obj.ID;
+            bool spawnedRecently = WasSpawnedRecently(id, type);
 
             switch (type)
             {
@@ -610,13 +690,19 @@ namespace op.io
                     break;
             }
 
-            return new BarConfigManager.BarSourceState(current, max, changedRecently, isKnown);
+            return new BarConfigManager.BarSourceState(current, max, changedRecently, spawnedRecently, isKnown);
         }
 
         private static bool WasChangedRecently(Dictionary<int, float> changeTimes, int id)
         {
             return changeTimes.TryGetValue(id, out float lastChange) &&
                    _totalTime - lastChange <= ChangeVisibilitySeconds;
+        }
+
+        private static bool WasSpawnedRecently(int id, BarType type)
+        {
+            return _barSpawnTime.TryGetValue(GetBarVisibilityKey(id, type), out float spawnTime) &&
+                   _totalTime - spawnTime <= ChangeVisibilitySeconds;
         }
 
         private static float GetHealthRegenProgressValue(GameObject obj)
@@ -642,6 +728,7 @@ namespace op.io
         }
 
         private static void TrackValueChange(
+            BarType type,
             Dictionary<int, float> previousValues,
             Dictionary<int, float> changeTimes,
             int id,
@@ -656,7 +743,7 @@ namespace op.io
             }
             else
             {
-                changeTimes[id] = _totalTime;
+                _barSpawnTime[GetBarVisibilityKey(id, type)] = _totalTime;
             }
 
             previousValues[id] = current;
@@ -676,6 +763,10 @@ namespace op.io
             _xpChangeTime.Remove(id);
             _healthRegenChangeTime.Remove(id);
             _shieldRegenChangeTime.Remove(id);
+            foreach (BarType type in Enum.GetValues<BarType>())
+            {
+                _barSpawnTime.Remove(GetBarVisibilityKey(id, type));
+            }
         }
 
         private static void DrawSingleBar(

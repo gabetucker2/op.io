@@ -469,6 +469,7 @@ namespace op.io.UI.BlockScripts.Blocks
         {
             try
             {
+                LogFileHandler.InitializeSession();
                 string logsDirectory = LogFileHandler.GetLogsDirectory();
                 if (string.IsNullOrWhiteSpace(logsDirectory))
                 {

@@ -330,7 +330,8 @@ INSERT OR REPLACE INTO BlockAmbience (RowKey, IsLocked) VALUES ('BlockLock', 1);
 INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceFogOfWarColor', '#B8A684FF', 1, 0);
 INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceOceanWaterColor', '#28B0CEFF', 2, 0);
 INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceBackgroundWavesColor', '#FFFFFFFF', 3, 0);
-INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceWorldTintColor', '#808080FF', 4, 0);
+INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceTerrainColor', '#000000FF', 4, 0);
+INSERT OR REPLACE INTO BlockAmbience (RowKey, RowData, RenderOrder, IsLocked) VALUES ('AmbienceWorldTintColor', '#808080FF', 5, 0);
 
 -----------------------------------------------------------------------
 -- Docking setups block

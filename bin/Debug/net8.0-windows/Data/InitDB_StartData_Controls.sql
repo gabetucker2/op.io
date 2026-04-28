@@ -38,11 +38,13 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Respawn',       
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ScrollIncrement',          'Scroll wheel units per zoom step (default 120 = one notch).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ShowHiddenAttrs',          'Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Grid',                     'Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBar',                  'Reveal your player''s configured bar rows for 5 seconds. In switch mode, ON keeps them visible and OFF lets them fade out.');
 
 -- Ambience block
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceFogOfWarColor',   'Base color currently applied to hidden fog-of-war territory. Edit it live in the Ambience block.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceOceanWaterColor', 'Base color currently driving the ocean water shader. Edit it live in the Ambience block.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceBackgroundWavesColor', 'Highlight color for the background wave crests in the ocean ambience. Edit it live in the Ambience block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceTerrainColor', 'Fill color for generated terrain, finite map borders, and the world beyond the playable square. Edit it live in the Ambience block.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceWorldTintColor',  'Gameplay object tint color. Mid-gray is neutral; warmer or cooler colors shift object colors already drawn in the world.');
 
 -- Backend block
@@ -69,6 +71,26 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpPullZoneR
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPClumpAbsorbZoneRadius', 'Distance from a clump where orbit-lock and absorption behavior begins, shown in centifoots.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CentifootWorldUnits', 'Copied baseline conversion: 1 centifoot = this many world units.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DistanceUnit', 'Name of the active distance unit used by backend distance displays.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWorldSeed', 'Seed used with chunk coordinates to deterministically regenerate terrain without saving chunk payloads.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainResidentChunkCount', 'How many terrain chunks are currently cached in memory, including water-only chunk records.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPendingChunkCount', 'How many terrain chunks are currently queued or building in the background.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPendingCriticalChunkCount', 'How many camera-or-fog-visible terrain chunks are still building; resident terrain visuals are held stable while this is above zero.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainDiscardedStaleMaterializationCount', 'How many completed terrain mesh builds were discarded because the camera or vision window changed before they finished.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainChunkBuildsInFlight', 'Shows whether any terrain chunk builds are currently in flight.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainChunkWorldSize', 'World-space width and height covered by each deterministic terrain chunk.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainArchipelagoMacroCellSize', 'Terrain-space size of the regional archipelago cluster mask that gates deep ocean, shelves, protected basins, and island cluster zones.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainGenerationPipeline', 'Current terrain generation order used by the layered archipelago sampler.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainLandformSelectionMode', 'Whether terrain is generated from direct archetype placement or from layered geological processes with post-classification.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPreloadMarginWorldUnits', 'Extra world-space margin around the camera-and-fog-visible terrain streaming window that chunk loading prebuilds ahead of view.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainSeedAnchor', 'Seed-derived terrain-space anchor applied before chunk sampling so the spawn region opens near generated land instead of empty ocean.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainCenterChunk', 'Chunk coordinate currently centered under the terrain streaming focus.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainVisibleChunkWindow', 'Inclusive chunk-coordinate window currently required by the camera and fog-of-war vision sources before preload margin.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBarRevealActive', 'True while the YourBar control is actively requesting your player''s configured bar rows to stay visible.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBarControlSwitchMode', 'True when the YourBar control is currently configured as a switch-style input.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBarRevealRemainingSeconds', 'Seconds left in the timed YourBar reveal before the existing bar fade begins.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBarRevealSeconds', 'Configured duration for timed YourBar reveals.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBarVisible', 'True while at least one of your player''s configured bar rows is currently visible or fading.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBarVisibilityAlpha', 'Highest current visibility alpha across your player''s configured bar rows.');
 
 -- Backend block — physics & bullet constants
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AirResistanceScalar',   'Drag scalar applied to bullets: drag = AirResistanceScalar × bulletVolume / bulletDragFactor.');
@@ -83,10 +105,16 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletMas
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletDamage',   'Fallback flat damage dealt by a bullet on hit.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DefaultBulletPenHP',    'Fallback penetration HP; consumed as a bullet passes through objects.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('PhysicsFrictionRate',   'Velocity decay rate applied to game objects each frame: vel *= clamp(1 − rate × dt, 0, 1).');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('CollisionBounceMomentumTransfer', 'Fraction of incoming collision momentum converted into bounce impulse against static or terrain bodies.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AngularAccelFactor',        'Multiplier on angular acceleration when rotating toward the cursor.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelSwitchSpeed',         'Speed at which the active barrel index rotates between barrels (units/s).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ActiveBodyIndex',           'Zero-based index of the currently active body slot.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ActiveBodyName',            'Display name of the currently active body.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyTransitionAnimating',   'True while the player body is actively blending from the previous slot into the newly selected slot.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyTransitionProgress',    'Normalized progress through the active body transition lerp. 0 = just started, 1 = fully arrived.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyTransitionCooldownRemaining', 'Seconds remaining before another body change is allowed after the current transition finishes.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyTransitionDurationSeconds', 'Configured SQL duration for a full body transition lerp.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyTransitionBufferSeconds', 'Configured SQL lockout that begins after a body transition finishes.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BodyRadiusScalar',           'Circle body radius = sqrt(mass) × BodyRadiusScalar.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletRadiusScalar',        'Bullet visual radius = sqrt(mass) × BulletRadiusScalar.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelHeightScalar',        'Barrel length = max(4, bulletSpeed × BarrelHeightScalar).');
@@ -148,6 +176,8 @@ INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartSt
     VALUES ('CameraLockMode', 'C', 'SaveEnum', 0, 1, 0, 'Camera', 2, 0);
 INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
     VALUES ('Grid', 'G', 'SaveSwitch', 0, 0, 0, 'Interface', 3, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
+    VALUES ('YourBar', 'B', 'Trigger', 0, 0, 0, 'Interface', 3, 0);
 
 ---------------------------------------------------------------------------------------------------------------------------
 

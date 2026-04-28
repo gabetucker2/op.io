@@ -28,6 +28,20 @@ namespace op.io
             _deathFadeSpinMaxDegPerSecond ??= DatabaseFetch.GetSetting<float>(
                 "FXSettings", "Value", "SettingKey", "DeathFadeSpinMaxDegPerSecond", 240f);
 
+        private static bool SuppressDeadPlayerMotion(Agent player)
+        {
+            if (player == null || !player.IsDeadOrDying)
+            {
+                return false;
+            }
+
+            InputManager.ClearHoldLatch();
+            player.MovementVelocity = Vector2.Zero;
+            player.PhysicsVelocity = Vector2.Zero;
+            player.DeathImpulse = Vector2.Zero;
+            return true;
+        }
+
         public static void Update(GameTime gameTime)
         {
             try
@@ -80,8 +94,18 @@ namespace op.io
                     go.DeathFadeScale = 1f;
                     go.DeathFadeSpinVelocity = GetRandomDeathFadeSpinVelocity();
                     go.Opacity = 1f;
-                    if (go.DeathImpulse != Vector2.Zero)
+                    if (go == Core.Instance.Player)
+                    {
+                        go.DeathImpulse = Vector2.Zero;
+                        go.PhysicsVelocity = Vector2.Zero;
+                        if (go is Agent playerAgent)
+                            playerAgent.MovementVelocity = Vector2.Zero;
+                    }
+                    else if (go.DeathImpulse != Vector2.Zero)
+                    {
                         go.PhysicsVelocity = go.DeathImpulse;
+                    }
+
                     _dyingObjects.Add(go);
                     DebugLogger.PrintGO($"Death fade started for GameObject ID={go.ID} (Name={go.Name}, Reward={go.DeathPointReward} XP, FadeOut={fadeOut}s).");
                 }
@@ -224,32 +248,35 @@ namespace op.io
             Agent player = Core.Instance.Player;
             if (player != null)
             {
-                Vector2 direction = uiConsumingMouse ? Vector2.Zero : InputManager.GetMoveVector();
-                float accelDelay = AttributeDerived.AccelerationDelay(player.BodyAttributes.Control);
-                if (accelDelay <= 0f)
+                if (!SuppressDeadPlayerMotion(player))
                 {
-                    // Instant movement — snap directly to full speed with no ramp-up.
-                    player.MovementVelocity = Vector2.Zero;
-                    if (direction != Vector2.Zero)
-                        ActionHandler.Move(player, direction, player.Speed);
-                }
-                else
-                {
-                    // Delay-based acceleration — higher delay means slower ramp-up.
-                    Vector2 targetVelocity = direction != Vector2.Zero
-                        ? Vector2.Normalize(direction) * player.Speed
-                        : Vector2.Zero;
-                    float t = MathHelper.Clamp(Core.DELTATIME / accelDelay, 0f, 1f);
-                    player.MovementVelocity += (targetVelocity - player.MovementVelocity) * t;
-                    if (player.MovementVelocity.LengthSquared() < 1f)
+                    Vector2 direction = uiConsumingMouse ? Vector2.Zero : InputManager.GetMoveVector();
+                    float accelDelay = AttributeDerived.AccelerationDelay(player.BodyAttributes.Control);
+                    if (accelDelay <= 0f)
+                    {
+                        // Instant movement — snap directly to full speed with no ramp-up.
                         player.MovementVelocity = Vector2.Zero;
-                    player.Position += player.MovementVelocity * Core.DELTATIME;
+                        if (direction != Vector2.Zero)
+                            ActionHandler.Move(player, direction, player.Speed);
+                    }
+                    else
+                    {
+                        // Delay-based acceleration — higher delay means slower ramp-up.
+                        Vector2 targetVelocity = direction != Vector2.Zero
+                            ? Vector2.Normalize(direction) * player.Speed
+                            : Vector2.Zero;
+                        float t = MathHelper.Clamp(Core.DELTATIME / accelDelay, 0f, 1f);
+                        player.MovementVelocity += (targetVelocity - player.MovementVelocity) * t;
+                        if (player.MovementVelocity.LengthSquared() < 1f)
+                            player.MovementVelocity = Vector2.Zero;
+                        player.Position += player.MovementVelocity * Core.DELTATIME;
+                    }
                 }
-                if (InputManager.TryGetHoldLatchRotation(out float lockedRotation))
+                if (!InputManager.IsPlayerGameplayInputSuppressed && InputManager.TryGetHoldLatchRotation(out float lockedRotation))
                 {
                     player.Rotation = lockedRotation;
                 }
-                else if (!uiConsumingMouse)
+                else if (!InputManager.IsPlayerGameplayInputSuppressed && !uiConsumingMouse)
                 {
                     Vector2 cursorPos = MouseFunctions.GetMousePositionWithSensitivity();
                     Vector2 playerPos = player.Position;
@@ -305,6 +332,8 @@ namespace op.io
             BulletCollisionSystem.Update(Core.DELTATIME);
             FrameProfiler.EndSample("BulletCollisionSystem.Update");
 
+            SuppressDeadPlayerMotion(Core.Instance.Player);
+
             // Regenerate health and shields for agents with regen stats
             FrameProfiler.BeginSample("RegenerateStats", "GameUpdater");
             RegenerateStats(Core.DELTATIME);
@@ -314,6 +343,8 @@ namespace op.io
             FrameProfiler.BeginSample("PhysicsManager.Update", "PhysicsManager");
             PhysicsManager.Update(Core.Instance.GameObjects);
             FrameProfiler.EndSample("PhysicsManager.Update");
+
+            SuppressDeadPlayerMotion(Core.Instance.Player);
 
             // Update unstable-clump low-health previews before death processing so
             // death handling can smoothly transition those previews into free clumps.

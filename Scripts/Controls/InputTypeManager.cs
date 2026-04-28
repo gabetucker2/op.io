@@ -1073,7 +1073,8 @@ namespace op.io
                 return false;
             }
 
-            if (_settingKeyToInputKey.ContainsKey(settingKey))
+            if (_settingKeyToInputKey.ContainsKey(settingKey) &&
+                _switchStateCache.ContainsKey(settingKey))
             {
                 return true;
             }

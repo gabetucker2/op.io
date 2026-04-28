@@ -17,6 +17,7 @@ namespace op.io
         public bool IsDestructible { get; set; }
         public bool IsCollidable { get; set; }
         public bool DynamicPhysics { get; set; }
+        public bool SuppressCollisionImpulse { get; set; }
         public bool IsInteract { get; set; }
         public bool IsZoneBlock { get; set; }
         public bool IsFarmObject { get; set; }
@@ -119,6 +120,7 @@ namespace op.io
         public float FarmFloatPhase            { get; set; } = 0f;
 
         private static readonly Random _random = new();
+        private readonly bool _registeredWithShapeManager;
 
         /// <summary>
         /// Applies damage to this object, absorbing through shields first, then health.
@@ -243,7 +245,8 @@ namespace op.io
             Color fillColor,
             Color outlineColor,
             int outlineWidth,
-            bool isPrototype = false
+            bool isPrototype = false,
+            bool registerWithShapeManager = true
         )
         {
             // Validate that the shape is not null
@@ -270,9 +273,10 @@ namespace op.io
             Shape = shape;
 
             // Register the GameObject with ShapeManager, if not a prototype
-            if (!isPrototype)
+            if (!isPrototype && registerWithShapeManager)
             {
                 GameObjectRegister.RegisterGameObject(this); // Delegate registration to the new GameObjectRegister class
+                _registeredWithShapeManager = true;
             }
         }
 
@@ -339,7 +343,10 @@ namespace op.io
             Parent?.RemoveChild(this);
 
             // If the GameObject is registered, unregister it upon disposal
-            GameObjectRegister.UnregisterGameObject(this);
+            if (_registeredWithShapeManager)
+            {
+                GameObjectRegister.UnregisterGameObject(this);
+            }
 
             // Dispose of Shape if it has IDisposable functionality
             if (Shape is IDisposable disposableShape)

@@ -33,6 +33,7 @@ namespace op.io
         internal const string GridKey               = "Grid";
         internal const string BodyLeftKey           = "BodyLeft";
         internal const string BodyRightKey          = "BodyRight";
+        internal const string YourBarKey            = "YourBar";
         private static readonly string[] MetaControlKeys = ["Exit", BlockMenuKey, LegacyPanelMenuKey, HoldInputsKey, InspectModeState.InspectModeKey, AutoTurnInspectModeOffKey, "DockingMode", "DebugMode", "AllowGameInputFreeze", TransparentTabBlockingKey, NextConfigurationKey, PreviousConfigurationKey, TabSwitchRequiresBlockModeKey, RespawnKey, CameraLockModeKey, CameraSnapToPlayerKey, ScrollInKey, ScrollOutKey, ScrollMinDistanceKey, ScrollMaxDistanceKey, ScrollIncrementKey, CtrlBufferKey, ShowHiddenAttrsKey, DisableToolTipsKey];
 
         public static void EnsureApplied()
@@ -80,6 +81,7 @@ namespace op.io
                 EnsureTabSwitchRequiresBlockModeControl();
                 EnsureDisableToolTipsControl();
                 EnsureGridControl();
+                EnsureYourBarControl();
                 EnsureRespawnControl();
                 EnsureCameraLockModeControl();
                 EnsureCameraSnapToPlayerControl();
@@ -746,6 +748,25 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             ControlKeyData.EnsureInputKey(BodyRightKey, "Ctrl + E");
         }
 
+        private static void EnsureYourBarControl()
+        {
+            string categoryKey = ControlRowCategoryCatalog.InterfaceCategoryKey;
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = YourBarKey,
+                InputKey = "B",
+                InputType = "Trigger",
+                SwitchStartState = 0,
+                MetaControl = false,
+                RenderOrder = 22,
+                RenderCategory = categoryKey,
+                RenderCategoryOrder = ControlRowCategoryCatalog.GetDefaultCategoryOrder(categoryKey)
+            });
+
+            ControlKeyData.EnsureInputKey(YourBarKey, "B");
+            ControlKeyData.EnsureSwitchStartState(YourBarKey, 0);
+        }
+
         private static void EnsureCombatTextControl()
         {
             // Register enum options before loading so LoadControlSwitchStates can clamp the index.
@@ -1168,6 +1189,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 (CameraLockModeKey,                 "Camera follow mode: Free (no follow), Scout (always centered), or Locked (fixed offset)."),
                 (CameraSnapToPlayerKey,             "Snap the camera to center on the player. In Locked mode, resets the offset."),
                 (RespawnKey,                        "Respawn the player after death."),
+                (YourBarKey,                        "Reveal your player's configured bar rows for 5 seconds. In switch mode, ON keeps them visible and OFF lets them fade out."),
                 (ScrollInKey,                       "Scroll in (zoom in) the camera view."),
                 (ScrollOutKey,                      "Scroll out (zoom out) the camera view."),
                 (ScrollMinDistanceKey,              "Minimum camera scroll distance (closest zoom)."),
@@ -1240,6 +1262,11 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
         {
             return string.Equals(settingKey, ControlKeyMigrations.BlockMenuKey, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(settingKey, ControlKeyMigrations.LegacyPanelMenuKey, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool SupportsTriggerSwitchMode(string settingKey)
+        {
+            return string.Equals(settingKey, ControlKeyMigrations.YourBarKey, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool ShouldScannerTrackSwitch(string settingKey)

@@ -155,6 +155,7 @@ namespace op.io
                 [ControlKeyMigrations.DisableToolTipsKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.ShowHiddenAttrsKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.GridKey] = InterfaceCategoryKey,
+                [ControlKeyMigrations.YourBarKey] = InterfaceCategoryKey,
 
                 // System
                 ["Exit"] = SystemCategoryKey,
