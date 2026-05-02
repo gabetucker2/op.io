@@ -8,7 +8,7 @@ namespace op.io
     {
         public static Vector2 GetGOLocalScreenPosition(GameObject gameObject)
         {
-            GameObject target = gameObject ?? Core.Instance.Player;
+            GameObject target = gameObject ?? Core.Instance.PlayerOrNull;
 
             if (target == null)
             {
@@ -27,7 +27,7 @@ namespace op.io
 
         public static Vector2 GetGOGlobalScreenPosition(GameObject gameObject)
         {
-            GameObject target = gameObject ?? Core.Instance.Player;
+            GameObject target = gameObject ?? Core.Instance.PlayerOrNull;
 
             if (target == null)
             {

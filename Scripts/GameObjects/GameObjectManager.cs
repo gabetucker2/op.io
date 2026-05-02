@@ -27,21 +27,33 @@ public static class GameObjectManager
         LoadMapObjects();
     }
 
-    public static void SeedNextID()
-    {
-        try
+        public static void SeedNextID()
         {
-            var result = DatabaseQuery.ExecuteQuery("SELECT MAX(ID) AS MaxID FROM GameObjects;");
-            if (result.Count > 0 && result[0]["MaxID"] != DBNull.Value)
-                _nextAvailableID = Convert.ToInt32(result[0]["MaxID"]) + 1;
-            else
-                _nextAvailableID = 1;
+            int maxId = 0;
+            try
+            {
+                var result = DatabaseQuery.ExecuteQuery("SELECT MAX(ID) AS MaxID FROM GameObjects;");
+                if (result.Count > 0 && result[0]["MaxID"] != DBNull.Value)
+                    maxId = Convert.ToInt32(result[0]["MaxID"]);
+            }
+            catch
+            {
+                maxId = 0;
+            }
+
+            if (Core.Instance?.GameObjects != null)
+            {
+                foreach (GameObject gameObject in Core.Instance.GameObjects)
+                {
+                    if (gameObject != null && gameObject.ID > maxId)
+                    {
+                        maxId = gameObject.ID;
+                    }
+                }
+            }
+
+            _nextAvailableID = Math.Max(1, maxId + 1);
         }
-        catch
-        {
-            _nextAvailableID = 1;
-        }
-    }
 
     public static int GetNextID()
     {

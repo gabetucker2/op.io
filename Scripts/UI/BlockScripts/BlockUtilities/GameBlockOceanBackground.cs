@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace op.io
 {
@@ -22,6 +23,9 @@ namespace op.io
         private const float DefaultWaveSet1Strength = 0.86f;
         private const float DefaultWaveSet2Strength = 0.56f;
         private const float DefaultWaveSet3Strength = 0.38f;
+        private const float OceanZoneTransitionSeconds = 3f;
+        private const float OceanZoneBannerDurationSeconds = 2.6f;
+        private const float OceanZoneBannerFadeSeconds = 0.35f;
         private const int FieldTextureResolution = 320;
         private const int AnimationLoopFrameCount = 12;
         private const float DetailAnimationCycleSeconds = 3.10f;
@@ -35,10 +39,18 @@ namespace op.io
             CullMode = CullMode.None,
             ScissorTestEnable = true
         };
-        private static readonly Vector3 DefaultBaseColor = new(40f / 255f, 176f / 255f, 206f / 255f);
+        private static readonly Vector3 DefaultBaseColor = new(
+            TerrainColorPalette.SunlitWaterR / 255f,
+            TerrainColorPalette.SunlitWaterG / 255f,
+            TerrainColorPalette.SunlitWaterB / 255f);
         private static readonly Vector3 DefaultWaveColor = Vector3.One;
         private const float DefaultBaseAlpha = 1f;
         private const float DefaultWaveAlpha = 1f;
+        private static readonly Color DevShallowWaterColor = new(TerrainColorPalette.ShallowWaterR, TerrainColorPalette.ShallowWaterG, TerrainColorPalette.ShallowWaterB);
+        private static readonly Color DevSunlitWaterColor = new(TerrainColorPalette.SunlitWaterR, TerrainColorPalette.SunlitWaterG, TerrainColorPalette.SunlitWaterB);
+        private static readonly Color DevTwilightWaterColor = new(TerrainColorPalette.TwilightWaterR, TerrainColorPalette.TwilightWaterG, TerrainColorPalette.TwilightWaterB);
+        private static readonly Color DevMidnightWaterColor = new(TerrainColorPalette.MidnightWaterR, TerrainColorPalette.MidnightWaterG, TerrainColorPalette.MidnightWaterB);
+        private static readonly Color DevAbyssWaterColor = new(TerrainColorPalette.AbyssWaterR, TerrainColorPalette.AbyssWaterG, TerrainColorPalette.AbyssWaterB);
 
         private static Texture2D _fullscreenPixel;
         private static Effect _oceanShader;
@@ -97,6 +109,32 @@ namespace op.io
         private static float[] _staticYsBase;
         private static bool _loggedShaderWorldSpan;
         private static readonly VertexPositionColorTexture[] ShaderQuadVertices = new VertexPositionColorTexture[6];
+        private static bool _oceanZoneTransitionInitialized;
+        private static TerrainWaterType _detectedOceanZone = TerrainWaterType.Sunlit;
+        private static TerrainWaterType _playerOceanZone = TerrainWaterType.Sunlit;
+        private static bool _playerOceanZoneValid;
+        private static TerrainWaterType _targetOceanZone = TerrainWaterType.Sunlit;
+        private static TerrainWaterType _cursorOceanZone = TerrainWaterType.Sunlit;
+        private static bool _cursorOceanZoneValid;
+        private static float _lastDetectedOceanDepth;
+        private static float _lastDetectedOceanOffshoreDistance;
+        private static float _cursorOceanZoneDepth;
+        private static float _cursorOceanZoneOffshoreDistance;
+        private static float _targetOceanZoneDarkness = 1f;
+        private static float _currentOceanZoneDarkness = 1f;
+        private static string _oceanZoneProbeStatus = "uninitialized";
+        private static string _playerOceanZoneStatus = "uninitialized";
+        private static string _cursorOceanZoneStatus = "cursor uninitialized";
+        private static bool _oceanZoneBannerActive;
+        private static float _oceanZoneBannerElapsedSeconds;
+        private static TerrainWaterType _oceanZoneBannerOldZone = TerrainWaterType.Sunlit;
+        private static TerrainWaterType _oceanZoneBannerNewZone = TerrainWaterType.Sunlit;
+        private static string _oceanZoneTransitionBanner = "none";
+        private static InterruptibleVector4Transition _baseColorTransition;
+        private static InterruptibleVector4Transition _waveColorTransition;
+        private static Vector4 _currentBaseColor = new(DefaultBaseColor, DefaultBaseAlpha);
+        private static Vector4 _currentWaveColor = new(DefaultWaveColor, DefaultWaveAlpha);
+        private static float _lastOceanZoneTransitionUpdateTime = float.NaN;
 
         private sealed class GeneratedTileFrame
         {
@@ -141,9 +179,32 @@ namespace op.io
         public static bool UsingShaderPath => _shaderReady;
         public static string ShaderStatus => _shaderStatus;
         public static string BaseColorRgb =>
-            $"{ClampToByte(BaseColor.X)}, {ClampToByte(BaseColor.Y)}, {ClampToByte(BaseColor.Z)}";
+            $"{ClampToByte(CurrentBaseColorVector.X)}, {ClampToByte(CurrentBaseColorVector.Y)}, {ClampToByte(CurrentBaseColorVector.Z)}";
         public static string WaveColorRgb =>
-            $"{ClampToByte(WaveColor.X)}, {ClampToByte(WaveColor.Y)}, {ClampToByte(WaveColor.Z)}";
+            $"{ClampToByte(CurrentWaveColorVector.X)}, {ClampToByte(CurrentWaveColorVector.Y)}, {ClampToByte(CurrentWaveColorVector.Z)}";
+        public static Color CurrentBaseColor => ToColor(CurrentBaseColorVector);
+        public static Color CurrentWaveColor => ToColor(CurrentWaveColorVector);
+        public static string DetectedOceanZone => _detectedOceanZone.ToString();
+        public static string PlayerOceanZone => _playerOceanZoneValid ? _playerOceanZone.ToString() : "None";
+        public static string PlayerOceanZoneStatus => _playerOceanZoneStatus;
+        public static string TargetOceanZone => _targetOceanZone.ToString();
+        public static string CursorOceanZone => _cursorOceanZoneValid ? _cursorOceanZone.ToString() : "None";
+        public static string CursorOceanZoneStatus => _cursorOceanZoneStatus;
+        public static float CursorOceanZoneDepth => _cursorOceanZoneDepth;
+        public static float CursorOceanZoneOffshoreDistance => _cursorOceanZoneOffshoreDistance;
+        public static bool CursorOceanZoneValid => _cursorOceanZoneValid;
+        public static string OceanZoneProbeStatus => _oceanZoneProbeStatus;
+        public static float OceanZoneDepth => _lastDetectedOceanDepth;
+        public static float OceanZoneOffshoreDistance => _lastDetectedOceanOffshoreDistance;
+        public static float OceanZoneDarkness => _targetOceanZoneDarkness;
+        public static float OceanZoneCurrentDarkness => _currentOceanZoneDarkness;
+        public static string OceanZoneTransitionBanner => _oceanZoneTransitionBanner;
+        public static bool OceanZoneTransitioning =>
+            _oceanZoneTransitionInitialized && (_baseColorTransition.IsActive || _waveColorTransition.IsActive);
+        public static float OceanZoneTransitionProgress =>
+            _oceanZoneTransitionInitialized
+                ? MathHelper.Clamp(MathF.Min(_baseColorTransition.Progress, _waveColorTransition.Progress), 0f, 1f)
+                : 1f;
         public static float LastResolvedRenderScale => _lastResolvedFieldScale;
         public static float LastCameraZoom => _lastCameraZoom;
         public static string RenderTextureResolution =>
@@ -201,6 +262,7 @@ namespace op.io
 
             _lastCameraZoom = Math.Max(0.05f, cameraZoom);
             _lastDrawTimeSeconds = Math.Max(0f, timeSeconds);
+            UpdateOceanZoneTransitionForFrame(timeSeconds);
             float fieldScale = ResolveFieldScale();
             _lastResolvedFieldScale = fieldScale;
             _lastPanelWidth = Math.Max(1, panelBounds.Width);
@@ -252,6 +314,429 @@ namespace op.io
                         : $"CPU ocean fallback active ({_tileWidth}x{_tileHeight}, fieldScale {fieldScale:0.00}, zoom {_lastCameraZoom:0.00})";
         }
 
+        public static void UpdateOceanZoneTransitionForFrame(float timeSeconds)
+        {
+            float clampedTime = Math.Max(0f, timeSeconds);
+            if (!float.IsNaN(_lastOceanZoneTransitionUpdateTime) &&
+                MathF.Abs(_lastOceanZoneTransitionUpdateTime - clampedTime) <= 0.0001f)
+            {
+                return;
+            }
+
+            _lastOceanZoneTransitionUpdateTime = clampedTime;
+            UpdateOceanZoneTransition();
+        }
+
+        private static void UpdateOceanZoneTransition()
+        {
+            AmbienceSettings.Initialize();
+            UpdateCursorOceanZone();
+
+            TerrainWaterType desiredZone = _targetOceanZone;
+            Agent player = Core.Instance?.PlayerOrNull;
+            if (player != null &&
+                GameBlockTerrainBackground.TryResolveOceanZoneAtWorldPosition(
+                    player.Position,
+                    out TerrainWaterType playerWaterType,
+                    out float playerWaterDepth,
+                    out float playerOffshoreDistance))
+            {
+                desiredZone = playerWaterType;
+                _detectedOceanZone = playerWaterType;
+                _playerOceanZone = playerWaterType;
+                _playerOceanZoneValid = true;
+                _lastDetectedOceanDepth = playerWaterDepth;
+                _lastDetectedOceanOffshoreDistance = playerOffshoreDistance;
+                _playerOceanZoneStatus = $"player water: {playerWaterType} offshore={playerOffshoreDistance:0.#} depth={playerWaterDepth:0.00}";
+                _oceanZoneProbeStatus = _playerOceanZoneStatus;
+            }
+            else
+            {
+                _playerOceanZoneValid = false;
+                _lastDetectedOceanDepth = 0f;
+                _lastDetectedOceanOffshoreDistance = 0f;
+                _playerOceanZoneStatus = player == null ? "player unavailable" : "player not over ocean";
+                _oceanZoneProbeStatus = _playerOceanZoneStatus;
+            }
+
+            Vector4 targetBase = ResolveOceanZoneColor(AmbienceSettings.OceanWaterColor, desiredZone);
+            Vector4 targetWave = ResolveOceanZoneColor(AmbienceSettings.BackgroundWavesColor, desiredZone);
+            float deltaSeconds = MathF.Max(0f, Core.DELTATIME);
+
+            if (!_oceanZoneTransitionInitialized)
+            {
+                _targetOceanZone = desiredZone;
+                _detectedOceanZone = desiredZone;
+                _playerOceanZone = desiredZone;
+                _targetOceanZoneDarkness = ResolveOceanZoneDarkness(desiredZone);
+                _baseColorTransition.Reset(targetBase);
+                _waveColorTransition.Reset(targetWave);
+                _oceanZoneTransitionInitialized = true;
+                ResetOceanZoneTransitionBanner();
+            }
+            else if (desiredZone != _targetOceanZone ||
+                !Vector4NearlyEqual(_baseColorTransition.Target, targetBase) ||
+                !Vector4NearlyEqual(_waveColorTransition.Target, targetWave))
+            {
+                if (desiredZone != _targetOceanZone)
+                {
+                    StartOceanZoneTransitionBanner(_targetOceanZone, desiredZone);
+                }
+
+                _targetOceanZone = desiredZone;
+                _targetOceanZoneDarkness = ResolveOceanZoneDarkness(desiredZone);
+                _baseColorTransition.Retarget(targetBase, OceanZoneTransitionSeconds);
+                _waveColorTransition.Retarget(targetWave, OceanZoneTransitionSeconds);
+            }
+
+            UpdateOceanZoneTransitionBanner(deltaSeconds);
+            _baseColorTransition.Update(deltaSeconds);
+            _waveColorTransition.Update(deltaSeconds);
+            _currentBaseColor = _baseColorTransition.Current;
+            _currentWaveColor = _waveColorTransition.Current;
+            _currentOceanZoneDarkness = ResolveCurrentOceanZoneDarkness();
+            AmbienceSettings.SyncFogOfWarWithOceanWater(ToColor(_currentBaseColor));
+        }
+
+        private static void UpdateCursorOceanZone()
+        {
+            if (!BlockManager.IsCursorWithinGameBlock())
+            {
+                _cursorOceanZoneValid = false;
+                _cursorOceanZoneDepth = 0f;
+                _cursorOceanZoneOffshoreDistance = 0f;
+                _cursorOceanZoneStatus = "cursor outside Game";
+                return;
+            }
+
+            Vector2 cursorWorldPosition = BlockManager.ToGameSpace(Mouse.GetState().Position);
+            if (GameBlockTerrainBackground.TryResolveOceanZoneAtWorldPosition(
+                    cursorWorldPosition,
+                    out TerrainWaterType cursorWaterType,
+                    out float cursorWaterDepth,
+                    out float cursorOffshoreDistance))
+            {
+                _cursorOceanZone = cursorWaterType;
+                _cursorOceanZoneValid = true;
+                _cursorOceanZoneDepth = cursorWaterDepth;
+                _cursorOceanZoneOffshoreDistance = cursorOffshoreDistance;
+                _cursorOceanZoneStatus = $"cursor water: {cursorWaterType} offshore={cursorOffshoreDistance:0.#} depth={cursorWaterDepth:0.00}";
+                return;
+            }
+
+            _cursorOceanZoneValid = false;
+            _cursorOceanZoneDepth = 0f;
+            _cursorOceanZoneOffshoreDistance = 0f;
+            _cursorOceanZoneStatus = "cursor not over ocean";
+        }
+
+        private static void StartOceanZoneTransitionBanner(TerrainWaterType oldZone, TerrainWaterType newZone)
+        {
+            if (oldZone == newZone)
+            {
+                return;
+            }
+
+            _oceanZoneBannerOldZone = oldZone;
+            _oceanZoneBannerNewZone = newZone;
+            _oceanZoneBannerElapsedSeconds = 0f;
+            _oceanZoneBannerActive = true;
+            _oceanZoneTransitionBanner = $"Ocean zone {oldZone} to {newZone}";
+            DebugLogger.Print($"Ocean zone transition: {oldZone} -> {newZone}");
+        }
+
+        private static void UpdateOceanZoneTransitionBanner(float deltaSeconds)
+        {
+            if (!_oceanZoneBannerActive)
+            {
+                return;
+            }
+
+            _oceanZoneBannerElapsedSeconds += MathF.Max(0f, deltaSeconds);
+            if (_oceanZoneBannerElapsedSeconds >= OceanZoneBannerDurationSeconds)
+            {
+                ResetOceanZoneTransitionBanner();
+            }
+        }
+
+        private static void ResetOceanZoneTransitionBanner()
+        {
+            _oceanZoneBannerActive = false;
+            _oceanZoneBannerElapsedSeconds = 0f;
+            _oceanZoneTransitionBanner = "none";
+        }
+
+        public static void DrawOceanZoneTransitionOverlay(SpriteBatch spriteBatch)
+        {
+            if (!_oceanZoneBannerActive ||
+                spriteBatch == null ||
+                string.IsNullOrWhiteSpace(_oceanZoneTransitionBanner) ||
+                !BlockManager.TryGetGameContentWindowBounds(out Rectangle gameWindowBounds) ||
+                gameWindowBounds.Width <= 0 ||
+                gameWindowBounds.Height <= 0)
+            {
+                return;
+            }
+
+            UIStyle.UIFont font = UIStyle.FontH2.IsAvailable ? UIStyle.FontH2 : UIStyle.FontBody;
+            if (!font.IsAvailable)
+            {
+                return;
+            }
+
+            Vector2 textSize = font.MeasureString(_oceanZoneTransitionBanner);
+            if (textSize.X <= 0f || textSize.Y <= 0f)
+            {
+                return;
+            }
+
+            float fadeInAlpha = MathHelper.Clamp(_oceanZoneBannerElapsedSeconds / OceanZoneBannerFadeSeconds, 0f, 1f);
+            float fadeOutAlpha = MathHelper.Clamp(
+                (OceanZoneBannerDurationSeconds - _oceanZoneBannerElapsedSeconds) / OceanZoneBannerFadeSeconds,
+                0f,
+                1f);
+            float alpha = InterruptibleTransitionCurves.SmoothStep(MathF.Min(fadeInAlpha, fadeOutAlpha));
+            if (alpha <= 0.01f)
+            {
+                return;
+            }
+
+            EnsureFullscreenPixel(spriteBatch.GraphicsDevice);
+
+            string prefixText = "Ocean zone";
+            string oldZoneText = _oceanZoneBannerOldZone.ToString();
+            string newZoneText = _oceanZoneBannerNewZone.ToString();
+            Vector2 prefixSize = font.MeasureString(prefixText);
+            Vector2 oldZoneSize = font.MeasureString(oldZoneText);
+            Vector2 newZoneSize = font.MeasureString(newZoneText);
+            float gap = 12f;
+            float arrowWidth = 44f;
+            float unscaledWidth = prefixSize.X + oldZoneSize.X + newZoneSize.X + (gap * 4f) + arrowWidth;
+            float maxContentWidth = Math.Max(1f, gameWindowBounds.Width - 48f);
+            float scale = unscaledWidth > maxContentWidth ? MathHelper.Clamp(maxContentWidth / unscaledWidth, 0.58f, 1f) : 1f;
+            gap *= scale;
+            arrowWidth *= scale;
+            float lineHeight = MathF.Max(prefixSize.Y, MathF.Max(oldZoneSize.Y, newZoneSize.Y)) * scale;
+            float contentWidth = (prefixSize.X + oldZoneSize.X + newZoneSize.X) * scale + (gap * 4f) + arrowWidth;
+            Vector2 position = new(
+                gameWindowBounds.X + ((gameWindowBounds.Width - contentWidth) * 0.5f),
+                gameWindowBounds.Y + 20f - ((1f - alpha) * 8f));
+
+            Color oldColor = ResolveOceanZoneBannerColor(_oceanZoneBannerOldZone) * (0.86f * alpha);
+            Color mainColor = ResolveOceanZoneBannerColor(_oceanZoneBannerNewZone) * alpha;
+            Color prefixColor = Color.White * (0.88f * alpha);
+            Color shadowColor = Color.Black * (0.78f * alpha);
+            Color panelColor = Color.Black * (0.36f * alpha);
+            Color underlineColor = mainColor * 0.72f;
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+            if (_fullscreenPixel != null && !_fullscreenPixel.IsDisposed)
+            {
+                int paddingX = Math.Max(8, (int)MathF.Round(12f * scale));
+                int paddingY = Math.Max(4, (int)MathF.Round(6f * scale));
+                Rectangle panel = new(
+                    (int)MathF.Floor(position.X - paddingX),
+                    (int)MathF.Floor(position.Y - paddingY),
+                    (int)MathF.Ceiling(contentWidth + (paddingX * 2f)),
+                    (int)MathF.Ceiling(lineHeight + (paddingY * 2f)));
+                DrawOceanZoneBannerRect(spriteBatch, panel, panelColor);
+                DrawOceanZoneBannerRect(spriteBatch, new Rectangle(panel.X, panel.Bottom - 2, panel.Width, 2), underlineColor);
+            }
+
+            Vector2 cursor = position;
+            DrawScaledOceanZoneBannerText(spriteBatch, font, prefixText, cursor + new Vector2(2f, 2f), shadowColor, scale);
+            DrawScaledOceanZoneBannerText(spriteBatch, font, prefixText, cursor, prefixColor, scale);
+            cursor.X += (prefixSize.X * scale) + gap;
+
+            DrawScaledOceanZoneBannerText(spriteBatch, font, oldZoneText, cursor + new Vector2(2f, 2f), shadowColor, scale);
+            DrawScaledOceanZoneBannerText(spriteBatch, font, oldZoneText, cursor, oldColor, scale);
+            cursor.X += (oldZoneSize.X * scale) + gap;
+
+            Vector2 arrowStart = new(cursor.X, position.Y + (lineHeight * 0.54f));
+            Vector2 arrowEnd = new(cursor.X + arrowWidth, arrowStart.Y);
+            DrawOceanZoneBannerArrow(spriteBatch, arrowStart + new Vector2(1f, 1f), arrowEnd + new Vector2(1f, 1f), shadowColor, scale);
+            DrawOceanZoneBannerArrow(spriteBatch, arrowStart, arrowEnd, mainColor, scale);
+            cursor.X += arrowWidth + gap;
+
+            DrawScaledOceanZoneBannerText(spriteBatch, font, newZoneText, cursor + new Vector2(2f, 2f), shadowColor, scale);
+            DrawScaledOceanZoneBannerText(spriteBatch, font, newZoneText, cursor, mainColor, scale);
+            spriteBatch.End();
+        }
+
+        private static void DrawScaledOceanZoneBannerText(
+            SpriteBatch spriteBatch,
+            UIStyle.UIFont font,
+            string text,
+            Vector2 position,
+            Color color,
+            float scale)
+        {
+            if (MathF.Abs(scale - 1f) <= 0.001f)
+            {
+                font.DrawString(spriteBatch, text, position, color);
+                return;
+            }
+
+            spriteBatch.DrawString(
+                font.Font,
+                text,
+                position,
+                color,
+                0f,
+                Vector2.Zero,
+                font.Scale * scale,
+                SpriteEffects.None,
+                0f);
+        }
+
+        private static void DrawOceanZoneBannerArrow(
+            SpriteBatch spriteBatch,
+            Vector2 start,
+            Vector2 end,
+            Color color,
+            float scale)
+        {
+            if (_fullscreenPixel == null || _fullscreenPixel.IsDisposed)
+            {
+                return;
+            }
+
+            Vector2 delta = end - start;
+            if (delta.LengthSquared() <= 1f)
+            {
+                return;
+            }
+
+            delta.Normalize();
+            Vector2 perpendicular = new(-delta.Y, delta.X);
+            float thickness = Math.Max(2f, 3f * scale);
+            float headLength = Math.Max(8f, 12f * scale);
+            float headSpread = Math.Max(5f, 7f * scale);
+            Vector2 shaftEnd = end - (delta * (headLength * 0.35f));
+            Vector2 leftHead = end - (delta * headLength) + (perpendicular * headSpread);
+            Vector2 rightHead = end - (delta * headLength) - (perpendicular * headSpread);
+
+            DrawOceanZoneBannerLine(spriteBatch, start, shaftEnd, color, thickness);
+            DrawOceanZoneBannerLine(spriteBatch, leftHead, end, color, thickness);
+            DrawOceanZoneBannerLine(spriteBatch, rightHead, end, color, thickness);
+        }
+
+        private static void DrawOceanZoneBannerLine(
+            SpriteBatch spriteBatch,
+            Vector2 start,
+            Vector2 end,
+            Color color,
+            float thickness)
+        {
+            Vector2 delta = end - start;
+            float length = delta.Length();
+            if (length <= 0.001f || _fullscreenPixel == null || _fullscreenPixel.IsDisposed)
+            {
+                return;
+            }
+
+            spriteBatch.Draw(
+                _fullscreenPixel,
+                start,
+                null,
+                color,
+                MathF.Atan2(delta.Y, delta.X),
+                new Vector2(0f, 0.5f),
+                new Vector2(length, Math.Max(1f, thickness)),
+                SpriteEffects.None,
+                0f);
+        }
+
+        private static void DrawOceanZoneBannerRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)
+        {
+            if (_fullscreenPixel == null || _fullscreenPixel.IsDisposed || bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            spriteBatch.Draw(_fullscreenPixel, bounds, color);
+        }
+
+        private static Color ResolveOceanZoneBannerColor(TerrainWaterType waterType)
+        {
+            Color zoneColor = waterType switch
+            {
+                TerrainWaterType.Shallow => DevShallowWaterColor,
+                TerrainWaterType.Sunlit => DevSunlitWaterColor,
+                TerrainWaterType.Twilight => DevTwilightWaterColor,
+                TerrainWaterType.Midnight => DevMidnightWaterColor,
+                TerrainWaterType.Abyss => DevAbyssWaterColor,
+                _ => DevSunlitWaterColor
+            };
+
+            Vector3 brightened = Vector3.Lerp(zoneColor.ToVector3(), Vector3.One, 0.58f);
+            return new Color(brightened.X, brightened.Y, brightened.Z, 1f);
+        }
+
+        private static Vector4 ResolveOceanZoneColor(Color ambienceColor, TerrainWaterType waterType)
+        {
+            float darkness = ResolveOceanZoneDarkness(waterType);
+            Vector3 rgb = Vector3.Clamp(ambienceColor.ToVector3() * darkness, Vector3.Zero, Vector3.One);
+            return new Vector4(rgb, ambienceColor.A / 255f);
+        }
+
+        private static float ResolveOceanZoneDarkness(TerrainWaterType waterType)
+        {
+            float sunlitLuminance = MathF.Max(0.0001f, PerceivedLuminance(DevSunlitWaterColor));
+            return waterType switch
+            {
+                TerrainWaterType.Shallow => PerceivedLuminance(DevShallowWaterColor) / sunlitLuminance,
+                TerrainWaterType.Sunlit => 1f,
+                TerrainWaterType.Twilight => PerceivedLuminance(DevTwilightWaterColor) / sunlitLuminance,
+                TerrainWaterType.Midnight => PerceivedLuminance(DevMidnightWaterColor) / sunlitLuminance,
+                TerrainWaterType.Abyss => PerceivedLuminance(DevAbyssWaterColor) / sunlitLuminance,
+                _ => 1f
+            };
+        }
+
+        private static float PerceivedLuminance(Color color)
+        {
+            return ((0.2126f * color.R) + (0.7152f * color.G) + (0.0722f * color.B)) / 255f;
+        }
+
+        private static Color ToColor(Vector3 color, float alpha)
+        {
+            Vector3 clamped = Vector3.Clamp(color, Vector3.Zero, Vector3.One);
+            return new Color(clamped.X, clamped.Y, clamped.Z, Math.Clamp(alpha, 0f, 1f));
+        }
+
+        private static Color ToColor(Vector4 color)
+        {
+            return new Color(
+                MathHelper.Clamp(color.X, 0f, 1f),
+                MathHelper.Clamp(color.Y, 0f, 1f),
+                MathHelper.Clamp(color.Z, 0f, 1f),
+                MathHelper.Clamp(color.W, 0f, 1f));
+        }
+
+        private static Vector4 CurrentBaseColorVector =>
+            _oceanZoneTransitionInitialized ? _currentBaseColor : new Vector4(BaseColor, BaseAlpha);
+
+        private static Vector4 CurrentWaveColorVector =>
+            _oceanZoneTransitionInitialized ? _currentWaveColor : new Vector4(WaveColor, WaveAlpha);
+
+        private static float ResolveCurrentOceanZoneDarkness()
+        {
+            float configuredLuminance = PerceivedLuminance(ToColor(BaseColor, BaseAlpha));
+            if (configuredLuminance <= 0.0001f)
+            {
+                return 1f;
+            }
+
+            Color liveColor = ToColor(_currentBaseColor);
+            return MathHelper.Clamp(PerceivedLuminance(liveColor) / configuredLuminance, 0.05f, 2f);
+        }
+
+        private static bool Vector4NearlyEqual(Vector4 left, Vector4 right)
+        {
+            return Vector4.DistanceSquared(left, right) <= 0.000001f;
+        }
+
         private static void DrawWorldAnchoredShader(
             SpriteBatch spriteBatch,
             Rectangle panelBounds,
@@ -291,8 +776,8 @@ namespace op.io
             float waveSet2Factor = Math.Clamp(WaveSet2Strength / DefaultWaveSet2Strength, 0f, 3f);
             float waveSet3Factor = Math.Clamp(WaveSet3Strength / DefaultWaveSet3Strength, 0f, 3f);
 
-            _oceanShader.Parameters["BaseColor"]?.SetValue(new Vector4(Vector3.Clamp(BaseColor, Vector3.Zero, Vector3.One), Math.Clamp(BaseAlpha, 0f, 1f)));
-            _oceanShader.Parameters["WaveColor"]?.SetValue(new Vector4(Vector3.Clamp(WaveColor, Vector3.Zero, Vector3.One), Math.Clamp(WaveAlpha, 0f, 1f)));
+            _oceanShader.Parameters["BaseColor"]?.SetValue(CurrentBaseColorVector);
+            _oceanShader.Parameters["WaveColor"]?.SetValue(CurrentWaveColorVector);
             _oceanShader.Parameters["TimeSeconds"]?.SetValue(scaledTime);
             _oceanShader.Parameters["FieldScale"]?.SetValue(Math.Clamp(fieldScale, 0.20f, 12f));
             _oceanShader.Parameters["BackgroundVariationStrength"]?.SetValue(backgroundFactor);
@@ -1362,7 +1847,12 @@ namespace op.io
             int endTileX = (int)MathF.Ceiling(maxX / _tileWidth) + 1;
             int startTileY = (int)MathF.Floor((minY - scrollOffset) / _tileHeight) - 1;
             int endTileY = (int)MathF.Ceiling((maxY - scrollOffset) / _tileHeight) + 1;
-            Color tint = Color.White * Math.Clamp(alpha, 0f, 1f);
+            float darkness = MathHelper.Clamp(_currentOceanZoneDarkness, 0.05f, 2f);
+            Color tint = new(
+                MathHelper.Clamp(darkness, 0f, 1f),
+                MathHelper.Clamp(darkness, 0f, 1f),
+                MathHelper.Clamp(darkness, 0f, 1f),
+                Math.Clamp(alpha, 0f, 1f));
             Rectangle sourceRectangle = new(0, 0, _tileWidth, _tileHeight);
 
             for (int tileY = startTileY; tileY <= endTileY; tileY++)

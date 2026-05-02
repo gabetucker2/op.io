@@ -8,4 +8,8 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\Scripts\TerrainWorldDefaults.cs" Link="Shared\TerrainWorldDefaults.cs" />
+    <Compile Include="..\..\Scripts\TerrainColorPalette.cs" Link="Shared\TerrainColorPalette.cs" />
+  </ItemGroup>
 </Project>

@@ -90,6 +90,14 @@ namespace op.io
             _locked = null;
         }
 
+        public static void ClearTargets()
+        {
+            _hovered = null;
+            _locked = null;
+            _suppressHoverUntilPointerMoves = true;
+            _lastCursorPosition = Mouse.GetState().Position;
+        }
+
         public static InspectableObjectInfo GetActiveTarget()
         {
             InspectableObjectInfo active = _locked ?? _hovered;

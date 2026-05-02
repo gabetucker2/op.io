@@ -98,6 +98,33 @@ namespace op.io
         public static float YourBarVisibilityAlpha => _yourBarMaxVisibilityAlpha;
         public static bool YourBarVisible => BarConfigManager.BarsVisible && _yourBarMaxVisibilityAlpha > 0.001f;
 
+        public static void Clear()
+        {
+            _alphas.Clear();
+            _liveIds.Clear();
+            _toRemove.Clear();
+            _visibleInRow.Clear();
+            _barVisibilityAlphas.Clear();
+            _liveBarKeys.Clear();
+            _barKeysToRemove.Clear();
+            _prevHealth.Clear();
+            _prevShield.Clear();
+            _prevXP.Clear();
+            _prevHealthRegenProgress.Clear();
+            _prevShieldRegenProgress.Clear();
+            _healthDmgTime.Clear();
+            _shieldDmgTime.Clear();
+            _healthChangeTime.Clear();
+            _shieldChangeTime.Clear();
+            _xpChangeTime.Clear();
+            _healthRegenChangeTime.Clear();
+            _shieldRegenChangeTime.Clear();
+            _barSpawnTime.Clear();
+            _yourBarRevealActive = false;
+            _yourBarRevealRemainingSeconds = 0f;
+            _yourBarMaxVisibilityAlpha = 0f;
+        }
+
         private static int? _cachedBarHeight;
         public static int BarHeight
         {
@@ -220,9 +247,7 @@ namespace op.io
                     long barKey = GetBarVisibilityKey(id, entry.Type);
                     _liveBarKeys.Add(barKey);
 
-                    bool relationActive = IsYourPlayerBar(obj)
-                        ? _yourBarRevealActive
-                        : BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
+                    bool relationActive = AreBarVisibilityRelationsActive(obj, entry);
                     bool shouldBeVisible = relationActive && externalVisible;
                     float barAlpha = _barVisibilityAlphas.TryGetValue(barKey, out float existingAlpha)
                         ? existingAlpha
@@ -497,9 +522,7 @@ namespace op.io
                 return false;
             }
 
-            bool relationActive = IsYourPlayerBar(obj)
-                ? _yourBarRevealActive
-                : BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
+            bool relationActive = AreBarVisibilityRelationsActive(obj, entry);
             long barKey = GetBarVisibilityKey(obj.ID, entry.Type);
             float visibilityAlpha = _barVisibilityAlphas.TryGetValue(barKey, out float storedAlpha)
                 ? storedAlpha
@@ -558,6 +581,14 @@ namespace op.io
         private static bool IsYourPlayerBar(GameObject obj)
         {
             return obj is Agent agent && agent.IsPlayer;
+        }
+
+        private static bool AreBarVisibilityRelationsActive(GameObject obj, BarConfigManager.BarEntry entry)
+        {
+            bool relationActive = BarConfigManager.AreVisibilityRelationsActive(entry, type => GetBarSourceState(obj, type));
+            return IsYourPlayerBar(obj)
+                ? relationActive || _yourBarRevealActive
+                : relationActive;
         }
 
         private static bool TryGetBarBaseState(

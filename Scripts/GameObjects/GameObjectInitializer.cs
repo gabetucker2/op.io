@@ -9,26 +9,201 @@ namespace op.io
     {
         private const int FarmSpawnPlacementMaxAttempts = 48;
         private const float FarmSpawnClearancePaddingWorldUnits = 10f;
+        private const float PlayerSpawnClearancePaddingWorldUnits = 8f;
+        private const float PlayerSpawnMaxSearchDistanceWorldUnits = 1536f;
+        private const int PlayerSpawnMaxRingSamples = 192;
+
+        private static bool _playerSpawnRelocated;
+        private static float _playerSpawnRelocationDistance;
+        private static int _playerSpawnSearchAttempts;
+
+        public static bool PlayerSpawnRelocated => _playerSpawnRelocated;
+        public static float PlayerSpawnRelocationDistance => _playerSpawnRelocationDistance;
+        public static int PlayerSpawnSearchAttempts => _playerSpawnSearchAttempts;
 
         public static void Initialize()
         {
             DebugLogger.PrintGO("Initializing GameObjects...");
 
+            GameObjectRegister.ClearAllGameObjects();
             Core.Instance.GameObjects = new List<GameObject>();
             Core.Instance.StaticObjects = new List<GameObject>();
-            XPClumpManager.Reset();
+            InitializeActiveLevel(loadContent: false);
 
+            DebugLogger.PrintGO($"Initialization complete. Total GameObjects: {Core.Instance.GameObjects.Count}, StaticObjects: {Core.Instance.StaticObjects.Count}");
+        }
+
+        public static void ReloadActiveLevel()
+        {
+            try
+            {
+                DebugLogger.PrintGO($"Reloading active level: {GameLevelManager.ActiveLevelName}");
+
+                GameBlockTerrainBackground.ResetRuntimeTerrainObjectsForLevelLoad();
+                List<GameObject> preservedRuntimeObjects = CollectPreservedRuntimeObjects();
+                DisposeLevelManagedObjects(preservedRuntimeObjects);
+
+                Core.Instance.GameObjects = new List<GameObject>(preservedRuntimeObjects);
+                Core.Instance.StaticObjects = preservedRuntimeObjects
+                    .Where(IsPreservedRuntimeStaticObject)
+                    .ToList();
+                Core.Instance.Player = null;
+
+                GameUpdater.ResetSceneTransientState();
+                BulletManager.Clear();
+                DamageNumberManager.Clear();
+                HealthBarManager.Clear();
+                ZoneBlockDetector.Reset();
+                InspectModeState.ClearTargets();
+                XPClumpManager.Reset();
+
+                InitializeActiveLevel(loadContent: true);
+
+                DebugLogger.PrintGO($"Level reload complete. Active={GameLevelManager.ActiveLevelName}, GameObjects={Core.Instance.GameObjects.Count}, StaticObjects={Core.Instance.StaticObjects.Count}");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Exception in ReloadActiveLevel: {ex.Message}");
+            }
+        }
+
+        private static void InitializeActiveLevel(bool loadContent)
+        {
+            GameLevelDefinition level = GameLevelManager.ActiveLevel;
+            DebugLogger.PrintGO($"Initializing level '{level.DisplayName}' with loadout: {GameLevelManager.BuildLevelLoadoutSummary(level)}");
+
+            ResetPlayerSpawnTelemetry();
+            XPClumpManager.Reset();
             GameObjectManager.SeedNextID();
 
-            InitializeMapObjects();
-            InitializeFarms();
+            if (level.LoadMapObjects)
+            {
+                InitializeMapObjects();
+            }
+            else
+            {
+                DebugLogger.PrintGO("Level skips map objects.");
+            }
+
+            if (level.LoadFarms)
+            {
+                InitializeFarms();
+            }
+            else
+            {
+                DebugLogger.PrintGO("Level skips farms.");
+            }
+
             InitializeBlocks();
-            InitializeAgents();
-            InitializeZoneBlocks();
+
+            if (level.SpawnPlayer || level.LoadAgents || level.LoadsSelectedAgents)
+            {
+                InitializeAgents(
+                    includeNonPlayerAgents: level.LoadAgents,
+                    requirePlayer: level.SpawnPlayer,
+                    includedAgentNames: level.IncludedAgentNames);
+            }
+            else
+            {
+                Core.Instance.Player = null;
+                GameBlockTerrainBackground.PrepareStartupTerrainAroundWorldPosition(Vector2.Zero);
+                DebugLogger.PrintGO("Level skips agents.");
+            }
+
+            if (level.LoadZoneBlocks)
+            {
+                InitializeZoneBlocks();
+            }
+            else
+            {
+                DebugLogger.PrintGO("Level skips zone blocks.");
+            }
+
             ResolveTerrainSpawnOverlaps();
             ResolveStartupCollidableOverlaps();
 
-            DebugLogger.PrintGO($"Initialization complete. Total GameObjects: {Core.Instance.GameObjects.Count}, StaticObjects: {Core.Instance.StaticObjects.Count}");
+            if (loadContent)
+            {
+                LoadSceneContent();
+            }
+        }
+
+        private static List<GameObject> CollectPreservedRuntimeObjects()
+        {
+            List<GameObject> preserved = new();
+            if (Core.Instance?.GameObjects == null)
+            {
+                return preserved;
+            }
+
+            foreach (GameObject gameObject in Core.Instance.GameObjects)
+            {
+                if (IsPreservedRuntimeObject(gameObject) && !preserved.Contains(gameObject))
+                {
+                    preserved.Add(gameObject);
+                }
+            }
+
+            return preserved;
+        }
+
+        private static bool IsPreservedRuntimeObject(GameObject gameObject)
+        {
+            return false;
+        }
+
+        private static bool IsPreservedRuntimeStaticObject(GameObject gameObject)
+        {
+            return IsPreservedRuntimeObject(gameObject) && !gameObject.DynamicPhysics;
+        }
+
+        private static void DisposeLevelManagedObjects(IReadOnlyCollection<GameObject> preservedRuntimeObjects)
+        {
+            HashSet<GameObject> preserved = preservedRuntimeObjects != null
+                ? new HashSet<GameObject>(preservedRuntimeObjects)
+                : new HashSet<GameObject>();
+            HashSet<GameObject> disposed = new();
+
+            DisposeObjects(Core.Instance?.GameObjects, preserved, disposed);
+            DisposeObjects(Core.Instance?.StaticObjects, preserved, disposed);
+        }
+
+        private static void DisposeObjects(IEnumerable<GameObject> objects, HashSet<GameObject> preserved, HashSet<GameObject> disposed)
+        {
+            if (objects == null)
+            {
+                return;
+            }
+
+            foreach (GameObject gameObject in objects)
+            {
+                if (gameObject == null || preserved.Contains(gameObject) || !disposed.Add(gameObject))
+                {
+                    continue;
+                }
+
+                gameObject.Dispose();
+            }
+        }
+
+        private static void LoadSceneContent()
+        {
+            if (Core.Instance?.GraphicsDevice == null || Core.Instance.GameObjects == null)
+            {
+                return;
+            }
+
+            foreach (GameObject gameObject in Core.Instance.GameObjects)
+            {
+                gameObject?.LoadContent(Core.Instance.GraphicsDevice);
+                if (gameObject is Agent agent)
+                {
+                    foreach (var slot in agent.Barrels)
+                    {
+                        slot.FullShape?.LoadContent(Core.Instance.GraphicsDevice);
+                    }
+                }
+            }
         }
 
         private static void InitializeMapObjects()
@@ -361,17 +536,48 @@ namespace op.io
             }
         }
 
-        private static void InitializeAgents()
+        private static void InitializeAgents(
+            bool includeNonPlayerAgents,
+            bool requirePlayer,
+            IReadOnlyCollection<string> includedAgentNames = null)
         {
             try
             {
-                DebugLogger.PrintGO("Initializing Agents...");
+                HashSet<string> selectedAgentNames = includedAgentNames != null
+                    ? new HashSet<string>(includedAgentNames.Where(name => !string.IsNullOrWhiteSpace(name)), StringComparer.OrdinalIgnoreCase)
+                    : [];
+                DebugLogger.PrintGO(includeNonPlayerAgents
+                    ? "Initializing player and level agents..."
+                    : selectedAgentNames.Count > 0
+                        ? $"Initializing player and selected level agents: {string.Join(", ", selectedAgentNames)}"
+                        : "Initializing player spawn...");
 
                 var agents = AgentLoader.LoadAgents();
 
                 if (agents.Count != 0)
                 {
-                    foreach (var agent in agents)
+                    Agent player = agents.FirstOrDefault(a => a.IsPlayer);
+                    List<Agent> activeAgents = includeNonPlayerAgents
+                        ? agents
+                        : agents
+                            .Where(a =>
+                                (requirePlayer && ReferenceEquals(a, player)) ||
+                                selectedAgentNames.Contains(a.Name))
+                            .ToList();
+                    DisposeSkippedLevelAgents(agents, activeAgents);
+
+                    if (selectedAgentNames.Count > 0)
+                    {
+                        foreach (string requestedName in selectedAgentNames)
+                        {
+                            if (!activeAgents.Any(agent => string.Equals(agent.Name, requestedName, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                DebugLogger.PrintWarning($"Selected level agent '{requestedName}' was requested but not found.");
+                            }
+                        }
+                    }
+
+                    foreach (var agent in activeAgents)
                     {
                         var barrels = BarrelLoader.LoadBarrelsForAgent(agent.ID);
                         if (barrels.Count > 0)
@@ -399,19 +605,39 @@ namespace op.io
                         }
                     }
 
-                    Core.Instance.GameObjects.AddRange(agents);
-                    Core.Instance.Player = agents.FirstOrDefault(a => a.IsPlayer);
+                    if (player != null)
+                    {
+                        PreparePlayerTerrainAndSpawnPosition(player, activeAgents);
+                    }
 
-                    if (Core.Instance.Player == null)
-                        DebugLogger.PrintError("No Agent with IsPlayer=1 found. Core.Instance.Player is null.");
+                    Core.Instance.GameObjects.AddRange(activeAgents);
+                    Core.Instance.Player = activeAgents.Contains(player) ? player : null;
+
+                    if (Core.Instance.PlayerOrNull == null)
+                    {
+                        GameBlockTerrainBackground.PrepareStartupTerrainAroundWorldPosition(Vector2.Zero);
+                        DebugLogger.PrintWarning(requirePlayer
+                            ? "Required player Agent with IsPlayer=1 was not found. Core.Instance.Player is null."
+                            : "No Agent with IsPlayer=1 found. Core.Instance.Player is null.");
+                    }
                     else
-                        DebugLogger.PrintGO($"Core player set: ID={Core.Instance.Player.ID}, Pos={Core.Instance.Player.Position}, Shape={Core.Instance.Player.Shape?.ShapeType}");
+                    {
+                        DebugLogger.PrintGO($"Core player set: ID={Core.Instance.PlayerOrNull.ID}, Pos={Core.Instance.PlayerOrNull.Position}, Shape={Core.Instance.PlayerOrNull.Shape?.ShapeType}");
+                    }
 
-                    DebugLogger.PrintGO($"Agents loaded: {agents.Count} total");
+                    DebugLogger.PrintGO(includeNonPlayerAgents
+                        ? $"Agents loaded: {activeAgents.Count} active of {agents.Count} total"
+                        : selectedAgentNames.Count > 0
+                            ? $"Player and selected agents loaded: {activeAgents.Count} active, {Math.Max(0, agents.Count - activeAgents.Count)} agents skipped"
+                            : $"Player spawn loaded: {activeAgents.Count} active, {Math.Max(0, agents.Count - activeAgents.Count)} level agents skipped");
                 }
                 else
                 {
-                    DebugLogger.PrintWarning("No agents were loaded.");
+                    Core.Instance.Player = null;
+                    GameBlockTerrainBackground.PrepareStartupTerrainAroundWorldPosition(Vector2.Zero);
+                    DebugLogger.PrintWarning(requirePlayer
+                        ? "No agents were loaded, so the required player spawn is missing."
+                        : "No agents were loaded.");
                 }
             }
             catch (Exception ex)
@@ -419,6 +645,200 @@ namespace op.io
                 DebugLogger.PrintError($"Exception in InitializeAgents: {ex.Message}");
             }
         }
+
+        private static void DisposeSkippedLevelAgents(IReadOnlyList<Agent> loadedAgents, IReadOnlyCollection<Agent> activeAgents)
+        {
+            if (loadedAgents == null || loadedAgents.Count == 0)
+            {
+                return;
+            }
+
+            HashSet<Agent> active = activeAgents != null
+                ? new HashSet<Agent>(activeAgents)
+                : [];
+            foreach (Agent agent in loadedAgents)
+            {
+                if (agent == null || active.Contains(agent))
+                {
+                    continue;
+                }
+
+                agent.Dispose();
+            }
+        }
+
+        private static void PreparePlayerTerrainAndSpawnPosition(Agent player, IReadOnlyList<Agent> activeAgents)
+        {
+            Vector2 requestedPosition = player?.Position ?? Vector2.Zero;
+            ResetPlayerSpawnTelemetry();
+
+            if (player == null)
+            {
+                GameBlockTerrainBackground.PrepareStartupTerrainAroundWorldPosition(Vector2.Zero);
+                return;
+            }
+
+            GameBlockTerrainBackground.PrepareStartupTerrainAroundWorldPosition(requestedPosition);
+
+            Vector2 resolvedPosition = ResolveNearestUnoccupiedPlayerSpawnPosition(
+                player,
+                requestedPosition,
+                activeAgents);
+            ApplyPlayerSpawnState(player, resolvedPosition);
+
+            float relocationDistance = Vector2.Distance(requestedPosition, resolvedPosition);
+            _playerSpawnRelocated = relocationDistance > 0.5f;
+            _playerSpawnRelocationDistance = _playerSpawnRelocated ? relocationDistance : 0f;
+
+            if (_playerSpawnRelocated)
+            {
+                GameBlockTerrainBackground.PrepareStartupTerrainAroundWorldPosition(resolvedPosition);
+                DebugLogger.PrintGO(
+                    $"Player spawn relocated from {requestedPosition} to {resolvedPosition} " +
+                    $"after {_playerSpawnSearchAttempts} probes; distance={relocationDistance:0.##}.");
+            }
+        }
+
+        private static Vector2 ResolveNearestUnoccupiedPlayerSpawnPosition(
+            Agent player,
+            Vector2 requestedPosition,
+            IReadOnlyList<Agent> activeAgents)
+        {
+            if (player == null || player.Shape == null)
+            {
+                return requestedPosition;
+            }
+
+            float clearanceRadius = MathF.Max(12f, player.BoundingRadius + PlayerSpawnClearancePaddingWorldUnits);
+            Vector2 terrainResolvedPosition = GameBlockTerrainBackground.ResolveNearestTerrainFreeWorldPosition(
+                requestedPosition,
+                clearanceRadius,
+                PlayerSpawnMaxSearchDistanceWorldUnits);
+            if (IsPlayerSpawnCandidateOpen(player, terrainResolvedPosition, activeAgents, clearanceRadius))
+            {
+                return terrainResolvedPosition;
+            }
+
+            float radialStep = MathF.Max(18f, clearanceRadius * 0.45f);
+            for (float distance = radialStep; distance <= PlayerSpawnMaxSearchDistanceWorldUnits; distance += radialStep)
+            {
+                int sampleCount = Math.Min(
+                    PlayerSpawnMaxRingSamples,
+                    Math.Max(16, (int)MathF.Ceiling(MathF.Tau * distance / radialStep)));
+                for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+                {
+                    float angle = (sampleIndex / (float)sampleCount) * MathF.Tau;
+                    Vector2 candidate = new(
+                        requestedPosition.X + (MathF.Cos(angle) * distance),
+                        requestedPosition.Y + (MathF.Sin(angle) * distance));
+                    if (IsPlayerSpawnCandidateOpen(player, candidate, activeAgents, clearanceRadius))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            DebugLogger.PrintWarning(
+                $"Player spawn remained at terrain-resolved position {terrainResolvedPosition}; no fully open spawn found within {PlayerSpawnMaxSearchDistanceWorldUnits:0.##} world units.");
+            return terrainResolvedPosition;
+        }
+
+        private static bool IsPlayerSpawnCandidateOpen(
+            Agent player,
+            Vector2 candidatePosition,
+            IReadOnlyList<Agent> activeAgents,
+            float clearanceRadius)
+        {
+            _playerSpawnSearchAttempts++;
+            return GameBlockTerrainBackground.IsTerrainFreeWorldPosition(candidatePosition, clearanceRadius) &&
+                !PlayerSpawnOverlapsAnyCollidable(player, candidatePosition, activeAgents);
+        }
+
+        private static bool PlayerSpawnOverlapsAnyCollidable(
+            Agent player,
+            Vector2 candidatePosition,
+            IReadOnlyList<Agent> activeAgents)
+        {
+            if (Core.Instance?.GameObjects != null)
+            {
+                for (int i = 0; i < Core.Instance.GameObjects.Count; i++)
+                {
+                    if (WouldPlayerSpawnOverlapObject(player, candidatePosition, Core.Instance.GameObjects[i]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (activeAgents != null)
+            {
+                for (int i = 0; i < activeAgents.Count; i++)
+                {
+                    if (WouldPlayerSpawnOverlapObject(player, candidatePosition, activeAgents[i]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool WouldPlayerSpawnOverlapObject(
+            Agent player,
+            Vector2 candidatePosition,
+            GameObject existingObject)
+        {
+            if (player == null ||
+                existingObject == null ||
+                ReferenceEquals(existingObject, player) ||
+                !existingObject.IsCollidable ||
+                existingObject.Shape == null ||
+                player.Shape == null)
+            {
+                return false;
+            }
+
+            float combinedRadius = player.BoundingRadius + existingObject.BoundingRadius + PlayerSpawnClearancePaddingWorldUnits;
+            if (Vector2.DistanceSquared(candidatePosition, existingObject.Position) > combinedRadius * combinedRadius)
+            {
+                return false;
+            }
+
+            try
+            {
+                Vector2[] playerVertices = player.Shape.GetTransformedVertices(candidatePosition, player.Rotation);
+                Vector2[] existingVertices = existingObject.Shape.GetTransformedVertices(existingObject.Position, existingObject.Rotation);
+                return SATCollisionUtil.TryGetCollision(playerVertices, existingVertices, out _);
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning(
+                    $"Player spawn overlap probe failed against ID={existingObject.ID}, Name={existingObject.Name}: {ex.Message}");
+                return true;
+            }
+        }
+
+        private static void ApplyPlayerSpawnState(Agent player, Vector2 position)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            player.Position = position;
+            player.PreviousPosition = position;
+            player.PhysicsVelocity = Vector2.Zero;
+            player.MovementVelocity = Vector2.Zero;
+        }
+
+        private static void ResetPlayerSpawnTelemetry()
+        {
+            _playerSpawnRelocated = false;
+            _playerSpawnRelocationDistance = 0f;
+            _playerSpawnSearchAttempts = 0;
+        }
+
         private static void InitializeZoneBlocks()
         {
             try

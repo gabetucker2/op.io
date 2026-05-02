@@ -24,7 +24,7 @@ namespace op.io
         private static bool _holdLatchEnabled;
         private static float _holdLatchRotation;
         internal static bool IsHoldLatchActive => _holdLatchEnabled;
-        private static bool _requiresFocusClick = true;
+        private static bool _requiresFocusClick;
         private static bool _focusLatchInitialized;
         private static bool _windowWasActiveLastTick;
         private static MouseState _previousFocusLatchMouseState;
@@ -186,7 +186,13 @@ namespace op.io
                     moveTowardsCursor = false;
                 }
 
-                float rotation = Core.Instance.Player.Rotation;
+                Agent player = Core.Instance?.PlayerOrNull;
+                if (player == null)
+                {
+                    return Vector2.Zero;
+                }
+
+                float rotation = player.Rotation;
                 if (moveTowardsCursor)
                 {
                     direction.X += MathF.Cos(rotation);
@@ -231,14 +237,15 @@ namespace op.io
 
         private static bool IsCursorOutsideFollowDeadzone()
         {
-            if (Core.Instance?.Player == null)
+            Agent player = Core.Instance?.PlayerOrNull;
+            if (player == null)
             {
                 return true;
             }
 
             float deadzone = GetCursorFollowDeadzonePixels();
             Vector2 cursorPosition = MouseFunctions.GetMousePosition();
-            Vector2 playerPosition = Core.Instance.Player.Position;
+            Vector2 playerPosition = player.Position;
             float distanceSquared = Vector2.DistanceSquared(cursorPosition, playerPosition);
             return distanceSquared >= deadzone * deadzone;
         }
@@ -328,7 +335,7 @@ namespace op.io
                 _focusLatchInitialized = true;
                 _windowWasActiveLastTick = isActive;
                 _previousFocusLatchMouseState = currentMouse;
-                _requiresFocusClick = true;
+                _requiresFocusClick = !isActive;
             }
 
             if (!isActive)
@@ -1150,12 +1157,6 @@ namespace op.io
         private static bool ShouldAllowBinding(bool isMetaControl, bool isMouseBinding = false)
         {
             TickWindowFocusState();
-
-            if (_requiresFocusClick)
-            {
-                Freeze(true, "Focus mode: waiting for in-window click");
-                return false;
-            }
 
             if (isMetaControl)
             {

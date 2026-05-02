@@ -42,6 +42,16 @@ namespace op.io
             return true;
         }
 
+        public static void ResetSceneTransientState()
+        {
+            for (int i = _dyingObjects.Count - 1; i >= 0; i--)
+            {
+                _dyingObjects[i]?.Dispose();
+            }
+
+            _dyingObjects.Clear();
+        }
+
         public static void Update(GameTime gameTime)
         {
             try
@@ -94,7 +104,7 @@ namespace op.io
                     go.DeathFadeScale = 1f;
                     go.DeathFadeSpinVelocity = GetRandomDeathFadeSpinVelocity();
                     go.Opacity = 1f;
-                    if (go == Core.Instance.Player)
+                    if (go == Core.Instance.PlayerOrNull)
                     {
                         go.DeathImpulse = Vector2.Zero;
                         go.PhysicsVelocity = Vector2.Zero;
@@ -245,9 +255,10 @@ namespace op.io
             bool uiConsumingMouse = BlockManager.IsConsumingMouseInput();
 
             FrameProfiler.BeginSample("Player.Movement", "GameUpdater");
-            Agent player = Core.Instance.Player;
+            Agent player = Core.Instance.PlayerOrNull;
             if (player != null)
             {
+                Vector2 positionBeforeMovement = player.Position;
                 if (!SuppressDeadPlayerMotion(player))
                 {
                     Vector2 direction = uiConsumingMouse ? Vector2.Zero : InputManager.GetMoveVector();
@@ -272,6 +283,11 @@ namespace op.io
                         player.Position += player.MovementVelocity * Core.DELTATIME;
                     }
                 }
+                if (Vector2.DistanceSquared(player.Position, positionBeforeMovement) > 0.001f)
+                {
+                    GameBlockTerrainBackground.RequestPlayerTerrainAccess(player);
+                }
+
                 if (!InputManager.IsPlayerGameplayInputSuppressed && InputManager.TryGetHoldLatchRotation(out float lockedRotation))
                 {
                     player.Rotation = lockedRotation;
@@ -312,7 +328,7 @@ namespace op.io
             }
             FrameProfiler.EndSample("GameObjects.Update");
 
-            if (Core.Instance.GameObjects.Count == 0)
+            if (Core.Instance.GameObjects.Count == 0 && GameLevelManager.ActiveLevel.LoadsAnySceneObjects)
             {
                 DebugLogger.PrintWarning("No GameObjects exist in the scene.");
             }
@@ -321,6 +337,10 @@ namespace op.io
             FrameProfiler.BeginSample("BulletManager.Update", "BulletManager");
             BulletManager.Update();
             FrameProfiler.EndSample("BulletManager.Update");
+
+            FrameProfiler.BeginSample("GameBlockTerrainBackground.ResolveBulletTerrainIntrusions", "GameBlockTerrainBackground");
+            GameBlockTerrainBackground.ResolveBulletTerrainIntrusions(BulletManager.GetBullets());
+            FrameProfiler.EndSample("GameBlockTerrainBackground.ResolveBulletTerrainIntrusions");
 
             // Resolve bullet collisions against world objects
             FrameProfiler.BeginSample("BulletCollisionResolver.ResolveCollisions", "BulletCollisionResolver");
@@ -332,7 +352,7 @@ namespace op.io
             BulletCollisionSystem.Update(Core.DELTATIME);
             FrameProfiler.EndSample("BulletCollisionSystem.Update");
 
-            SuppressDeadPlayerMotion(Core.Instance.Player);
+            SuppressDeadPlayerMotion(Core.Instance.PlayerOrNull);
 
             // Regenerate health and shields for agents with regen stats
             FrameProfiler.BeginSample("RegenerateStats", "GameUpdater");
@@ -344,7 +364,7 @@ namespace op.io
             PhysicsManager.Update(Core.Instance.GameObjects);
             FrameProfiler.EndSample("PhysicsManager.Update");
 
-            SuppressDeadPlayerMotion(Core.Instance.Player);
+            SuppressDeadPlayerMotion(Core.Instance.PlayerOrNull);
 
             // Update unstable-clump low-health previews before death processing so
             // death handling can smoothly transition those previews into free clumps.

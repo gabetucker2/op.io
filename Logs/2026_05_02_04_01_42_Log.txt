@@ -1,0 +1,2 @@
+Log created at 2026-05-02T04:01:42.6204106-04:00
+[DEBUG] [TerrainMaterializationApply] request=1 oldObjects=0 newObjects=0 oldTriangles=0 newTriangles=0 buildMs=5.293 visibleWindow=0..0, 0..0 resultMaterializedWindow=0..0, 0..0 resultVisualWindow=0..0, 0..0 resultColliderWindow=0..0, 0..0 covered=True dirty=False pendingCritical=0 pendingTotal=0 | GameBlockTerrainBackground.cs::LogTerrainMaterializationApplyDiagnostics @ Line 7806

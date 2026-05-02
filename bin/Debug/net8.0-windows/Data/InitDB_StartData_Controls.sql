@@ -38,17 +38,22 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Respawn',       
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ScrollIncrement',          'Scroll wheel units per zoom step (default 120 = one notch).');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('ShowHiddenAttrs',          'Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('Grid',                     'Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OceanZoneDebug',           'Toggle ocean zone borders and labels.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('YourBar',                  'Reveal your player''s configured bar rows for 5 seconds. In switch mode, ON keeps them visible and OFF lets them fade out.');
 
 -- Ambience block
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceFogOfWarColor',   'Base color currently applied to hidden fog-of-war territory. Edit it live in the Ambience block.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceOceanWaterColor', 'Base color currently driving the ocean water shader. Edit it live in the Ambience block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceOceanWaterLiveColor', 'Current ocean water color after zone darkness has been applied.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceBackgroundWavesColor', 'Highlight color for the background wave crests in the ocean ambience. Edit it live in the Ambience block.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceBackgroundWavesLiveColor', 'Current ocean wave highlight color after zone darkness has been applied.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceTerrainColor', 'Fill color for generated terrain, finite map borders, and the world beyond the playable square. Edit it live in the Ambience block.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceWorldTintColor',  'Gameplay object tint color. Mid-gray is neutral; warmer or cooler colors shift object colors already drawn in the world.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AmbienceWorldTintColor',  'Gameplay object tint follows the live ocean water background color.');
 
 -- Backend block
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('FreezeGameInputs',   'Gameplay inputs are currently suspended. Keyboard and mouse actions will not affect the game while this is true.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OceanZoneDebugRequested', 'Shows whether the OceanZoneDebug save switch is currently requesting ocean zone borders and labels.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OceanZoneDebugVisible', 'Shows whether ocean zone borders and labels are currently rendering. Follows the OceanZoneDebug save switch.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('AnyGUIInteracting',  'True when the cursor is pressed inside a UI block (not the game viewport). Gameplay inputs are suppressed while this is active.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('GUIInteractingWith', 'Name of the UI block currently being clicked. Empty or None means no block is being interacted with.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('DockingMode',        'Whether block-layout docking mode is active. When true, blocks can be resized and repositioned.');
@@ -75,12 +80,27 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWorldSeed
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainResidentChunkCount', 'How many terrain chunks are currently cached in memory, including water-only chunk records.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPendingChunkCount', 'How many terrain chunks are currently queued or building in the background.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPendingCriticalChunkCount', 'How many camera-or-fog-visible terrain chunks are still building; resident terrain visuals are held stable while this is above zero.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainStartupPhase', 'Current terrain startup/streaming stage: nearby synchronous warmup, visible materialization, or background preload.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainStartupSynchronousChunkBuildCount', 'How many startup chunks were built synchronously before loading the player into the active world.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainBackgroundQueuedChunkBuildCount', 'How many terrain chunks have been queued on the background worker after startup.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainStartupFirstSightTerrainReady', 'Whether at least one nearby landform was materialized before or during the first visible startup frame.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainStartupWarmupChunkCount', 'How many nearby chunks were considered for first-sight startup terrain warmup.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainRuntimeFieldCollisionFallbackSuppressedCount', 'How many frames skipped expensive runtime terrain field collision fallback while no resident collision loops were available.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainDiscardedStaleMaterializationCount', 'How many completed terrain mesh builds were discarded because the camera or vision window changed before they finished.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainDynamicCollisionProbeCount', 'How many dynamic object and bullet probes are currently expanding terrain collision-border generation.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainDynamicCollisionObjectProbeCount', 'How many dynamic collidable GameObjects are currently expanding terrain collision-border generation.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainDynamicCollisionBulletProbeCount', 'How many active bullets are currently expanding terrain collision-border generation.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainChunkBuildsInFlight', 'Shows whether any terrain chunk builds are currently in flight.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainChunkWorldSize', 'World-space width and height covered by each deterministic terrain chunk.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainArchipelagoMacroCellSize', 'Terrain-space size of the regional archipelago cluster mask that gates deep ocean, shelves, protected basins, and island cluster zones.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainGenerationPipeline', 'Current terrain generation order used by the layered archipelago sampler.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainLandformSelectionMode', 'Whether terrain is generated from direct archetype placement or from layered geological processes with post-classification.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWaterZoneDistanceScale', 'SQL-backed multiplier applied to ocean-zone offshore thresholds before water changes to the next deeper zone.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWaterShallowDistance', 'Maximum offshore distance classified as shallow water around generated landmasses.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWaterSunlitDistance', 'Maximum offshore distance classified as sunlit water after the shallow band.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWaterTwilightDistance', 'Maximum offshore distance classified as twilight water after the sunlit band.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainWaterMidnightDistance', 'Maximum offshore distance classified as midnight water before open water becomes abyss.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanZoneMinimumTransitionVolumeDistance', 'SQL-backed cumulative offshore spread added per water-zone transition before deeper zones begin.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPreloadMarginWorldUnits', 'Extra world-space margin around the camera-and-fog-visible terrain streaming window that chunk loading prebuilds ahead of view.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainSeedAnchor', 'Seed-derived terrain-space anchor applied before chunk sampling so the spawn region opens near generated land instead of empty ocean.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainCenterChunk', 'Chunk coordinate currently centered under the terrain streaming focus.');
@@ -121,7 +141,9 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BarrelHeightScal
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletKnockbackScalar',     'Knockback multiplier: knockback = bulletPenetration × BulletKnockbackScalar.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletRecoilScalar',        'Recoil multiplier: recoil = bulletMass × (1 + knockback) × BulletRecoilScalar.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletFarmKnockbackScalar', 'Knockback attenuation for farm objects hit by bullets.');
-INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('OwnerImmunityDuration',    'Seconds after spawn during which a bullet cannot collide with or damage its owner. Bullet fades in over this period.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletActiveCount',          'Number of active bullets currently managed by BulletManager.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletBarrelLockedCount',    'Number of active bullets still traveling inside their firing barrels.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletCollisionReadyCount',  'Number of active bullets that have left the barrel and can collide.');
 
 -- Controls block — XP bar toggle
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('XPBar', 'Toggle XP bars visible under all units. Configure bar layout in the Bars block.');
@@ -176,6 +198,8 @@ INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartSt
     VALUES ('CameraLockMode', 'C', 'SaveEnum', 0, 1, 0, 'Camera', 2, 0);
 INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
     VALUES ('Grid', 'G', 'SaveSwitch', 0, 0, 0, 'Interface', 3, 0);
+INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
+    VALUES ('OceanZoneDebug', 'Z', 'SaveSwitch', 1, 0, 0, 'Interface', 3, 0);
 INSERT OR IGNORE INTO ControlKey (SettingKey, InputKey, InputType, SwitchStartState, MetaControl, RenderOrder, RenderCategory, RenderCategoryOrder, LockMode)
     VALUES ('YourBar', 'B', 'Trigger', 0, 0, 0, 'Interface', 3, 0);
 

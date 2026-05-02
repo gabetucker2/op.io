@@ -14,13 +14,19 @@ namespace op.io
     {
         private static string _activeZoneKey;
 
+        public static void Reset()
+        {
+            _activeZoneKey = null;
+            InteractBlock.ClearActiveDynamicContent();
+        }
+
         /// <summary>
         /// Call once per frame after physics are resolved.
         /// Uses simple AABB overlap between the player and every ZoneBlock GO.
         /// </summary>
         public static void Update()
         {
-            Agent player = Core.Instance?.Player;
+            Agent player = Core.Instance?.PlayerOrNull;
             if (player?.Shape == null)
             {
                 if (_activeZoneKey != null)

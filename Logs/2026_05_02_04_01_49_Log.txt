@@ -1,0 +1,84 @@
+Log created at 2026-05-02T04:01:49.7450574-04:00
+[GAMEOBJECT] Loading all Agents from database... | AgentLoader.cs::LoadAgents @ Line 72
+[DATABASE] Executing query:  |             SELECT  |             g.ID, |             g.Name, |             g.PositionX, |             g.PositionY, |             g.Rotation,        -- Ensure this is included for rotation |             g.Width, |             g.Height, |             g.Sides, |             g.FillR, g.FillG, g.FillB, g.FillA, |             g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |             g.OutlineWidth, |             g.IsCollidable, |             g.IsDestructible, |             g.Mass, |             g.StaticPhysics, |             g.Shape, s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed, COALESCE(s.Mass, g.Mass) AS BodyMass, s.HealthRegen, s.HealthRegenDelay, s.HealthArmor, s.MaxShield, s.ShieldRegen, s.ShieldRegenDelay, s.ShieldArmor, s.BodyPenetration, s.BodyCollisionDamage, s.CollisionDamageResistance, s.BulletDamageResistance, COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, COALESCE(s.Sight, 0.0) AS Sight, COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, COALESCE(s.MaxXP, 0) AS MaxXP, COALESCE(d.DeathPointReward, 0.0) AS DeathPointReward |             FROM Agents s |             INNER JOIN GameObjects g ON s.ID = g.ID |             LEFT JOIN Destructibles d ON d.ID = g.ID; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 2 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Retrieved 2 rows from Agents + GameObjects. | AgentLoader.cs::LoadAgents @ Line 96
+[DATABASE] Row keys: ID, Name, PositionX, PositionY, Rotation, Width, Height, Sides, FillR, FillG, FillB, FillA, OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth, IsCollidable, IsDestructible, Mass, StaticPhysics, Shape, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed, BodyMass, HealthRegen, HealthRegenDelay, HealthArmor, MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor, BodyPenetration, BodyCollisionDamage, CollisionDamageResistance, BulletDamageResistance, Speed, Control, Sight, BodyActionBuff, MaxXP, DeathPointReward | AgentLoader.cs::LoadAgents @ Line 100
+[DATABASE] Executing query: SELECT Value FROM BulletDefaults WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DefaultBulletMass | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM BulletDefaults WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DefaultBulletSpeed | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM BulletPhysics WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: BulletRadiusScalar | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM BulletPhysics WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: BarrelHeightScalar | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PLAYER] Agent created with TriggerCooldown: 0, SwitchCooldown: 0 | Agent.cs::.ctor @ Line 353
+[DATABASE] Executing query: SELECT Value FROM PhysicsSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: BodyRadiusScalar | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded Agent ID=1, Pos={X:100 Y:100}, Shape=Circle | AgentLoader.cs::LoadAgents @ Line 106
+[DATABASE] Row keys: ID, Name, PositionX, PositionY, Rotation, Width, Height, Sides, FillR, FillG, FillB, FillA, OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth, IsCollidable, IsDestructible, Mass, StaticPhysics, Shape, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed, BodyMass, HealthRegen, HealthRegenDelay, HealthArmor, MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor, BodyPenetration, BodyCollisionDamage, CollisionDamageResistance, BulletDamageResistance, Speed, Control, Sight, BodyActionBuff, MaxXP, DeathPointReward | AgentLoader.cs::LoadAgents @ Line 100
+[PLAYER] Agent created with TriggerCooldown: 0, SwitchCooldown: 0 | Agent.cs::.ctor @ Line 353
+[GAMEOBJECT] Loaded Agent ID=3, Pos={X:420 Y:100}, Shape=Circle | AgentLoader.cs::LoadAgents @ Line 106
+[GAMEOBJECT] Total agents loaded: 2 | AgentLoader.cs::LoadAgents @ Line 114
+[DATABASE] Executing query: SELECT bp.BulletDamage, bp.BulletPenetration, bp.BulletSpeed,        bp.ReloadSpeed, bp.BulletMaxLifespan, bp.BulletMass, bp.BulletHealth,        bp.BulletControl,        bp.BulletFillR, bp.BulletFillG, bp.BulletFillB, bp.BulletFillA,        bp.BulletOutlineR, bp.BulletOutlineG, bp.BulletOutlineB, bp.BulletOutlineA,        bp.BulletOutlineWidth FROM AgentBarrels ab JOIN BarrelPrototypes bp ON ab.BarrelPrototypeID = bp.ID WHERE ab.AgentID = @AgentID ORDER BY ab.SlotIndex; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @AgentID: 1 | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 2 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 2 barrel(s) for agent ID=1 | BarrelLoader.cs::LoadBarrelsForAgent @ Line 63
+[DATABASE] Executing query: SELECT bp.Name, bp.Mass,        bp.HealthRegen, bp.HealthRegenDelay, bp.HealthArmor,        bp.MaxShield, bp.ShieldRegen, bp.ShieldRegenDelay, bp.ShieldArmor,        bp.BodyCollisionDamage, bp.BodyPenetration,        bp.CollisionDamageResistance, bp.BulletDamageResistance,        bp.Speed, bp.Control, bp.Sight, bp.BodyActionBuff,        bp.FillR, bp.FillG, bp.FillB, bp.FillA,        bp.OutlineR, bp.OutlineG, bp.OutlineB, bp.OutlineA, bp.OutlineWidth FROM AgentBodies ab JOIN BodyPrototypes bp ON ab.BodyPrototypeID = bp.ID WHERE ab.AgentID = @AgentID ORDER BY ab.SlotIndex; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @AgentID: 1 | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 2 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 2 body/bodies for agent ID=1 | BodyLoader.cs::LoadBodiesForAgent @ Line 66
+[DEBUG] [TerrainMaterializationApply] request=1 oldObjects=0 newObjects=0 oldTriangles=0 newTriangles=0 buildMs=5.423 visibleWindow=0..0, 0..0 resultMaterializedWindow=0..0, 0..0 resultVisualWindow=0..0, 0..0 resultColliderWindow=0..0, 0..0 covered=True dirty=False pendingCritical=0 pendingTotal=0 | GameBlockTerrainBackground.cs::LogTerrainMaterializationApplyDiagnostics @ Line 7806
+[DEBUG] GameBlockTerrainBackground: full terrain map generated 64/64 chunks in -4..3, -4..3. | GameBlockTerrainBackground.cs::UpdateFullTerrainMapGenerationState @ Line 4232
+[DEBUG] [TerrainMaterializationApply] request=2 oldObjects=0 newObjects=18 oldTriangles=0 newTriangles=884 buildMs=42.745 visibleWindow=-2..1, -2..1 resultMaterializedWindow=-5..4, -5..4 resultVisualWindow=-5..4, -5..4 resultColliderWindow=-3..2, -2..1 covered=True dirty=False pendingCritical=0 pendingTotal=0 | GameBlockTerrainBackground.cs::LogTerrainMaterializationApplyDiagnostics @ Line 7806
+[DATABASE] Executing query: PRAGMA table_info(ControlKey); | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 12 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query:  | SELECT SettingKey, InputKey, InputType, SwitchStartState, FloatStartState, MetaControl, COALESCE(RenderOrder, 0) AS ControlOrder, COALESCE(RenderCategory, '') AS RenderCategory, COALESCE(RenderCategoryOrder, 0) AS RenderCategoryOrder, COALESCE(LockMode, 0) AS LockMode, COALESCE(BindingRequired, 0) AS BindingRequired, COALESCE(EnumDisabledOptions, '') AS EnumDisabledOptions | FROM ControlKey | WHERE SettingKey = @settingKey | LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @settingKey: OceanZoneDebug | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DEBUG] GameBlockTerrainBackground: full-map ocean borders built 562 segments in 7.2 ms; tinyZonesSuppressed=0. | GameBlockTerrainBackground.cs::TryApplyCompletedFullOceanZoneDebugBuild @ Line 1597

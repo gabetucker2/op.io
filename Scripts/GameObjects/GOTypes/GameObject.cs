@@ -17,7 +17,6 @@ namespace op.io
         public bool IsDestructible { get; set; }
         public bool IsCollidable { get; set; }
         public bool DynamicPhysics { get; set; }
-        public bool SuppressCollisionImpulse { get; set; }
         public bool IsInteract { get; set; }
         public bool IsZoneBlock { get; set; }
         public bool IsFarmObject { get; set; }

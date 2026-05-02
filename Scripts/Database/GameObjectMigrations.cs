@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using op.io.UI.BlockScripts.BlockUtilities;
 
 namespace op.io
 {
@@ -50,6 +51,8 @@ namespace op.io
                 EnsureBarConfigShowPercent();
                 EnsureBarConfigDefaultHidden();
                 EnsureBarConfigDefaultRelations();
+                EnsureBarConfigDamagePopupRelations();
+                EnsureBarConfigNoShieldChangeRelation();
                 EnsureShieldAboveHealth();
                 EnsurePlainDefaultXpBar();
                 EnsureBrightGreenDefaultXpBarColor();
@@ -90,7 +93,10 @@ namespace op.io
                 EnsureBodyTransitionBackendTooltips();
                 EnsureYourBarBackendTooltips();
                 EnsureTerrainWorldSeedSetting();
+                EnsureTerrainOceanZoneSettings();
                 EnsureTerrainBackendTooltips();
+                EnsureLevelBackendTooltips();
+                EnsureLevelLaunchDefault();
                 _applied = true;
             }
             catch (Exception ex)
@@ -535,7 +541,7 @@ AND BulletDamage IN (4, 10, 15);");
                 "VALUES ('Shield', 0, 0, 10, 1, 0, 'Shield:BelowFull|Health:BelowFull', 0, '0.18');");
             DatabaseQuery.ExecuteNonQuery(
                 "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
-                "VALUES ('Health', 1, 0, 10, 1, 0, 'Shield:Empty', 0, '0.18');");
+                "VALUES ('Health', 1, 0, 10, 1, 0, 'Health:Change|Shield:Empty', 0, '0.18');");
             DatabaseQuery.ExecuteNonQuery(
                 "INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade) " +
                 "VALUES ('XP', 2, 0, 10, 0, 0, 'XP:Change', 0, '0.18');");
@@ -893,6 +899,7 @@ AND BulletDamage IN (4, 10, 15);");
                     bool updated = false;
                     updated |= EnsureMenuToggleEntry(menu, "Bars", true);
                     updated |= UpsertMenuToggleVisibility(menu, "Ambience", true);
+                    updated |= UpsertMenuToggleVisibility(menu, "Levels", true);
                     updated |= EnsureMenuToggleEntry(menu, "Interact", true);
                     updated |= UpsertMenuToggleVisibility(menu, "ControlSetups", false);
                     updated |= UpsertMenuToggleVisibility(menu, "DockingSetups", false);
@@ -904,6 +911,7 @@ AND BulletDamage IN (4, 10, 15);");
                     updated |= MoveBlockToPanel(panels, "properties", "bars", "properties");
                     updated |= MoveBlockToPanel(panels, "controls", "interact");
                     updated |= MoveBlockToPanel(panels, "controls", "ambience", "controls");
+                    updated |= MoveBlockToPanel(panels, "controls", "levels", "ambience");
                     updated |= MoveBlockToPanel(panels, "controls", "controlsetups", "ambience");
                     updated |= MoveBlockToPanel(panels, "colors", "dockingsetups", "colors");
                     updated |= MoveBlockToPanel(panels, "backend", "notes", "backend");
@@ -919,6 +927,7 @@ AND BulletDamage IN (4, 10, 15);");
                         "bars",
                         "interact",
                         "ambience",
+                        "levels",
                         "controlsetups",
                         "dockingsetups",
                         "notes",
@@ -1255,7 +1264,7 @@ AND BulletDamage IN (4, 10, 15);");
                   AND TRIM(COALESCE(VisibilityRelations, '')) = '';");
             DatabaseQuery.ExecuteNonQuery(@"
                 UPDATE BarConfig
-                SET VisibilityRelations = 'Shield:Empty'
+                SET VisibilityRelations = 'Health:Change|Shield:Empty'
                 WHERE BarType = 'Health'
                   AND TRIM(COALESCE(VisibilityRelations, '')) = '';");
             DatabaseQuery.ExecuteNonQuery(@"
@@ -1268,6 +1277,56 @@ AND BulletDamage IN (4, 10, 15);");
 
             System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
             DebugLogger.PrintDatabase("EnsureBarConfigDefaultRelations: seeded default Shield/Health/XP visibility relations and unhid XP.");
+        }
+
+        private static void EnsureBarConfigDamagePopupRelations()
+        {
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".barconfig_damage_popup_relations_v1_applied");
+            if (System.IO.File.Exists(marker)) return;
+
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET VisibilityRelations = 'Shield:BelowFull|Health:BelowFull'
+                WHERE BarType = 'Shield'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) IN ('', 'Shield:BelowFull|Health:BelowFull', 'Health:BelowFull|Shield:BelowFull');");
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET VisibilityRelations = 'Health:Change|Shield:Empty'
+                WHERE BarType = 'Health'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) IN ('', 'Shield:Empty');");
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfigGroupOverrides
+                SET VisibilityRelations = 'Shield:BelowFull|Health:BelowFull'
+                WHERE BarType = 'Shield'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) IN ('', 'Shield:BelowFull|Health:BelowFull', 'Health:BelowFull|Shield:BelowFull');");
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfigGroupOverrides
+                SET VisibilityRelations = 'Health:Change|Shield:Empty'
+                WHERE BarType = 'Health'
+                  AND TRIM(COALESCE(VisibilityRelations, '')) IN ('', 'Shield:Empty');");
+
+            System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            DebugLogger.PrintDatabase("EnsureBarConfigDamagePopupRelations: made default Health bars appear on health changes while preserving shield below-full visibility.");
+        }
+
+        private static void EnsureBarConfigNoShieldChangeRelation()
+        {
+            string marker = System.IO.Path.Combine(DatabaseConfig.DatabaseDirectory, ".barconfig_no_shield_change_relation_v1_applied");
+            if (System.IO.File.Exists(marker)) return;
+
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfig
+                SET VisibilityRelations = REPLACE(REPLACE(REPLACE(VisibilityRelations, '|Shield:Change', ''), 'Shield:Change|', ''), 'Shield:Change', '')
+                WHERE BarType = 'Shield'
+                  AND INSTR(COALESCE(VisibilityRelations, ''), 'Shield:Change') > 0;");
+            DatabaseQuery.ExecuteNonQuery(@"
+                UPDATE BarConfigGroupOverrides
+                SET VisibilityRelations = REPLACE(REPLACE(REPLACE(VisibilityRelations, '|Shield:Change', ''), 'Shield:Change|', ''), 'Shield:Change', '')
+                WHERE BarType = 'Shield'
+                  AND INSTR(COALESCE(VisibilityRelations, ''), 'Shield:Change') > 0;");
+
+            System.IO.File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            DebugLogger.PrintDatabase("EnsureBarConfigNoShieldChangeRelation: removed default Shield:Change visibility relation.");
         }
 
         private static void EnsureShieldAboveHealth()
@@ -2410,6 +2469,29 @@ WHERE Name = 'ScoutSentryBody'
             DebugLogger.PrintDatabase("EnsureTerrainWorldSeedSetting: inserted TerrainWorldSeed = 1337.");
         }
 
+        private static void EnsureTerrainOceanZoneSettings()
+        {
+            EnsureGeneralSetting("TerrainWaterZoneDistanceScale", "1.0");
+            EnsureGeneralSetting("TerrainOceanZoneMinimumTransitionVolumeDistance", "240");
+        }
+
+        private static void EnsureGeneralSetting(string key, string value)
+        {
+            if (SettingKeyExists(key, "GeneralSettings"))
+            {
+                return;
+            }
+
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT INTO GeneralSettings (SettingKey, Value) VALUES (@key, @value);",
+                new Dictionary<string, object>
+                {
+                    ["@key"] = key,
+                    ["@value"] = value
+                });
+            DebugLogger.PrintDatabase($"EnsureGeneralSetting: inserted {key} = {value}.");
+        }
+
         private static void EnsureTerrainBackendTooltips()
         {
             if (!TableExists("UITooltips"))
@@ -2419,16 +2501,32 @@ WHERE Name = 'ScoutSentryBody'
 
             (string key, string text)[] entries =
             [
+                ("BulletActiveCount", "Number of active bullets currently managed by BulletManager."),
+                ("BulletBarrelLockedCount", "Number of active bullets still traveling inside their firing barrels."),
+                ("BulletCollisionReadyCount", "Number of active bullets that have left the barrel and can collide."),
                 ("TerrainWorldSeed", "Seed used with chunk coordinates to deterministically regenerate terrain without saving chunk payloads."),
                 ("TerrainResidentChunkCount", "How many terrain chunks are currently cached in memory, including water-only chunk records."),
                 ("TerrainResidentComponentCount", "How many connected terrain landmass render objects are currently resident after stitching loaded chunks together."),
-                ("TerrainResidentColliderCount", "How many static terrain collider proxy bodies are currently active in the existing SAT collision system."),
+                ("TerrainResidentColliderCount", "How many legacy terrain collider proxy bodies are resident; should remain zero because terrain collision no longer creates hidden scene objects."),
                 ("TerrainResidentVisualTriangleCount", "How many vector terrain fill triangles are currently resident for direct procedural terrain rendering."),
-                ("TerrainActiveColliderCount", "How many terrain collider proxy bodies are currently active near the camera and participating in world collisions this frame."),
+                ("TerrainActiveColliderCount", "How many legacy terrain collider proxy bodies are active in the scene; should remain zero."),
+                ("TerrainDynamicCollisionProbeCount", "How many dynamic object and bullet probes are currently expanding terrain collision-border generation."),
+                ("TerrainDynamicCollisionObjectProbeCount", "How many dynamic collidable GameObjects are currently expanding terrain collision-border generation."),
+                ("TerrainDynamicCollisionBulletProbeCount", "How many active bullets are currently expanding terrain collision-border generation."),
                 ("TerrainSpawnRelocationCount", "How many dynamic startup objects were nudged out of terrain so legacy spawn placement remains valid with collideable land enabled."),
                 ("TerrainCollisionIntrusionCorrectionCount", "How many dynamic world objects were force-corrected back out of terrain this frame after collision resolution to prevent embeds and freeze-state glitches."),
+                ("TerrainBulletCollisionCorrectionCount", "How many bullets were reflected out of visible terrain collision loops this frame without using hidden scene proxy colliders."),
                 ("TerrainPendingChunkCount", "How many terrain chunks are currently queued or building in the background."),
                 ("TerrainPendingCriticalChunkCount", "How many camera-or-fog-visible terrain chunks are still building; resident terrain visuals are held stable while this is above zero."),
+                ("TerrainFullMapChunkWindow", "Inclusive chunk-coordinate window for the finite terrain map cache used by full-map ocean border generation."),
+                ("TerrainFullMapChunkCount", "How many deterministic terrain chunks make up the full terrain map cache."),
+                ("TerrainFullMapGeneratedChunkCount", "How many full-map terrain chunks have been generated and retained in memory."),
+                ("TerrainFullMapPendingChunkCount", "How many full-map terrain chunks are still queued, building, or awaiting promotion."),
+                ("TerrainFullMapGenerationComplete", "Whether every chunk in the finite terrain map cache has finished generating."),
+                ("TerrainFullMapSnapshotReady", "Whether the generated full terrain map has been copied into the immutable mask used by ocean-zone border generation."),
+                ("TerrainAccessRequestActive", "Shows whether player movement requested terrain streaming around the target area without blocking movement."),
+                ("TerrainAccessRequestStatus", "Current non-blocking terrain-access target and radius being queued for generation."),
+                ("TerrainMovementBlockedUntilReadyCount", "Legacy count of movement attempts blocked by terrain streaming; should remain zero."),
                 ("TerrainDiscardedStaleMaterializationCount", "How many completed terrain mesh builds were discarded because the camera or vision window changed before they finished."),
                 ("TerrainChunkBuildsInFlight", "Shows whether any terrain chunk builds are currently in flight."),
                 ("TerrainChunkWorldSize", "World-space width and height covered by each deterministic terrain chunk."),
@@ -2438,6 +2536,31 @@ WHERE Name = 'ScoutSentryBody'
                 ("TerrainArchipelagoEnclosureCellSize", "Terrain-space size of the larger enclosure-producer cells used by reef rings, barrier systems, island rings, and cove/ravine cuts."),
                 ("TerrainGenerationPipeline", "Current terrain generation order used by the layered archipelago sampler."),
                 ("TerrainLandformSelectionMode", "Whether terrain is generated from direct archetype placement or from layered geological processes with post-classification."),
+                ("TerrainOceanZoneDistanceMode", "Current ocean-zone distance source. Nearest-border distance keeps shallow water wrapped around every terrain coastline."),
+                ("TerrainOceanZoneOrigin", "Distance anchor used by ocean zones. Nearest generated terrain border means every coast starts at shallow water."),
+                ("TerrainOceanZoneOriginRadius", "Effective shallow-water transition distance from the nearest terrain border."),
+                ("TerrainOceanDebugWorkerStatus", "Full-map ocean-zone debug border state. Borders build only after the full terrain map cache has finished."),
+                ("TerrainOceanDebugFullMapReady", "Whether the full-map ocean-zone border cache has finished building from the complete terrain map."),
+                ("TerrainOceanDebugFullMapSegmentCount", "How many ocean-zone border segments were generated for the full map cache."),
+                ("TerrainOceanDebugFullMapBuildMilliseconds", "Milliseconds spent building the full-map ocean-zone border cache on the background task."),
+                ("TerrainOceanDebugFullMapStatus", "Detailed full-map ocean-zone border generation status and readiness summary."),
+                ("TerrainOceanDebugSuppressedTinyZoneCount", "How many connected ocean-zone components were removed because no same-zone core circle met the minimum stable radius."),
+                ("TerrainOceanDebugMinimumStableZoneRadius", "Minimum unobstructed same-zone radius required inside an ocean-zone component before debug borders are allowed to render it."),
+                ("TerrainOceanDebugTinyZoneViolationSummary", "Summary of any remaining tiny ocean-zone components that failed the minimum stable radius validation."),
+                ("GameBlockOceanPlayerZone", "Current ocean zone under the runtime player, or None when the player is on terrain or unavailable."),
+                ("GameBlockOceanPlayerZoneStatus", "Player ocean-zone probe detail including resolved zone, offshore distance, and water depth."),
+                ("GameBlockOceanCursorZone", "Current ocean zone under the cursor while it is hovering the Game block."),
+                ("GameBlockOceanCursorZoneStatus", "Cursor ocean-zone probe detail including hover availability, resolved zone, offshore distance, and water depth."),
+                ("GameBlockOceanCursorZoneValid", "Shows whether the cursor currently resolves to an ocean zone in the Game block."),
+                ("GameBlockOceanCursorZoneDepth", "Water depth resolved under the cursor's Game-block hover position."),
+                ("GameBlockOceanCursorZoneOffshoreDistance", "Offshore distance resolved under the cursor's Game-block hover position."),
+                ("GameBlockOceanZoneTransitionBanner", "Current top-center Game overlay text for an ocean-zone transition, or none when inactive."),
+                ("TerrainWaterZoneDistanceScale", "SQL-backed multiplier applied to ocean-zone offshore thresholds before water changes to the next deeper zone."),
+                ("TerrainWaterShallowDistance", "Maximum offshore distance classified as shallow water around generated landmasses."),
+                ("TerrainWaterSunlitDistance", "Maximum offshore distance classified as sunlit water after the shallow band."),
+                ("TerrainWaterTwilightDistance", "Maximum offshore distance classified as twilight water after the sunlit band."),
+                ("TerrainWaterMidnightDistance", "Maximum offshore distance classified as midnight water before open water becomes abyss."),
+                ("TerrainOceanZoneMinimumTransitionVolumeDistance", "SQL-backed cumulative offshore spread added per water-zone transition before deeper zones begin."),
                 ("TerrainLagoonOpeningTarget", "Target pass count used by opening producers so lagoons usually retain one or two navigable breaks instead of sealing shut."),
                 ("TerrainContourResolutionMultiplier", "Multiplier used when extracting procedural contour geometry from the sampled terrain field before simplifying it into vector terrain polygons and collider shells."),
                 ("TerrainTargetVisualTextureOversample", "Legacy terrain texture oversample setting. Vector terrain rendering keeps this at 0 because visuals are generated from polygon triangles instead of raster textures."),
@@ -2446,6 +2569,11 @@ WHERE Name = 'ScoutSentryBody'
                 ("TerrainStreamingFocus", "World position currently anchoring terrain chunk priority. Usually the player position."),
                 ("TerrainCenterChunk", "Chunk coordinate currently centered under the terrain streaming focus."),
                 ("TerrainVisibleChunkWindow", "Inclusive chunk-coordinate window currently required by the camera and fog-of-war vision sources before preload margin."),
+                ("TerrainTargetVisualChunkWindow", "True terrain visual chunk window requested for the next resident terrain materialization."),
+                ("TerrainTargetMaterializedChunkWindow", "Combined chunk window requested for terrain materialization, including visual and collider preload coverage."),
+                ("TerrainAppliedVisualChunkWindow", "True terrain visual chunk window currently applied to resident terrain render objects."),
+                ("TerrainAppliedColliderChunkWindow", "Terrain collision chunk window currently applied to resident visible collision loops."),
+                ("TerrainColliderChunkWindow", "Target terrain collision chunk window requested for resident visible collision loops."),
                 ("WorldRenderRegisteredObjectCount", "How many world render game objects are currently registered with the shape renderer before camera culling."),
                 ("WorldRenderDrawnObjectCount", "How many world render game objects survived camera culling and were actually drawn this frame."),
                 ("PhysicsBroadPhaseActiveCollidableCount", "How many collidable world objects entered the spatial broad-phase this frame."),
@@ -2464,6 +2592,51 @@ WHERE Name = 'ScoutSentryBody'
                         ["@text"] = text
                     });
             }
+        }
+
+        private static void EnsureLevelBackendTooltips()
+        {
+            if (!TableExists("UITooltips"))
+            {
+                return;
+            }
+
+            (string key, string text)[] entries =
+            [
+                ("GameLevelActiveName", "Name of the currently loaded game level."),
+                ("GameLevelActiveKey", "Stable key for the currently loaded game level."),
+                ("GameLevelCount", "Number of game levels registered with the level manager."),
+                ("GameLevelReloadCount", "How many times a level has been loaded or reloaded during this run."),
+                ("GameLevelLoadInProgress", "Shows whether a level load is currently clearing and rebuilding scene objects."),
+                ("GameLevelLoadoutSummary", "Scene object groups and world systems loaded by the active level."),
+                ("GameLevelTerrainConfiguration", "Terrain configuration key requested by the active level."),
+                ("GameLevelOceanZoneConfiguration", "Ocean-zone configuration key requested by the active level."),
+                ("GameLevelPrevious", "Load the previous game level in the registered level list."),
+                ("GameLevelNext", "Load the next game level in the registered level list."),
+                ("GameLevelReload", "Reload the active level from its object, farm, terrain, and ocean-zone configuration."),
+                ("GameLevelManual", "Manual level: loads the current authored test scene with scout, farms, walls, zones, terrain, and ocean."),
+                ("GameLevelNatural", "Natural level: loads the runtime player with generated terrain and ocean, without ScoutSentry1, farms, walls, or zones."),
+            ];
+
+            foreach ((string key, string text) in entries)
+            {
+                DatabaseQuery.ExecuteNonQuery(
+                    "INSERT OR REPLACE INTO UITooltips (RowKey, TooltipText) VALUES (@key, @text);",
+                    new Dictionary<string, object>
+                    {
+                        ["@key"] = key,
+                        ["@text"] = text
+                    });
+            }
+        }
+
+        private static void EnsureLevelLaunchDefault()
+        {
+            BlockDataStore.EnsureTables(null, DockBlockKind.Levels);
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BlockLevels (RowKey, RowData, RenderOrder, IsLocked) VALUES ('LaunchLevelKey', 'natural', 1, 0);");
+            DatabaseQuery.ExecuteNonQuery(
+                "INSERT OR IGNORE INTO BlockLevels (RowKey, RowData, RenderOrder, IsLocked) VALUES ('ActiveLevelKey', 'natural', 2, 0);");
         }
 
         private static bool TableExists(string tableName)

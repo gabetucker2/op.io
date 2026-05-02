@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PhysicsHarness")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7ffc5f38eb68fc194341d332c72f8b523947ff6b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+30aac4e614f564c7b54d1e84175d662cf1d7a33a")]
 [assembly: System.Reflection.AssemblyProductAttribute("PhysicsHarness")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PhysicsHarness")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

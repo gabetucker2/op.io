@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -14,24 +15,61 @@ namespace op.io
     /// </summary>
     internal static class GameBlockTerrainBackground
     {
-        private const int DefaultTerrainWorldSeed = 1337;
+        private const int DefaultTerrainWorldSeed = TerrainWorldDefaults.DefaultSeed;
         private const float ChunkWorldSize = 1024f;
-        private const int ChunkTextureResolution = 128;
+        private const int ChunkTextureResolution = 96;
         private const int ChunkGuardResolution = 16;
         private const int MaxNewChunkBuildsPerFrame = 2;
+        private const int StartupWarmupChunkRadius = 0;
+        private const int StartupWarmupMaxSynchronousChunks = 1;
         private const float PreloadChunkMarginMultiplier = 1.25f;
         private const float RetainExtraChunkMultiplier = 1.5f;
         private const float TerrainFeatureScaleMultiplier = 3f;
+        private const float TerrainDefaultWorldUnitsPerTerrainCoordinate = CentifootUnits.WorldUnitsPerCentifoot * TerrainFeatureScaleMultiplier;
         private const int TerrainContourResolutionMultiplier = 1;
         private const int TerrainVisualTextureOversample = 0;
         private const int MaxTerrainVisualTextureAxis = 4096;
         private const float TerrainCollisionActivationMarginWorldUnits = 256f;
         private const float TerrainCollisionDynamicProbeMarginWorldUnits = 128f;
-        private const float TerrainColliderSpatialCellSizeWorldUnits = 256f;
+        private const float TerrainAccessImmediatePaddingWorldUnits = 96f;
         private const float TerrainCollisionVelocityLeadSeconds = 0.35f;
         private const float TerrainCollisionHullSampleSpacingWorldUnits = 8f;
-        private const int MaxTerrainColliderRecordsPerRefresh = 16384;
-        private const float TerrainCollisionShellThicknessCentifoot = 0.08f;
+        private const int MaxTerrainFlickerObjectLogs = 64;
+        private const float TerrainFlickerDiagnosticCooldownSeconds = 0.75f;
+        private const int TerrainVisionRevealAheadChunkMargin = 3;
+        private const int TerrainVisionRevealRefreshGuardChunkMargin = 1;
+        private const float TerrainOceanZoneFieldSampleStepWorldUnits = 36f;
+        private const int TerrainOceanZoneMaxFieldSamplesPerRing = 256;
+        private const int TerrainOceanZoneCoastRefineIterations = 10;
+        private const float OceanZoneDebugSampleStepWorldUnits = 64f;
+        private const float OceanZoneDebugFullMapSampleStepWorldUnits = OceanZoneDebugSampleStepWorldUnits * 2f;
+        private const float OceanZoneDebugTileWorldUnits = OceanZoneDebugSampleStepWorldUnits * 4f;
+        private const int OceanZoneDebugMaxSampleAxis = 128;
+        private const int OceanZoneDebugMaxSegments = 8192;
+        private const int OceanZoneDebugMaxLabels = 512;
+        private const float OceanZoneDebugLineThicknessScreenPixels = 3f;
+        private const float OceanZoneDebugVisionBuildPaddingWorldUnits = OceanZoneDebugSampleStepWorldUnits * 2f;
+        private const float OceanZoneDebugVisionClipSampleStepWorldUnits = 16f;
+        private const float OceanZoneDebugLabelScreenScale = 0.58f;
+        private const float OceanZoneDebugLabelOffsetScreenPixels = 78f;
+        private const float OceanZoneDebugLabelShadowOffsetScreenPixels = 2f;
+        private const float OceanZoneDebugLabelViewportMarginPixels = 220f;
+        private const float OceanZoneDebugLabelCollisionPaddingPixels = 18f;
+        private const float OceanZoneDebugMinimumCellWorldUnits = OceanZoneDebugSampleStepWorldUnits * 0.25f;
+        private const int OceanZoneDebugMaxCellSubdivisionDepth = 3;
+        private const int OceanZoneDebugTileBuildQueueLimit = 128;
+        private const int MaxNewOceanZoneDebugTileBuildsPerFrame = 4;
+        private const int MaxCompletedOceanZoneDebugTilePromotionsPerFrame = 8;
+        private const int OceanZoneDebugTileSegmentCacheLimit = 256;
+        private const double OceanZoneDebugSlowTileBuildLogThresholdMilliseconds = 120.0;
+        private const int OceanZoneDebugMaxSlowTileBuildLogs = 16;
+        private const string TerrainWaterZoneDistanceScaleSettingKey = "TerrainWaterZoneDistanceScale";
+        private const string TerrainOceanZoneMinimumTransitionVolumeDistanceSettingKey = "TerrainOceanZoneMinimumTransitionVolumeDistance";
+        private const float DefaultTerrainWaterZoneDistanceScale = 1.0f;
+        private const float DefaultOceanZoneMinimumTransitionVolumeDistanceWorldUnits = 240f;
+        private const float OceanZoneDebugMinimumStableZoneRadiusWorldUnits = OceanZoneDebugFullMapSampleStepWorldUnits;
+        private const int OceanZoneDebugMinimumStableZoneFilterPasses = 16;
+        private const int MaxFullTerrainMapChunkBuildEnqueuesPerFrame = 12;
         private const float TerrainVisualLoopSimplifyToleranceCells = 1.15f;
         private const float TerrainNaturalCoastJitterCells = 0.42f;
         private const float TerrainNaturalCoastMaxSegmentCells = 4.25f;
@@ -46,6 +84,7 @@ namespace op.io
         private const int TerrainHeavyLoopPointThreshold = 384;
         private const int TerrainDrawLayer = -1000;
         private const float TerrainStaticMass = 1000000f;
+        private static readonly bool TerrainWorldBoundaryEnabled = false;
         private const float TerrainWorldSizeWorldUnits = 8192f;
         private const float TerrainWorldBoundaryThicknessWorldUnits = 256f;
         private const float DefaultPixelsPerTerrainUnit = 22f;
@@ -57,8 +96,8 @@ namespace op.io
         private const byte Water = 0;
         private const int BaseMinLandComponentArea = 260;
         private const int BaseMinWaterComponentArea = 120;
-        private const float ArchipelagoCellSize = 4.8f;
-        private const float ArchipelagoMacroCellSize = ArchipelagoCellSize * 4.6f;
+        private const float ArchipelagoCellSize = TerrainWorldDefaults.WorldMinimumSpacing / TerrainDefaultWorldUnitsPerTerrainCoordinate;
+        private const float ArchipelagoMacroCellSize = TerrainWorldDefaults.WorldInteractionSpacing / TerrainDefaultWorldUnitsPerTerrainCoordinate;
         private const float IslandCellPresenceThreshold = 0.38f;
         private const float IslandMainRadiusBase = 1.18f;
         private const float IslandMainRadiusRange = 0.38f;
@@ -75,27 +114,48 @@ namespace op.io
         private const int LagoonOpeningMaxCount = 2;
         private const float LagoonBasinCutStrength = 0.76f;
         private const float RegionalTidalChannelCutStrength = 0.68f;
+        private const float DevWaterDepthRampMax = TerrainWorldDefaults.WaterDepthRampMax;
+        private const float DevWaterShallowBaseDistance = TerrainWorldDefaults.WaterShallowDistance / TerrainWorldDefaults.WaterZoneDistanceScale;
+        private const float DevWaterSunlitBaseDistance = TerrainWorldDefaults.WaterSunlitDistance / TerrainWorldDefaults.WaterZoneDistanceScale;
+        private const float DevWaterTwilightBaseDistance = TerrainWorldDefaults.WaterTwilightDistance / TerrainWorldDefaults.WaterZoneDistanceScale;
+        private const float DevWaterMidnightBaseDistance = TerrainWorldDefaults.WaterMidnightDistance / TerrainWorldDefaults.WaterZoneDistanceScale;
+        private static float DevWaterShallowDistance => DevWaterShallowBaseDistance * _terrainWaterZoneDistanceScale;
+        private static float DevWaterSunlitDistance => DevWaterSunlitBaseDistance * _terrainWaterZoneDistanceScale;
+        private static float DevWaterTwilightDistance => DevWaterTwilightBaseDistance * _terrainWaterZoneDistanceScale;
+        private static float DevWaterMidnightDistance => DevWaterMidnightBaseDistance * _terrainWaterZoneDistanceScale;
 
-        private static readonly int MaxConcurrentChunkBuilds = 2;
         private static readonly Dictionary<ChunkKey, TerrainChunkRecord> ResidentChunks = new();
-        private static readonly Dictionary<ChunkKey, Task<GeneratedChunkData>> PendingChunks = new();
+        private const int TerrainResidentChunkMemoryCapValue = 128;
+        private const int TerrainChunkBuildQueueLimit = 256;
+        private const int MaxCompletedChunkPromotionsPerFrame = 2;
+        private static readonly object TerrainChunkWorkerLock = new();
+        private static readonly List<ChunkBuildCandidate> TerrainChunkBuildQueue = new();
+        private static readonly HashSet<ChunkKey> QueuedChunkKeys = new();
+        private static readonly HashSet<ChunkKey> BuildingChunkKeys = new();
+        private static readonly Queue<GeneratedChunkData> CompletedChunkBuildQueue = new();
+        private static Thread _terrainChunkWorkerThread;
+        private static bool _terrainChunkWorkerStopRequested;
+        private static int _terrainChunkWorkerGeneration;
+        private static int _terrainChunkWorkerCompletedQueueCount;
+        private static int _terrainChunkWorkerActiveBuildCount;
+        private static int _terrainChunkWorkerQueuedBuildCount;
         private static readonly List<TerrainVisualObjectRecord> ResidentTerrainVisualObjects = new();
-        private static readonly List<TerrainColliderObjectRecord> ResidentTerrainColliderObjects = new();
         private static readonly List<TerrainCollisionLoopRecord> ResidentTerrainCollisionLoops = new();
-        private static readonly Dictionary<long, List<TerrainColliderObjectRecord>> TerrainColliderRecordCells = new();
-        private static readonly List<long> TerrainColliderRecordCellKeys = new();
-        private static readonly Stack<List<TerrainColliderObjectRecord>> AvailableTerrainColliderRecordCellLists = new();
-        private static readonly HashSet<TerrainColliderObjectRecord> ActiveTerrainColliderRecords = new();
-        private static readonly HashSet<TerrainColliderObjectRecord> DesiredTerrainColliderRecords = new();
-        private static readonly List<TerrainColliderObjectRecord> TerrainColliderDeactivateScratch = new();
         private static readonly VertexPositionColor[] TerrainBoundaryFillVertices = new VertexPositionColor[24];
         private static readonly RasterizerState TerrainVectorRasterizerState = new()
         {
             CullMode = CullMode.None,
             ScissorTestEnable = true
         };
+        private static readonly RasterizerState OceanZoneDebugOverlayRasterizerState = new()
+        {
+            CullMode = CullMode.None,
+            ScissorTestEnable = true
+        };
 
         private static bool _settingsLoaded;
+        private static float _terrainWaterZoneDistanceScale = DefaultTerrainWaterZoneDistanceScale;
+        private static float _oceanZoneMinimumTransitionVolumeDistanceWorldUnits = DefaultOceanZoneMinimumTransitionVolumeDistanceWorldUnits;
         private static bool _terrainWorldObjectsDirty = true;
         private static int _terrainWorldSeed = DefaultTerrainWorldSeed;
         private static int _residentTerrainComponentCount;
@@ -103,15 +163,22 @@ namespace op.io
         private static int _residentTerrainVisualTriangleCount;
         private static int _activeTerrainColliderCount;
         private static int _terrainColliderActivationCandidateCount;
+        private static int _terrainDynamicCollisionProbeCount;
+        private static int _terrainDynamicCollisionObjectProbeCount;
+        private static int _terrainDynamicCollisionBulletProbeCount;
         private static int _terrainSpawnRelocationCount;
         private static int _terrainCollisionIntrusionCorrectionCount;
+        private static int _terrainBulletCollisionCorrectionCount;
         private static Vector2 _terrainSeedAnchorCentifoot = Vector2.Zero;
         private static bool _terrainWorldBoundsInitialized;
         private static TerrainWorldBounds _terrainWorldBounds;
         private static float _lastPreloadMarginWorldUnits = ChunkWorldSize * PreloadChunkMarginMultiplier;
         private static ChunkBounds _lastVisibleChunkWindow;
+        private static ChunkBounds _lastTerrainVisualChunkWindow;
         private static ChunkBounds _lastMaterializedChunkWindow;
         private static ChunkBounds _lastTerrainColliderChunkWindow;
+        private static ChunkBounds _lastAppliedVisualChunkWindow;
+        private static ChunkBounds _lastAppliedColliderChunkWindow;
         private static ChunkKey _lastCenterChunk = new(0, 0);
         private static Vector2 _lastTerrainStreamingFocusWorldPosition = Vector2.Zero;
         private static int _terrainPendingCriticalChunkCount;
@@ -124,27 +191,152 @@ namespace op.io
         private static bool _residentTerrainVertexColorValid;
         private static bool _startupVisibleTerrainReady;
         private static string _terrainStartupReadinessSummary = "startup terrain pending";
+        private static int _cachedDefaultWorldPlacementSeed = int.MinValue;
+        private static TerrainWorldPlacement[] _cachedDefaultWorldPlacements = Array.Empty<TerrainWorldPlacement>();
+        private static readonly object DefaultWorldPlacementCacheLock = new();
+        private static int _cachedOceanZoneDistanceAnchorSeed = int.MinValue;
+        private static OceanZoneDistanceAnchor[] _cachedOceanZoneDistanceAnchors = Array.Empty<OceanZoneDistanceAnchor>();
+        private static readonly object OceanZoneDistanceAnchorCacheLock = new();
+        private static int _cachedOceanZoneAnchorSeed = int.MinValue;
+        private static Vector2 _cachedOceanZoneAnchorCenterWorld;
+        private static float _cachedOceanZoneAnchorRadiusWorldUnits;
+        private static float _cachedOceanZoneAnchorElongation = 1f;
+        private static float _cachedOceanZoneAnchorRotationRadians;
+        private static int _startupSynchronousChunkBuildCount;
+        private static int _terrainBackgroundQueuedChunkBuildCount;
+        private static string _terrainStartupPhase = "terrain startup pending";
+        private static bool _startupFirstSightTerrainReady;
+        private static int _startupWarmupChunkCount;
+        private static int _terrainRuntimeFieldCollisionFallbackSuppressedCount;
+        private static bool _hasAppliedTerrainVisualChunkWindow;
+        private static bool _terrainVisibleObjectsDirty = true;
+        private static int _terrainDeferredVisibleMaterializationCount;
+        private static int _terrainAcceptedDirtyMaterializationCount;
+        private static string _terrainVisibleCoverageStatus = "visible terrain not materialized";
+        private static int _terrainNextVisualObjectDiagnosticId;
+        private static int _terrainFlickerDiagnosticCount;
+        private static float _lastTerrainFlickerDiagnosticTime = float.NegativeInfinity;
+        private static string _lastTerrainFlickerDiagnosticReason = "none";
+        private static int _lastTerrainVisibleDrawObjectCount = -1;
+        private static int _lastTerrainVisibleDrawTriangleCount = -1;
+        private static string _lastTerrainVisibleDrawSummary = "none";
+        private static bool _hasTerrainDrawDiagnosticBaseline;
+        private static ChunkBounds _lastTerrainDrawVisibleChunkWindow;
+        private static ChunkBounds _lastTerrainDrawAppliedVisualChunkWindow;
+        private static readonly List<string> _lastResidentTerrainVisualObjectSnapshot = new();
+        private static bool _terrainAccessRequestActive;
+        private static Vector2 _terrainAccessRequestWorldPosition;
+        private static float _terrainAccessRequestRadiusWorldUnits;
+        private static Texture2D _oceanZoneDebugPixelTexture;
+        private static readonly List<OceanZoneDebugSegment> OceanZoneDebugSegments = new();
+        private static readonly List<FogOfWarManager.VisionRegion> OceanZoneDebugVisionRegions = new();
+        private static readonly Dictionary<OceanZoneDebugTileKey, List<OceanZoneDebugSegment>> OceanZoneDebugTileSegmentCache = new();
+        private static readonly Dictionary<OceanZoneDebugTileKey, int> OceanZoneDebugTileSegmentCacheTouchTicks = new();
+        private static readonly object OceanZoneDebugTileWorkerLock = new();
+        private static readonly object OceanZoneAnchorCacheLock = new();
+        private static readonly List<OceanZoneDebugTileBuildCandidate> OceanZoneDebugTileBuildQueue = new();
+        private static readonly HashSet<OceanZoneDebugTileKey> QueuedOceanZoneDebugTileKeys = new();
+        private static readonly HashSet<OceanZoneDebugTileKey> BuildingOceanZoneDebugTileKeys = new();
+        private static readonly Queue<OceanZoneDebugTileBuildResult> CompletedOceanZoneDebugTileBuildQueue = new();
+        private static readonly HashSet<int> OceanZoneDebugLabelCellKeys = new();
+        private static readonly List<OceanZoneDebugLabelBounds> OceanZoneDebugPlacedLabelBounds = new();
+        private static Thread _oceanZoneDebugTileWorkerThread;
+        private static bool _oceanZoneDebugTileWorkerStopRequested;
+        private static int _oceanZoneDebugTileWorkerGeneration;
+        private static int _oceanZoneDebugTileWorkerQueuedBuildCount;
+        private static int _oceanZoneDebugTileWorkerActiveBuildCount;
+        private static int _oceanZoneDebugTileWorkerCompletedQueueCount;
+        private static int _oceanZoneDebugTileCacheTouchTick;
+        private static int _oceanZoneDebugQueuedTileBuildCount;
+        private static int _oceanZoneDebugSlowTileBuildLogCount;
+        private static int _lastOceanZoneDebugBuildSeed = int.MinValue;
+        private static int _oceanZoneDebugBorderSegmentCount;
+        private static int _oceanZoneDebugBorderLabelCount;
+        private static double _oceanZoneDebugBuildMilliseconds;
+        private static ChunkBounds _fullTerrainMapChunkWindow;
+        private static bool _fullTerrainMapChunkWindowInitialized;
+        private static int _fullTerrainMapChunkCount;
+        private static int _fullTerrainMapGeneratedChunkCount;
+        private static int _fullTerrainMapPendingChunkCount;
+        private static bool _fullTerrainMapGenerationComplete;
+        private static TerrainMapSnapshot _fullTerrainMapSnapshot;
+        [ThreadStatic]
+        private static TerrainMapSnapshot _terrainMapSnapshotOverride;
+        private static readonly List<OceanZoneDebugSegment> FullOceanZoneDebugSegments = new();
+        private static Task<OceanZoneDebugFullMapBuildResult> _fullOceanZoneDebugBuildTask;
+        private static bool _fullOceanZoneDebugReady;
+        private static int _fullOceanZoneDebugBuildSeed = int.MinValue;
+        private static int _fullOceanZoneDebugSegmentCount;
+        private static double _fullOceanZoneDebugBuildMilliseconds;
+        private static string _fullOceanZoneDebugStatus = "waiting full-map ocean border queue";
+        private static int _oceanZoneDebugSuppressedTinyZoneCount;
+        private static string _oceanZoneDebugTinyZoneViolationSummary = "none";
+        [ThreadStatic]
+        private static int _oceanZoneDebugTinyZoneSuppressionScratchCount;
+        [ThreadStatic]
+        private static bool[] _oceanZoneDebugTinyZoneSuppressedCellsScratch;
+        [ThreadStatic]
+        private static bool _oceanZoneDebugDistanceSeedOverrideActive;
+        [ThreadStatic]
+        private static int _oceanZoneDebugDistanceSeedOverride;
 
         public static bool IsActive => true;
         public static int TerrainWorldSeed => _terrainWorldSeed;
         public static int TerrainResidentChunkCount => ResidentChunks.Count;
+        public static int TerrainResidentChunkMemoryCap => TerrainResidentChunkMemoryCapValue;
         public static int TerrainResidentComponentCount => _residentTerrainComponentCount;
-        public static int TerrainResidentEdgeLoopCount => _residentTerrainComponentCount;
+        public static int TerrainResidentEdgeLoopCount => ResidentTerrainCollisionLoops.Count;
         public static int TerrainResidentColliderCount => _residentTerrainColliderCount;
         public static int TerrainResidentVisualTriangleCount => _residentTerrainVisualTriangleCount;
         public static int TerrainActiveColliderCount => _activeTerrainColliderCount;
         public static int TerrainColliderActivationCandidateCount => _terrainColliderActivationCandidateCount;
+        public static int TerrainDynamicCollisionProbeCount => _terrainDynamicCollisionProbeCount;
+        public static int TerrainDynamicCollisionObjectProbeCount => _terrainDynamicCollisionObjectProbeCount;
+        public static int TerrainDynamicCollisionBulletProbeCount => _terrainDynamicCollisionBulletProbeCount;
         public static int TerrainSpawnRelocationCount => _terrainSpawnRelocationCount;
         public static int TerrainCollisionIntrusionCorrectionCount => _terrainCollisionIntrusionCorrectionCount;
-        public static int TerrainPendingChunkCount => PendingChunks.Count;
+        public static int TerrainBulletCollisionCorrectionCount => _terrainBulletCollisionCorrectionCount;
+        public static int TerrainPendingChunkCount => _terrainChunkWorkerQueuedBuildCount + _terrainChunkWorkerActiveBuildCount + _terrainChunkWorkerCompletedQueueCount;
         public static int TerrainPendingCriticalChunkCount => _terrainPendingCriticalChunkCount;
-        public static bool TerrainChunkBuildsInFlight => PendingChunks.Count > 0;
+        public static string TerrainFullMapChunkWindow => _fullTerrainMapChunkWindowInitialized ? FormatChunkBounds(_fullTerrainMapChunkWindow) : "not initialized";
+        public static int TerrainFullMapChunkCount => _fullTerrainMapChunkCount;
+        public static int TerrainFullMapGeneratedChunkCount => _fullTerrainMapGeneratedChunkCount;
+        public static int TerrainFullMapPendingChunkCount => _fullTerrainMapPendingChunkCount;
+        public static bool TerrainFullMapGenerationComplete => _fullTerrainMapGenerationComplete;
+        public static bool TerrainFullMapSnapshotReady => _fullTerrainMapSnapshot != null;
+        public static bool TerrainChunkBuildsInFlight => _terrainChunkWorkerActiveBuildCount > 0;
+        public static int TerrainBackgroundQueuedChunkCount => _terrainChunkWorkerQueuedBuildCount;
+        public static int TerrainBackgroundCompletedChunkQueueCount => _terrainChunkWorkerCompletedQueueCount;
+        public static int TerrainBackgroundActiveChunkBuildCount => _terrainChunkWorkerActiveBuildCount;
+        public static string TerrainBackgroundWorkerStatus => ResolveTerrainBackgroundWorkerStatus();
         public static bool TerrainMaterializationInFlight => _terrainMaterializationTask != null;
         public static bool TerrainMaterializationRestartPending => _terrainMaterializationTask != null && _terrainWorldObjectsDirty;
         public static int TerrainDiscardedStaleMaterializationCount => _terrainDiscardedStaleMaterializationCount;
         public static double TerrainLastMaterializationMilliseconds => _lastTerrainMaterializationMilliseconds;
         public static bool TerrainStartupVisibleTerrainReady => _startupVisibleTerrainReady;
         public static string TerrainStartupReadinessSummary => _terrainStartupReadinessSummary;
+        public static int TerrainStartupSynchronousChunkBuildCount => _startupSynchronousChunkBuildCount;
+        public static int TerrainBackgroundQueuedChunkBuildCount => _terrainBackgroundQueuedChunkBuildCount;
+        public static string TerrainStartupPhase => _terrainStartupPhase;
+        public static bool TerrainStartupFirstSightTerrainReady => _startupFirstSightTerrainReady;
+        public static int TerrainStartupWarmupChunkCount => _startupWarmupChunkCount;
+        public static int TerrainRuntimeFieldCollisionFallbackSuppressedCount => _terrainRuntimeFieldCollisionFallbackSuppressedCount;
+        public static bool TerrainVisibleObjectsDirty => _terrainVisibleObjectsDirty;
+        public static int TerrainDeferredVisibleMaterializationCount => _terrainDeferredVisibleMaterializationCount;
+        public static int TerrainAcceptedDirtyMaterializationCount => _terrainAcceptedDirtyMaterializationCount;
+        public static string TerrainVisibleCoverageStatus => _terrainVisibleCoverageStatus;
+        public static int TerrainFlickerDiagnosticCount => _terrainFlickerDiagnosticCount;
+        public static string TerrainLastFlickerDiagnosticReason => _lastTerrainFlickerDiagnosticReason;
+        public static string TerrainLastVisibleDrawSummary => _lastTerrainVisibleDrawSummary;
+        public static bool TerrainAccessRequestActive => _terrainAccessRequestActive;
+        public static string TerrainAccessRequestStatus => ResolveTerrainAccessRequestStatus();
+        public static int TerrainMovementBlockedUntilReadyCount => 0;
+        public static bool TerrainWorldBoundaryActive => TerrainWorldBoundaryEnabled;
+        public static int TerrainWorldDefaultIslandCount => Math.Clamp((int)MathF.Round(TerrainWorldDefaults.WorldIslandCount), 1, TerrainWorldDefaults.WorldIslandGenerationLimit);
+        public static float TerrainWorldDefaultMinimumSpacing => TerrainWorldDefaults.WorldMinimumSpacing;
+        public static float TerrainWorldDefaultInteractionSpacing => TerrainWorldDefaults.WorldInteractionSpacing;
+        public static string TerrainWorldDefaultClusterCountRange =>
+            $"{TerrainWorldDefaults.WorldClusterCountMinimum:0}-{TerrainWorldDefaults.WorldClusterCountMaximum:0}";
         public static float TerrainChunkWorldSize => ChunkWorldSize;
         public static float TerrainFeatureWorldScaleMultiplier => TerrainFeatureScaleMultiplier;
         public static float TerrainArchipelagoMacroCellSize => ArchipelagoMacroCellSize;
@@ -153,6 +345,15 @@ namespace op.io
         public static float TerrainArchipelagoLandformCellSize => ArchipelagoLandformCellSize;
         public static string TerrainGenerationPipeline => "macro mask > lithology > fractures > pre-flood terrain > karst dissolution > flooding > erosion > sediment > reef growth > classification";
         public static string TerrainLandformSelectionMode => "layered geological processes";
+        public static string TerrainOceanZoneDistanceMode => "canonical archipelago polygon distance";
+        public static string TerrainOceanZoneOrigin => FormatTerrainOceanZoneOrigin();
+        public static float TerrainOceanZoneOriginRadius => ResolveTerrainOceanZoneOriginRadius();
+        public static float TerrainWaterZoneDistanceScale => _terrainWaterZoneDistanceScale;
+        public static float TerrainWaterShallowDistance => DevWaterShallowDistance;
+        public static float TerrainWaterSunlitDistance => DevWaterSunlitDistance;
+        public static float TerrainWaterTwilightDistance => DevWaterTwilightDistance;
+        public static float TerrainWaterMidnightDistance => DevWaterMidnightDistance;
+        public static float TerrainOceanZoneMinimumTransitionVolumeDistance => _oceanZoneMinimumTransitionVolumeDistanceWorldUnits;
         public static string TerrainLagoonOpeningTarget => $"{LagoonOpeningMinCount}-{LagoonOpeningMaxCount}";
         public static float TerrainLagoonBasinCutStrength => LagoonBasinCutStrength;
         public static float TerrainRegionalTidalChannelCutStrength => RegionalTidalChannelCutStrength;
@@ -162,7 +363,9 @@ namespace op.io
         public static int TerrainDrawLayerSetting => TerrainDrawLayer;
         public static float TerrainPreloadMarginWorldUnits => _lastPreloadMarginWorldUnits;
         public static string TerrainWorldBoundsSummary =>
-            $"{CentifootUnits.FormatDistance(_terrainWorldBounds.MinX)}, {CentifootUnits.FormatDistance(_terrainWorldBounds.MinY)} -> {CentifootUnits.FormatDistance(_terrainWorldBounds.MaxX)}, {CentifootUnits.FormatDistance(_terrainWorldBounds.MaxY)}";
+            TerrainWorldBoundaryEnabled
+                ? $"{CentifootUnits.FormatDistance(_terrainWorldBounds.MinX)}, {CentifootUnits.FormatDistance(_terrainWorldBounds.MinY)} -> {CentifootUnits.FormatDistance(_terrainWorldBounds.MaxX)}, {CentifootUnits.FormatDistance(_terrainWorldBounds.MaxY)}"
+                : "unbounded";
         public static string TerrainSeedAnchor =>
             $"{CentifootUnits.FormatNumber(_terrainSeedAnchorCentifoot.X)}, {CentifootUnits.FormatNumber(_terrainSeedAnchorCentifoot.Y)} {CentifootUnits.UnitAbbreviation}";
         public static string TerrainStreamingFocus => CentifootUnits.FormatVector2(_lastTerrainStreamingFocusWorldPosition);
@@ -170,8 +373,37 @@ namespace op.io
         public static string TerrainCenterChunk => $"{_lastCenterChunk.X}, {_lastCenterChunk.Y}";
         public static string TerrainVisibleChunkWindow =>
             $"{_lastVisibleChunkWindow.MinChunkX}..{_lastVisibleChunkWindow.MaxChunkX}, {_lastVisibleChunkWindow.MinChunkY}..{_lastVisibleChunkWindow.MaxChunkY}";
+        public static string TerrainAppliedVisualChunkWindow =>
+            _hasAppliedTerrainVisualChunkWindow
+                ? FormatChunkBounds(_lastAppliedVisualChunkWindow)
+                : "none";
+        public static string TerrainAppliedColliderChunkWindow =>
+            _hasAppliedTerrainVisualChunkWindow
+                ? FormatChunkBounds(_lastAppliedColliderChunkWindow)
+                : "none";
+        public static string TerrainTargetVisualChunkWindow => FormatChunkBounds(_lastTerrainVisualChunkWindow);
+        public static string TerrainTargetMaterializedChunkWindow => FormatChunkBounds(_lastMaterializedChunkWindow);
         public static string TerrainColliderChunkWindow =>
             $"{_lastTerrainColliderChunkWindow.MinChunkX}..{_lastTerrainColliderChunkWindow.MaxChunkX}, {_lastTerrainColliderChunkWindow.MinChunkY}..{_lastTerrainColliderChunkWindow.MaxChunkY}";
+        public static float TerrainWorldScaleMultiplier => TerrainWorldDefaults.GlobalScale;
+        public static bool TerrainOceanDebugOverlayRequested => IsOceanZoneDebugOverlayRequested();
+        public static bool TerrainOceanDebugOverlayVisible => IsOceanZoneDebugOverlayRequested();
+        public static int TerrainOceanDebugBorderSegmentCount => _oceanZoneDebugBorderSegmentCount;
+        public static int TerrainOceanDebugBorderLabelCount => _oceanZoneDebugBorderLabelCount;
+        public static double TerrainOceanDebugBuildMilliseconds => _oceanZoneDebugBuildMilliseconds;
+        public static bool TerrainOceanDebugFullMapReady => _fullOceanZoneDebugReady;
+        public static int TerrainOceanDebugFullMapSegmentCount => _fullOceanZoneDebugSegmentCount;
+        public static double TerrainOceanDebugFullMapBuildMilliseconds => _fullOceanZoneDebugBuildMilliseconds;
+        public static string TerrainOceanDebugFullMapStatus => _fullOceanZoneDebugStatus;
+        public static int TerrainOceanDebugSuppressedTinyZoneCount => _oceanZoneDebugSuppressedTinyZoneCount;
+        public static float TerrainOceanDebugMinimumStableZoneRadius => OceanZoneDebugMinimumStableZoneRadiusWorldUnits;
+        public static string TerrainOceanDebugTinyZoneViolationSummary => _oceanZoneDebugTinyZoneViolationSummary;
+        public static int TerrainOceanDebugTileCacheCount => OceanZoneDebugTileSegmentCache.Count;
+        public static int TerrainOceanDebugQueuedTileCount => _oceanZoneDebugTileWorkerQueuedBuildCount;
+        public static int TerrainOceanDebugActiveTileBuildCount => _oceanZoneDebugTileWorkerActiveBuildCount;
+        public static int TerrainOceanDebugCompletedTileQueueCount => _oceanZoneDebugTileWorkerCompletedQueueCount;
+        public static int TerrainOceanDebugQueuedTileBuildCount => _oceanZoneDebugQueuedTileBuildCount;
+        public static string TerrainOceanDebugWorkerStatus => ResolveOceanZoneDebugWorkerStatus();
 
         public static void Initialize(GraphicsDevice graphicsDevice)
         {
@@ -183,8 +415,156 @@ namespace op.io
             LoadSettingsIfNeeded();
             EnsureTerrainVectorEffect(graphicsDevice);
             _terrainWorldObjectsDirty = true;
+            _startupVisibleTerrainReady = _startupFirstSightTerrainReady && ResidentTerrainVisualObjects.Count > 0;
+            if (_startupVisibleTerrainReady)
+            {
+                _terrainStartupReadinessSummary = "first-sight terrain ready; background preload pending";
+                _terrainStartupPhase = "first-sight terrain ready; background preload streaming";
+            }
+            else if (ResidentChunks.Count > 0)
+            {
+                _terrainStartupReadinessSummary = "startup terrain chunks ready; visible materialization pending";
+                _terrainStartupPhase = "player loaded; visible terrain materialization pending";
+            }
+            else
+            {
+                _terrainStartupReadinessSummary = "startup terrain pending";
+                _terrainStartupPhase = "terrain startup pending";
+            }
+        }
+
+        internal static void ResetRuntimeTerrainObjectsForLevelLoad()
+        {
+            _terrainMaterializationRequestId++;
+            _terrainMaterializationTask = null;
+            ClearResidentTerrainWorldObjects();
+            _activeTerrainColliderCount = 0;
+            _terrainColliderActivationCandidateCount = 0;
+            _terrainWorldObjectsDirty = true;
             _startupVisibleTerrainReady = false;
-            _terrainStartupReadinessSummary = "startup terrain pending";
+            _startupFirstSightTerrainReady = false;
+            _hasAppliedTerrainVisualChunkWindow = false;
+            _lastTerrainVisualChunkWindow = default;
+            _lastMaterializedChunkWindow = default;
+            _lastTerrainColliderChunkWindow = default;
+            _lastAppliedVisualChunkWindow = default;
+            _lastAppliedColliderChunkWindow = default;
+            _terrainVisibleObjectsDirty = true;
+            _terrainAccessRequestActive = false;
+            _terrainAccessRequestWorldPosition = Vector2.Zero;
+            _terrainAccessRequestRadiusWorldUnits = 0f;
+            _terrainPendingCriticalChunkCount = 0;
+            _terrainStartupPhase = "terrain reset for level load";
+            _terrainStartupReadinessSummary = "terrain reset for level load";
+            ResetFullTerrainMapState(clearResidentChunks: false);
+            ResetOceanZoneDebugFullMapState(clearSegments: true);
+        }
+
+        internal static bool PrepareStartupTerrainAroundWorldPosition(Vector2 focusWorldPosition)
+        {
+            if (!IsFiniteVector(focusWorldPosition))
+            {
+                focusWorldPosition = Vector2.Zero;
+            }
+
+            LoadSettingsIfNeeded();
+            EnsureTerrainWorldBoundsInitialized(focusWorldPosition);
+
+            ChunkKey focusChunk = BuildChunkKey(focusWorldPosition.X, focusWorldPosition.Y);
+            ChunkBounds warmupWindow = ClampChunkBoundsToTerrainWorld(new ChunkBounds(
+                focusChunk.X - StartupWarmupChunkRadius,
+                focusChunk.X + StartupWarmupChunkRadius,
+                focusChunk.Y - StartupWarmupChunkRadius,
+                focusChunk.Y + StartupWarmupChunkRadius));
+
+            _terrainStartupPhase = $"warming nearby terrain chunks around {focusChunk.X}, {focusChunk.Y}";
+            _terrainStartupReadinessSummary = $"startup terrain warming: {FormatChunkBounds(warmupWindow)} near player";
+            ApplyTerrainStreamingWindowState(new TerrainStreamingWindowSet(
+                focusWorldPosition.X,
+                focusWorldPosition.X,
+                focusWorldPosition.Y,
+                focusWorldPosition.Y,
+                focusWorldPosition,
+                ChunkWorldSize * PreloadChunkMarginMultiplier,
+                warmupWindow,
+                warmupWindow,
+                warmupWindow,
+                warmupWindow,
+                warmupWindow));
+
+            TryPromoteCompletedChunks(warmupWindow);
+            List<ChunkBuildCandidate> warmupCandidates = BuildStartupWarmupChunkCandidates(focusChunk, warmupWindow);
+            List<ChunkKey> builtKeys = new(warmupCandidates.Count);
+            bool foundLand = HasResidentLandChunkInBounds(new ChunkBounds(focusChunk.X, focusChunk.X, focusChunk.Y, focusChunk.Y));
+            int synchronousBuilds = 0;
+            int maxSynchronousBuilds = Math.Min(StartupWarmupMaxSynchronousChunks, warmupCandidates.Count);
+
+            for (int i = 0; i < warmupCandidates.Count; i++)
+            {
+                ChunkKey key = warmupCandidates[i].Key;
+                bool alreadyResident = ResidentChunks.ContainsKey(key);
+                if (!alreadyResident && synchronousBuilds >= maxSynchronousBuilds)
+                {
+                    continue;
+                }
+
+                if (!TryBuildResidentChunkSynchronously(key, waitForPending: false))
+                {
+                    _terrainStartupPhase = "nearby terrain warmup failed";
+                    return false;
+                }
+
+                if (!alreadyResident)
+                {
+                    synchronousBuilds++;
+                }
+
+                builtKeys.Add(key);
+                if (ResidentChunks.TryGetValue(key, out TerrainChunkRecord chunk) && chunk.HasLand)
+                {
+                    foundLand = true;
+                }
+            }
+
+            if (builtKeys.Count == 0)
+            {
+                _terrainStartupPhase = "nearby terrain warmup failed";
+                return false;
+            }
+
+            _startupWarmupChunkCount = builtKeys.Count;
+            ChunkBounds startupMaterializedWindow = BuildChunkBoundsForKeys(builtKeys);
+            _terrainPendingCriticalChunkCount = CountPendingChunksInBounds(warmupWindow);
+            if (foundLand &&
+                TryBuildCombinedResidentMask(startupMaterializedWindow, out CombinedResidentMask residentMask))
+            {
+                TerrainMaterializationResult result = BuildTerrainMaterializationResult(
+                    residentMask,
+                    ++_terrainMaterializationRequestId,
+                    BuildChunkWorldBounds(startupMaterializedWindow),
+                    startupMaterializedWindow,
+                    startupMaterializedWindow,
+                    startupMaterializedWindow);
+                _terrainMaterializationTask = null;
+                _lastTerrainVisualChunkWindow = startupMaterializedWindow;
+                _lastMaterializedChunkWindow = startupMaterializedWindow;
+                _lastTerrainColliderChunkWindow = startupMaterializedWindow;
+                _terrainWorldObjectsDirty = false;
+                ApplyTerrainMaterializationResult(result);
+                _startupFirstSightTerrainReady = result.ComponentCount > 0;
+                if (_startupFirstSightTerrainReady)
+                {
+                    DebugLogger.Print($"GameBlockTerrainBackground: first-sight terrain materialized {result.ComponentCount} landforms from {builtKeys.Count} nearby chunks in {result.BuildMilliseconds:0.0} ms.");
+                    _terrainStartupPhase = "nearby terrain ready; visible window pending";
+                    _terrainStartupReadinessSummary = $"startup terrain warm: {result.ComponentCount} nearby landforms in {FormatChunkBounds(startupMaterializedWindow)}; visible window pending";
+                    return true;
+                }
+            }
+
+            _terrainWorldObjectsDirty = true;
+            _terrainStartupPhase = "nearby terrain chunks ready; visible land still streaming";
+            _terrainStartupReadinessSummary = $"startup terrain chunks ready: {FormatChunkBounds(startupMaterializedWindow)} near player";
+            return true;
         }
 
         public static bool PrepareStartupVisibleTerrain(GraphicsDevice graphicsDevice, Rectangle panelBounds, Matrix cameraTransform)
@@ -207,48 +587,56 @@ namespace op.io
 
             ApplyTerrainStreamingWindowState(windows);
             TryPromoteCompletedChunks(windows.RetainChunkWindow);
-            if (!BuildResidentChunksSynchronously(windows.VisibleChunkWindow))
+            ChunkBounds startupVisualChunkWindow = windows.TerrainObjectChunkWindow;
+            ChunkBounds startupColliderChunkWindow = windows.TerrainColliderChunkWindow;
+            ChunkBounds startupMaterializedWindow = UnionChunkBounds(startupVisualChunkWindow, startupColliderChunkWindow);
+            if (!BuildResidentChunksSynchronously(startupMaterializedWindow, waitForPending: false))
             {
-                _terrainStartupReadinessSummary = "startup terrain pending: visible chunk build failed";
+                _terrainStartupReadinessSummary = "startup terrain pending: visible preload chunk build failed";
                 return false;
             }
 
             PruneResidentChunks(windows.RetainChunkWindow);
-            _terrainPendingCriticalChunkCount = CountPendingChunksInBounds(windows.VisibleChunkWindow);
+            QueueFullTerrainMapBuilds(startupMaterializedWindow);
+            UpdateFullTerrainMapGenerationState();
+            _terrainPendingCriticalChunkCount = CountPendingChunksInBounds(startupMaterializedWindow);
             if (_terrainPendingCriticalChunkCount > 0)
             {
-                _terrainStartupReadinessSummary = $"startup terrain pending: {_terrainPendingCriticalChunkCount} visible chunks still queued";
+                _terrainStartupReadinessSummary = $"startup terrain pending: {_terrainPendingCriticalChunkCount} visible preload chunks still queued";
                 return false;
             }
 
-            ChunkBounds startupMaterializedWindow = windows.VisibleChunkWindow;
             TerrainMaterializationResult result;
             if (TryBuildCombinedResidentMask(startupMaterializedWindow, out CombinedResidentMask residentMask))
             {
                 result = BuildTerrainMaterializationResult(
                     residentMask,
                     ++_terrainMaterializationRequestId,
-                    BuildChunkWorldBounds(startupMaterializedWindow),
+                    BuildChunkWorldBounds(startupColliderChunkWindow),
                     startupMaterializedWindow,
-                    startupMaterializedWindow);
+                    startupVisualChunkWindow,
+                    startupColliderChunkWindow);
             }
             else
             {
                 result = BuildTerrainMaterializationResult(
                     new CombinedResidentMask(Array.Empty<byte>(), 0, 0, startupMaterializedWindow.MinChunkX, startupMaterializedWindow.MinChunkY),
                     ++_terrainMaterializationRequestId,
-                    BuildChunkWorldBounds(startupMaterializedWindow),
+                    BuildChunkWorldBounds(startupColliderChunkWindow),
                     startupMaterializedWindow,
-                    startupMaterializedWindow);
+                    startupVisualChunkWindow,
+                    startupColliderChunkWindow);
             }
 
             _terrainMaterializationTask = null;
+            _lastTerrainVisualChunkWindow = startupVisualChunkWindow;
             _lastMaterializedChunkWindow = startupMaterializedWindow;
-            _lastTerrainColliderChunkWindow = startupMaterializedWindow;
+            _lastTerrainColliderChunkWindow = startupColliderChunkWindow;
             _terrainWorldObjectsDirty = false;
             ApplyTerrainMaterializationResult(result);
             _startupVisibleTerrainReady = true;
-            _terrainStartupReadinessSummary = $"startup terrain ready: {FormatChunkBounds(startupMaterializedWindow)} visible";
+            _terrainStartupPhase = "visible terrain and access buffer ready";
+            _terrainStartupReadinessSummary = $"startup terrain ready: {FormatChunkBounds(startupMaterializedWindow)} visible buffer";
             return true;
         }
 
@@ -294,23 +682,40 @@ namespace op.io
             }
 
             ApplyTerrainStreamingWindowState(windows);
-            if (!ChunkBoundsEqual(_lastMaterializedChunkWindow, windows.TerrainObjectChunkWindow) ||
-                !ChunkBoundsEqual(_lastTerrainColliderChunkWindow, windows.TerrainColliderChunkWindow))
+            ChunkBounds targetVisualMaterializedChunkWindow = _startupVisibleTerrainReady
+                ? ResolveStableTerrainObjectChunkWindow(windows.TerrainObjectChunkWindow, windows.VisibleChunkWindow)
+                : windows.VisibleChunkWindow;
+            ChunkBounds targetColliderChunkWindow = _startupVisibleTerrainReady
+                ? windows.TerrainColliderChunkWindow
+                : windows.VisibleChunkWindow;
+            ChunkBounds targetMaterializedChunkWindow = _startupVisibleTerrainReady
+                ? UnionChunkBounds(targetVisualMaterializedChunkWindow, targetColliderChunkWindow)
+                : targetVisualMaterializedChunkWindow;
+            if (!ChunkBoundsEqual(_lastTerrainVisualChunkWindow, targetVisualMaterializedChunkWindow) ||
+                !ChunkBoundsEqual(_lastMaterializedChunkWindow, targetMaterializedChunkWindow) ||
+                !ChunkBoundsEqual(_lastTerrainColliderChunkWindow, targetColliderChunkWindow))
             {
-                _lastMaterializedChunkWindow = windows.TerrainObjectChunkWindow;
-                _lastTerrainColliderChunkWindow = windows.TerrainColliderChunkWindow;
+                _lastTerrainVisualChunkWindow = targetVisualMaterializedChunkWindow;
+                _lastMaterializedChunkWindow = targetMaterializedChunkWindow;
+                _lastTerrainColliderChunkWindow = targetColliderChunkWindow;
                 _terrainWorldObjectsDirty = true;
             }
 
             TryPromoteCompletedChunks(windows.RetainChunkWindow);
-            QueueChunkBuilds(windows.PreloadChunkWindow, windows.VisibleChunkWindow);
+            ChunkBounds priorityChunkWindow = UnionChunkBounds(targetMaterializedChunkWindow, windows.TerrainObjectChunkWindow);
+            QueueChunkBuilds(windows.PreloadChunkWindow, priorityChunkWindow);
+            QueueFullTerrainMapBuilds(priorityChunkWindow);
             PruneResidentChunks(windows.RetainChunkWindow);
-            _terrainPendingCriticalChunkCount = CountPendingChunksInBounds(windows.VisibleChunkWindow);
+            UpdateFullTerrainMapGenerationState();
+            TryApplyCompletedFullOceanZoneDebugBuild();
+            _terrainPendingCriticalChunkCount = CountPendingChunksInBounds(targetMaterializedChunkWindow);
             RefreshResidentTerrainWorldObjects(
                 graphicsDevice,
-                windows.TerrainObjectChunkWindow,
-                windows.TerrainColliderChunkWindow,
-                windows.VisibleChunkWindow);
+                targetMaterializedChunkWindow,
+                targetVisualMaterializedChunkWindow,
+                targetColliderChunkWindow,
+                targetMaterializedChunkWindow);
+            UpdateTerrainVisibleCoverageStatus(windows.VisibleChunkWindow);
             UpdateStartupVisibleTerrainReadiness(windows.VisibleChunkWindow);
             DrawTerrainWorldBoundaryFill(
                 spriteBatch,
@@ -331,6 +736,2840 @@ namespace op.io
             UpdateActiveTerrainColliders(windows.CameraMinX, windows.CameraMaxX, windows.CameraMinY, windows.CameraMaxY);
         }
 
+        private static bool IsOceanZoneDebugOverlayRequested()
+        {
+            if (ControlStateManager.ContainsSwitchState(ControlKeyMigrations.OceanZoneDebugKey))
+            {
+                return ControlStateManager.GetSwitchState(ControlKeyMigrations.OceanZoneDebugKey);
+            }
+
+            ControlKeyData.ControlKeyRecord persistedControl = ControlKeyData.GetControl(ControlKeyMigrations.OceanZoneDebugKey);
+            if (persistedControl?.SwitchStartState != null)
+            {
+                return TypeConversionFunctions.IntToBool(persistedControl.SwitchStartState.Value);
+            }
+
+            return !ControlStateManager.ContainsSwitchState(ControlKeyMigrations.OceanZoneDebugKey);
+        }
+
+        public static void DrawOceanZoneDebugOverlay(SpriteBatch spriteBatch, Matrix cameraTransform)
+        {
+            if (spriteBatch == null || !TerrainOceanDebugOverlayVisible)
+            {
+                return;
+            }
+
+            GraphicsDevice graphicsDevice = spriteBatch.GraphicsDevice;
+            if (graphicsDevice == null)
+            {
+                return;
+            }
+
+            if (!GameRenderer.TryGetVisibleWorldBounds(
+                cameraTransform,
+                out float visibleMinX,
+                out float visibleMaxX,
+                out float visibleMinY,
+                out float visibleMaxY))
+            {
+                return;
+            }
+
+            EnsureOceanZoneDebugPixelTexture(graphicsDevice);
+            if (_oceanZoneDebugPixelTexture == null || _oceanZoneDebugPixelTexture.IsDisposed)
+            {
+                return;
+            }
+
+            Rectangle viewportBounds = graphicsDevice.Viewport.Bounds;
+            DrawOceanZoneDebugOverlayCore(
+                spriteBatch,
+                cameraTransform,
+                viewportBounds,
+                viewportBounds,
+                viewportBounds,
+                visibleMinX,
+                visibleMaxX,
+                visibleMinY,
+                visibleMaxY);
+        }
+
+        public static void DrawOceanZoneDebugFinalOverlay(SpriteBatch spriteBatch, Matrix cameraTransform)
+        {
+            if (spriteBatch == null || !TerrainOceanDebugOverlayVisible)
+            {
+                return;
+            }
+
+            GraphicsDevice graphicsDevice = spriteBatch.GraphicsDevice;
+            if (graphicsDevice == null)
+            {
+                return;
+            }
+
+            if (!BlockManager.TryGetGameRenderBounds(out Rectangle renderBounds) ||
+                !BlockManager.TryGetGameContentWindowBounds(out Rectangle windowBounds))
+            {
+                return;
+            }
+
+            Rectangle viewportBounds = graphicsDevice.Viewport.Bounds;
+            Rectangle clippedWindowBounds = Rectangle.Intersect(windowBounds, viewportBounds);
+            if (renderBounds.Width <= 0 ||
+                renderBounds.Height <= 0 ||
+                clippedWindowBounds.Width <= 0 ||
+                clippedWindowBounds.Height <= 0)
+            {
+                return;
+            }
+
+            if (!TryResolveOceanZoneDebugVisibleWorldBounds(
+                cameraTransform,
+                renderBounds,
+                out float visibleMinX,
+                out float visibleMaxX,
+                out float visibleMinY,
+                out float visibleMaxY))
+            {
+                return;
+            }
+
+            EnsureOceanZoneDebugPixelTexture(graphicsDevice);
+            if (_oceanZoneDebugPixelTexture == null || _oceanZoneDebugPixelTexture.IsDisposed)
+            {
+                return;
+            }
+
+            Rectangle previousScissor = graphicsDevice.ScissorRectangle;
+            graphicsDevice.ScissorRectangle = clippedWindowBounds;
+
+            try
+            {
+                spriteBatch.Begin(
+                    SpriteSortMode.Immediate,
+                    BlendState.AlphaBlend,
+                    SamplerState.PointClamp,
+                    DepthStencilState.None,
+                    OceanZoneDebugOverlayRasterizerState,
+                    null,
+                    Matrix.Identity);
+
+                DrawOceanZoneDebugOverlayCore(
+                    spriteBatch,
+                    cameraTransform,
+                    renderBounds,
+                    windowBounds,
+                    clippedWindowBounds,
+                    visibleMinX,
+                    visibleMaxX,
+                    visibleMinY,
+                    visibleMaxY);
+
+                spriteBatch.End();
+            }
+            finally
+            {
+                graphicsDevice.ScissorRectangle = previousScissor;
+            }
+        }
+
+        internal static int CountOceanZoneDebugBorderSegmentsForWorldBounds(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            List<OceanZoneDebugSegment> segments = new();
+            return BuildOceanZoneDebugSegments(minX, maxX, minY, maxY, segments);
+        }
+
+        internal static int CountOceanZoneDebugVisionClipPartsForProbe(Vector2 from, Vector2 to)
+        {
+            OceanZoneDebugVisionRegions.Clear();
+            if (FogOfWarManager.IsFogEnabled &&
+                (!FogOfWarManager.TryGetVisionRegions(OceanZoneDebugVisionRegions) ||
+                    OceanZoneDebugVisionRegions.Count <= 0))
+            {
+                return 0;
+            }
+
+            OceanZoneDebugSegment segment = new(from, to, Vector2.UnitY, TerrainWaterType.Shallow, TerrainWaterType.Sunlit, DevWaterShallowDistance);
+            return CountOceanZoneDebugVisionClipParts(segment);
+        }
+
+        internal static string ResolveOceanZoneDebugBuildGridSignatureForProbe(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            return TryResolveOceanZoneDebugBuildGrid(
+                minX,
+                maxX,
+                minY,
+                maxY,
+                out float buildMinX,
+                out float buildMaxX,
+                out float buildMinY,
+                out float buildMaxY,
+                out float sampleStep)
+                    ? $"{buildMinX:0.###}|{buildMaxX:0.###}|{buildMinY:0.###}|{buildMaxY:0.###}|{sampleStep:0.###}"
+                    : "invalid";
+        }
+
+        internal static string ResolveOceanZoneDebugTileRangeSignatureForProbe(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            return TryResolveOceanZoneDebugTileRange(
+                minX,
+                maxX,
+                minY,
+                maxY,
+                out int minTileX,
+                out int maxTileX,
+                out int minTileY,
+                out int maxTileY)
+                    ? $"{minTileX}..{maxTileX}|{minTileY}..{maxTileY}"
+                    : "invalid";
+        }
+
+        internal static bool ValidateOceanZoneDebugBorderConsistencyForProbe(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            out int checkedSegments,
+            out int mismatchedSegments)
+        {
+            checkedSegments = 0;
+            mismatchedSegments = 0;
+
+            List<OceanZoneDebugSegment> segments = new();
+            BuildOceanZoneDebugSegments(minX, maxX, minY, maxY, segments);
+            if (segments.Count == 0)
+            {
+                return false;
+            }
+
+            if (!TryResolveOceanZoneDebugBuildGrid(
+                minX,
+                maxX,
+                minY,
+                maxY,
+                out _,
+                out _,
+                out _,
+                out _,
+                out float sampleStep))
+            {
+                return false;
+            }
+
+            int stride = Math.Max(1, segments.Count / 96);
+            float probeOffset = Math.Max(18f, sampleStep * 0.25f);
+            float maxSearchDistance = ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance)) +
+                probeOffset +
+                OceanZoneDebugSampleStepWorldUnits;
+            float borderTolerance = Math.Max(24f, sampleStep * 0.75f);
+            for (int i = 0; i < segments.Count; i += stride)
+            {
+                OceanZoneDebugSegment segment = segments[i];
+                Vector2 midpoint = (segment.From + segment.To) * 0.5f;
+                OceanZoneDebugSample firstSideSample = ResolveOceanZoneRuntimeWaterSample(midpoint - (segment.Normal * probeOffset), maxSearchDistance);
+                OceanZoneDebugSample secondSideSample = ResolveOceanZoneRuntimeWaterSample(midpoint + (segment.Normal * probeOffset), maxSearchDistance);
+                if (!firstSideSample.IsWater || !secondSideSample.IsWater)
+                {
+                    continue;
+                }
+
+                checkedSegments++;
+                bool distanceOrdered = firstSideSample.OffshoreDistance <= secondSideSample.OffshoreDistance + borderTolerance;
+                bool thresholdStraddled =
+                    firstSideSample.OffshoreDistance <= segment.Threshold + borderTolerance &&
+                    secondSideSample.OffshoreDistance >= segment.Threshold - borderTolerance;
+                bool zoneOrderValid =
+                    ResolveOceanZoneDebugWaterTypeOrder(firstSideSample.WaterType) <= ResolveOceanZoneDebugWaterTypeOrder(segment.FirstSide) + 1 &&
+                    ResolveOceanZoneDebugWaterTypeOrder(secondSideSample.WaterType) >= ResolveOceanZoneDebugWaterTypeOrder(segment.SecondSide) - 1;
+                if (!distanceOrdered || !thresholdStraddled || !zoneOrderValid)
+                {
+                    mismatchedSegments++;
+                    continue;
+                }
+            }
+
+            return checkedSegments > 0 && mismatchedSegments <= Math.Max(1, checkedSegments / 32);
+        }
+
+        private static OceanZoneDebugSample ResolveOceanZoneRuntimeWaterSample(
+            Vector2 worldPosition,
+            float maxSearchDistanceWorldUnits)
+        {
+            return TryResolveOceanZoneAtWorldPositionCore(
+                worldPosition,
+                maxSearchDistanceWorldUnits,
+                out TerrainWaterType waterType,
+                out _,
+                out float offshoreDistance)
+                    ? new OceanZoneDebugSample(true, waterType, offshoreDistance)
+                    : new OceanZoneDebugSample(false, TerrainWaterType.Shallow, 0f);
+        }
+
+        internal static bool ValidateOceanZoneDebugMinimumStableZoneRadiusForProbe(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            float sampleStep,
+            out int suppressedComponents,
+            out int remainingTinyComponents)
+        {
+            suppressedComponents = 0;
+            remainingTinyComponents = 0;
+            if (!float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                !float.IsFinite(sampleStep) ||
+                maxX <= minX ||
+                maxY <= minY ||
+                sampleStep <= 0f)
+            {
+                return false;
+            }
+
+            float maxDebugThreshold = ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance));
+            int sampleColumns = Math.Max(2, (int)MathF.Ceiling((maxX - minX) / sampleStep) + 1);
+            int sampleRows = Math.Max(2, (int)MathF.Ceiling((maxY - minY) / sampleStep) + 1);
+            OceanZoneDebugSample[] samples = new OceanZoneDebugSample[sampleColumns * sampleRows];
+            float maxSearchDistance = maxDebugThreshold + sampleStep;
+
+            for (int y = 0; y < sampleRows; y++)
+            {
+                float sampleY = minY + (y * sampleStep);
+                for (int x = 0; x < sampleColumns; x++)
+                {
+                    float sampleX = minX + (x * sampleStep);
+                    samples[Index(x, y, sampleColumns)] = ResolveOceanZoneDebugWaterSample(new Vector2(sampleX, sampleY), maxSearchDistance);
+                }
+            }
+
+            suppressedComponents = ApplyOceanZoneDebugMinimumStableZoneFilter(samples, sampleColumns, sampleRows, sampleStep, sampleStep);
+            remainingTinyComponents = CountOceanZoneDebugMinimumStableZoneViolations(
+                samples,
+                sampleColumns,
+                sampleRows,
+                sampleStep,
+                sampleStep,
+                out string violationSummary);
+            _oceanZoneDebugTinyZoneViolationSummary = violationSummary;
+            return remainingTinyComponents == 0;
+        }
+
+        private static void EnsureOceanZoneDebugPixelTexture(GraphicsDevice graphicsDevice)
+        {
+            if (graphicsDevice == null)
+            {
+                return;
+            }
+
+            if (_oceanZoneDebugPixelTexture != null && !_oceanZoneDebugPixelTexture.IsDisposed)
+            {
+                return;
+            }
+
+            _oceanZoneDebugPixelTexture = new Texture2D(graphicsDevice, 1, 1);
+            _oceanZoneDebugPixelTexture.SetData([Color.White]);
+        }
+
+        private static void UpdateOceanZoneDebugSegments(float minX, float maxX, float minY, float maxY)
+        {
+            LoadSettingsIfNeeded();
+            EnsureTerrainWorldBoundsInitialized();
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            OceanZoneDebugSegments.Clear();
+            if (_lastOceanZoneDebugBuildSeed != _terrainWorldSeed)
+            {
+                ResetOceanZoneDebugTileWorkerState(clearCache: true);
+                ResetOceanZoneDebugFullMapState(clearSegments: true);
+                _lastOceanZoneDebugBuildSeed = _terrainWorldSeed;
+            }
+
+            ChunkBounds fullMapWindow = ResolveFullTerrainMapChunkWindow();
+            QueueFullTerrainMapBuilds(_lastVisibleChunkWindow);
+            TryPromoteCompletedChunks(fullMapWindow);
+            UpdateFullTerrainMapGenerationState();
+            EnsureFullOceanZoneDebugBuildQueued();
+            TryApplyCompletedFullOceanZoneDebugBuild();
+            TryPromoteCompletedOceanZoneDebugTiles();
+            if (!_fullOceanZoneDebugReady)
+            {
+                _lastOceanZoneDebugBuildSeed = _terrainWorldSeed;
+                _oceanZoneDebugBorderSegmentCount = OceanZoneDebugSegments.Count;
+                _oceanZoneDebugBorderLabelCount = 0;
+                _oceanZoneDebugBuildMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+                return;
+            }
+
+            PopulateVisibleOceanZoneDebugSegmentsFromFullMap(minX, maxX, minY, maxY);
+
+            stopwatch.Stop();
+            _lastOceanZoneDebugBuildSeed = _terrainWorldSeed;
+            _oceanZoneDebugBorderSegmentCount = OceanZoneDebugSegments.Count;
+            _oceanZoneDebugBuildMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+        }
+
+        private static bool OceanZoneDebugViewExtendsBeyondFullMap(float minX, float maxX, float minY, float maxY)
+        {
+            if (!float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                maxX <= minX ||
+                maxY <= minY)
+            {
+                return false;
+            }
+
+            TerrainWorldBounds fullMapBounds = BuildChunkWorldBounds(ResolveFullTerrainMapChunkWindow());
+            float margin = OceanZoneDebugVisionBuildPaddingWorldUnits;
+            return minX - margin < fullMapBounds.MinX ||
+                maxX + margin > fullMapBounds.MaxX ||
+                minY - margin < fullMapBounds.MinY ||
+                maxY + margin > fullMapBounds.MaxY;
+        }
+
+        private static bool TryResolveOceanZoneDebugTileRange(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            out int minTileX,
+            out int maxTileX,
+            out int minTileY,
+            out int maxTileY)
+        {
+            minTileX = maxTileX = minTileY = maxTileY = 0;
+            if (!float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                maxX <= minX ||
+                maxY <= minY)
+            {
+                return false;
+            }
+
+            float margin = OceanZoneDebugTileWorldUnits;
+            minTileX = ResolveOceanZoneDebugTileCoordinate(minX - margin);
+            maxTileX = ResolveOceanZoneDebugTileCoordinate(maxX + margin);
+            minTileY = ResolveOceanZoneDebugTileCoordinate(minY - margin);
+            maxTileY = ResolveOceanZoneDebugTileCoordinate(maxY + margin);
+            return true;
+        }
+
+        private static int ResolveOceanZoneDebugTileCoordinate(float worldCoordinate)
+        {
+            if (!float.IsFinite(worldCoordinate))
+            {
+                return 0;
+            }
+
+            return (int)MathF.Floor(worldCoordinate / OceanZoneDebugTileWorldUnits);
+        }
+
+        private static List<OceanZoneDebugSegment> GetOceanZoneDebugTileSegments(OceanZoneDebugTileKey tileKey)
+        {
+            if (OceanZoneDebugTileSegmentCache.TryGetValue(tileKey, out List<OceanZoneDebugSegment> cachedSegments))
+            {
+                return cachedSegments;
+            }
+
+            float tileMinX = tileKey.X * OceanZoneDebugTileWorldUnits;
+            float tileMinY = tileKey.Y * OceanZoneDebugTileWorldUnits;
+            List<OceanZoneDebugSegment> segments = new();
+            BuildOceanZoneDebugSegmentsForFixedGrid(
+                tileMinX,
+                tileMinX + OceanZoneDebugTileWorldUnits,
+                tileMinY,
+                tileMinY + OceanZoneDebugTileWorldUnits,
+                OceanZoneDebugSampleStepWorldUnits,
+                segments);
+            OceanZoneDebugTileSegmentCache[tileKey] = segments;
+            TouchOceanZoneDebugTileCache(tileKey);
+
+            return segments;
+        }
+
+        private static void QueueOceanZoneDebugTileBuilds(List<OceanZoneDebugTileBuildCandidate> missingTileCandidates)
+        {
+            if (missingTileCandidates == null || missingTileCandidates.Count == 0)
+            {
+                return;
+            }
+
+            missingTileCandidates.Sort(static (left, right) =>
+            {
+                int distanceCompare = left.DistanceSq.CompareTo(right.DistanceSq);
+                if (distanceCompare != 0)
+                {
+                    return distanceCompare;
+                }
+
+                int yCompare = left.Key.Y.CompareTo(right.Key.Y);
+                return yCompare != 0 ? yCompare : left.Key.X.CompareTo(right.Key.X);
+            });
+
+            EnsureOceanZoneDebugTileWorkerRunning();
+            int enqueuedCount = 0;
+            lock (OceanZoneDebugTileWorkerLock)
+            {
+                for (int i = 0; i < missingTileCandidates.Count && enqueuedCount < MaxNewOceanZoneDebugTileBuildsPerFrame; i++)
+                {
+                    if (OceanZoneDebugTileBuildQueue.Count >= OceanZoneDebugTileBuildQueueLimit)
+                    {
+                        break;
+                    }
+
+                    OceanZoneDebugTileBuildCandidate candidate = missingTileCandidates[i];
+                    if (OceanZoneDebugTileSegmentCache.ContainsKey(candidate.Key) ||
+                        QueuedOceanZoneDebugTileKeys.Contains(candidate.Key) ||
+                        BuildingOceanZoneDebugTileKeys.Contains(candidate.Key) ||
+                        ContainsCompletedOceanZoneDebugTileBuildLocked(candidate.Key))
+                    {
+                        continue;
+                    }
+
+                    OceanZoneDebugTileBuildQueue.Add(candidate);
+                    QueuedOceanZoneDebugTileKeys.Add(candidate.Key);
+                    _oceanZoneDebugQueuedTileBuildCount++;
+                    enqueuedCount++;
+                }
+
+                if (enqueuedCount > 0)
+                {
+                    SortOceanZoneDebugTileBuildQueueLocked();
+                    UpdateOceanZoneDebugTileWorkerTelemetryLocked();
+                    Monitor.Pulse(OceanZoneDebugTileWorkerLock);
+                }
+            }
+        }
+
+        private static bool IsOceanZoneDebugTileQueuedOrBuilding(OceanZoneDebugTileKey tileKey)
+        {
+            lock (OceanZoneDebugTileWorkerLock)
+            {
+                return QueuedOceanZoneDebugTileKeys.Contains(tileKey) ||
+                    BuildingOceanZoneDebugTileKeys.Contains(tileKey) ||
+                    ContainsCompletedOceanZoneDebugTileBuildLocked(tileKey);
+            }
+        }
+
+        private static bool ContainsCompletedOceanZoneDebugTileBuildLocked(OceanZoneDebugTileKey tileKey)
+        {
+            foreach (OceanZoneDebugTileBuildResult result in CompletedOceanZoneDebugTileBuildQueue)
+            {
+                if (result.Key.Equals(tileKey))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void EnsureOceanZoneDebugTileWorkerRunning()
+        {
+            if (_oceanZoneDebugTileWorkerThread != null && _oceanZoneDebugTileWorkerThread.IsAlive)
+            {
+                return;
+            }
+
+            lock (OceanZoneDebugTileWorkerLock)
+            {
+                if (_oceanZoneDebugTileWorkerThread != null && _oceanZoneDebugTileWorkerThread.IsAlive)
+                {
+                    return;
+                }
+
+                _oceanZoneDebugTileWorkerStopRequested = false;
+                _oceanZoneDebugTileWorkerThread = new Thread(OceanZoneDebugTileWorkerLoop)
+                {
+                    IsBackground = true,
+                    Name = "OceanZoneDebugTileWorker",
+                    Priority = ThreadPriority.BelowNormal
+                };
+                _oceanZoneDebugTileWorkerThread.Start();
+            }
+        }
+
+        private static void OceanZoneDebugTileWorkerLoop()
+        {
+            while (true)
+            {
+                OceanZoneDebugTileBuildCandidate candidate;
+                int generation;
+                lock (OceanZoneDebugTileWorkerLock)
+                {
+                    while (!_oceanZoneDebugTileWorkerStopRequested && OceanZoneDebugTileBuildQueue.Count == 0)
+                    {
+                        UpdateOceanZoneDebugTileWorkerTelemetryLocked();
+                        Monitor.Wait(OceanZoneDebugTileWorkerLock);
+                    }
+
+                    if (_oceanZoneDebugTileWorkerStopRequested)
+                    {
+                        return;
+                    }
+
+                    candidate = OceanZoneDebugTileBuildQueue[0];
+                    OceanZoneDebugTileBuildQueue.RemoveAt(0);
+                    QueuedOceanZoneDebugTileKeys.Remove(candidate.Key);
+                    BuildingOceanZoneDebugTileKeys.Add(candidate.Key);
+                    generation = _oceanZoneDebugTileWorkerGeneration;
+                    UpdateOceanZoneDebugTileWorkerTelemetryLocked();
+                }
+
+                OceanZoneDebugTileBuildResult result = default;
+                bool hasResult = false;
+                try
+                {
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+                    float tileMinX = candidate.Key.X * OceanZoneDebugTileWorldUnits;
+                    float tileMinY = candidate.Key.Y * OceanZoneDebugTileWorldUnits;
+                    List<OceanZoneDebugSegment> segments = new();
+                    BuildOceanZoneDebugSegmentsForFixedGrid(
+                        tileMinX,
+                        tileMinX + OceanZoneDebugTileWorldUnits,
+                        tileMinY,
+                        tileMinY + OceanZoneDebugTileWorldUnits,
+                        OceanZoneDebugSampleStepWorldUnits,
+                        segments);
+                    stopwatch.Stop();
+
+                    result = new OceanZoneDebugTileBuildResult(candidate.Key, segments, stopwatch.Elapsed.TotalMilliseconds);
+                    hasResult = true;
+                    if (result.BuildMilliseconds >= OceanZoneDebugSlowTileBuildLogThresholdMilliseconds &&
+                        _oceanZoneDebugSlowTileBuildLogCount < OceanZoneDebugMaxSlowTileBuildLogs)
+                    {
+                        _oceanZoneDebugSlowTileBuildLogCount++;
+                        DebugLogger.PrintDebug(
+                            $"GameBlockTerrainBackground: ocean debug tile {candidate.Key.X},{candidate.Key.Y} built slowly in {result.BuildMilliseconds:0.0} ms with {segments.Count} segments.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.PrintWarning($"GameBlockTerrainBackground: ocean debug tile build {candidate.Key.X},{candidate.Key.Y} failed. {ex.GetBaseException().Message}");
+                }
+
+                lock (OceanZoneDebugTileWorkerLock)
+                {
+                    BuildingOceanZoneDebugTileKeys.Remove(candidate.Key);
+                    if (hasResult &&
+                        generation == _oceanZoneDebugTileWorkerGeneration)
+                    {
+                        CompletedOceanZoneDebugTileBuildQueue.Enqueue(result);
+                    }
+
+                    UpdateOceanZoneDebugTileWorkerTelemetryLocked();
+                    Monitor.Pulse(OceanZoneDebugTileWorkerLock);
+                }
+            }
+        }
+
+        private static void SortOceanZoneDebugTileBuildQueueLocked()
+        {
+            OceanZoneDebugTileBuildQueue.Sort(static (left, right) =>
+            {
+                int distanceCompare = left.DistanceSq.CompareTo(right.DistanceSq);
+                if (distanceCompare != 0)
+                {
+                    return distanceCompare;
+                }
+
+                int yCompare = left.Key.Y.CompareTo(right.Key.Y);
+                return yCompare != 0 ? yCompare : left.Key.X.CompareTo(right.Key.X);
+            });
+        }
+
+        private static void TryPromoteCompletedOceanZoneDebugTiles()
+        {
+            int promotedCount = 0;
+            while (promotedCount < MaxCompletedOceanZoneDebugTilePromotionsPerFrame)
+            {
+                OceanZoneDebugTileBuildResult result;
+                bool hasResult;
+                lock (OceanZoneDebugTileWorkerLock)
+                {
+                    hasResult = CompletedOceanZoneDebugTileBuildQueue.Count > 0;
+                    result = hasResult ? CompletedOceanZoneDebugTileBuildQueue.Dequeue() : default;
+                    UpdateOceanZoneDebugTileWorkerTelemetryLocked();
+                }
+
+                if (!hasResult)
+                {
+                    break;
+                }
+
+                OceanZoneDebugTileSegmentCache[result.Key] = result.Segments ?? new List<OceanZoneDebugSegment>();
+                TouchOceanZoneDebugTileCache(result.Key);
+                promotedCount++;
+            }
+        }
+
+        private static void TouchOceanZoneDebugTileCache(OceanZoneDebugTileKey tileKey)
+        {
+            _oceanZoneDebugTileCacheTouchTick++;
+            OceanZoneDebugTileSegmentCacheTouchTicks[tileKey] = _oceanZoneDebugTileCacheTouchTick;
+        }
+
+        private static void PruneOceanZoneDebugTileCache(int retainMinTileX, int retainMaxTileX, int retainMinTileY, int retainMaxTileY)
+        {
+            if (OceanZoneDebugTileSegmentCache.Count <= OceanZoneDebugTileSegmentCacheLimit)
+            {
+                return;
+            }
+
+            List<OceanZoneDebugTileKey> removableKeys = new(OceanZoneDebugTileSegmentCache.Count);
+            foreach (OceanZoneDebugTileKey key in OceanZoneDebugTileSegmentCache.Keys)
+            {
+                if (key.X >= retainMinTileX &&
+                    key.X <= retainMaxTileX &&
+                    key.Y >= retainMinTileY &&
+                    key.Y <= retainMaxTileY)
+                {
+                    continue;
+                }
+
+                removableKeys.Add(key);
+            }
+
+            removableKeys.Sort((left, right) =>
+            {
+                int leftTick = OceanZoneDebugTileSegmentCacheTouchTicks.TryGetValue(left, out int resolvedLeftTick)
+                    ? resolvedLeftTick
+                    : 0;
+                int rightTick = OceanZoneDebugTileSegmentCacheTouchTicks.TryGetValue(right, out int resolvedRightTick)
+                    ? resolvedRightTick
+                    : 0;
+                return leftTick.CompareTo(rightTick);
+            });
+
+            for (int i = 0; i < removableKeys.Count && OceanZoneDebugTileSegmentCache.Count > OceanZoneDebugTileSegmentCacheLimit; i++)
+            {
+                OceanZoneDebugTileSegmentCache.Remove(removableKeys[i]);
+                OceanZoneDebugTileSegmentCacheTouchTicks.Remove(removableKeys[i]);
+            }
+        }
+
+        private static void ResetOceanZoneDebugTileWorkerState(bool clearCache)
+        {
+            lock (OceanZoneDebugTileWorkerLock)
+            {
+                _oceanZoneDebugTileWorkerGeneration++;
+                OceanZoneDebugTileBuildQueue.Clear();
+                QueuedOceanZoneDebugTileKeys.Clear();
+                BuildingOceanZoneDebugTileKeys.Clear();
+                CompletedOceanZoneDebugTileBuildQueue.Clear();
+                UpdateOceanZoneDebugTileWorkerTelemetryLocked();
+                Monitor.Pulse(OceanZoneDebugTileWorkerLock);
+            }
+
+            if (clearCache)
+            {
+                OceanZoneDebugSegments.Clear();
+                OceanZoneDebugTileSegmentCache.Clear();
+                OceanZoneDebugTileSegmentCacheTouchTicks.Clear();
+            }
+        }
+
+        private static void UpdateOceanZoneDebugTileWorkerTelemetryLocked()
+        {
+            _oceanZoneDebugTileWorkerQueuedBuildCount = OceanZoneDebugTileBuildQueue.Count;
+            _oceanZoneDebugTileWorkerActiveBuildCount = BuildingOceanZoneDebugTileKeys.Count;
+            _oceanZoneDebugTileWorkerCompletedQueueCount = CompletedOceanZoneDebugTileBuildQueue.Count;
+        }
+
+        private static string ResolveOceanZoneDebugWorkerStatus()
+        {
+            if (_fullOceanZoneDebugBuildTask != null)
+            {
+                return _fullOceanZoneDebugBuildTask.IsCompleted
+                    ? "full-map build awaiting apply"
+                    : "building full-map ocean borders";
+            }
+
+            return _fullOceanZoneDebugReady
+                ? $"full-map ready segments={_fullOceanZoneDebugSegmentCount}"
+                : _fullOceanZoneDebugStatus;
+        }
+
+        private static void EnsureFullOceanZoneDebugBuildQueued()
+        {
+            if (_fullOceanZoneDebugReady ||
+                _fullOceanZoneDebugBuildTask != null)
+            {
+                return;
+            }
+
+            ChunkBounds fullMapWindow = ResolveFullTerrainMapChunkWindow();
+            TerrainMapSnapshot snapshot = _fullTerrainMapSnapshot;
+            int seed = _terrainWorldSeed;
+            _fullOceanZoneDebugStatus = "building full-map ocean borders";
+            _fullOceanZoneDebugBuildTask = Task.Run(() => BuildFullOceanZoneDebugSegments(seed, fullMapWindow, snapshot));
+        }
+
+        private static OceanZoneDebugFullMapBuildResult BuildFullOceanZoneDebugSegments(
+            int seed,
+            ChunkBounds fullMapWindow,
+            TerrainMapSnapshot snapshot)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            List<OceanZoneDebugSegment> segments = new();
+            TerrainMapSnapshot previousSnapshot = _terrainMapSnapshotOverride;
+            bool previousSeedOverrideActive = _oceanZoneDebugDistanceSeedOverrideActive;
+            int previousSeedOverride = _oceanZoneDebugDistanceSeedOverride;
+            _terrainMapSnapshotOverride = snapshot;
+            _oceanZoneDebugDistanceSeedOverrideActive = true;
+            _oceanZoneDebugDistanceSeedOverride = seed;
+            try
+            {
+                TerrainWorldBounds worldBounds = BuildChunkWorldBounds(fullMapWindow);
+                BuildOceanZoneDebugSegmentsForFixedGrid(
+                    worldBounds.MinX,
+                    worldBounds.MaxX,
+                    worldBounds.MinY,
+                    worldBounds.MaxY,
+                    OceanZoneDebugFullMapSampleStepWorldUnits,
+                    segments);
+            }
+            finally
+            {
+                _terrainMapSnapshotOverride = previousSnapshot;
+                _oceanZoneDebugDistanceSeedOverrideActive = previousSeedOverrideActive;
+                _oceanZoneDebugDistanceSeedOverride = previousSeedOverride;
+            }
+
+            stopwatch.Stop();
+            return new OceanZoneDebugFullMapBuildResult(
+                seed,
+                fullMapWindow,
+                segments,
+                stopwatch.Elapsed.TotalMilliseconds,
+                _oceanZoneDebugTinyZoneSuppressionScratchCount);
+        }
+
+        private static void TryApplyCompletedFullOceanZoneDebugBuild()
+        {
+            Task<OceanZoneDebugFullMapBuildResult> task = _fullOceanZoneDebugBuildTask;
+            if (task == null || !task.IsCompleted)
+            {
+                return;
+            }
+
+            _fullOceanZoneDebugBuildTask = null;
+            if (task.IsFaulted)
+            {
+                Exception ex = task.Exception?.GetBaseException();
+                _fullOceanZoneDebugStatus = $"full-map ocean border build failed: {ex?.Message ?? "unknown error"}";
+                DebugLogger.PrintWarning($"GameBlockTerrainBackground: full-map ocean border build failed. {ex?.Message ?? "unknown error"}");
+                return;
+            }
+
+            OceanZoneDebugFullMapBuildResult result = task.Result;
+            if (result.Seed != _terrainWorldSeed ||
+                !ChunkBoundsEqual(result.FullMapWindow, ResolveFullTerrainMapChunkWindow()))
+            {
+                _fullOceanZoneDebugStatus = "full-map ocean border build discarded as stale";
+                return;
+            }
+
+            FullOceanZoneDebugSegments.Clear();
+            FullOceanZoneDebugSegments.AddRange(result.Segments);
+            _fullOceanZoneDebugReady = true;
+            _fullOceanZoneDebugBuildSeed = result.Seed;
+            _fullOceanZoneDebugSegmentCount = FullOceanZoneDebugSegments.Count;
+            _fullOceanZoneDebugBuildMilliseconds = result.BuildMilliseconds;
+            _oceanZoneDebugSuppressedTinyZoneCount = result.SuppressedTinyZoneCount;
+            _fullOceanZoneDebugStatus = $"full-map ready segments={_fullOceanZoneDebugSegmentCount} buildMs={_fullOceanZoneDebugBuildMilliseconds:0.###} tinyZonesSuppressed={_oceanZoneDebugSuppressedTinyZoneCount}";
+            DebugLogger.PrintDebug(
+                $"GameBlockTerrainBackground: full-map ocean borders built {FullOceanZoneDebugSegments.Count} segments in {result.BuildMilliseconds:0.0} ms; tinyZonesSuppressed={_oceanZoneDebugSuppressedTinyZoneCount}.");
+        }
+
+        private static void PopulateVisibleOceanZoneDebugSegmentsFromFullMap(float minX, float maxX, float minY, float maxY)
+        {
+            if (!float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                maxX <= minX ||
+                maxY <= minY)
+            {
+                return;
+            }
+
+            float margin = OceanZoneDebugVisionBuildPaddingWorldUnits;
+            float expandedMinX = minX - margin;
+            float expandedMaxX = maxX + margin;
+            float expandedMinY = minY - margin;
+            float expandedMaxY = maxY + margin;
+            for (int i = 0; i < FullOceanZoneDebugSegments.Count && OceanZoneDebugSegments.Count < OceanZoneDebugMaxSegments; i++)
+            {
+                OceanZoneDebugSegment segment = FullOceanZoneDebugSegments[i];
+                if (OceanZoneDebugSegmentIntersectsWorldBounds(
+                    segment,
+                    expandedMinX,
+                    expandedMaxX,
+                    expandedMinY,
+                    expandedMaxY))
+                {
+                    OceanZoneDebugSegments.Add(segment);
+                }
+            }
+        }
+
+        private static bool TryPopulateVisibleOceanZoneDebugSegmentsFromTiles(float minX, float maxX, float minY, float maxY)
+        {
+            return TryPopulateVisibleOceanZoneDebugSegmentsFromTiles(
+                minX,
+                maxX,
+                minY,
+                maxY,
+                excludeWorldBounds: false,
+                excludedWorldBounds: default);
+        }
+
+        private static bool TryPopulateVisibleOceanZoneDebugSegmentsFromTiles(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            bool excludeWorldBounds,
+            TerrainWorldBounds excludedWorldBounds)
+        {
+            if (!TryResolveOceanZoneDebugTileRange(
+                minX,
+                maxX,
+                minY,
+                maxY,
+                out int minTileX,
+                out int maxTileX,
+                out int minTileY,
+                out int maxTileY))
+            {
+                return false;
+            }
+
+            PruneOceanZoneDebugTileCache(minTileX, maxTileX, minTileY, maxTileY);
+            float margin = OceanZoneDebugVisionBuildPaddingWorldUnits;
+            float expandedMinX = minX - margin;
+            float expandedMaxX = maxX + margin;
+            float expandedMinY = minY - margin;
+            float expandedMaxY = maxY + margin;
+
+            for (int tileY = minTileY; tileY <= maxTileY; tileY++)
+            {
+                for (int tileX = minTileX; tileX <= maxTileX; tileX++)
+                {
+                    OceanZoneDebugTileKey tileKey = new(tileX, tileY);
+                    List<OceanZoneDebugSegment> cachedSegments = GetOceanZoneDebugTileSegments(tileKey);
+                    if (cachedSegments == null)
+                    {
+                        continue;
+                    }
+
+                    TouchOceanZoneDebugTileCache(tileKey);
+                    for (int i = 0; i < cachedSegments.Count && OceanZoneDebugSegments.Count < OceanZoneDebugMaxSegments; i++)
+                    {
+                        OceanZoneDebugSegment segment = cachedSegments[i];
+                        if (excludeWorldBounds &&
+                            IsOceanZoneDebugSegmentMidpointInsideBounds(segment, excludedWorldBounds))
+                        {
+                            continue;
+                        }
+
+                        if (OceanZoneDebugSegmentIntersectsWorldBounds(
+                            segment,
+                            expandedMinX,
+                            expandedMaxX,
+                            expandedMinY,
+                            expandedMaxY))
+                        {
+                            OceanZoneDebugSegments.Add(segment);
+                        }
+                    }
+                }
+            }
+
+            return OceanZoneDebugSegments.Count > 0;
+        }
+
+        private static bool IsOceanZoneDebugSegmentMidpointInsideBounds(
+            OceanZoneDebugSegment segment,
+            TerrainWorldBounds bounds)
+        {
+            Vector2 midpoint = (segment.From + segment.To) * 0.5f;
+            return midpoint.X >= bounds.MinX &&
+                midpoint.X <= bounds.MaxX &&
+                midpoint.Y >= bounds.MinY &&
+                midpoint.Y <= bounds.MaxY;
+        }
+
+        private static bool OceanZoneDebugSegmentIntersectsWorldBounds(
+            OceanZoneDebugSegment segment,
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            float segmentMinX = MathF.Min(segment.From.X, segment.To.X);
+            float segmentMaxX = MathF.Max(segment.From.X, segment.To.X);
+            float segmentMinY = MathF.Min(segment.From.Y, segment.To.Y);
+            float segmentMaxY = MathF.Max(segment.From.Y, segment.To.Y);
+            return segmentMaxX >= minX &&
+                segmentMinX <= maxX &&
+                segmentMaxY >= minY &&
+                segmentMinY <= maxY;
+        }
+
+        private static bool TryResolveOceanZoneDebugBuildGrid(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            out float buildMinX,
+            out float buildMaxX,
+            out float buildMinY,
+            out float buildMaxY,
+            out float sampleStep)
+        {
+            buildMinX = buildMaxX = buildMinY = buildMaxY = 0f;
+            sampleStep = OceanZoneDebugSampleStepWorldUnits;
+            if (!float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                maxX <= minX ||
+                maxY <= minY)
+            {
+                return false;
+            }
+
+            float maxDebugThreshold = ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance));
+            float margin = maxDebugThreshold + OceanZoneDebugSampleStepWorldUnits;
+            float targetWidth = (maxX - minX) + (margin * 2f);
+            float targetHeight = (maxY - minY) + (margin * 2f);
+            float expandedSpan = MathF.Max(targetWidth, targetHeight);
+            sampleStep = MathF.Max(
+                OceanZoneDebugSampleStepWorldUnits,
+                expandedSpan / Math.Max(1, OceanZoneDebugMaxSampleAxis - 4));
+
+            float centerX = (minX + maxX) * 0.5f;
+            float centerY = (minY + maxY) * 0.5f;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                int columns = Math.Max(2, (int)MathF.Ceiling(targetWidth / sampleStep) + 1);
+                int rows = Math.Max(2, (int)MathF.Ceiling(targetHeight / sampleStep) + 1);
+                if (columns <= OceanZoneDebugMaxSampleAxis + 1 &&
+                    rows <= OceanZoneDebugMaxSampleAxis + 1)
+                {
+                    float snappedCenterX = MathF.Round(centerX / sampleStep) * sampleStep;
+                    float snappedCenterY = MathF.Round(centerY / sampleStep) * sampleStep;
+                    float halfWidth = ((columns - 1) * sampleStep) * 0.5f;
+                    float halfHeight = ((rows - 1) * sampleStep) * 0.5f;
+                    buildMinX = snappedCenterX - halfWidth;
+                    buildMaxX = snappedCenterX + halfWidth;
+                    buildMinY = snappedCenterY - halfHeight;
+                    buildMaxY = snappedCenterY + halfHeight;
+                    return true;
+                }
+
+                sampleStep *= 1.18f;
+            }
+
+            float fallbackCenterX = MathF.Round(centerX / sampleStep) * sampleStep;
+            float fallbackCenterY = MathF.Round(centerY / sampleStep) * sampleStep;
+            buildMinX = fallbackCenterX - (targetWidth * 0.5f);
+            buildMaxX = fallbackCenterX + (targetWidth * 0.5f);
+            buildMinY = fallbackCenterY - (targetHeight * 0.5f);
+            buildMaxY = fallbackCenterY + (targetHeight * 0.5f);
+
+            return true;
+        }
+
+        private static int BuildOceanZoneDebugSegments(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            List<OceanZoneDebugSegment> segments)
+        {
+            segments?.Clear();
+            if (segments == null ||
+                !float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                maxX <= minX ||
+                maxY <= minY)
+            {
+                return 0;
+            }
+
+            LoadSettingsIfNeeded();
+            EnsureTerrainWorldBoundsInitialized();
+
+            if (!TryResolveOceanZoneDebugBuildGrid(
+                minX,
+                maxX,
+                minY,
+                maxY,
+                out minX,
+                out maxX,
+                out minY,
+                out maxY,
+                out float sampleStep))
+            {
+                return 0;
+            }
+
+            return BuildOceanZoneDebugSegmentsForFixedGrid(minX, maxX, minY, maxY, sampleStep, segments);
+        }
+
+        private static int BuildOceanZoneDebugSegmentsForFixedGrid(
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            float sampleStep,
+            List<OceanZoneDebugSegment> segments)
+        {
+            if (segments == null ||
+                !float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY) ||
+                !float.IsFinite(sampleStep) ||
+                maxX <= minX ||
+                maxY <= minY ||
+                sampleStep <= 0f)
+            {
+                return 0;
+            }
+
+            float maxDebugThreshold = ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance));
+            int sampleColumns = Math.Max(2, (int)MathF.Ceiling((maxX - minX) / sampleStep) + 1);
+            int sampleRows = Math.Max(2, (int)MathF.Ceiling((maxY - minY) / sampleStep) + 1);
+            float stepX = sampleStep;
+            float stepY = sampleStep;
+            OceanZoneDebugSample[] samples = new OceanZoneDebugSample[sampleColumns * sampleRows];
+            float maxSearchDistance = maxDebugThreshold + MathF.Max(stepX, stepY);
+
+            for (int y = 0; y < sampleRows; y++)
+            {
+                float sampleY = minY + (y * stepY);
+                for (int x = 0; x < sampleColumns; x++)
+                {
+                    float sampleX = minX + (x * stepX);
+                    int sampleIndex = Index(x, y, sampleColumns);
+                    Vector2 samplePosition = new(sampleX, sampleY);
+                    samples[sampleIndex] = ResolveOceanZoneDebugWaterSample(samplePosition, maxSearchDistance);
+                }
+            }
+
+            _oceanZoneDebugTinyZoneSuppressionScratchCount = 0;
+            _oceanZoneDebugTinyZoneSuppressedCellsScratch = null;
+            _oceanZoneDebugTinyZoneSuppressionScratchCount = ApplyOceanZoneDebugMinimumStableZoneFilter(
+                samples,
+                sampleColumns,
+                sampleRows,
+                stepX,
+                stepY);
+
+            float[] thresholds = ResolveOceanZoneDebugThresholds();
+            for (int y = 0; y < sampleRows - 1 && segments.Count < OceanZoneDebugMaxSegments; y++)
+            {
+                for (int x = 0; x < sampleColumns - 1 && segments.Count < OceanZoneDebugMaxSegments; x++)
+                {
+                    Vector2 topLeftPosition = new(minX + (x * stepX), minY + (y * stepY));
+                    Vector2 topRightPosition = new(topLeftPosition.X + stepX, topLeftPosition.Y);
+                    Vector2 bottomRightPosition = new(topLeftPosition.X + stepX, topLeftPosition.Y + stepY);
+                    Vector2 bottomLeftPosition = new(topLeftPosition.X, topLeftPosition.Y + stepY);
+                    OceanZoneDebugSample topLeft = samples[Index(x, y, sampleColumns)];
+                    OceanZoneDebugSample topRight = samples[Index(x + 1, y, sampleColumns)];
+                    OceanZoneDebugSample bottomRight = samples[Index(x + 1, y + 1, sampleColumns)];
+                    OceanZoneDebugSample bottomLeft = samples[Index(x, y + 1, sampleColumns)];
+                    if (!topLeft.IsWater ||
+                        !topRight.IsWater ||
+                        !bottomRight.IsWater ||
+                        !bottomLeft.IsWater)
+                    {
+                        continue;
+                    }
+
+                    AddOceanZoneDebugCellSegments(
+                        topLeft,
+                        topRight,
+                        bottomRight,
+                        bottomLeft,
+                        topLeftPosition,
+                        topRightPosition,
+                        bottomRightPosition,
+                        bottomLeftPosition,
+                        thresholds,
+                        maxSearchDistance,
+                        depth: 0,
+                        segments);
+                }
+            }
+
+            return segments.Count;
+        }
+
+        private static float ResolveOceanZoneDebugSampleStep(float minX, float maxX, float minY, float maxY)
+        {
+            float span = MathF.Max(MathF.Abs(maxX - minX), MathF.Abs(maxY - minY));
+            return MathF.Max(OceanZoneDebugSampleStepWorldUnits, span / Math.Max(1, OceanZoneDebugMaxSampleAxis));
+        }
+
+        private static float[] ResolveOceanZoneDebugThresholds()
+        {
+            return
+            [
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance),
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance),
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterTwilightDistance),
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance)
+            ];
+        }
+
+        private static int ApplyOceanZoneDebugMinimumStableZoneFilter(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            float stepX,
+            float stepY)
+        {
+            if (samples == null ||
+                samples.Length < width * height ||
+                width <= 0 ||
+                height <= 0 ||
+                !float.IsFinite(stepX) ||
+                !float.IsFinite(stepY) ||
+                stepX <= 0f ||
+                stepY <= 0f)
+            {
+                return 0;
+            }
+
+            int totalSuppressed = 0;
+            bool[] suppressedCells = new bool[samples.Length];
+            _oceanZoneDebugTinyZoneSuppressedCellsScratch = suppressedCells;
+            for (int pass = 0; pass < OceanZoneDebugMinimumStableZoneFilterPasses; pass++)
+            {
+                int passSuppressed = ApplyOceanZoneDebugMinimumStableZoneFilterPass(samples, width, height, stepX, stepY, suppressedCells);
+                totalSuppressed += passSuppressed;
+                if (passSuppressed == 0)
+                {
+                    break;
+                }
+            }
+
+            return totalSuppressed;
+        }
+
+        private static int ApplyOceanZoneDebugMinimumStableZoneFilterPass(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            float stepX,
+            float stepY,
+            bool[] suppressedCells)
+        {
+            bool[] visited = new bool[width * height];
+            List<int> component = new();
+            Queue<int> queue = new();
+            int suppressed = 0;
+
+            for (int index = 0; index < samples.Length; index++)
+            {
+                if (visited[index] || !samples[index].IsWater)
+                {
+                    continue;
+                }
+
+                component.Clear();
+                CollectOceanZoneDebugComponent(samples, width, height, index, visited, queue, component);
+                if (component.Count == 0)
+                {
+                    continue;
+                }
+
+                if (OceanZoneDebugComponentContainsSuppressedCell(component, suppressedCells))
+                {
+                    continue;
+                }
+
+                if (OceanZoneDebugComponentTouchesSampleBoundary(component, width, height))
+                {
+                    continue;
+                }
+
+                TerrainWaterType waterType = samples[index].WaterType;
+                if (OceanZoneDebugComponentHasStableCore(samples, width, height, stepX, stepY, component, waterType))
+                {
+                    continue;
+                }
+
+                TerrainWaterType fallback = ResolveOceanZoneDebugTinyZoneFallback(samples, width, height, component, waterType);
+                if (fallback == waterType)
+                {
+                    continue;
+                }
+
+                float fallbackDistance = ResolveRepresentativeOffshoreDistanceForWaterType(fallback);
+                for (int i = 0; i < component.Count; i++)
+                {
+                    int componentIndex = component[i];
+                    samples[componentIndex] = new OceanZoneDebugSample(true, fallback, fallbackDistance);
+                    if (suppressedCells != null && componentIndex >= 0 && componentIndex < suppressedCells.Length)
+                    {
+                        suppressedCells[componentIndex] = true;
+                    }
+                }
+
+                suppressed++;
+            }
+
+            return suppressed;
+        }
+
+        private static int CountOceanZoneDebugMinimumStableZoneViolations(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            float stepX,
+            float stepY,
+            out string summary)
+        {
+            summary = "none";
+            if (samples == null || samples.Length < width * height)
+            {
+                return 0;
+            }
+
+            bool[] visited = new bool[width * height];
+            List<int> component = new();
+            Queue<int> queue = new();
+            int violations = 0;
+            Dictionary<string, int> violationCounts = new();
+            bool[] suppressedCells = _oceanZoneDebugTinyZoneSuppressedCellsScratch;
+
+            for (int index = 0; index < samples.Length; index++)
+            {
+                if (visited[index] || !samples[index].IsWater)
+                {
+                    continue;
+                }
+
+                component.Clear();
+                CollectOceanZoneDebugComponent(samples, width, height, index, visited, queue, component);
+                if (component.Count == 0)
+                {
+                    continue;
+                }
+
+                if (OceanZoneDebugComponentTouchesSampleBoundary(component, width, height))
+                {
+                    continue;
+                }
+
+                if (OceanZoneDebugComponentContainsSuppressedCell(component, suppressedCells))
+                {
+                    continue;
+                }
+
+                TerrainWaterType waterType = samples[index].WaterType;
+                TerrainWaterType fallback = ResolveOceanZoneDebugTinyZoneFallback(samples, width, height, component, waterType);
+                if (!OceanZoneDebugComponentHasStableCore(samples, width, height, stepX, stepY, component, waterType) &&
+                    fallback != waterType)
+                {
+                    violations++;
+                    string key = $"{waterType}->{fallback}";
+                    violationCounts[key] = violationCounts.TryGetValue(key, out int count) ? count + 1 : 1;
+                }
+            }
+
+            if (violationCounts.Count > 0)
+            {
+                List<string> parts = new();
+                foreach (KeyValuePair<string, int> entry in violationCounts)
+                {
+                    parts.Add($"{entry.Key}:{entry.Value}");
+                }
+
+                parts.Sort(StringComparer.Ordinal);
+                summary = string.Join(", ", parts);
+            }
+
+            return violations;
+        }
+
+        private static bool OceanZoneDebugComponentContainsSuppressedCell(List<int> component, bool[] suppressedCells)
+        {
+            if (component == null || suppressedCells == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < component.Count; i++)
+            {
+                int index = component[i];
+                if (index >= 0 && index < suppressedCells.Length && suppressedCells[index])
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void CollectOceanZoneDebugComponent(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            int startIndex,
+            bool[] visited,
+            Queue<int> queue,
+            List<int> component)
+        {
+            TerrainWaterType waterType = samples[startIndex].WaterType;
+            visited[startIndex] = true;
+            queue.Enqueue(startIndex);
+
+            while (queue.Count > 0)
+            {
+                int index = queue.Dequeue();
+                component.Add(index);
+                int x = index % width;
+                int y = index / width;
+                TryQueueOceanZoneDebugComponentNeighbor(samples, width, height, x - 1, y, waterType, visited, queue);
+                TryQueueOceanZoneDebugComponentNeighbor(samples, width, height, x + 1, y, waterType, visited, queue);
+                TryQueueOceanZoneDebugComponentNeighbor(samples, width, height, x, y - 1, waterType, visited, queue);
+                TryQueueOceanZoneDebugComponentNeighbor(samples, width, height, x, y + 1, waterType, visited, queue);
+            }
+        }
+
+        private static void TryQueueOceanZoneDebugComponentNeighbor(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            int x,
+            int y,
+            TerrainWaterType waterType,
+            bool[] visited,
+            Queue<int> queue)
+        {
+            if (x < 0 || x >= width || y < 0 || y >= height)
+            {
+                return;
+            }
+
+            int index = Index(x, y, width);
+            if (visited[index] ||
+                !samples[index].IsWater ||
+                samples[index].WaterType != waterType)
+            {
+                return;
+            }
+
+            visited[index] = true;
+            queue.Enqueue(index);
+        }
+
+        private static bool OceanZoneDebugComponentHasStableCore(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            float stepX,
+            float stepY,
+            List<int> component,
+            TerrainWaterType waterType)
+        {
+            for (int i = 0; i < component.Count; i++)
+            {
+                int index = component[i];
+                int x = index % width;
+                int y = index / width;
+                if (IsOceanZoneDebugStableCoreCell(samples, width, height, stepX, stepY, x, y, waterType))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsOceanZoneDebugStableCoreCell(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            float stepX,
+            float stepY,
+            int centerX,
+            int centerY,
+            TerrainWaterType waterType)
+        {
+            float radius = MathF.Max(
+                OceanZoneDebugMinimumStableZoneRadiusWorldUnits,
+                MathF.Min(stepX, stepY));
+            int radiusCellsX = Math.Max(1, (int)MathF.Ceiling(radius / stepX));
+            int radiusCellsY = Math.Max(1, (int)MathF.Ceiling(radius / stepY));
+            float radiusSq = radius * radius;
+
+            for (int y = centerY - radiusCellsY; y <= centerY + radiusCellsY; y++)
+            {
+                for (int x = centerX - radiusCellsX; x <= centerX + radiusCellsX; x++)
+                {
+                    float dx = (x - centerX) * stepX;
+                    float dy = (y - centerY) * stepY;
+                    if ((dx * dx) + (dy * dy) > radiusSq)
+                    {
+                        continue;
+                    }
+
+                    if (x < 0 || x >= width || y < 0 || y >= height)
+                    {
+                        return false;
+                    }
+
+                    OceanZoneDebugSample sample = samples[Index(x, y, width)];
+                    if (!sample.IsWater || sample.WaterType != waterType)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static TerrainWaterType ResolveOceanZoneDebugTinyZoneFallback(
+            OceanZoneDebugSample[] samples,
+            int width,
+            int height,
+            List<int> component,
+            TerrainWaterType sourceType)
+        {
+            if (sourceType != TerrainWaterType.Abyss)
+            {
+                return ResolveOceanZoneDebugZoneBehind(sourceType);
+            }
+
+            if (OceanZoneDebugComponentTouchesSampleBoundary(component, width, height))
+            {
+                return sourceType;
+            }
+
+            Span<int> neighborCounts = stackalloc int[5];
+            for (int i = 0; i < component.Count; i++)
+            {
+                int index = component[i];
+                int centerX = index % width;
+                int centerY = index / width;
+                for (int y = centerY - 1; y <= centerY + 1; y++)
+                {
+                    for (int x = centerX - 1; x <= centerX + 1; x++)
+                    {
+                        if ((x == centerX && y == centerY) ||
+                            x < 0 || x >= width || y < 0 || y >= height)
+                        {
+                            continue;
+                        }
+
+                        OceanZoneDebugSample neighbor = samples[Index(x, y, width)];
+                        if (!neighbor.IsWater || neighbor.WaterType == sourceType)
+                        {
+                            continue;
+                        }
+
+                        int order = ResolveOceanZoneDebugWaterTypeOrder(neighbor.WaterType);
+                        if (order >= 0 && order < neighborCounts.Length)
+                        {
+                            neighborCounts[order]++;
+                        }
+                    }
+                }
+            }
+
+            int sourceOrder = ResolveOceanZoneDebugWaterTypeOrder(sourceType);
+            int bestOrder = -1;
+            int bestCount = 0;
+            int bestDistance = int.MaxValue;
+            for (int order = 0; order < neighborCounts.Length; order++)
+            {
+                int count = neighborCounts[order];
+                int distance = Math.Abs(order - sourceOrder);
+                if (count <= 0 ||
+                    count < bestCount ||
+                    (count == bestCount && distance >= bestDistance))
+                {
+                    continue;
+                }
+
+                bestOrder = order;
+                bestCount = count;
+                bestDistance = distance;
+            }
+
+            return bestOrder >= 0
+                ? ResolveOceanZoneDebugWaterTypeFromOrder(bestOrder)
+                : ResolveOceanZoneDebugZoneBehind(sourceType);
+        }
+
+        private static bool OceanZoneDebugComponentTouchesSampleBoundary(List<int> component, int width, int height)
+        {
+            for (int i = 0; i < component.Count; i++)
+            {
+                int index = component[i];
+                int x = index % width;
+                int y = index / width;
+                if (x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static TerrainWaterType ResolveOceanZoneDebugZoneBehind(TerrainWaterType sourceType)
+        {
+            return sourceType switch
+            {
+                TerrainWaterType.Shallow => TerrainWaterType.Sunlit,
+                TerrainWaterType.Sunlit => TerrainWaterType.Twilight,
+                TerrainWaterType.Twilight => TerrainWaterType.Midnight,
+                _ => TerrainWaterType.Abyss
+            };
+        }
+
+        private static TerrainWaterType ResolveOceanZoneDebugWaterTypeFromOrder(int order)
+        {
+            return order switch
+            {
+                0 => TerrainWaterType.Shallow,
+                1 => TerrainWaterType.Sunlit,
+                2 => TerrainWaterType.Twilight,
+                3 => TerrainWaterType.Midnight,
+                _ => TerrainWaterType.Abyss
+            };
+        }
+
+        private static float ResolveRepresentativeOffshoreDistanceForWaterType(TerrainWaterType waterType)
+        {
+            float shallow = ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance);
+            float sunlit = ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance);
+            float twilight = ResolveEffectiveOceanZoneTransitionDistance(DevWaterTwilightDistance);
+            float midnight = ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance);
+            return waterType switch
+            {
+                TerrainWaterType.Shallow => shallow * 0.5f,
+                TerrainWaterType.Sunlit => (shallow + sunlit) * 0.5f,
+                TerrainWaterType.Twilight => (sunlit + twilight) * 0.5f,
+                TerrainWaterType.Midnight => (twilight + midnight) * 0.5f,
+                _ => midnight + OceanZoneDebugMinimumStableZoneRadiusWorldUnits
+            };
+        }
+
+        private static OceanZoneDebugSample ResolveOceanZoneDebugWaterSample(
+            Vector2 worldPosition,
+            float maxSearchDistanceWorldUnits)
+        {
+            if (!IsFiniteVector(worldPosition))
+            {
+                return new OceanZoneDebugSample(false, TerrainWaterType.Shallow, 0f);
+            }
+
+            if (!TerrainWorldContainsPoint(worldPosition.X, worldPosition.Y))
+            {
+                return new OceanZoneDebugSample(
+                    true,
+                    TerrainWaterType.Abyss,
+                    ResolveInfiniteAbyssOffshoreDistance());
+            }
+
+            // Land is not a clipping mask here; zone polygons must stay closed and match the runtime distance resolver.
+            float offshoreDistance = ResolveOceanZoneDebugOffshoreDistance(worldPosition, maxSearchDistanceWorldUnits);
+            TerrainWaterType waterType = ResolveWaterTypeFromOffshoreDistance(offshoreDistance);
+            return new OceanZoneDebugSample(true, waterType, offshoreDistance);
+        }
+
+        private static float ResolveOceanZoneDebugOffshoreDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            int seed = _oceanZoneDebugDistanceSeedOverrideActive
+                ? _oceanZoneDebugDistanceSeedOverride
+                : _terrainWorldSeed;
+            return ResolveCanonicalOceanZoneOffshoreDistance(worldPosition, seed);
+        }
+
+        private static bool TryResolveGeneratedOceanZoneDebugOffshoreDistance(
+            Vector2 worldPosition,
+            float maxSearchDistanceWorldUnits,
+            out float offshoreDistance)
+        {
+            offshoreDistance = 0f;
+            TerrainMapSnapshot overrideSnapshot = _terrainMapSnapshotOverride;
+            if (overrideSnapshot != null &&
+                overrideSnapshot.TryResolveNearestLandDistance(
+                    worldPosition.X,
+                    worldPosition.Y,
+                    maxSearchDistanceWorldUnits,
+                    out offshoreDistance))
+            {
+                return true;
+            }
+
+            TerrainMapSnapshot fullMapSnapshot = _fullTerrainMapSnapshot;
+            if (fullMapSnapshot != null &&
+                fullMapSnapshot.TryResolveNearestLandDistance(
+                    worldPosition.X,
+                    worldPosition.Y,
+                    maxSearchDistanceWorldUnits,
+                    out offshoreDistance))
+            {
+                return true;
+            }
+
+            if (TryResolveResidentTerrainVectorOffshoreDistance(
+                worldPosition,
+                maxSearchDistanceWorldUnits,
+                assumeFarWaterWhenNoNearbyEdge: false,
+                out bool isWater,
+                out offshoreDistance))
+            {
+                return isWater;
+            }
+
+            return false;
+        }
+
+        private static void AddOceanZoneDebugCellSegments(
+            OceanZoneDebugSample topLeft,
+            OceanZoneDebugSample topRight,
+            OceanZoneDebugSample bottomRight,
+            OceanZoneDebugSample bottomLeft,
+            Vector2 topLeftPosition,
+            Vector2 topRightPosition,
+            Vector2 bottomRightPosition,
+            Vector2 bottomLeftPosition,
+            float[] thresholds,
+            float maxSearchDistance,
+            int depth,
+            List<OceanZoneDebugSegment> segments)
+        {
+            if (segments == null ||
+                segments.Count >= OceanZoneDebugMaxSegments ||
+                thresholds == null ||
+                thresholds.Length == 0)
+            {
+                return;
+            }
+
+            if (ShouldSubdivideOceanZoneDebugCell(
+                topLeft,
+                topRight,
+                bottomRight,
+                bottomLeft,
+                topLeftPosition,
+                topRightPosition,
+                bottomRightPosition,
+                bottomLeftPosition,
+                thresholds,
+                depth))
+            {
+                Vector2 topMidPosition = (topLeftPosition + topRightPosition) * 0.5f;
+                Vector2 rightMidPosition = (topRightPosition + bottomRightPosition) * 0.5f;
+                Vector2 bottomMidPosition = (bottomLeftPosition + bottomRightPosition) * 0.5f;
+                Vector2 leftMidPosition = (topLeftPosition + bottomLeftPosition) * 0.5f;
+                Vector2 centerPosition = (topLeftPosition + bottomRightPosition) * 0.5f;
+
+                OceanZoneDebugSample topMid = ResolveOceanZoneDebugWaterSample(topMidPosition, maxSearchDistance);
+                OceanZoneDebugSample rightMid = ResolveOceanZoneDebugWaterSample(rightMidPosition, maxSearchDistance);
+                OceanZoneDebugSample bottomMid = ResolveOceanZoneDebugWaterSample(bottomMidPosition, maxSearchDistance);
+                OceanZoneDebugSample leftMid = ResolveOceanZoneDebugWaterSample(leftMidPosition, maxSearchDistance);
+                OceanZoneDebugSample center = ResolveOceanZoneDebugWaterSample(centerPosition, maxSearchDistance);
+                int nextDepth = depth + 1;
+
+                AddOceanZoneDebugCellSegments(
+                    topLeft,
+                    topMid,
+                    center,
+                    leftMid,
+                    topLeftPosition,
+                    topMidPosition,
+                    centerPosition,
+                    leftMidPosition,
+                    thresholds,
+                    maxSearchDistance,
+                    nextDepth,
+                    segments);
+                AddOceanZoneDebugCellSegments(
+                    topMid,
+                    topRight,
+                    rightMid,
+                    center,
+                    topMidPosition,
+                    topRightPosition,
+                    rightMidPosition,
+                    centerPosition,
+                    thresholds,
+                    maxSearchDistance,
+                    nextDepth,
+                    segments);
+                AddOceanZoneDebugCellSegments(
+                    center,
+                    rightMid,
+                    bottomRight,
+                    bottomMid,
+                    centerPosition,
+                    rightMidPosition,
+                    bottomRightPosition,
+                    bottomMidPosition,
+                    thresholds,
+                    maxSearchDistance,
+                    nextDepth,
+                    segments);
+                AddOceanZoneDebugCellSegments(
+                    leftMid,
+                    center,
+                    bottomMid,
+                    bottomLeft,
+                    leftMidPosition,
+                    centerPosition,
+                    bottomMidPosition,
+                    bottomLeftPosition,
+                    thresholds,
+                    maxSearchDistance,
+                    nextDepth,
+                    segments);
+                return;
+            }
+
+            Vector2 deeperNormal = ResolveOceanZoneDebugDeeperNormal(topLeft, topRight, bottomRight, bottomLeft);
+            for (int thresholdIndex = 0; thresholdIndex < thresholds.Length && segments.Count < OceanZoneDebugMaxSegments; thresholdIndex++)
+            {
+                AddOceanZoneDebugContourSegments(
+                    threshold: thresholds[thresholdIndex],
+                    topLeft,
+                    topRight,
+                    bottomRight,
+                    bottomLeft,
+                    topLeftPosition,
+                    topRightPosition,
+                    bottomRightPosition,
+                    bottomLeftPosition,
+                    deeperNormal,
+                    maxSearchDistance,
+                    segments);
+            }
+        }
+
+        private static bool ShouldSubdivideOceanZoneDebugCell(
+            OceanZoneDebugSample topLeft,
+            OceanZoneDebugSample topRight,
+            OceanZoneDebugSample bottomRight,
+            OceanZoneDebugSample bottomLeft,
+            Vector2 topLeftPosition,
+            Vector2 topRightPosition,
+            Vector2 bottomRightPosition,
+            Vector2 bottomLeftPosition,
+            float[] thresholds,
+            int depth)
+        {
+            if (ShouldUseFastOceanZoneDebugContours() ||
+                depth >= OceanZoneDebugMaxCellSubdivisionDepth ||
+                !topLeft.IsWater ||
+                !topRight.IsWater ||
+                !bottomRight.IsWater ||
+                !bottomLeft.IsWater)
+            {
+                return false;
+            }
+
+            float width = MathF.Max(
+                Vector2.Distance(topLeftPosition, topRightPosition),
+                Vector2.Distance(bottomLeftPosition, bottomRightPosition));
+            float height = MathF.Max(
+                Vector2.Distance(topLeftPosition, bottomLeftPosition),
+                Vector2.Distance(topRightPosition, bottomRightPosition));
+            if (MathF.Max(width, height) <= OceanZoneDebugMinimumCellWorldUnits)
+            {
+                return false;
+            }
+
+            int minOrder = Math.Min(
+                Math.Min(ResolveOceanZoneDebugWaterTypeOrder(topLeft.WaterType), ResolveOceanZoneDebugWaterTypeOrder(topRight.WaterType)),
+                Math.Min(ResolveOceanZoneDebugWaterTypeOrder(bottomRight.WaterType), ResolveOceanZoneDebugWaterTypeOrder(bottomLeft.WaterType)));
+            int maxOrder = Math.Max(
+                Math.Max(ResolveOceanZoneDebugWaterTypeOrder(topLeft.WaterType), ResolveOceanZoneDebugWaterTypeOrder(topRight.WaterType)),
+                Math.Max(ResolveOceanZoneDebugWaterTypeOrder(bottomRight.WaterType), ResolveOceanZoneDebugWaterTypeOrder(bottomLeft.WaterType)));
+            return maxOrder - minOrder > 1;
+        }
+
+        private static bool ShouldUseFastOceanZoneDebugContours()
+        {
+            return true;
+        }
+
+        private static Vector2 ResolveOceanZoneDebugDeeperNormal(
+            OceanZoneDebugSample topLeft,
+            OceanZoneDebugSample topRight,
+            OceanZoneDebugSample bottomRight,
+            OceanZoneDebugSample bottomLeft)
+        {
+            float gradientX = ((topRight.OffshoreDistance + bottomRight.OffshoreDistance) -
+                (topLeft.OffshoreDistance + bottomLeft.OffshoreDistance)) * 0.5f;
+            float gradientY = ((bottomLeft.OffshoreDistance + bottomRight.OffshoreDistance) -
+                (topLeft.OffshoreDistance + topRight.OffshoreDistance)) * 0.5f;
+            Vector2 normal = new(gradientX, gradientY);
+            if (normal.LengthSquared() <= 0.0001f)
+            {
+                return Vector2.UnitY;
+            }
+
+            normal.Normalize();
+            return normal;
+        }
+
+        private static void AddOceanZoneDebugContourSegments(
+            float threshold,
+            OceanZoneDebugSample topLeft,
+            OceanZoneDebugSample topRight,
+            OceanZoneDebugSample bottomRight,
+            OceanZoneDebugSample bottomLeft,
+            Vector2 topLeftPosition,
+            Vector2 topRightPosition,
+            Vector2 bottomRightPosition,
+            Vector2 bottomLeftPosition,
+            Vector2 deeperNormal,
+            float maxSearchDistance,
+            List<OceanZoneDebugSegment> segments)
+        {
+            Span<Vector2> intersections = stackalloc Vector2[4];
+            int count = 0;
+            TryAddOceanZoneDebugIntersection(topLeft, topRight, topLeftPosition, topRightPosition, threshold, intersections, ref count);
+            TryAddOceanZoneDebugIntersection(topRight, bottomRight, topRightPosition, bottomRightPosition, threshold, intersections, ref count);
+            TryAddOceanZoneDebugIntersection(bottomRight, bottomLeft, bottomRightPosition, bottomLeftPosition, threshold, intersections, ref count);
+            TryAddOceanZoneDebugIntersection(bottomLeft, topLeft, bottomLeftPosition, topLeftPosition, threshold, intersections, ref count);
+            if (count < 2)
+            {
+                return;
+            }
+
+            TerrainWaterType shallowSide = ResolveWaterTypeFromOffshoreDistance(MathF.Max(0f, threshold - 0.01f));
+            TerrainWaterType deepSide = ResolveWaterTypeFromOffshoreDistance(threshold + 0.01f);
+            bool topLeftDeep = topLeft.OffshoreDistance >= threshold;
+            bool topRightDeep = topRight.OffshoreDistance >= threshold;
+            bool bottomRightDeep = bottomRight.OffshoreDistance >= threshold;
+            bool bottomLeftDeep = bottomLeft.OffshoreDistance >= threshold;
+            if (count >= 4 &&
+                topLeftDeep == bottomRightDeep &&
+                topRightDeep == bottomLeftDeep &&
+                topLeftDeep != topRightDeep)
+            {
+                Vector2 centerPosition = (topLeftPosition + bottomRightPosition) * 0.5f;
+                OceanZoneDebugSample center = ResolveOceanZoneDebugWaterSample(centerPosition, maxSearchDistance);
+                float centerValue = center.IsWater
+                    ? center.OffshoreDistance
+                    : (topLeft.OffshoreDistance + topRight.OffshoreDistance + bottomRight.OffshoreDistance + bottomLeft.OffshoreDistance) * 0.25f;
+                bool centerOnTopLeftSide = (centerValue >= threshold) == topLeftDeep;
+                if (centerOnTopLeftSide)
+                {
+                    AddOceanZoneDebugContourSegment(intersections[0], intersections[1], threshold, deeperNormal, shallowSide, deepSide, segments);
+                    AddOceanZoneDebugContourSegment(intersections[2], intersections[3], threshold, deeperNormal, shallowSide, deepSide, segments);
+                }
+                else
+                {
+                    AddOceanZoneDebugContourSegment(intersections[0], intersections[3], threshold, deeperNormal, shallowSide, deepSide, segments);
+                    AddOceanZoneDebugContourSegment(intersections[1], intersections[2], threshold, deeperNormal, shallowSide, deepSide, segments);
+                }
+
+                return;
+            }
+
+            AddOceanZoneDebugContourSegment(intersections[0], intersections[1], threshold, deeperNormal, shallowSide, deepSide, segments);
+            if (count >= 4)
+            {
+                AddOceanZoneDebugContourSegment(intersections[2], intersections[3], threshold, deeperNormal, shallowSide, deepSide, segments);
+            }
+        }
+
+        private static void TryAddOceanZoneDebugIntersection(
+            OceanZoneDebugSample first,
+            OceanZoneDebugSample second,
+            Vector2 firstPosition,
+            Vector2 secondPosition,
+            float threshold,
+            Span<Vector2> intersections,
+            ref int count)
+        {
+            if (count >= intersections.Length)
+            {
+                return;
+            }
+
+            float firstValue = first.OffshoreDistance;
+            float secondValue = second.OffshoreDistance;
+            if ((firstValue < threshold && secondValue < threshold) ||
+                (firstValue > threshold && secondValue > threshold) ||
+                MathF.Abs(firstValue - secondValue) <= 0.001f)
+            {
+                return;
+            }
+
+            float t = Math.Clamp((threshold - firstValue) / (secondValue - firstValue), 0f, 1f);
+            intersections[count++] = RefineOceanZoneDebugIntersection(
+                firstPosition,
+                secondPosition,
+                firstValue - threshold,
+                secondValue - threshold,
+                threshold,
+                t);
+        }
+
+        private static Vector2 RefineOceanZoneDebugIntersection(
+            Vector2 firstPosition,
+            Vector2 secondPosition,
+            float firstDelta,
+            float secondDelta,
+            float threshold,
+            float initialT)
+        {
+            Vector2 lowPosition = firstPosition;
+            Vector2 highPosition = secondPosition;
+            float lowDelta = firstDelta;
+            float highDelta = secondDelta;
+            if (MathF.Abs(lowDelta) <= 0.001f)
+            {
+                return firstPosition;
+            }
+
+            if (MathF.Abs(highDelta) <= 0.001f)
+            {
+                return secondPosition;
+            }
+
+            if (ShouldUseFastOceanZoneDebugContours())
+            {
+                return Vector2.Lerp(firstPosition, secondPosition, initialT);
+            }
+
+            if (MathF.Sign(lowDelta) == MathF.Sign(highDelta))
+            {
+                return Vector2.Lerp(firstPosition, secondPosition, initialT);
+            }
+
+            float maxSearchDistance = Math.Max(
+                    ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance)),
+                    threshold) +
+                OceanZoneDebugSampleStepWorldUnits;
+            for (int i = 0; i < 3; i++)
+            {
+                Vector2 midpoint = (lowPosition + highPosition) * 0.5f;
+                OceanZoneDebugSample midpointSample = ResolveOceanZoneDebugWaterSample(midpoint, maxSearchDistance);
+                if (!midpointSample.IsWater)
+                {
+                    lowPosition = midpoint;
+                    lowDelta = -threshold;
+                    continue;
+                }
+
+                float midpointDelta = midpointSample.OffshoreDistance - threshold;
+                if (MathF.Abs(midpointDelta) <= 0.001f)
+                {
+                    return midpoint;
+                }
+
+                if (MathF.Sign(midpointDelta) == MathF.Sign(lowDelta))
+                {
+                    lowPosition = midpoint;
+                    lowDelta = midpointDelta;
+                }
+                else
+                {
+                    highPosition = midpoint;
+                    highDelta = midpointDelta;
+                }
+            }
+
+            return (lowPosition + highPosition) * 0.5f;
+        }
+
+        private static void AddOceanZoneDebugContourSegment(
+            Vector2 from,
+            Vector2 to,
+            float threshold,
+            Vector2 deeperNormal,
+            TerrainWaterType shallowSide,
+            TerrainWaterType deepSide,
+            List<OceanZoneDebugSegment> segments)
+        {
+            if (segments.Count >= OceanZoneDebugMaxSegments ||
+                Vector2.DistanceSquared(from, to) <= 1f)
+            {
+                return;
+            }
+
+            Vector2 normal = ResolveOceanZoneDebugSegmentNormal(from, to, threshold, deeperNormal, shallowSide, deepSide);
+            segments.Add(new OceanZoneDebugSegment(from, to, normal, shallowSide, deepSide, threshold));
+        }
+
+        private static Vector2 ResolveOceanZoneDebugSegmentNormal(
+            Vector2 from,
+            Vector2 to,
+            float threshold,
+            Vector2 fallbackNormal,
+            TerrainWaterType shallowSide,
+            TerrainWaterType deepSide)
+        {
+            Vector2 normal = fallbackNormal;
+            if (normal.LengthSquared() <= 0.0001f)
+            {
+                Vector2 delta = to - from;
+                normal = new Vector2(-delta.Y, delta.X);
+            }
+
+            if (normal.LengthSquared() <= 0.0001f)
+            {
+                return Vector2.UnitY;
+            }
+
+            if (normal.LengthSquared() <= 0.0001f)
+            {
+                return Vector2.UnitY;
+            }
+
+            normal.Normalize();
+            Vector2 midpoint = (from + to) * 0.5f;
+            float probeOffset = Math.Clamp(OceanZoneDebugSampleStepWorldUnits * 0.28f, 18f, 48f);
+            float maxSearchDistance = Math.Max(
+                    ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance)),
+                    threshold) +
+                probeOffset;
+            OceanZoneDebugSample negativeSample = ResolveOceanZoneDebugWaterSample(midpoint - (normal * probeOffset), maxSearchDistance);
+            OceanZoneDebugSample positiveSample = ResolveOceanZoneDebugWaterSample(midpoint + (normal * probeOffset), maxSearchDistance);
+            if (negativeSample.IsWater &&
+                positiveSample.IsWater &&
+                negativeSample.WaterType == deepSide &&
+                positiveSample.WaterType == shallowSide)
+            {
+                normal = -normal;
+            }
+            else if (negativeSample.IsWater &&
+                positiveSample.IsWater &&
+                negativeSample.WaterType != shallowSide &&
+                positiveSample.WaterType != deepSide &&
+                negativeSample.OffshoreDistance > positiveSample.OffshoreDistance)
+            {
+                normal = -normal;
+            }
+
+            return normal;
+        }
+
+        private static bool TryResolveOceanZoneDebugVisibleWorldBounds(
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY)
+        {
+            minX = maxX = minY = maxY = 0f;
+            if (renderBounds.Width <= 0 || renderBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            Matrix inverse = Matrix.Invert(cameraTransform);
+            float right = renderBounds.X + renderBounds.Width;
+            float bottom = renderBounds.Y + renderBounds.Height;
+            Vector2 topLeft = Vector2.Transform(new Vector2(renderBounds.X, renderBounds.Y), inverse);
+            Vector2 topRight = Vector2.Transform(new Vector2(right, renderBounds.Y), inverse);
+            Vector2 bottomLeft = Vector2.Transform(new Vector2(renderBounds.X, bottom), inverse);
+            Vector2 bottomRight = Vector2.Transform(new Vector2(right, bottom), inverse);
+
+            minX = MathF.Min(MathF.Min(topLeft.X, topRight.X), MathF.Min(bottomLeft.X, bottomRight.X));
+            maxX = MathF.Max(MathF.Max(topLeft.X, topRight.X), MathF.Max(bottomLeft.X, bottomRight.X));
+            minY = MathF.Min(MathF.Min(topLeft.Y, topRight.Y), MathF.Min(bottomLeft.Y, bottomRight.Y));
+            maxY = MathF.Max(MathF.Max(topLeft.Y, topRight.Y), MathF.Max(bottomLeft.Y, bottomRight.Y));
+            return float.IsFinite(minX) && float.IsFinite(maxX) && float.IsFinite(minY) && float.IsFinite(maxY);
+        }
+
+        private static void DrawOceanZoneDebugOverlayCore(
+            SpriteBatch spriteBatch,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds,
+            Rectangle visibleBounds,
+            float visibleMinX,
+            float visibleMaxX,
+            float visibleMinY,
+            float visibleMaxY)
+        {
+            OceanZoneDebugVisionRegions.Clear();
+            const bool visionClipActive = false;
+            UpdateOceanZoneDebugSegments(visibleMinX, visibleMaxX, visibleMinY, visibleMaxY);
+            if (OceanZoneDebugSegments.Count == 0)
+            {
+                _oceanZoneDebugBorderSegmentCount = 0;
+                _oceanZoneDebugBorderLabelCount = 0;
+                return;
+            }
+
+            int visibleSegmentCount = 0;
+            for (int i = 0; i < OceanZoneDebugSegments.Count; i++)
+            {
+                OceanZoneDebugSegment segment = OceanZoneDebugSegments[i];
+                if (DrawOceanZoneDebugLine(spriteBatch, segment, cameraTransform, renderBounds, targetBounds, visibleBounds, visionClipActive))
+                {
+                    visibleSegmentCount++;
+                }
+            }
+
+            _oceanZoneDebugBorderSegmentCount = visibleSegmentCount;
+            DrawOceanZoneDebugLabels(spriteBatch, cameraTransform, renderBounds, targetBounds, visibleBounds, visionClipActive);
+        }
+
+        private static bool TryPrepareOceanZoneDebugVisionClip(
+            ref float visibleMinX,
+            ref float visibleMaxX,
+            ref float visibleMinY,
+            ref float visibleMaxY)
+        {
+            OceanZoneDebugVisionRegions.Clear();
+            if (!FogOfWarManager.IsFogEnabled)
+            {
+                return false;
+            }
+
+            if (!FogOfWarManager.TryGetVisionRegions(OceanZoneDebugVisionRegions) ||
+                OceanZoneDebugVisionRegions.Count <= 0)
+            {
+                return false;
+            }
+
+            float visionMinX = 0f;
+            float visionMaxX = 0f;
+            float visionMinY = 0f;
+            float visionMaxY = 0f;
+            bool foundRegion = false;
+            for (int i = 0; i < OceanZoneDebugVisionRegions.Count; i++)
+            {
+                FogOfWarManager.VisionRegion region = OceanZoneDebugVisionRegions[i];
+                float radius = region.Radius + OceanZoneDebugVisionBuildPaddingWorldUnits;
+                float regionMinX = region.Position.X - radius;
+                float regionMaxX = region.Position.X + radius;
+                float regionMinY = region.Position.Y - radius;
+                float regionMaxY = region.Position.Y + radius;
+
+                if (!foundRegion)
+                {
+                    visionMinX = regionMinX;
+                    visionMaxX = regionMaxX;
+                    visionMinY = regionMinY;
+                    visionMaxY = regionMaxY;
+                    foundRegion = true;
+                }
+                else
+                {
+                    visionMinX = MathF.Min(visionMinX, regionMinX);
+                    visionMaxX = MathF.Max(visionMaxX, regionMaxX);
+                    visionMinY = MathF.Min(visionMinY, regionMinY);
+                    visionMaxY = MathF.Max(visionMaxY, regionMaxY);
+                }
+            }
+
+            if (!foundRegion)
+            {
+                return false;
+            }
+
+            visibleMinX = MathF.Max(visibleMinX, visionMinX);
+            visibleMaxX = MathF.Min(visibleMaxX, visionMaxX);
+            visibleMinY = MathF.Max(visibleMinY, visionMinY);
+            visibleMaxY = MathF.Min(visibleMaxY, visionMaxY);
+
+            return visibleMaxX > visibleMinX && visibleMaxY > visibleMinY;
+        }
+
+        private static Vector2 ProjectOceanZoneDebugPointToTarget(
+            Vector2 worldPosition,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds)
+        {
+            Vector2 renderPosition = Vector2.Transform(worldPosition, cameraTransform);
+            float targetX = targetBounds.X + ((renderPosition.X - renderBounds.X) / renderBounds.Width) * targetBounds.Width;
+            float targetY = targetBounds.Y + ((renderPosition.Y - renderBounds.Y) / renderBounds.Height) * targetBounds.Height;
+            return new Vector2(targetX, targetY);
+        }
+
+        private static bool DrawOceanZoneDebugLine(
+            SpriteBatch spriteBatch,
+            OceanZoneDebugSegment segment,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds,
+            Rectangle visibleBounds,
+            bool visionClipActive)
+        {
+            if (visionClipActive)
+            {
+                return DrawOceanZoneDebugVisionClippedLine(
+                    spriteBatch,
+                    segment,
+                    cameraTransform,
+                    renderBounds,
+                    targetBounds,
+                    visibleBounds);
+            }
+
+            return DrawOceanZoneDebugLinePart(
+                spriteBatch,
+                segment.From,
+                segment.To,
+                segment,
+                cameraTransform,
+                renderBounds,
+                targetBounds,
+                visibleBounds);
+        }
+
+        private static bool DrawOceanZoneDebugVisionClippedLine(
+            SpriteBatch spriteBatch,
+            OceanZoneDebugSegment segment,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds,
+            Rectangle visibleBounds)
+        {
+            float worldLength = Vector2.Distance(segment.From, segment.To);
+            if (!float.IsFinite(worldLength) || worldLength <= 0.001f)
+            {
+                return false;
+            }
+
+            int sampleCount = Math.Clamp(
+                (int)MathF.Ceiling(worldLength / OceanZoneDebugVisionClipSampleStepWorldUnits),
+                1,
+                64);
+            Vector2 previousPoint = segment.From;
+            bool previousVisible = IsOceanZoneDebugWorldPointInVision(segment.From);
+            bool drewAny = false;
+
+            for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
+            {
+                float t = sampleIndex / (float)sampleCount;
+                Vector2 currentPoint = Vector2.Lerp(segment.From, segment.To, t);
+                bool currentVisible = IsOceanZoneDebugWorldPointInVision(currentPoint);
+
+                if (previousVisible && currentVisible)
+                {
+                    drewAny |= DrawOceanZoneDebugLinePart(
+                        spriteBatch,
+                        previousPoint,
+                        currentPoint,
+                        segment,
+                        cameraTransform,
+                        renderBounds,
+                        targetBounds,
+                        visibleBounds);
+                }
+                else if (previousVisible != currentVisible)
+                {
+                    Vector2 boundaryPoint = previousVisible
+                        ? RefineOceanZoneDebugVisionBoundary(previousPoint, currentPoint)
+                        : RefineOceanZoneDebugVisionBoundary(currentPoint, previousPoint);
+
+                    drewAny |= previousVisible
+                        ? DrawOceanZoneDebugLinePart(
+                            spriteBatch,
+                            previousPoint,
+                            boundaryPoint,
+                            segment,
+                            cameraTransform,
+                            renderBounds,
+                            targetBounds,
+                            visibleBounds)
+                        : DrawOceanZoneDebugLinePart(
+                            spriteBatch,
+                            boundaryPoint,
+                            currentPoint,
+                            segment,
+                            cameraTransform,
+                            renderBounds,
+                            targetBounds,
+                            visibleBounds);
+                }
+
+                previousVisible = currentVisible;
+                previousPoint = currentPoint;
+            }
+
+            return drewAny;
+        }
+
+        private static Vector2 RefineOceanZoneDebugVisionBoundary(Vector2 visiblePoint, Vector2 hiddenPoint)
+        {
+            Vector2 inside = visiblePoint;
+            Vector2 outside = hiddenPoint;
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 midpoint = (inside + outside) * 0.5f;
+                if (IsOceanZoneDebugWorldPointInVision(midpoint))
+                {
+                    inside = midpoint;
+                }
+                else
+                {
+                    outside = midpoint;
+                }
+            }
+
+            return inside;
+        }
+
+        private static bool IsOceanZoneDebugWorldPointInVision(Vector2 worldPosition)
+        {
+            if (!IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            if (!FogOfWarManager.IsFogEnabled)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < OceanZoneDebugVisionRegions.Count; i++)
+            {
+                if (OceanZoneDebugVisionRegions[i].Contains(worldPosition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int CountOceanZoneDebugVisionClipParts(OceanZoneDebugSegment segment)
+        {
+            if (!FogOfWarManager.IsFogEnabled)
+            {
+                return 0;
+            }
+
+            float worldLength = Vector2.Distance(segment.From, segment.To);
+            if (!float.IsFinite(worldLength) || worldLength <= 0.001f)
+            {
+                return IsOceanZoneDebugWorldPointInVision(segment.From) ? 1 : 0;
+            }
+
+            int sampleCount = Math.Clamp(
+                (int)MathF.Ceiling(worldLength / OceanZoneDebugVisionClipSampleStepWorldUnits),
+                1,
+                64);
+            bool previousVisible = IsOceanZoneDebugWorldPointInVision(segment.From);
+            int clipPartCount = 0;
+            for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
+            {
+                float t = sampleIndex / (float)sampleCount;
+                Vector2 currentPoint = Vector2.Lerp(segment.From, segment.To, t);
+                bool currentVisible = IsOceanZoneDebugWorldPointInVision(currentPoint);
+                if (previousVisible && currentVisible)
+                {
+                    clipPartCount++;
+                }
+                else if (previousVisible != currentVisible)
+                {
+                    clipPartCount++;
+                }
+
+                previousVisible = currentVisible;
+            }
+
+            return clipPartCount;
+        }
+
+        private static bool DrawOceanZoneDebugLinePart(
+            SpriteBatch spriteBatch,
+            Vector2 worldFrom,
+            Vector2 worldTo,
+            OceanZoneDebugSegment segment,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds,
+            Rectangle visibleBounds)
+        {
+            Vector2 screenFrom = ProjectOceanZoneDebugPointToTarget(worldFrom, cameraTransform, renderBounds, targetBounds);
+            Vector2 screenTo = ProjectOceanZoneDebugPointToTarget(worldTo, cameraTransform, renderBounds, targetBounds);
+            if (!IsOceanZoneDebugScreenSegmentVisible(screenFrom, screenTo, visibleBounds, OceanZoneDebugLabelViewportMarginPixels))
+            {
+                return false;
+            }
+
+            Vector2 delta = screenTo - screenFrom;
+            float length = delta.Length();
+            if (length <= 0.001f)
+            {
+                return false;
+            }
+
+            float angle = MathF.Atan2(delta.Y, delta.X);
+            Color lineColor = ResolveOceanZoneDebugBorderColor(segment.FirstSide, segment.SecondSide);
+            spriteBatch.Draw(
+                _oceanZoneDebugPixelTexture,
+                screenFrom,
+                null,
+                lineColor,
+                angle,
+                new Vector2(0f, 0.5f),
+                new Vector2(length, OceanZoneDebugLineThicknessScreenPixels),
+                SpriteEffects.None,
+                0f);
+            return true;
+        }
+
+        private static void DrawOceanZoneDebugLabels(
+            SpriteBatch spriteBatch,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds,
+            Rectangle visibleBounds,
+            bool visionClipActive)
+        {
+            UIStyle.UIFont font = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Bold);
+            if (!font.IsAvailable || font.Font == null)
+            {
+                _oceanZoneDebugBorderLabelCount = 0;
+                return;
+            }
+
+            int labelsDrawn = 0;
+            OceanZoneDebugLabelCellKeys.Clear();
+            OceanZoneDebugPlacedLabelBounds.Clear();
+            for (int i = 0; i < OceanZoneDebugSegments.Count && labelsDrawn < OceanZoneDebugMaxLabels; i++)
+            {
+                OceanZoneDebugSegment segment = OceanZoneDebugSegments[i];
+                if (visionClipActive &&
+                    !IsOceanZoneDebugWorldPointInVision((segment.From + segment.To) * 0.5f))
+                {
+                    continue;
+                }
+
+                Vector2 screenFrom = ProjectOceanZoneDebugPointToTarget(segment.From, cameraTransform, renderBounds, targetBounds);
+                Vector2 screenTo = ProjectOceanZoneDebugPointToTarget(segment.To, cameraTransform, renderBounds, targetBounds);
+                if (!IsOceanZoneDebugScreenSegmentVisible(screenFrom, screenTo, visibleBounds, OceanZoneDebugLabelViewportMarginPixels))
+                {
+                    continue;
+                }
+
+                int labelCellKey = ResolveOceanZoneDebugLabelCellKey(segment);
+                if (!OceanZoneDebugLabelCellKeys.Add(labelCellKey))
+                {
+                    continue;
+                }
+
+                labelsDrawn += DrawOceanZoneDebugLabelPair(
+                    spriteBatch,
+                    font.Font,
+                    OceanZoneDebugLabelScreenScale,
+                    OceanZoneDebugLabelOffsetScreenPixels,
+                    segment,
+                    screenFrom,
+                    screenTo,
+                    cameraTransform,
+                    renderBounds,
+                    targetBounds);
+            }
+
+            OceanZoneDebugLabelCellKeys.Clear();
+            OceanZoneDebugPlacedLabelBounds.Clear();
+            _oceanZoneDebugBorderLabelCount = labelsDrawn;
+        }
+
+        private static int ResolveOceanZoneDebugLabelCellKey(OceanZoneDebugSegment segment)
+        {
+            Vector2 midpoint = (segment.From + segment.To) * 0.5f;
+            float cellSize = MathF.Max(OceanZoneDebugTileWorldUnits * 0.55f, OceanZoneDebugSampleStepWorldUnits * 6f);
+            int cellX = (int)MathF.Floor(midpoint.X / cellSize);
+            int cellY = (int)MathF.Floor(midpoint.Y / cellSize);
+            return HashCode.Combine(
+                cellX,
+                cellY,
+                ResolveOceanZoneDebugWaterTypeOrder(segment.FirstSide),
+                ResolveOceanZoneDebugWaterTypeOrder(segment.SecondSide));
+        }
+
+        private static bool IsOceanZoneDebugScreenSegmentVisible(
+            Vector2 from,
+            Vector2 to,
+            Rectangle visibleBounds,
+            float margin)
+        {
+            if (!IsFiniteVector(from) || !IsFiniteVector(to))
+            {
+                return false;
+            }
+
+            float left = visibleBounds.X - margin;
+            float right = visibleBounds.X + visibleBounds.Width + margin;
+            float top = visibleBounds.Y - margin;
+            float bottom = visibleBounds.Y + visibleBounds.Height + margin;
+            float segmentMinX = MathF.Min(from.X, to.X);
+            float segmentMaxX = MathF.Max(from.X, to.X);
+            float segmentMinY = MathF.Min(from.Y, to.Y);
+            float segmentMaxY = MathF.Max(from.Y, to.Y);
+            return segmentMaxX >= left &&
+                segmentMinX <= right &&
+                segmentMaxY >= top &&
+                segmentMinY <= bottom;
+        }
+
+        private static int DrawOceanZoneDebugLabelPair(
+            SpriteBatch spriteBatch,
+            SpriteFont font,
+            float scale,
+            float labelOffsetScreenPixels,
+            OceanZoneDebugSegment segment,
+            Vector2 screenFrom,
+            Vector2 screenTo,
+            Matrix cameraTransform,
+            Rectangle renderBounds,
+            Rectangle targetBounds)
+        {
+            Vector2 delta = screenTo - screenFrom;
+            float length = delta.Length();
+            if (length <= 0.001f)
+            {
+                return 0;
+            }
+
+            float rotation = MathF.Atan2(delta.Y, delta.X);
+            rotation = NormalizeOceanZoneDebugLabelRotation(rotation);
+            Vector2 midpoint = (screenFrom + screenTo) * 0.5f;
+            Vector2 worldMidpoint = (segment.From + segment.To) * 0.5f;
+            Vector2 normal = ProjectOceanZoneDebugPointToTarget(worldMidpoint + segment.Normal, cameraTransform, renderBounds, targetBounds) -
+                ProjectOceanZoneDebugPointToTarget(worldMidpoint, cameraTransform, renderBounds, targetBounds);
+            if (normal.LengthSquared() <= 0.0001f)
+            {
+                normal = new Vector2(-delta.Y, delta.X);
+            }
+
+            normal.Normalize();
+            int drawnCount = 0;
+            string firstText = FormatOceanZoneDebugLabel(segment.FirstSide);
+            string secondText = FormatOceanZoneDebugLabel(segment.SecondSide);
+            Color firstColor = ResolveOceanZoneDebugZoneColor(segment.FirstSide);
+            Color secondColor = ResolveOceanZoneDebugZoneColor(segment.SecondSide);
+            if (TryDrawOceanZoneDebugLabel(
+                spriteBatch,
+                font,
+                firstText,
+                midpoint - (normal * labelOffsetScreenPixels),
+                rotation,
+                scale,
+                firstColor))
+            {
+                drawnCount++;
+            }
+
+            if (TryDrawOceanZoneDebugLabel(
+                spriteBatch,
+                font,
+                secondText,
+                midpoint + (normal * labelOffsetScreenPixels),
+                rotation,
+                scale,
+                secondColor))
+            {
+                drawnCount++;
+            }
+
+            return drawnCount;
+        }
+
+        private static bool TryDrawOceanZoneDebugLabel(
+            SpriteBatch spriteBatch,
+            SpriteFont font,
+            string text,
+            Vector2 position,
+            float rotation,
+            float scale,
+            Color color)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            float resolvedScale = MathF.Max(0.08f, scale);
+            Vector2 measuredSize = font.MeasureString(text) * resolvedScale;
+            OceanZoneDebugLabelBounds bounds = BuildOceanZoneDebugLabelBounds(
+                position,
+                measuredSize,
+                rotation,
+                OceanZoneDebugLabelCollisionPaddingPixels);
+            if (DoesOceanZoneDebugLabelOverlap(bounds))
+            {
+                return false;
+            }
+
+            OceanZoneDebugPlacedLabelBounds.Add(bounds);
+            Vector2 origin = font.MeasureString(text) * 0.5f;
+            spriteBatch.DrawString(
+                font,
+                text,
+                position + new Vector2(
+                    OceanZoneDebugLabelShadowOffsetScreenPixels,
+                    OceanZoneDebugLabelShadowOffsetScreenPixels),
+                new Color(0, 0, 0, 235),
+                rotation,
+                origin,
+                resolvedScale,
+                SpriteEffects.None,
+                0f);
+            spriteBatch.DrawString(
+                font,
+                text,
+                position,
+                color,
+                rotation,
+                origin,
+                resolvedScale,
+                SpriteEffects.None,
+                0f);
+            return true;
+        }
+
+        private static OceanZoneDebugLabelBounds BuildOceanZoneDebugLabelBounds(
+            Vector2 center,
+            Vector2 measuredSize,
+            float rotation,
+            float padding)
+        {
+            float halfWidth = MathF.Max(1f, measuredSize.X * 0.5f);
+            float halfHeight = MathF.Max(1f, measuredSize.Y * 0.5f);
+            float cos = MathF.Abs(MathF.Cos(rotation));
+            float sin = MathF.Abs(MathF.Sin(rotation));
+            float extentX = (cos * halfWidth) + (sin * halfHeight) + padding;
+            float extentY = (sin * halfWidth) + (cos * halfHeight) + padding;
+            return new OceanZoneDebugLabelBounds(
+                center.X - extentX,
+                center.Y - extentY,
+                center.X + extentX,
+                center.Y + extentY);
+        }
+
+        private static bool DoesOceanZoneDebugLabelOverlap(OceanZoneDebugLabelBounds bounds)
+        {
+            for (int i = 0; i < OceanZoneDebugPlacedLabelBounds.Count; i++)
+            {
+                if (bounds.Intersects(OceanZoneDebugPlacedLabelBounds[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static Color ResolveOceanZoneDebugBorderColor(TerrainWaterType firstSide, TerrainWaterType secondSide)
+        {
+            TerrainWaterType deeperSide = ResolveOceanZoneDebugWaterTypeOrder(firstSide) >= ResolveOceanZoneDebugWaterTypeOrder(secondSide)
+                ? firstSide
+                : secondSide;
+
+            return deeperSide switch
+            {
+                TerrainWaterType.Sunlit => new Color(80, 234, 255, 215),
+                TerrainWaterType.Twilight => new Color(64, 156, 255, 220),
+                TerrainWaterType.Midnight => new Color(126, 126, 255, 225),
+                TerrainWaterType.Abyss => new Color(255, 186, 72, 230),
+                _ => new Color(156, 255, 214, 210)
+            };
+        }
+
+        private static Color ResolveOceanZoneDebugZoneColor(TerrainWaterType waterType)
+        {
+            return waterType switch
+            {
+                TerrainWaterType.Shallow => new Color(162, 255, 216, 255),
+                TerrainWaterType.Sunlit => new Color(86, 232, 255, 255),
+                TerrainWaterType.Twilight => new Color(88, 166, 255, 255),
+                TerrainWaterType.Midnight => new Color(152, 140, 255, 255),
+                TerrainWaterType.Abyss => new Color(255, 196, 88, 255),
+                _ => Color.White
+            };
+        }
+
+        private static int ResolveOceanZoneDebugWaterTypeOrder(TerrainWaterType waterType)
+        {
+            return waterType switch
+            {
+                TerrainWaterType.Shallow => 0,
+                TerrainWaterType.Sunlit => 1,
+                TerrainWaterType.Twilight => 2,
+                TerrainWaterType.Midnight => 3,
+                TerrainWaterType.Abyss => 4,
+                _ => 0
+            };
+        }
+
+        private static string FormatOceanZoneDebugLabel(TerrainWaterType waterType)
+        {
+            return waterType.ToString();
+        }
+
+        internal static string FormatOceanZoneDebugLabelForProbe(TerrainWaterType waterType)
+        {
+            return FormatOceanZoneDebugLabel(waterType);
+        }
+
+        internal static float ResolveOceanZoneDebugLabelScreenScaleForProbe()
+        {
+            return OceanZoneDebugLabelScreenScale;
+        }
+
+        private static float NormalizeOceanZoneDebugLabelRotation(float rotation)
+        {
+            float normalized = rotation;
+            while (normalized > MathF.PI)
+            {
+                normalized -= MathF.Tau;
+            }
+
+            while (normalized < -MathF.PI)
+            {
+                normalized += MathF.Tau;
+            }
+
+            if (normalized > MathF.PI / 2f)
+            {
+                normalized -= MathF.PI;
+            }
+            else if (normalized < -MathF.PI / 2f)
+            {
+                normalized += MathF.PI;
+            }
+
+            return normalized;
+        }
+
         private static void LoadSettingsIfNeeded()
         {
             if (_settingsLoaded)
@@ -339,18 +3578,55 @@ namespace op.io
             }
 
             _terrainWorldSeed = DatabaseFetch.GetSetting("GeneralSettings", "Value", "SettingKey", "TerrainWorldSeed", DefaultTerrainWorldSeed);
+            _terrainWaterZoneDistanceScale = LoadClampedGeneralFloatSetting(
+                TerrainWaterZoneDistanceScaleSettingKey,
+                DefaultTerrainWaterZoneDistanceScale,
+                0.1f,
+                12f);
+            _oceanZoneMinimumTransitionVolumeDistanceWorldUnits = LoadClampedGeneralFloatSetting(
+                TerrainOceanZoneMinimumTransitionVolumeDistanceSettingKey,
+                DefaultOceanZoneMinimumTransitionVolumeDistanceWorldUnits,
+                0f,
+                10000f);
             _terrainSeedAnchorCentifoot = ResolveSeedAnchorCentifoot(_terrainWorldSeed);
+            ResetTerrainChunkWorkerQueues();
+            ResetOceanZoneDebugTileWorkerState(clearCache: true);
+            ResetFullTerrainMapState(clearResidentChunks: false);
             _settingsLoaded = true;
         }
 
+        private static float LoadClampedGeneralFloatSetting(
+            string settingKey,
+            float defaultValue,
+            float minValue,
+            float maxValue)
+        {
+            float configured = DatabaseFetch.GetSetting("GeneralSettings", "Value", "SettingKey", settingKey, defaultValue);
+            if (!float.IsFinite(configured))
+            {
+                configured = defaultValue;
+            }
+
+            return Math.Clamp(configured, minValue, maxValue);
+        }
+
         private static void EnsureTerrainWorldBoundsInitialized()
+        {
+            EnsureTerrainWorldBoundsInitialized(Core.Instance?.PlayerOrNull?.Position ?? Vector2.Zero);
+        }
+
+        private static void EnsureTerrainWorldBoundsInitialized(Vector2 center)
         {
             if (_terrainWorldBoundsInitialized)
             {
                 return;
             }
 
-            Vector2 center = Core.Instance?.Player?.Position ?? Vector2.Zero;
+            if (!IsFiniteVector(center))
+            {
+                center = Vector2.Zero;
+            }
+
             float halfSize = TerrainWorldSizeWorldUnits * 0.5f;
             _terrainWorldBounds = new TerrainWorldBounds(
                 center.X - halfSize,
@@ -374,7 +3650,7 @@ namespace op.io
 
         private static Vector2 ResolveTerrainStreamingFocusWorldPosition(float minX, float maxX, float minY, float maxY)
         {
-            Vector2 playerPosition = Core.Instance?.Player?.Position ?? Vector2.Zero;
+            Vector2 playerPosition = Core.Instance?.PlayerOrNull?.Position ?? Vector2.Zero;
             if (IsFiniteVector(playerPosition))
             {
                 return playerPosition;
@@ -434,6 +3710,186 @@ namespace op.io
             targetMaxY = MathF.Max(targetMaxY, sourceMaxY);
         }
 
+        private static void IncludeTerrainWorldBounds(
+            ref float targetMinX,
+            ref float targetMaxX,
+            ref float targetMinY,
+            ref float targetMaxY,
+            TerrainWorldBounds bounds)
+        {
+            IncludeWorldBounds(
+                ref targetMinX,
+                ref targetMaxX,
+                ref targetMinY,
+                ref targetMaxY,
+                bounds.MinX,
+                bounds.MaxX,
+                bounds.MinY,
+                bounds.MaxY);
+        }
+
+        private static void UpdateTerrainDynamicCollisionProbeTelemetry(
+            int objectProbeCount,
+            int bulletProbeCount)
+        {
+            _terrainDynamicCollisionObjectProbeCount = Math.Max(0, objectProbeCount);
+            _terrainDynamicCollisionBulletProbeCount = Math.Max(0, bulletProbeCount);
+            _terrainDynamicCollisionProbeCount =
+                _terrainDynamicCollisionObjectProbeCount +
+                _terrainDynamicCollisionBulletProbeCount;
+        }
+
+        internal static void RequestPlayerTerrainAccess(Agent player)
+        {
+            if (player == null || !IsActive)
+            {
+                return;
+            }
+
+            float accessRadius = ResolvePlayerTerrainAccessRadius(player);
+            if (!IsTerrainAccessReady(player.Position, accessRadius))
+            {
+                RequestTerrainAccessAroundWorldPosition(player.Position, accessRadius);
+            }
+        }
+
+        private static float ResolvePlayerTerrainAccessRadius(Agent player)
+        {
+            float bodyRadius = player?.BoundingRadius ?? 0f;
+            if (!float.IsFinite(bodyRadius))
+            {
+                bodyRadius = 0f;
+            }
+
+            return MathF.Max(
+                TerrainCollisionDynamicProbeMarginWorldUnits,
+                bodyRadius + TerrainAccessImmediatePaddingWorldUnits);
+        }
+
+        private static bool IsTerrainAccessReady(Vector2 worldPosition, float radiusWorldUnits)
+        {
+            if (!_startupVisibleTerrainReady ||
+                !_hasAppliedTerrainVisualChunkWindow ||
+                !IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            ChunkBounds accessWindow = BuildTerrainAccessChunkWindow(worldPosition, radiusWorldUnits);
+            return _lastAppliedVisualChunkWindow.Contains(accessWindow) &&
+                _lastAppliedColliderChunkWindow.Contains(accessWindow) &&
+                !HasPendingChunkInBounds(accessWindow);
+        }
+
+        private static void RequestTerrainAccessAroundWorldPosition(Vector2 worldPosition, float radiusWorldUnits)
+        {
+            if (!IsFiniteVector(worldPosition))
+            {
+                return;
+            }
+
+            _terrainAccessRequestActive = true;
+            _terrainAccessRequestWorldPosition = worldPosition;
+            _terrainAccessRequestRadiusWorldUnits = MathF.Max(TerrainCollisionDynamicProbeMarginWorldUnits, radiusWorldUnits);
+        }
+
+        private static ChunkBounds BuildTerrainAccessChunkWindow(Vector2 worldPosition, float radiusWorldUnits)
+        {
+            float radius = MathF.Max(0f, radiusWorldUnits);
+            return BuildChunkBounds(
+                worldPosition.X - radius,
+                worldPosition.X + radius,
+                worldPosition.Y - radius,
+                worldPosition.Y + radius);
+        }
+
+        private static void IncludeTerrainAccessRequestWorldBounds(
+            ref float streamMinX,
+            ref float streamMaxX,
+            ref float streamMinY,
+            ref float streamMaxY,
+            ref float maxVisionRadiusWorldUnits)
+        {
+            if (!_terrainAccessRequestActive)
+            {
+                return;
+            }
+
+            if (IsTerrainAccessReady(_terrainAccessRequestWorldPosition, _terrainAccessRequestRadiusWorldUnits))
+            {
+                _terrainAccessRequestActive = false;
+                return;
+            }
+
+            float radius = MathF.Max(ChunkWorldSize, _terrainAccessRequestRadiusWorldUnits);
+            IncludeWorldBounds(
+                ref streamMinX,
+                ref streamMaxX,
+                ref streamMinY,
+                ref streamMaxY,
+                _terrainAccessRequestWorldPosition.X - radius,
+                _terrainAccessRequestWorldPosition.X + radius,
+                _terrainAccessRequestWorldPosition.Y - radius,
+                _terrainAccessRequestWorldPosition.Y + radius);
+            maxVisionRadiusWorldUnits = MathF.Max(maxVisionRadiusWorldUnits, radius);
+        }
+
+        private static void ExpandTerrainCollisionWorldBoundsForDynamicProbes(
+            ref float collisionMinX,
+            ref float collisionMaxX,
+            ref float collisionMinY,
+            ref float collisionMaxY)
+        {
+            int objectProbeCount = 0;
+            int bulletProbeCount = 0;
+
+            List<GameObject> gameObjects = Core.Instance?.GameObjects;
+            if (gameObjects != null)
+            {
+                for (int i = 0; i < gameObjects.Count; i++)
+                {
+                    if (!TryBuildTerrainActivationBoundsForDynamicGameObject(
+                        gameObjects[i],
+                        out TerrainWorldBounds activationBounds))
+                    {
+                        continue;
+                    }
+
+                    IncludeTerrainWorldBounds(
+                        ref collisionMinX,
+                        ref collisionMaxX,
+                        ref collisionMinY,
+                        ref collisionMaxY,
+                        activationBounds);
+                    objectProbeCount++;
+                }
+            }
+
+            IReadOnlyList<Bullet> bullets = BulletManager.GetBullets();
+            if (bullets != null)
+            {
+                for (int i = 0; i < bullets.Count; i++)
+                {
+                    if (!TryBuildTerrainActivationBoundsForBullet(
+                        bullets[i],
+                        out TerrainWorldBounds activationBounds))
+                    {
+                        continue;
+                    }
+
+                    IncludeTerrainWorldBounds(
+                        ref collisionMinX,
+                        ref collisionMaxX,
+                        ref collisionMinY,
+                        ref collisionMaxY,
+                        activationBounds);
+                    bulletProbeCount++;
+                }
+            }
+
+            UpdateTerrainDynamicCollisionProbeTelemetry(objectProbeCount, bulletProbeCount);
+        }
+
         private static bool TryResolveTerrainStreamingWindows(
             Matrix cameraTransform,
             Rectangle panelBounds,
@@ -473,6 +3929,12 @@ namespace op.io
                 cameraMinY,
                 cameraMaxY,
                 ref maxVisionRadiusWorldUnits);
+            IncludeTerrainAccessRequestWorldBounds(
+                ref streamMinX,
+                ref streamMaxX,
+                ref streamMinY,
+                ref streamMaxY,
+                ref maxVisionRadiusWorldUnits);
             terrainStreamingFocus = ResolveTerrainStreamingFocusWorldPosition(streamMinX, streamMaxX, streamMinY, streamMaxY);
 
             float preloadMarginWorldUnits = ResolvePreloadMarginWorldUnits(
@@ -489,17 +3951,31 @@ namespace op.io
                 streamMaxX + preloadMarginWorldUnits,
                 streamMinY - preloadMarginWorldUnits,
                 streamMaxY + preloadMarginWorldUnits);
-            ChunkBounds terrainObjectChunkWindow = preloadChunkWindow;
+            ChunkBounds terrainObjectChunkWindow = ExpandChunkBounds(
+                visibleChunkWindow,
+                TerrainVisionRevealAheadChunkMargin);
+            preloadChunkWindow = UnionChunkBounds(preloadChunkWindow, terrainObjectChunkWindow);
+            float collisionMinX = streamMinX - TerrainCollisionActivationMarginWorldUnits;
+            float collisionMaxX = streamMaxX + TerrainCollisionActivationMarginWorldUnits;
+            float collisionMinY = streamMinY - TerrainCollisionActivationMarginWorldUnits;
+            float collisionMaxY = streamMaxY + TerrainCollisionActivationMarginWorldUnits;
+            ExpandTerrainCollisionWorldBoundsForDynamicProbes(
+                ref collisionMinX,
+                ref collisionMaxX,
+                ref collisionMinY,
+                ref collisionMaxY);
             ChunkBounds terrainColliderChunkWindow = BuildChunkBounds(
-                streamMinX - TerrainCollisionActivationMarginWorldUnits,
-                streamMaxX + TerrainCollisionActivationMarginWorldUnits,
-                streamMinY - TerrainCollisionActivationMarginWorldUnits,
-                streamMaxY + TerrainCollisionActivationMarginWorldUnits);
+                collisionMinX,
+                collisionMaxX,
+                collisionMinY,
+                collisionMaxY);
+            preloadChunkWindow = UnionChunkBounds(preloadChunkWindow, terrainColliderChunkWindow);
             ChunkBounds retainChunkWindow = BuildChunkBounds(
                 streamMinX - retainMarginWorldUnits,
                 streamMaxX + retainMarginWorldUnits,
                 streamMinY - retainMarginWorldUnits,
                 streamMaxY + retainMarginWorldUnits);
+            retainChunkWindow = UnionChunkBounds(retainChunkWindow, terrainColliderChunkWindow);
 
             windows = new TerrainStreamingWindowSet(
                 cameraMinX,
@@ -522,6 +3998,48 @@ namespace op.io
             _lastPreloadMarginWorldUnits = windows.PreloadMarginWorldUnits;
             _lastVisibleChunkWindow = windows.VisibleChunkWindow;
             _lastCenterChunk = BuildChunkKey(windows.StreamingFocusWorldPosition.X, windows.StreamingFocusWorldPosition.Y);
+        }
+
+        private static ChunkBounds ResolveStableTerrainObjectChunkWindow(
+            ChunkBounds desiredChunkWindow,
+            ChunkBounds visibleChunkWindow)
+        {
+            if (_terrainMaterializationTask != null &&
+                _lastTerrainVisualChunkWindow.Contains(visibleChunkWindow))
+            {
+                return _lastTerrainVisualChunkWindow;
+            }
+
+            if (_hasAppliedTerrainVisualChunkWindow &&
+                ContainsChunkBoundsWithMargin(
+                    _lastAppliedVisualChunkWindow,
+                    visibleChunkWindow,
+                    TerrainVisionRevealRefreshGuardChunkMargin))
+            {
+                return _lastAppliedVisualChunkWindow;
+            }
+
+            if (ContainsChunkBoundsWithMargin(
+                _lastTerrainVisualChunkWindow,
+                visibleChunkWindow,
+                TerrainVisionRevealRefreshGuardChunkMargin))
+            {
+                return _lastTerrainVisualChunkWindow;
+            }
+
+            return desiredChunkWindow;
+        }
+
+        private static bool ContainsChunkBoundsWithMargin(
+            ChunkBounds outer,
+            ChunkBounds inner,
+            int marginChunks)
+        {
+            int margin = Math.Max(0, marginChunks);
+            return inner.MinChunkX >= outer.MinChunkX + margin &&
+                inner.MaxChunkX <= outer.MaxChunkX - margin &&
+                inner.MinChunkY >= outer.MinChunkY + margin &&
+                inner.MaxChunkY <= outer.MaxChunkY - margin;
         }
 
         private static void BuildTerrainStreamingWorldBounds(
@@ -559,13 +4077,46 @@ namespace op.io
             return false;
         }
 
-        private static bool HasPendingChunkInBounds(ChunkBounds bounds)
+        private static bool HasResidentLandChunkInBounds(ChunkBounds bounds)
         {
-            foreach (KeyValuePair<ChunkKey, Task<GeneratedChunkData>> entry in PendingChunks)
+            foreach (KeyValuePair<ChunkKey, TerrainChunkRecord> entry in ResidentChunks)
             {
-                if (bounds.Contains(entry.Key))
+                if (bounds.Contains(entry.Key) && entry.Value.HasLand)
                 {
                     return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasPendingChunkInBounds(ChunkBounds bounds)
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                for (int i = 0; i < TerrainChunkBuildQueue.Count; i++)
+                {
+                    ChunkKey key = TerrainChunkBuildQueue[i].Key;
+                    if (!ResidentChunks.ContainsKey(key) && bounds.Contains(key))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (ChunkKey key in BuildingChunkKeys)
+                {
+                    if (!ResidentChunks.ContainsKey(key) && bounds.Contains(key))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (GeneratedChunkData chunkData in CompletedChunkBuildQueue)
+                {
+                    if (chunkData != null && !ResidentChunks.ContainsKey(chunkData.Key) && bounds.Contains(chunkData.Key))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -575,7 +4126,121 @@ namespace op.io
         private static int CountPendingChunksInBounds(ChunkBounds bounds)
         {
             int count = 0;
-            foreach (KeyValuePair<ChunkKey, Task<GeneratedChunkData>> entry in PendingChunks)
+            lock (TerrainChunkWorkerLock)
+            {
+                for (int i = 0; i < TerrainChunkBuildQueue.Count; i++)
+                {
+                    ChunkKey key = TerrainChunkBuildQueue[i].Key;
+                    if (!ResidentChunks.ContainsKey(key) && bounds.Contains(key))
+                    {
+                        count++;
+                    }
+                }
+
+                foreach (ChunkKey key in BuildingChunkKeys)
+                {
+                    if (!ResidentChunks.ContainsKey(key) && bounds.Contains(key))
+                    {
+                        count++;
+                    }
+                }
+
+                foreach (GeneratedChunkData chunkData in CompletedChunkBuildQueue)
+                {
+                    if (chunkData != null && !ResidentChunks.ContainsKey(chunkData.Key) && bounds.Contains(chunkData.Key))
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private static ChunkBounds ResolveFullTerrainMapChunkWindow()
+        {
+            EnsureTerrainWorldBoundsInitialized();
+            if (_fullTerrainMapChunkWindowInitialized)
+            {
+                return _fullTerrainMapChunkWindow;
+            }
+
+            _fullTerrainMapChunkWindow = BuildChunkBounds(
+                _terrainWorldBounds.MinX,
+                _terrainWorldBounds.MaxX,
+                _terrainWorldBounds.MinY,
+                _terrainWorldBounds.MaxY);
+            _fullTerrainMapChunkCount = CountChunksInBounds(_fullTerrainMapChunkWindow);
+            _fullTerrainMapChunkWindowInitialized = true;
+            return _fullTerrainMapChunkWindow;
+        }
+
+        private static int CountChunksInBounds(ChunkBounds bounds)
+        {
+            int width = Math.Max(0, bounds.MaxChunkX - bounds.MinChunkX + 1);
+            int height = Math.Max(0, bounds.MaxChunkY - bounds.MinChunkY + 1);
+            return width * height;
+        }
+
+        private static bool IsFullTerrainMapChunk(ChunkKey key)
+        {
+            return ResolveFullTerrainMapChunkWindow().Contains(key);
+        }
+
+        private static void QueueFullTerrainMapBuilds(ChunkBounds priorityChunkWindow)
+        {
+            ChunkBounds fullMapWindow = ResolveFullTerrainMapChunkWindow();
+            if (_fullTerrainMapGenerationComplete)
+            {
+                return;
+            }
+
+            QueueChunkBuildsWithLimit(
+                fullMapWindow,
+                priorityChunkWindow,
+                MaxFullTerrainMapChunkBuildEnqueuesPerFrame);
+        }
+
+        private static void UpdateFullTerrainMapGenerationState()
+        {
+            ChunkBounds fullMapWindow = ResolveFullTerrainMapChunkWindow();
+            _fullTerrainMapGeneratedChunkCount = CountResidentChunksInBounds(fullMapWindow);
+            _fullTerrainMapPendingChunkCount = CountPendingChunksInBounds(fullMapWindow);
+            bool complete =
+                _fullTerrainMapChunkCount > 0 &&
+                _fullTerrainMapGeneratedChunkCount >= _fullTerrainMapChunkCount &&
+                _fullTerrainMapPendingChunkCount == 0;
+
+            if (!complete)
+            {
+                _fullTerrainMapGenerationComplete = false;
+                if (_fullTerrainMapSnapshot == null &&
+                    _fullOceanZoneDebugBuildTask == null &&
+                    !_fullOceanZoneDebugReady)
+                {
+                    _fullOceanZoneDebugStatus = "waiting full-map ocean border queue";
+                }
+                return;
+            }
+
+            _fullTerrainMapGenerationComplete = true;
+            if (_fullTerrainMapSnapshot == null)
+            {
+                _fullTerrainMapSnapshot = BuildFullTerrainMapSnapshot(fullMapWindow);
+                if (_fullTerrainMapSnapshot != null)
+                {
+                    DebugLogger.PrintDebug(
+                        $"GameBlockTerrainBackground: full terrain map generated {_fullTerrainMapGeneratedChunkCount}/{_fullTerrainMapChunkCount} chunks in {FormatChunkBounds(fullMapWindow)}.");
+                }
+            }
+
+            EnsureFullOceanZoneDebugBuildQueued();
+        }
+
+        private static int CountResidentChunksInBounds(ChunkBounds bounds)
+        {
+            int count = 0;
+            foreach (KeyValuePair<ChunkKey, TerrainChunkRecord> entry in ResidentChunks)
             {
                 if (bounds.Contains(entry.Key))
                 {
@@ -586,8 +4251,70 @@ namespace op.io
             return count;
         }
 
+        private static List<ChunkBuildCandidate> BuildStartupWarmupChunkCandidates(ChunkKey focusChunk, ChunkBounds warmupWindow)
+        {
+            List<ChunkBuildCandidate> candidates = new();
+            for (int chunkY = warmupWindow.MinChunkY; chunkY <= warmupWindow.MaxChunkY; chunkY++)
+            {
+                for (int chunkX = warmupWindow.MinChunkX; chunkX <= warmupWindow.MaxChunkX; chunkX++)
+                {
+                    int dx = chunkX - focusChunk.X;
+                    int dy = chunkY - focusChunk.Y;
+                    int distanceSq = (dx * dx) + (dy * dy);
+                    candidates.Add(new ChunkBuildCandidate(new ChunkKey(chunkX, chunkY), isVisible: true, distanceSq));
+                }
+            }
+
+            candidates.Sort(static (left, right) =>
+            {
+                int distanceCompare = left.DistanceSq.CompareTo(right.DistanceSq);
+                if (distanceCompare != 0)
+                {
+                    return distanceCompare;
+                }
+
+                int yCompare = left.Key.Y.CompareTo(right.Key.Y);
+                return yCompare != 0 ? yCompare : left.Key.X.CompareTo(right.Key.X);
+            });
+
+            return candidates;
+        }
+
+        private static ChunkBounds BuildChunkBoundsForKeys(IReadOnlyList<ChunkKey> keys)
+        {
+            if (keys == null || keys.Count == 0)
+            {
+                return new ChunkBounds(0, 0, 0, 0);
+            }
+
+            int minChunkX = int.MaxValue;
+            int maxChunkX = int.MinValue;
+            int minChunkY = int.MaxValue;
+            int maxChunkY = int.MinValue;
+            for (int i = 0; i < keys.Count; i++)
+            {
+                ChunkKey key = keys[i];
+                minChunkX = Math.Min(minChunkX, key.X);
+                maxChunkX = Math.Max(maxChunkX, key.X);
+                minChunkY = Math.Min(minChunkY, key.Y);
+                maxChunkY = Math.Max(maxChunkY, key.Y);
+            }
+
+            return ClampChunkBoundsToTerrainWorld(new ChunkBounds(minChunkX, maxChunkX, minChunkY, maxChunkY));
+        }
+
         private static void QueueChunkBuilds(ChunkBounds preloadChunkWindow, ChunkBounds visibleChunkWindow)
         {
+            QueueChunkBuildsWithLimit(preloadChunkWindow, visibleChunkWindow, MaxNewChunkBuildsPerFrame);
+        }
+
+        private static void QueueChunkBuildsWithLimit(
+            ChunkBounds preloadChunkWindow,
+            ChunkBounds visibleChunkWindow,
+            int maxEnqueuesPerFrame)
+        {
+            EnsureTerrainChunkWorkerRunning();
+
             List<ChunkBuildCandidate> missingChunks = new();
 
             for (int chunkY = preloadChunkWindow.MinChunkY; chunkY <= preloadChunkWindow.MaxChunkY; chunkY++)
@@ -595,7 +4322,7 @@ namespace op.io
                 for (int chunkX = preloadChunkWindow.MinChunkX; chunkX <= preloadChunkWindow.MaxChunkX; chunkX++)
                 {
                     ChunkKey key = new(chunkX, chunkY);
-                    if (ResidentChunks.ContainsKey(key) || PendingChunks.ContainsKey(key))
+                    if (ResidentChunks.ContainsKey(key) || IsChunkQueuedOrBuilding(key))
                     {
                         continue;
                     }
@@ -619,59 +4346,321 @@ namespace op.io
                 return left.DistanceSq.CompareTo(right.DistanceSq);
             });
 
-            int availableBuildSlots = Math.Min(
-                MaxNewChunkBuildsPerFrame,
-                Math.Max(0, MaxConcurrentChunkBuilds - PendingChunks.Count));
-            if (availableBuildSlots <= 0)
+            int maxEnqueues = Math.Max(1, maxEnqueuesPerFrame);
+            int buildsQueued = 0;
+            lock (TerrainChunkWorkerLock)
+            {
+                for (int i = 0; i < missingChunks.Count && buildsQueued < maxEnqueues; i++)
+                {
+                    if (TerrainChunkBuildQueue.Count >= TerrainChunkBuildQueueLimit)
+                    {
+                        break;
+                    }
+
+                    ChunkBuildCandidate candidate = missingChunks[i];
+                    if (ResidentChunks.ContainsKey(candidate.Key) ||
+                        QueuedChunkKeys.Contains(candidate.Key) ||
+                        BuildingChunkKeys.Contains(candidate.Key))
+                    {
+                        continue;
+                    }
+
+                    TerrainChunkBuildQueue.Add(candidate);
+                    QueuedChunkKeys.Add(candidate.Key);
+                    _terrainBackgroundQueuedChunkBuildCount++;
+                    buildsQueued++;
+                }
+
+                if (buildsQueued > 0)
+                {
+                    SortTerrainChunkBuildQueueLocked();
+                    UpdateTerrainChunkWorkerTelemetryLocked();
+                    Monitor.Pulse(TerrainChunkWorkerLock);
+                }
+            }
+        }
+
+        private static bool IsChunkQueuedOrBuilding(ChunkKey key)
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                if (QueuedChunkKeys.Contains(key) || BuildingChunkKeys.Contains(key))
+                {
+                    return true;
+                }
+
+                foreach (GeneratedChunkData completedChunk in CompletedChunkBuildQueue)
+                {
+                    if (completedChunk != null && completedChunk.Key.Equals(key))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static void EnsureTerrainChunkWorkerRunning()
+        {
+            if (_terrainChunkWorkerThread != null && _terrainChunkWorkerThread.IsAlive)
             {
                 return;
             }
 
-            int buildsQueued = 0;
-            for (int i = 0; i < missingChunks.Count && buildsQueued < availableBuildSlots; i++)
+            lock (TerrainChunkWorkerLock)
             {
-                ChunkKey key = missingChunks[i].Key;
-                PendingChunks[key] = Task.Run(() => BuildChunkData(key));
-                buildsQueued++;
+                if (_terrainChunkWorkerThread != null && _terrainChunkWorkerThread.IsAlive)
+                {
+                    return;
+                }
+
+                _terrainChunkWorkerStopRequested = false;
+                _terrainChunkWorkerThread = new Thread(TerrainChunkWorkerLoop)
+                {
+                    IsBackground = true,
+                    Name = "TerrainChunkWorker",
+                    Priority = ThreadPriority.BelowNormal
+                };
+                _terrainChunkWorkerThread.Start();
             }
         }
 
-        private static bool BuildResidentChunksSynchronously(ChunkBounds chunkWindow)
+        private static void TerrainChunkWorkerLoop()
+        {
+            while (true)
+            {
+                ChunkBuildCandidate candidate;
+                int generation;
+                lock (TerrainChunkWorkerLock)
+                {
+                    while (!_terrainChunkWorkerStopRequested && TerrainChunkBuildQueue.Count == 0)
+                    {
+                        UpdateTerrainChunkWorkerTelemetryLocked();
+                        Monitor.Wait(TerrainChunkWorkerLock);
+                    }
+
+                    if (_terrainChunkWorkerStopRequested)
+                    {
+                        return;
+                    }
+
+                    candidate = TerrainChunkBuildQueue[0];
+                    TerrainChunkBuildQueue.RemoveAt(0);
+                    QueuedChunkKeys.Remove(candidate.Key);
+                    BuildingChunkKeys.Add(candidate.Key);
+                    generation = _terrainChunkWorkerGeneration;
+                    UpdateTerrainChunkWorkerTelemetryLocked();
+                }
+
+                GeneratedChunkData chunkData = null;
+                try
+                {
+                    chunkData = BuildChunkData(candidate.Key);
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.PrintWarning($"GameBlockTerrainBackground: background chunk build {candidate.Key.X},{candidate.Key.Y} failed. {ex.GetBaseException().Message}");
+                }
+
+                lock (TerrainChunkWorkerLock)
+                {
+                    BuildingChunkKeys.Remove(candidate.Key);
+                    if (chunkData != null &&
+                        generation == _terrainChunkWorkerGeneration)
+                    {
+                        CompletedChunkBuildQueue.Enqueue(chunkData);
+                    }
+
+                    UpdateTerrainChunkWorkerTelemetryLocked();
+                    Monitor.Pulse(TerrainChunkWorkerLock);
+                }
+            }
+        }
+
+        private static void SortTerrainChunkBuildQueueLocked()
+        {
+            TerrainChunkBuildQueue.Sort(static (left, right) =>
+            {
+                int visibleCompare = right.IsVisible.CompareTo(left.IsVisible);
+                if (visibleCompare != 0)
+                {
+                    return visibleCompare;
+                }
+
+                return left.DistanceSq.CompareTo(right.DistanceSq);
+            });
+        }
+
+        private static void UpdateTerrainChunkWorkerTelemetryLocked()
+        {
+            _terrainChunkWorkerQueuedBuildCount = TerrainChunkBuildQueue.Count;
+            _terrainChunkWorkerActiveBuildCount = BuildingChunkKeys.Count;
+            _terrainChunkWorkerCompletedQueueCount = CompletedChunkBuildQueue.Count;
+        }
+
+        private static string ResolveTerrainBackgroundWorkerStatus()
+        {
+            int queued = _terrainChunkWorkerQueuedBuildCount;
+            int active = _terrainChunkWorkerActiveBuildCount;
+            int completed = _terrainChunkWorkerCompletedQueueCount;
+            if (_terrainChunkWorkerThread == null || !_terrainChunkWorkerThread.IsAlive)
+            {
+                return "stopped";
+            }
+
+            return active > 0
+                ? $"building queued={queued} completed={completed}"
+                : queued > 0
+                    ? $"queued={queued} completed={completed}"
+                    : completed > 0
+                        ? $"completed={completed}"
+                        : "idle";
+        }
+
+        private static string ResolveTerrainAccessRequestStatus()
+        {
+            if (!_terrainAccessRequestActive)
+            {
+                return "none";
+            }
+
+            return $"{CentifootUnits.FormatVector2(_terrainAccessRequestWorldPosition)} radius={CentifootUnits.FormatDistance(_terrainAccessRequestRadiusWorldUnits)}";
+        }
+
+        private static GeneratedChunkData TryDequeueCompletedChunk()
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                if (CompletedChunkBuildQueue.Count == 0)
+                {
+                    UpdateTerrainChunkWorkerTelemetryLocked();
+                    return null;
+                }
+
+                GeneratedChunkData chunkData = CompletedChunkBuildQueue.Dequeue();
+                UpdateTerrainChunkWorkerTelemetryLocked();
+                return chunkData;
+            }
+        }
+
+        private static GeneratedChunkData TryTakeCompletedChunk(ChunkKey key)
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                if (CompletedChunkBuildQueue.Count == 0)
+                {
+                    UpdateTerrainChunkWorkerTelemetryLocked();
+                    return null;
+                }
+
+                GeneratedChunkData match = null;
+                int count = CompletedChunkBuildQueue.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    GeneratedChunkData chunkData = CompletedChunkBuildQueue.Dequeue();
+                    if (match == null && chunkData != null && chunkData.Key.Equals(key))
+                    {
+                        match = chunkData;
+                        continue;
+                    }
+
+                    CompletedChunkBuildQueue.Enqueue(chunkData);
+                }
+
+                UpdateTerrainChunkWorkerTelemetryLocked();
+                return match;
+            }
+        }
+
+        private static void RemoveQueuedChunkBuild(ChunkKey key)
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                if (!QueuedChunkKeys.Remove(key))
+                {
+                    return;
+                }
+
+                for (int i = TerrainChunkBuildQueue.Count - 1; i >= 0; i--)
+                {
+                    if (TerrainChunkBuildQueue[i].Key.Equals(key))
+                    {
+                        TerrainChunkBuildQueue.RemoveAt(i);
+                    }
+                }
+
+                UpdateTerrainChunkWorkerTelemetryLocked();
+            }
+        }
+
+        private static void ResetTerrainChunkWorkerQueues()
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                _terrainChunkWorkerGeneration++;
+                TerrainChunkBuildQueue.Clear();
+                QueuedChunkKeys.Clear();
+                BuildingChunkKeys.Clear();
+                CompletedChunkBuildQueue.Clear();
+                UpdateTerrainChunkWorkerTelemetryLocked();
+                Monitor.Pulse(TerrainChunkWorkerLock);
+            }
+        }
+
+        private static void ResetFullTerrainMapState(bool clearResidentChunks)
+        {
+            _fullTerrainMapChunkWindow = default;
+            _fullTerrainMapChunkWindowInitialized = false;
+            _fullTerrainMapChunkCount = 0;
+            _fullTerrainMapGeneratedChunkCount = 0;
+            _fullTerrainMapPendingChunkCount = 0;
+            _fullTerrainMapGenerationComplete = false;
+            _fullTerrainMapSnapshot = null;
+            _terrainMapSnapshotOverride = null;
+            ResetOceanZoneDebugFullMapState(clearSegments: true);
+
+            if (!clearResidentChunks)
+            {
+                return;
+            }
+
+            List<ChunkKey> residentKeys = new(ResidentChunks.Keys);
+            for (int i = 0; i < residentKeys.Count; i++)
+            {
+                DisposeResidentChunk(residentKeys[i]);
+            }
+        }
+
+        private static void ResetOceanZoneDebugFullMapState(bool clearSegments)
+        {
+            _fullOceanZoneDebugBuildTask = null;
+            _fullOceanZoneDebugReady = false;
+            _fullOceanZoneDebugBuildSeed = int.MinValue;
+            _fullOceanZoneDebugSegmentCount = 0;
+            _fullOceanZoneDebugBuildMilliseconds = 0.0;
+            _fullOceanZoneDebugStatus = "waiting full-map ocean border queue";
+            _oceanZoneDebugSuppressedTinyZoneCount = 0;
+            _oceanZoneDebugTinyZoneViolationSummary = "none";
+            _oceanZoneDebugTinyZoneSuppressionScratchCount = 0;
+            _oceanZoneDebugTinyZoneSuppressedCellsScratch = null;
+            if (clearSegments)
+            {
+                FullOceanZoneDebugSegments.Clear();
+                OceanZoneDebugSegments.Clear();
+                _oceanZoneDebugBorderSegmentCount = 0;
+                _oceanZoneDebugBorderLabelCount = 0;
+            }
+        }
+
+        private static bool BuildResidentChunksSynchronously(ChunkBounds chunkWindow, bool waitForPending = true)
         {
             for (int chunkY = chunkWindow.MinChunkY; chunkY <= chunkWindow.MaxChunkY; chunkY++)
             {
                 for (int chunkX = chunkWindow.MinChunkX; chunkX <= chunkWindow.MaxChunkX; chunkX++)
                 {
-                    ChunkKey key = new(chunkX, chunkY);
-                    if (ResidentChunks.ContainsKey(key))
+                    if (!TryBuildResidentChunkSynchronously(new ChunkKey(chunkX, chunkY), waitForPending))
                     {
-                        continue;
-                    }
-
-                    if (PendingChunks.TryGetValue(key, out Task<GeneratedChunkData> pendingTask))
-                    {
-                        try
-                        {
-                            GeneratedChunkData pendingChunkData = pendingTask.GetAwaiter().GetResult();
-                            PendingChunks.Remove(key);
-                            PromoteChunk(pendingChunkData);
-                            continue;
-                        }
-                        catch (Exception ex)
-                        {
-                            PendingChunks.Remove(key);
-                            DebugLogger.PrintWarning($"GameBlockTerrainBackground: startup chunk build {key.X},{key.Y} failed. {ex.GetBaseException().Message}");
-                            return false;
-                        }
-                    }
-
-                    try
-                    {
-                        PromoteChunk(BuildChunkData(key));
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLogger.PrintWarning($"GameBlockTerrainBackground: startup chunk build {key.X},{key.Y} failed. {ex.GetBaseException().Message}");
                         return false;
                     }
                 }
@@ -680,43 +4669,55 @@ namespace op.io
             return true;
         }
 
+        private static bool TryBuildResidentChunkSynchronously(ChunkKey key, bool waitForPending = true)
+        {
+            if (ResidentChunks.ContainsKey(key))
+            {
+                return true;
+            }
+
+            GeneratedChunkData completedChunk = TryTakeCompletedChunk(key);
+            if (completedChunk != null)
+            {
+                PromoteChunk(completedChunk);
+                return true;
+            }
+
+            RemoveQueuedChunkBuild(key);
+
+            try
+            {
+                PromoteChunk(BuildChunkData(key));
+                _startupSynchronousChunkBuildCount++;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning($"GameBlockTerrainBackground: synchronous chunk build {key.X},{key.Y} failed. {ex.GetBaseException().Message}");
+                return false;
+            }
+        }
+
         private static void TryPromoteCompletedChunks(ChunkBounds retainChunkWindow)
         {
-            List<ChunkKey> completed = new();
+            int promotedCount = 0;
 
-            foreach (KeyValuePair<ChunkKey, Task<GeneratedChunkData>> entry in PendingChunks)
+            while (promotedCount < MaxCompletedChunkPromotionsPerFrame)
             {
-                Task<GeneratedChunkData> task = entry.Value;
-                if (!task.IsCompleted)
+                GeneratedChunkData chunkData = TryDequeueCompletedChunk();
+                if (chunkData == null)
                 {
-                    continue;
+                    break;
                 }
 
-                completed.Add(entry.Key);
-
-                if (task.IsFaulted)
-                {
-                    DebugLogger.PrintWarning($"GameBlockTerrainBackground: chunk build {entry.Key.X},{entry.Key.Y} failed. {task.Exception?.GetBaseException().Message}");
-                    continue;
-                }
-
-                if (task.IsCanceled)
-                {
-                    continue;
-                }
-
-                GeneratedChunkData chunkData = task.Result;
-                if (!retainChunkWindow.Contains(chunkData.Key))
+                if (!retainChunkWindow.Contains(chunkData.Key) &&
+                    !IsFullTerrainMapChunk(chunkData.Key))
                 {
                     continue;
                 }
 
                 PromoteChunk(chunkData);
-            }
-
-            for (int i = 0; i < completed.Count; i++)
-            {
-                PendingChunks.Remove(completed[i]);
+                promotedCount++;
             }
         }
 
@@ -733,6 +4734,10 @@ namespace op.io
             {
                 _terrainWorldObjectsDirty = true;
             }
+            if (_lastVisibleChunkWindow.Contains(chunkData.Key))
+            {
+                _terrainVisibleObjectsDirty = true;
+            }
         }
 
         private static void DisposeResidentChunk(ChunkKey key)
@@ -747,6 +4752,10 @@ namespace op.io
             {
                 _terrainWorldObjectsDirty = true;
             }
+            if (_lastVisibleChunkWindow.Contains(key))
+            {
+                _terrainVisibleObjectsDirty = true;
+            }
         }
 
         private static void PruneResidentChunks(ChunkBounds retainChunkWindow)
@@ -755,7 +4764,8 @@ namespace op.io
 
             foreach (KeyValuePair<ChunkKey, TerrainChunkRecord> entry in ResidentChunks)
             {
-                if (!retainChunkWindow.Contains(entry.Key))
+                if (!retainChunkWindow.Contains(entry.Key) &&
+                    !IsFullTerrainMapChunk(entry.Key))
                 {
                     staleKeys.Add(entry.Key);
                 }
@@ -764,6 +4774,70 @@ namespace op.io
             for (int i = 0; i < staleKeys.Count; i++)
             {
                 DisposeResidentChunk(staleKeys[i]);
+            }
+
+            EnforceResidentChunkMemoryCap();
+            PruneQueuedChunkBuilds(retainChunkWindow);
+        }
+
+        private static void EnforceResidentChunkMemoryCap()
+        {
+            if (ResidentChunks.Count <= TerrainResidentChunkMemoryCapValue)
+            {
+                return;
+            }
+
+            List<ChunkKey> removable = new(ResidentChunks.Count);
+            foreach (KeyValuePair<ChunkKey, TerrainChunkRecord> entry in ResidentChunks)
+            {
+                if (_lastVisibleChunkWindow.Contains(entry.Key) ||
+                    _lastMaterializedChunkWindow.Contains(entry.Key) ||
+                    IsFullTerrainMapChunk(entry.Key))
+                {
+                    continue;
+                }
+
+                removable.Add(entry.Key);
+            }
+
+            removable.Sort((left, right) =>
+            {
+                int leftDistance = ChunkDistanceSqFromCurrentCenter(left);
+                int rightDistance = ChunkDistanceSqFromCurrentCenter(right);
+                return rightDistance.CompareTo(leftDistance);
+            });
+
+            for (int i = 0; i < removable.Count && ResidentChunks.Count > TerrainResidentChunkMemoryCapValue; i++)
+            {
+                DisposeResidentChunk(removable[i]);
+            }
+        }
+
+        private static int ChunkDistanceSqFromCurrentCenter(ChunkKey key)
+        {
+            int dx = key.X - _lastCenterChunk.X;
+            int dy = key.Y - _lastCenterChunk.Y;
+            return (dx * dx) + (dy * dy);
+        }
+
+        private static void PruneQueuedChunkBuilds(ChunkBounds retainChunkWindow)
+        {
+            lock (TerrainChunkWorkerLock)
+            {
+                for (int i = TerrainChunkBuildQueue.Count - 1; i >= 0; i--)
+                {
+                    ChunkKey key = TerrainChunkBuildQueue[i].Key;
+                    if (retainChunkWindow.Contains(key) ||
+                        IsFullTerrainMapChunk(key))
+                    {
+                        continue;
+                    }
+
+                    TerrainChunkBuildQueue.RemoveAt(i);
+                    QueuedChunkKeys.Remove(key);
+                }
+
+                UpdateTerrainChunkWorkerTelemetryLocked();
             }
         }
 
@@ -869,6 +4943,17 @@ namespace op.io
             return worldPosition;
         }
 
+        internal static bool IsTerrainFreeWorldPosition(Vector2 worldPosition, float clearanceRadiusWorldUnits)
+        {
+            if (!IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            LoadSettingsIfNeeded();
+            return !OverlapsTerrainAtWorldPosition(worldPosition, MathF.Max(0f, clearanceRadiusWorldUnits));
+        }
+
         internal static void SetTerrainSpawnRelocationCount(int relocationCount)
         {
             _terrainSpawnRelocationCount = Math.Max(0, relocationCount);
@@ -885,6 +4970,13 @@ namespace op.io
 
             LoadSettingsIfNeeded();
 
+            bool residentTerrainCollisionReady = ResidentTerrainCollisionLoops.Count > 0;
+            if (!residentTerrainCollisionReady && !HasDynamicTerrainWorldBoundaryIntrusion(gameObjects))
+            {
+                _terrainRuntimeFieldCollisionFallbackSuppressedCount++;
+                return;
+            }
+
             for (int i = 0; i < gameObjects.Count; i++)
             {
                 GameObject gameObject = gameObjects[i];
@@ -896,8 +4988,7 @@ namespace op.io
                     continue;
                 }
 
-                if (!OverlapsTerrainAtWorldPosition(gameObject.Position, gameObject.BoundingRadius) ||
-                    !OverlapsTerrainAtCollisionHull(gameObject, gameObject.Position))
+                if (!OverlapsStableTerrainCollisionSurface(gameObject, gameObject.Position, residentTerrainCollisionReady))
                 {
                     continue;
                 }
@@ -934,6 +5025,111 @@ namespace op.io
 
                 _terrainCollisionIntrusionCorrectionCount++;
             }
+        }
+
+        internal static void ResolveBulletTerrainIntrusions(IReadOnlyList<Bullet> bullets)
+        {
+            _terrainBulletCollisionCorrectionCount = 0;
+
+            if (bullets == null || bullets.Count == 0)
+            {
+                return;
+            }
+
+            LoadSettingsIfNeeded();
+
+            bool residentTerrainCollisionReady = ResidentTerrainCollisionLoops.Count > 0;
+            if (!residentTerrainCollisionReady)
+            {
+                return;
+            }
+
+            for (int i = 0; i < bullets.Count; i++)
+            {
+                Bullet bullet = bullets[i];
+                if (bullet == null ||
+                    bullet.IsDying ||
+                    bullet.IsBarrelLocked ||
+                    bullet.Shape == null)
+                {
+                    continue;
+                }
+
+                if (!OverlapsTerrainAtCollisionHull(bullet, bullet.Position))
+                {
+                    continue;
+                }
+
+                float escapeProbeRadius = ResolveTerrainEscapeProbeRadius(bullet);
+                Vector2 originalPosition = bullet.Position;
+                Vector2 resolvedPosition = ResolveTerrainIntrusionPosition(
+                    bullet,
+                    originalPosition,
+                    bullet.PreviousPosition,
+                    escapeProbeRadius);
+                Vector2 terrainMtv = originalPosition - resolvedPosition;
+                if (!IsFiniteVector(terrainMtv) || terrainMtv.LengthSquared() <= 0.25f)
+                {
+                    continue;
+                }
+
+                BulletCollisionResolver.ReflectBulletOffStaticSurface(
+                    bullet,
+                    terrainMtv,
+                    TerrainStaticMass);
+                bullet.TriggerHitFlash();
+                _terrainBulletCollisionCorrectionCount++;
+            }
+        }
+
+        private static bool HasDynamicTerrainWorldBoundaryIntrusion(IReadOnlyList<GameObject> gameObjects)
+        {
+            EnsureTerrainWorldBoundsInitialized();
+            if (!TerrainWorldBoundaryEnabled || gameObjects == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < gameObjects.Count; i++)
+            {
+                GameObject gameObject = gameObjects[i];
+                if (gameObject == null ||
+                    !gameObject.DynamicPhysics ||
+                    !gameObject.IsCollidable ||
+                    gameObject.Shape == null)
+                {
+                    continue;
+                }
+
+                if (OverlapsTerrainWorldBoundary(gameObject.Position, gameObject.BoundingRadius) ||
+                    TerrainCollisionHullOverlapsWorldBoundary(gameObject, gameObject.Position))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool OverlapsStableTerrainCollisionSurface(
+            GameObject gameObject,
+            Vector2 worldPosition,
+            bool residentTerrainCollisionReady)
+        {
+            if (gameObject == null)
+            {
+                return false;
+            }
+
+            if (OverlapsTerrainWorldBoundary(worldPosition, gameObject.BoundingRadius) ||
+                TerrainCollisionHullOverlapsWorldBoundary(gameObject, worldPosition))
+            {
+                return true;
+            }
+
+            return residentTerrainCollisionReady &&
+                OverlapsTerrainAtWorldPosition(worldPosition, gameObject.BoundingRadius) &&
+                OverlapsTerrainAtCollisionHull(gameObject, worldPosition);
         }
 
         private static Vector2 ResolveTerrainCollisionEscapeDirection(
@@ -1204,6 +5400,42 @@ namespace op.io
             return TerrainCollisionHullEdgesOverlapTerrain(vertices);
         }
 
+        private static bool TerrainCollisionHullOverlapsWorldBoundary(GameObject gameObject, Vector2 worldPosition)
+        {
+            EnsureTerrainWorldBoundsInitialized();
+            if (!TerrainWorldBoundaryEnabled ||
+                gameObject?.Shape == null ||
+                !IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            try
+            {
+                Vector2[] vertices = gameObject.Shape.GetTransformedVertices(worldPosition, gameObject.Rotation);
+                if (vertices == null || vertices.Length == 0)
+                {
+                    return OverlapsTerrainWorldBoundary(worldPosition, gameObject.BoundingRadius);
+                }
+
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    if (OverlapsTerrainWorldBoundary(vertices[i], 0f))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintWarning(
+                    $"Terrain world boundary hull probe failed for ID={gameObject.ID}, Name={gameObject.Name}: {ex.Message}");
+                return OverlapsTerrainWorldBoundary(worldPosition, gameObject.BoundingRadius);
+            }
+        }
+
         private static bool TerrainCollisionHullEdgesOverlapTerrain(Vector2[] vertices)
         {
             int vertexCount = vertices?.Length ?? 0;
@@ -1265,7 +5497,7 @@ namespace op.io
         {
             if (!TerrainWorldContainsPoint(worldX, worldY))
             {
-                return Land;
+                return Water;
             }
 
             float terrainX = ResolveTerrainCentifootX(worldX);
@@ -1275,7 +5507,69 @@ namespace op.io
 
         private static bool IsTerrainLandAtWorldPosition(Vector2 worldPosition)
         {
+            if (TrySampleGeneratedTerrainAtWorldPosition(worldPosition, out bool isLand))
+            {
+                return isLand;
+            }
+
             return SampleTerrainMaskAtWorldPosition(worldPosition.X, worldPosition.Y) == Land;
+        }
+
+        private static bool TrySampleGeneratedTerrainAtWorldPosition(Vector2 worldPosition, out bool isLand)
+        {
+            isLand = false;
+            TerrainMapSnapshot overrideSnapshot = _terrainMapSnapshotOverride;
+            if (overrideSnapshot != null &&
+                overrideSnapshot.TrySample(worldPosition.X, worldPosition.Y, out byte overrideMask))
+            {
+                isLand = overrideMask == Land;
+                return true;
+            }
+
+            TerrainMapSnapshot fullMapSnapshot = _fullTerrainMapSnapshot;
+            if (fullMapSnapshot != null &&
+                fullMapSnapshot.TrySample(worldPosition.X, worldPosition.Y, out byte snapshotMask))
+            {
+                isLand = snapshotMask == Land;
+                return true;
+            }
+
+            if (TrySampleResidentTerrainChunkAtWorldPosition(worldPosition, out bool residentIsLand))
+            {
+                isLand = residentIsLand;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TrySampleResidentTerrainChunkAtWorldPosition(Vector2 worldPosition, out bool isLand)
+        {
+            isLand = false;
+            if (!IsFiniteVector(worldPosition) || ResidentChunks.Count <= 0)
+            {
+                return false;
+            }
+
+            ChunkKey key = BuildChunkKey(worldPosition.X, worldPosition.Y);
+            if (!ResidentChunks.TryGetValue(key, out TerrainChunkRecord chunk))
+            {
+                return false;
+            }
+
+            if (chunk == null || !chunk.HasLand || chunk.LandMask == null || chunk.LandMask.Length < ChunkTextureResolution * ChunkTextureResolution)
+            {
+                isLand = false;
+                return true;
+            }
+
+            float chunkMinX = key.X * ChunkWorldSize;
+            float chunkMinY = key.Y * ChunkWorldSize;
+            float sampleStep = ChunkWorldSize / ChunkTextureResolution;
+            int x = Math.Clamp((int)MathF.Floor((worldPosition.X - chunkMinX) / sampleStep), 0, ChunkTextureResolution - 1);
+            int y = Math.Clamp((int)MathF.Floor((worldPosition.Y - chunkMinY) / sampleStep), 0, ChunkTextureResolution - 1);
+            isLand = chunk.LandMask[Index(x, y, ChunkTextureResolution)] == Land;
+            return true;
         }
 
         private static Vector2 ResolveTerrainIntrusionPosition(
@@ -1489,6 +5783,11 @@ namespace op.io
 
         private static bool OverlapsTerrainWorldBoundary(Vector2 worldPosition, float clearanceRadiusWorldUnits)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return false;
+            }
+
             float radius = MathF.Max(0f, clearanceRadiusWorldUnits);
             return worldPosition.X - radius < _terrainWorldBounds.MinX ||
                 worldPosition.X + radius > _terrainWorldBounds.MaxX ||
@@ -1549,6 +5848,910 @@ namespace op.io
             float terrainX = ResolveTerrainCentifootX(worldPosition.X);
             float terrainY = ResolveTerrainCentifootY(worldPosition.Y);
             return WorldField(terrainX, terrainY, _terrainWorldSeed);
+        }
+
+        internal static bool TryResolveOceanZoneAtWorldPosition(
+            Vector2 worldPosition,
+            out TerrainWaterType waterType,
+            out float waterDepth)
+        {
+            return TryResolveOceanZoneAtWorldPosition(
+                worldPosition,
+                out waterType,
+                out waterDepth,
+                out _);
+        }
+
+        internal static bool TryResolveOceanZoneAtWorldPosition(
+            Vector2 worldPosition,
+            out TerrainWaterType waterType,
+            out float waterDepth,
+            out float offshoreDistance)
+        {
+            LoadSettingsIfNeeded();
+            EnsureTerrainWorldBoundsInitialized();
+
+            waterType = TerrainWaterType.Sunlit;
+            waterDepth = 0f;
+            offshoreDistance = 0f;
+
+            if (!IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            if (!TerrainWorldContainsPoint(worldPosition.X, worldPosition.Y))
+            {
+                ResolveInfiniteAbyssOceanZone(out waterType, out waterDepth, out offshoreDistance);
+                return true;
+            }
+
+            if (!TryResolveOceanZoneAtWorldPositionCore(
+                worldPosition,
+                ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance)) +
+                    TerrainOceanZoneFieldSampleStepWorldUnits,
+                out waterType,
+                out waterDepth,
+                out offshoreDistance))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool TryResolveOceanZoneAtWorldPositionCore(
+            Vector2 worldPosition,
+            float maxSearchDistanceWorldUnits,
+            out TerrainWaterType waterType,
+            out float waterDepth,
+            out float offshoreDistance)
+        {
+            LoadSettingsIfNeeded();
+            EnsureTerrainWorldBoundsInitialized();
+
+            return TryResolveLayeredOceanZoneAtWorldPosition(
+                worldPosition,
+                maxSearchDistanceWorldUnits,
+                out waterType,
+                out waterDepth,
+                out offshoreDistance);
+        }
+
+        private static TerrainWaterType ResolveWaterTypeFromOffshoreDistance(float offshoreDistance)
+        {
+            float distance = MathF.Max(0f, offshoreDistance);
+            if (distance <= ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance))
+            {
+                return TerrainWaterType.Shallow;
+            }
+
+            if (distance <= ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance))
+            {
+                return TerrainWaterType.Sunlit;
+            }
+
+            if (distance <= ResolveEffectiveOceanZoneTransitionDistance(DevWaterTwilightDistance))
+            {
+                return TerrainWaterType.Twilight;
+            }
+
+            return distance <= ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance) ? TerrainWaterType.Midnight : TerrainWaterType.Abyss;
+        }
+
+        private static void ResolveInfiniteAbyssOceanZone(
+            out TerrainWaterType waterType,
+            out float waterDepth,
+            out float offshoreDistance)
+        {
+            waterType = TerrainWaterType.Abyss;
+            waterDepth = DevWaterDepthRampMax;
+            offshoreDistance = ResolveInfiniteAbyssOffshoreDistance();
+        }
+
+        private static float ResolveInfiniteAbyssOffshoreDistance()
+        {
+            return ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance) +
+                TerrainOceanZoneFieldSampleStepWorldUnits;
+        }
+
+        private static float ResolveDefaultArchipelagoAbyssOverrideDistance()
+        {
+            float abyssThreshold = ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance);
+            float safetyBand = Math.Max(
+                Math.Max(ChunkWorldSize * 2f, ResolveEffectiveOceanZoneTransitionDistance(DevWaterTwilightDistance)),
+                TerrainOceanZoneFieldSampleStepWorldUnits * 8f);
+            return abyssThreshold + safetyBand;
+        }
+
+        private static float ResolveOceanZoneSmoothArchipelagoDistanceStart()
+        {
+            return ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance) +
+                OceanZoneDebugSampleStepWorldUnits;
+        }
+
+        private static bool TryResolveStableArchipelagoOceanZoneOffshoreDistance(
+            Vector2 worldPosition,
+            int seed,
+            out float offshoreDistance)
+        {
+            if (!TryResolveDefaultArchipelagoOceanZoneOffshoreDistance(worldPosition, seed, out offshoreDistance))
+            {
+                return false;
+            }
+
+            return offshoreDistance > ResolveStableArchipelagoOceanZonePrecisionDistance();
+        }
+
+        private static float ResolveStableArchipelagoOceanZonePrecisionDistance()
+        {
+            return ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance);
+        }
+
+        private static float ResolveStableArchipelagoBlendedOffshoreDistance(float preciseDistance, float stableArchipelagoDistance)
+        {
+            if (!float.IsFinite(stableArchipelagoDistance))
+            {
+                return preciseDistance;
+            }
+
+            if (!float.IsFinite(preciseDistance))
+            {
+                return stableArchipelagoDistance;
+            }
+
+            float precisionDistance = ResolveStableArchipelagoOceanZonePrecisionDistance();
+            if (stableArchipelagoDistance <= precisionDistance)
+            {
+                return preciseDistance;
+            }
+
+            float fullStableDistance = MathF.Max(
+                precisionDistance + TerrainOceanZoneFieldSampleStepWorldUnits,
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance));
+            float blend = SmoothStep(precisionDistance, fullStableDistance, stableArchipelagoDistance);
+            return MathHelper.Lerp(preciseDistance, stableArchipelagoDistance, blend);
+        }
+
+        private static float ResolveEffectiveOceanZoneTransitionDistance(float baseDistance)
+        {
+            float distance = MathF.Max(0f, baseDistance);
+            return distance + (_oceanZoneMinimumTransitionVolumeDistanceWorldUnits * ResolveOceanZoneTransitionSpreadMultiplier(distance));
+        }
+
+        private static float ResolveOceanZoneTransitionSpreadMultiplier(float baseDistance)
+        {
+            float epsilon = MathF.Max(0.001f, TerrainOceanZoneFieldSampleStepWorldUnits * 0.01f);
+            if (baseDistance <= DevWaterShallowDistance + epsilon)
+            {
+                return 1f;
+            }
+
+            if (baseDistance <= DevWaterSunlitDistance + epsilon)
+            {
+                return 2f;
+            }
+
+            if (baseDistance <= DevWaterTwilightDistance + epsilon)
+            {
+                return 3f;
+            }
+
+            return 4f;
+        }
+
+        private static TerrainWaterType ResolveWaterTypeAtTerrainPosition(float terrainX, float terrainY, int seed)
+        {
+            Vector2 worldPosition = TerrainCoordinateToWorldPosition(terrainX, terrainY);
+            float offshoreDistance = ResolveCanonicalOceanZoneOffshoreDistance(worldPosition, seed);
+            return ResolveWaterTypeFromOffshoreDistance(offshoreDistance);
+        }
+
+        private static float ResolveOceanZoneOffshoreDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            return ResolveCanonicalOceanZoneOffshoreDistance(worldPosition, _terrainWorldSeed);
+        }
+
+        private static float ResolveCanonicalOceanZoneOffshoreDistance(Vector2 worldPosition, int seed)
+        {
+            if (!IsFiniteVector(worldPosition))
+            {
+                return 0f;
+            }
+
+            if (TryResolveDefaultArchipelagoOceanZoneOffshoreDistance(
+                worldPosition,
+                seed,
+                out float defaultArchipelagoDistance))
+            {
+                return defaultArchipelagoDistance;
+            }
+
+            return ResolveInfiniteAbyssOffshoreDistance();
+        }
+
+        private static float ResolveCentralIslandOceanZoneOffshoreDistance(Vector2 worldPosition, int seed)
+        {
+            if (!IsFiniteVector(worldPosition) ||
+                !TryResolvePrimaryOceanZoneAnchor(
+                    seed,
+                    out Vector2 centerWorld,
+                    out float radiusWorldUnits,
+                    out float elongation,
+                    out float rotationRadians))
+            {
+                return 0f;
+            }
+
+            Vector2 delta = worldPosition - centerWorld;
+            Rotate(delta.X, delta.Y, -rotationRadians, out float localX, out float localY);
+            float safeElongation = Math.Clamp(elongation, 0.25f, 4f);
+            localX /= safeElongation;
+            localY *= safeElongation;
+            float radialDistance = MathF.Sqrt((localX * localX) + (localY * localY));
+            return MathF.Max(0f, radialDistance - Math.Max(1f, radiusWorldUnits));
+        }
+
+        private static bool TryResolveDefaultArchipelagoOceanZoneOffshoreDistance(
+            Vector2 worldPosition,
+            int seed,
+            out float offshoreDistance)
+        {
+            offshoreDistance = 0f;
+            if (!IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            IReadOnlyList<OceanZoneDistanceAnchor> anchors = ResolveDefaultOceanZoneDistanceAnchors(seed);
+            if (anchors.Count <= 0)
+            {
+                return false;
+            }
+
+            float bestDistance = float.PositiveInfinity;
+            for (int i = 0; i < anchors.Count; i++)
+            {
+                OceanZoneDistanceAnchor anchor = anchors[i];
+                Vector2 delta = worldPosition - anchor.CenterWorld;
+                Rotate(delta.X, delta.Y, -anchor.RotationRadians, out float localX, out float localY);
+                localX /= anchor.Elongation;
+                localY *= anchor.Elongation;
+                float radialDistance = MathF.Sqrt((localX * localX) + (localY * localY));
+                float coastDistance = MathF.Max(0f, radialDistance - anchor.RadiusWorldUnits);
+                if (coastDistance < bestDistance)
+                {
+                    bestDistance = coastDistance;
+                }
+            }
+
+            if (!float.IsFinite(bestDistance))
+            {
+                return false;
+            }
+
+            offshoreDistance = bestDistance;
+            return true;
+        }
+
+        private static bool TryResolveCentralIslandOceanZoneNormal(Vector2 worldPosition, out Vector2 normal)
+        {
+            normal = Vector2.Zero;
+            if (!IsFiniteVector(worldPosition) ||
+                !TryResolvePrimaryOceanZoneAnchor(
+                    _terrainWorldSeed,
+                    out Vector2 centerWorld,
+                    out _,
+                    out float elongation,
+                    out float rotationRadians))
+            {
+                return false;
+            }
+
+            Vector2 delta = worldPosition - centerWorld;
+            Rotate(delta.X, delta.Y, -rotationRadians, out float rotatedX, out float rotatedY);
+            float safeElongation = Math.Clamp(elongation, 0.25f, 4f);
+            float localX = rotatedX / safeElongation;
+            float localY = rotatedY * safeElongation;
+            float radialDistance = MathF.Sqrt((localX * localX) + (localY * localY));
+            if (radialDistance <= 0.001f)
+            {
+                return false;
+            }
+
+            float gradientX = localX / (radialDistance * safeElongation);
+            float gradientY = (localY * safeElongation) / radialDistance;
+            Rotate(gradientX, gradientY, rotationRadians, out float normalX, out float normalY);
+            normal = new Vector2(normalX, normalY);
+            if (normal.LengthSquared() <= 0.0001f)
+            {
+                return false;
+            }
+
+            normal.Normalize();
+            return true;
+        }
+
+        private static float ResolveLayeredTerrainOffshoreDistance(float terrainX, float terrainY, int seed)
+        {
+            Vector2 worldPosition = TerrainCoordinateToWorldPosition(terrainX, terrainY);
+            bool stableArchipelagoDistanceAvailable =
+                TryResolveStableArchipelagoOceanZoneOffshoreDistance(
+                    worldPosition,
+                    seed,
+                    out float stableArchipelagoDistance);
+
+            float sampleStep = MathF.Max(0.01f, DefaultWorldToTerrainCoordinate(TerrainOceanZoneFieldSampleStepWorldUnits));
+            float maxDistance = stableArchipelagoDistanceAvailable
+                ? MathF.Max(sampleStep, DefaultWorldToTerrainCoordinate(ResolveStableArchipelagoOceanZonePrecisionDistance()))
+                : MathF.Max(
+                sampleStep,
+                DefaultWorldToTerrainCoordinate(
+                    ResolveEffectiveOceanZoneTransitionDistance(Math.Max(DevWaterMidnightDistance, DevWaterTwilightDistance)) +
+                    TerrainOceanZoneFieldSampleStepWorldUnits));
+            float bestDistance = float.PositiveInfinity;
+
+            for (float radius = sampleStep; radius <= maxDistance;)
+            {
+                float radiusWorldUnits = TerrainCoordinateToDefaultWorld(radius);
+                float ringStepWorldUnits = ResolveOceanZoneDistanceSearchStep(radiusWorldUnits);
+                float ringStep = MathF.Max(sampleStep, DefaultWorldToTerrainCoordinate(ringStepWorldUnits));
+                int sampleCount = Math.Clamp(
+                    (int)MathF.Ceiling(MathF.Tau * radiusWorldUnits / ringStepWorldUnits),
+                    12,
+                    TerrainOceanZoneMaxFieldSamplesPerRing);
+                float angleOffset = ResolveTerrainDistanceRingAngleOffset(radiusWorldUnits, ringStepWorldUnits);
+                for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+                {
+                    float angle = ((sampleIndex + angleOffset) / sampleCount) * MathF.Tau;
+                    float directionX = MathF.Cos(angle);
+                    float directionY = MathF.Sin(angle);
+                    float sampleX = terrainX + (directionX * radius);
+                    float sampleY = terrainY + (directionY * radius);
+                    if (!IsLayeredTerrainLandAtTerrainPosition(sampleX, sampleY, seed))
+                    {
+                        continue;
+                    }
+
+                    float coastDistance = RefineLayeredTerrainCoastDistance(terrainX, terrainY, directionX, directionY, radius, seed);
+                    if (coastDistance < bestDistance)
+                    {
+                        bestDistance = coastDistance;
+                    }
+                }
+
+                if (float.IsFinite(bestDistance))
+                {
+                    float preciseDistance = TerrainCoordinateToDefaultWorld(bestDistance);
+                    return stableArchipelagoDistanceAvailable
+                        ? ResolveStableArchipelagoBlendedOffshoreDistance(preciseDistance, stableArchipelagoDistance)
+                        : preciseDistance;
+                }
+
+                radius += sampleStep;
+            }
+
+            float fallbackDistance = TerrainCoordinateToDefaultWorld(maxDistance + sampleStep);
+            return stableArchipelagoDistanceAvailable
+                ? ResolveStableArchipelagoBlendedOffshoreDistance(fallbackDistance, stableArchipelagoDistance)
+                : fallbackDistance;
+        }
+
+        private static float RefineLayeredTerrainCoastDistance(
+            float waterX,
+            float waterY,
+            float directionX,
+            float directionY,
+            float landDistance,
+            int seed)
+        {
+            float low = 0f;
+            float high = Math.Max(0f, landDistance);
+            for (int i = 0; i < TerrainOceanZoneCoastRefineIterations; i++)
+            {
+                float midpoint = (low + high) * 0.5f;
+                float sampleX = waterX + (directionX * midpoint);
+                float sampleY = waterY + (directionY * midpoint);
+                if (IsLayeredTerrainLandAtTerrainPosition(sampleX, sampleY, seed))
+                {
+                    high = midpoint;
+                }
+                else
+                {
+                    low = midpoint;
+                }
+            }
+
+            return high;
+        }
+
+        private static bool IsLayeredTerrainLandAtTerrainPosition(float terrainX, float terrainY, int seed)
+        {
+            return WorldField(terrainX, terrainY, seed) > SeaLevel;
+        }
+
+        private static bool TryResolveLayeredOceanZoneAtWorldPosition(
+            Vector2 worldPosition,
+            float maxSearchDistanceWorldUnits,
+            out TerrainWaterType waterType,
+            out float waterDepth,
+            out float offshoreDistance)
+        {
+            waterType = TerrainWaterType.Sunlit;
+            waterDepth = 0f;
+            offshoreDistance = 0f;
+
+            if (!IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            if (!TerrainWorldContainsPoint(worldPosition.X, worldPosition.Y))
+            {
+                ResolveInfiniteAbyssOceanZone(out waterType, out waterDepth, out offshoreDistance);
+                return true;
+            }
+
+            float terrainX = ResolveTerrainCentifootX(worldPosition.X);
+            float terrainY = ResolveTerrainCentifootY(worldPosition.Y);
+            bool appliedTerrainAuthoritative = IsAppliedTerrainWindowAuthoritativeForOceanZone(worldPosition, 0f);
+            if (!appliedTerrainAuthoritative &&
+                TryResolveDefaultArchipelagoOceanZoneOffshoreDistance(
+                    worldPosition,
+                    _terrainWorldSeed,
+                    out float defaultArchipelagoDistance) &&
+                defaultArchipelagoDistance > ResolveDefaultArchipelagoAbyssOverrideDistance())
+            {
+                waterDepth = DevWaterDepthRampMax;
+                offshoreDistance = defaultArchipelagoDistance;
+                waterType = ResolveWaterTypeFromOffshoreDistance(offshoreDistance);
+                return true;
+            }
+
+            if (!appliedTerrainAuthoritative &&
+                TrySampleGeneratedTerrainAtWorldPosition(worldPosition, out bool snapshotIsLand))
+            {
+                if (snapshotIsLand)
+                {
+                    return false;
+                }
+
+                offshoreDistance = ResolveOceanZoneOffshoreDistance(worldPosition, maxSearchDistanceWorldUnits);
+                waterType = ResolveWaterTypeFromOffshoreDistance(offshoreDistance);
+                waterDepth = MathHelper.Lerp(0f, DevWaterDepthRampMax, Math.Clamp(offshoreDistance / Math.Max(1f, ResolveEffectiveOceanZoneTransitionDistance(DevWaterMidnightDistance)), 0f, 1f));
+                return true;
+            }
+
+            TerrainCell cell = SampleLayeredTerrainCell(terrainX, terrainY, _terrainWorldSeed, resolveWaterType: false);
+            if (appliedTerrainAuthoritative)
+            {
+                if (OverlapsResidentTerrainGeometry(worldPosition, clearanceRadiusWorldUnits: 0f))
+                {
+                    return false;
+                }
+            }
+            else if (!cell.IsWater)
+            {
+                return false;
+            }
+
+            waterDepth = cell.WaterDepth;
+            offshoreDistance = ResolveOceanZoneOffshoreDistance(worldPosition, maxSearchDistanceWorldUnits);
+            waterType = ResolveWaterTypeFromOffshoreDistance(offshoreDistance);
+            return true;
+        }
+
+        private static float ResolveGeneratedTerrainOffshoreDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            if (!IsFiniteVector(worldPosition))
+            {
+                return Math.Max(0f, maxSearchDistanceWorldUnits);
+            }
+
+            float maxDistance = Math.Max(
+                TerrainOceanZoneFieldSampleStepWorldUnits,
+                maxSearchDistanceWorldUnits);
+            bool appliedPointAuthoritative = IsAppliedTerrainWindowAuthoritativeForOceanZone(worldPosition, 0f);
+            bool appliedSearchAuthoritative = IsAppliedTerrainWindowAuthoritativeForOceanZone(worldPosition, maxDistance);
+            bool stableArchipelagoDistanceAvailable =
+                TryResolveStableArchipelagoOceanZoneOffshoreDistance(
+                    worldPosition,
+                    _terrainWorldSeed,
+                    out float stableArchipelagoDistance);
+            float residentSearchDistance = stableArchipelagoDistanceAvailable
+                ? MathF.Min(maxDistance, ResolveStableArchipelagoOceanZonePrecisionDistance())
+                : maxDistance;
+            if (TryResolveResidentTerrainVectorOffshoreDistance(
+                worldPosition,
+                residentSearchDistance,
+                assumeFarWaterWhenNoNearbyEdge: appliedPointAuthoritative,
+                out bool residentVectorWater,
+                out float residentVectorDistance))
+            {
+                if (residentVectorWater && stableArchipelagoDistanceAvailable)
+                {
+                    return ResolveStableArchipelagoBlendedOffshoreDistance(
+                        residentVectorDistance,
+                        stableArchipelagoDistance);
+                }
+
+                return residentVectorWater ? residentVectorDistance : 0f;
+            }
+
+            if (appliedPointAuthoritative || appliedSearchAuthoritative)
+            {
+                return maxDistance + TerrainOceanZoneFieldSampleStepWorldUnits;
+            }
+
+            if (IsTerrainLandAtWorldPosition(worldPosition))
+            {
+                return 0f;
+            }
+
+            float fieldSearchDistance = stableArchipelagoDistanceAvailable
+                ? MathF.Min(maxDistance, ResolveStableArchipelagoOceanZonePrecisionDistance())
+                : maxDistance;
+            float fieldDistance = ResolveFieldTerrainOffshoreDistance(worldPosition, fieldSearchDistance);
+            return stableArchipelagoDistanceAvailable
+                ? ResolveStableArchipelagoBlendedOffshoreDistance(fieldDistance, stableArchipelagoDistance)
+                : fieldDistance;
+        }
+
+        private static bool IsAppliedTerrainWindowAuthoritativeForOceanZone(Vector2 worldPosition, float searchRadiusWorldUnits)
+        {
+            if (!_hasAppliedTerrainVisualChunkWindow || !IsFiniteVector(worldPosition))
+            {
+                return false;
+            }
+
+            float radius = Math.Max(0f, searchRadiusWorldUnits);
+            ChunkBounds searchWindow = BuildChunkBounds(
+                worldPosition.X - radius,
+                worldPosition.X + radius,
+                worldPosition.Y - radius,
+                worldPosition.Y + radius);
+            return _lastAppliedVisualChunkWindow.Contains(searchWindow) &&
+                !HasPendingChunkInBounds(searchWindow);
+        }
+
+        private static float ResolveResidentTerrainOffshoreDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            return TryResolveResidentTerrainVectorOffshoreDistance(
+                worldPosition,
+                maxSearchDistanceWorldUnits,
+                assumeFarWaterWhenNoNearbyEdge: false,
+                out bool isWater,
+                out float offshoreDistance) && isWater
+                    ? offshoreDistance
+                    : float.PositiveInfinity;
+        }
+
+        private static bool TryResolveResidentTerrainVectorOffshoreDistance(
+            Vector2 worldPosition,
+            float maxSearchDistanceWorldUnits,
+            bool assumeFarWaterWhenNoNearbyEdge,
+            out bool isWater,
+            out float offshoreDistance)
+        {
+            isWater = true;
+            offshoreDistance = 0f;
+            if (ResidentTerrainCollisionLoops.Count == 0)
+            {
+                return false;
+            }
+
+            float maxDistance = Math.Max(0f, maxSearchDistanceWorldUnits);
+            float maxDistanceSq = maxDistance * maxDistance;
+            float bestDistanceSq = float.PositiveInfinity;
+            for (int loopIndex = 0; loopIndex < ResidentTerrainCollisionLoops.Count; loopIndex++)
+            {
+                TerrainCollisionLoopRecord loop = ResidentTerrainCollisionLoops[loopIndex];
+                if (loop?.Points == null || loop.Points.Count < 3)
+                {
+                    continue;
+                }
+
+                bool pointInLoopBounds = loop.Bounds.Intersects(
+                    worldPosition.X,
+                    worldPosition.X,
+                    worldPosition.Y,
+                    worldPosition.Y);
+                bool expandedBoundsHit = loop.Bounds.Intersects(
+                    worldPosition.X - maxDistance,
+                    worldPosition.X + maxDistance,
+                    worldPosition.Y - maxDistance,
+                    worldPosition.Y + maxDistance);
+                if (!pointInLoopBounds && !expandedBoundsHit)
+                {
+                    continue;
+                }
+
+                if (pointInLoopBounds && PointInsidePolygon(worldPosition, loop.Points))
+                {
+                    isWater = false;
+                    offshoreDistance = 0f;
+                    return true;
+                }
+
+                if (!expandedBoundsHit)
+                {
+                    continue;
+                }
+
+                for (int pointIndex = 0; pointIndex < loop.Points.Count; pointIndex++)
+                {
+                    Vector2 start = loop.Points[pointIndex];
+                    Vector2 end = loop.Points[(pointIndex + 1) % loop.Points.Count];
+                    float distanceSq = DistancePointToSegmentSquared(worldPosition, start, end);
+                    if (distanceSq < bestDistanceSq)
+                    {
+                        bestDistanceSq = distanceSq;
+                    }
+                }
+            }
+
+            if (bestDistanceSq <= maxDistanceSq)
+            {
+                isWater = true;
+                offshoreDistance = MathF.Sqrt(bestDistanceSq);
+                return true;
+            }
+
+            if (assumeFarWaterWhenNoNearbyEdge)
+            {
+                isWater = true;
+                offshoreDistance = maxDistance + TerrainOceanZoneFieldSampleStepWorldUnits;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static float ResolveFieldTerrainOffshoreDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            float sampleStep = MathF.Max(8f, TerrainOceanZoneFieldSampleStepWorldUnits);
+            float maxDistance = Math.Max(sampleStep, maxSearchDistanceWorldUnits);
+            float bestDistance = float.PositiveInfinity;
+            float firstHitRadius = float.PositiveInfinity;
+
+            for (float radius = sampleStep; radius <= maxDistance;)
+            {
+                float ringStep = ResolveOceanZoneDistanceSearchStep(radius);
+                int sampleCount = Math.Clamp(
+                    (int)MathF.Ceiling(MathF.Tau * radius / ringStep),
+                    12,
+                    TerrainOceanZoneMaxFieldSamplesPerRing);
+                float angleOffset = ResolveTerrainDistanceRingAngleOffset(radius, ringStep);
+                for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+                {
+                    float angle = ((sampleIndex + angleOffset) / sampleCount) * MathF.Tau;
+                    Vector2 direction = new(MathF.Cos(angle), MathF.Sin(angle));
+                    Vector2 sample = worldPosition + (direction * radius);
+                    if (!IsTerrainLandAtWorldPosition(sample))
+                    {
+                        continue;
+                    }
+
+                    float coastDistance = RefineTerrainCoastDistance(worldPosition, direction, radius);
+                    if (coastDistance < bestDistance)
+                    {
+                        bestDistance = coastDistance;
+                    }
+                }
+
+                if (float.IsFinite(bestDistance))
+                {
+                    if (!float.IsFinite(firstHitRadius))
+                    {
+                        firstHitRadius = radius;
+                    }
+
+                    if (radius >= MathF.Min(maxDistance, firstHitRadius + (sampleStep * 2f)))
+                    {
+                        return ResolveRefinedTerrainOffshoreDistance(worldPosition, maxDistance, bestDistance);
+                    }
+                }
+
+                radius += sampleStep;
+            }
+
+            float nearCoastFallbackDistance = ResolveNearCoastFallbackDistance(worldPosition, maxDistance);
+            if (float.IsFinite(nearCoastFallbackDistance))
+            {
+                return nearCoastFallbackDistance;
+            }
+
+            float shelfFallbackDistance = ResolveShelfFallbackDistance(worldPosition, maxDistance);
+            return float.IsFinite(shelfFallbackDistance) ? shelfFallbackDistance : maxDistance + sampleStep;
+        }
+
+        private static float ResolveRefinedTerrainOffshoreDistance(
+            Vector2 worldPosition,
+            float maxDistance,
+            float candidateDistance)
+        {
+            float refinedDistance = candidateDistance;
+            if (refinedDistance > ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance))
+            {
+                refinedDistance = MathF.Min(refinedDistance, ResolveNearCoastFallbackDistance(worldPosition, maxDistance));
+            }
+
+            if (refinedDistance > ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance))
+            {
+                refinedDistance = MathF.Min(refinedDistance, ResolveShelfFallbackDistance(worldPosition, maxDistance));
+                if (refinedDistance > ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance) &&
+                    refinedDistance <= ResolveEffectiveOceanZoneTransitionDistance(DevWaterTwilightDistance) + (TerrainOceanZoneFieldSampleStepWorldUnits * 3f))
+                {
+                    refinedDistance = MathF.Min(refinedDistance, ResolveShelfGridFallbackDistance(worldPosition, maxDistance));
+                }
+            }
+
+            return refinedDistance;
+        }
+
+        private static float ResolveNearCoastFallbackDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            float nearCoastStep = MathF.Max(6f, TerrainOceanZoneFieldSampleStepWorldUnits / 3f);
+            float nearCoastMaxDistance = MathF.Min(
+                maxSearchDistanceWorldUnits,
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance));
+            float bestDistance = float.PositiveInfinity;
+            for (float radius = nearCoastStep; radius <= nearCoastMaxDistance; radius += nearCoastStep)
+            {
+                int sampleCount = Math.Clamp(
+                    (int)MathF.Ceiling(MathF.Tau * radius / nearCoastStep),
+                    16,
+                    TerrainOceanZoneMaxFieldSamplesPerRing);
+                float angleOffset = ResolveTerrainDistanceRingAngleOffset(radius, nearCoastStep);
+                for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+                {
+                    float angle = ((sampleIndex + angleOffset) / sampleCount) * MathF.Tau;
+                    Vector2 direction = new(MathF.Cos(angle), MathF.Sin(angle));
+                    Vector2 sample = worldPosition + (direction * radius);
+                    if (!IsTerrainLandAtWorldPosition(sample))
+                    {
+                        continue;
+                    }
+
+                    float coastDistance = RefineTerrainCoastDistance(worldPosition, direction, radius);
+                    if (coastDistance < bestDistance)
+                    {
+                        bestDistance = coastDistance;
+                    }
+                }
+
+                if (float.IsFinite(bestDistance))
+                {
+                    return bestDistance;
+                }
+            }
+
+            return float.PositiveInfinity;
+        }
+
+        private static float ResolveShelfFallbackDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            float shelfStep = MathF.Max(18f, TerrainOceanZoneFieldSampleStepWorldUnits * 0.67f * TerrainWaterZoneDistanceScale);
+            float shelfMaxDistance = MathF.Min(
+                maxSearchDistanceWorldUnits,
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance));
+            float bestDistance = float.PositiveInfinity;
+            for (float radius = shelfStep; radius <= shelfMaxDistance; radius += shelfStep)
+            {
+                int sampleCount = Math.Clamp(
+                    (int)MathF.Ceiling(MathF.Tau * radius / shelfStep),
+                    24,
+                    TerrainOceanZoneMaxFieldSamplesPerRing);
+                float angleOffset = ResolveTerrainDistanceRingAngleOffset(radius, shelfStep);
+                for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+                {
+                    float angle = ((sampleIndex + angleOffset) / sampleCount) * MathF.Tau;
+                    Vector2 direction = new(MathF.Cos(angle), MathF.Sin(angle));
+                    Vector2 sample = worldPosition + (direction * radius);
+                    if (!IsTerrainLandAtWorldPosition(sample))
+                    {
+                        continue;
+                    }
+
+                    float coastDistance = RefineTerrainCoastDistance(worldPosition, direction, radius);
+                    if (coastDistance < bestDistance)
+                    {
+                        bestDistance = coastDistance;
+                    }
+                }
+
+                if (float.IsFinite(bestDistance))
+                {
+                    return bestDistance;
+                }
+            }
+
+            return float.PositiveInfinity;
+        }
+
+        private static float ResolveShelfGridFallbackDistance(Vector2 worldPosition, float maxSearchDistanceWorldUnits)
+        {
+            float gridStep = MathF.Max(12f, TerrainOceanZoneFieldSampleStepWorldUnits * 0.5f * TerrainWaterZoneDistanceScale);
+            float maxDistance = MathF.Min(
+                maxSearchDistanceWorldUnits,
+                ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance));
+            float maxDistanceSq = maxDistance * maxDistance;
+            float bestDistance = float.PositiveInfinity;
+
+            for (float y = -maxDistance; y <= maxDistance; y += gridStep)
+            {
+                for (float x = -maxDistance; x <= maxDistance; x += gridStep)
+                {
+                    float distanceSq = (x * x) + (y * y);
+                    if (distanceSq > maxDistanceSq)
+                    {
+                        continue;
+                    }
+
+                    Vector2 sample = new(worldPosition.X + x, worldPosition.Y + y);
+                    if (!IsTerrainLandAtWorldPosition(sample))
+                    {
+                        continue;
+                    }
+
+                    float distance = MathF.Sqrt(distanceSq);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                    }
+                }
+            }
+
+            return bestDistance;
+        }
+
+        private static float ResolveOceanZoneDistanceSearchStep(float radiusWorldUnits)
+        {
+            float radius = MathF.Max(0f, radiusWorldUnits);
+            float scale = Math.Clamp(TerrainWaterZoneDistanceScale, 0.5f, 6f);
+            if (radius > ResolveEffectiveOceanZoneTransitionDistance(DevWaterTwilightDistance))
+            {
+                return TerrainOceanZoneFieldSampleStepWorldUnits * scale * 2f;
+            }
+
+            if (radius > ResolveEffectiveOceanZoneTransitionDistance(DevWaterSunlitDistance))
+            {
+                return TerrainOceanZoneFieldSampleStepWorldUnits * scale * 1.5f;
+            }
+
+            if (radius > ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance))
+            {
+                return TerrainOceanZoneFieldSampleStepWorldUnits * scale;
+            }
+
+            return TerrainOceanZoneFieldSampleStepWorldUnits;
+        }
+
+        private static float ResolveTerrainDistanceRingAngleOffset(float radius, float sampleStep)
+        {
+            float ring = radius / MathF.Max(0.001f, sampleStep);
+            return (ring * 0.61803398875f) % 1f;
+        }
+
+        private static float RefineTerrainCoastDistance(Vector2 waterPosition, Vector2 direction, float landDistance)
+        {
+            float low = 0f;
+            float high = Math.Max(0f, landDistance);
+            for (int i = 0; i < TerrainOceanZoneCoastRefineIterations; i++)
+            {
+                float midpoint = (low + high) * 0.5f;
+                Vector2 sample = waterPosition + (direction * midpoint);
+                if (IsTerrainLandAtWorldPosition(sample))
+                {
+                    high = midpoint;
+                }
+                else
+                {
+                    low = midpoint;
+                }
+            }
+
+            return high;
         }
 
         private static Vector2 AdvanceCollisionHullOutOfTerrain(
@@ -1621,8 +6824,21 @@ namespace op.io
             float minY,
             float maxY)
         {
-            if (spriteBatch == null || ResidentTerrainVisualObjects.Count == 0)
+            if (spriteBatch == null)
             {
+                return;
+            }
+
+            if (ResidentTerrainVisualObjects.Count == 0)
+            {
+                UpdateTerrainVisualDrawDiagnostics(
+                    "no resident terrain visuals",
+                    minX,
+                    maxX,
+                    minY,
+                    maxY,
+                    drawnObjectCount: 0,
+                    drawnTriangleCount: 0);
                 return;
             }
 
@@ -1665,6 +6881,8 @@ namespace op.io
             graphicsDevice.DepthStencilState = DepthStencilState.None;
             graphicsDevice.RasterizerState = TerrainVectorRasterizerState;
 
+            int drawnObjectCount = 0;
+            int drawnTriangleCount = 0;
             foreach (EffectPass pass in _terrainVectorEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
@@ -1680,6 +6898,8 @@ namespace op.io
                         continue;
                     }
 
+                    drawnObjectCount++;
+                    drawnTriangleCount += record.FillPrimitiveCount;
                     graphicsDevice.DrawUserPrimitives(
                         PrimitiveType.TriangleList,
                         record.FillVertices,
@@ -1689,6 +6909,175 @@ namespace op.io
             }
 
             graphicsDevice.ScissorRectangle = previousScissor;
+            UpdateTerrainVisualDrawDiagnostics(
+                "draw terrain visuals",
+                minX,
+                maxX,
+                minY,
+                maxY,
+                drawnObjectCount,
+                drawnTriangleCount);
+        }
+
+        private static void UpdateTerrainVisualDrawDiagnostics(
+            string reason,
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            int drawnObjectCount,
+            int drawnTriangleCount)
+        {
+            bool stableVisibleCoverage =
+                _hasAppliedTerrainVisualChunkWindow &&
+                !_terrainVisibleObjectsDirty &&
+                _terrainPendingCriticalChunkCount == 0 &&
+                _lastAppliedVisualChunkWindow.Contains(_lastVisibleChunkWindow);
+            bool sameDrawWindow =
+                _hasTerrainDrawDiagnosticBaseline &&
+                ChunkBoundsEqual(_lastTerrainDrawVisibleChunkWindow, _lastVisibleChunkWindow) &&
+                ChunkBoundsEqual(_lastTerrainDrawAppliedVisualChunkWindow, _lastAppliedVisualChunkWindow);
+            bool zeroDrawWithResidents =
+                stableVisibleCoverage &&
+                ResidentTerrainVisualObjects.Count > 0 &&
+                drawnObjectCount == 0;
+            bool zeroResidentWhileCovered =
+                stableVisibleCoverage &&
+                ResidentTerrainVisualObjects.Count == 0;
+            bool zeroAfterVisibleDraw =
+                stableVisibleCoverage &&
+                sameDrawWindow &&
+                _lastTerrainVisibleDrawObjectCount > 0 &&
+                drawnObjectCount == 0;
+
+            _lastTerrainVisibleDrawSummary =
+                $"drawn={drawnObjectCount}/{ResidentTerrainVisualObjects.Count} objects, " +
+                $"triangles={drawnTriangleCount}/{_residentTerrainVisualTriangleCount}, " +
+                $"camera={FormatWorldRectangle(minX, maxX, minY, maxY)}, " +
+                $"visible={FormatChunkBounds(_lastVisibleChunkWindow)}, " +
+                $"applied={TerrainAppliedVisualChunkWindow}, " +
+                $"dirty={_terrainVisibleObjectsDirty}, pendingCritical={_terrainPendingCriticalChunkCount}";
+
+            if (zeroDrawWithResidents || zeroResidentWhileCovered || zeroAfterVisibleDraw)
+            {
+                string diagnosticReason = zeroResidentWhileCovered
+                    ? "covered visible window has zero resident terrain objects"
+                    : zeroAfterVisibleDraw
+                        ? "covered visible window stopped drawing terrain objects"
+                        : "resident terrain objects skipped by camera intersection";
+                EmitTerrainFlickerDiagnostic(
+                    $"{reason}: {diagnosticReason}",
+                    minX,
+                    maxX,
+                    minY,
+                    maxY,
+                    drawnObjectCount,
+                    drawnTriangleCount,
+                    previousObjectSnapshot: null);
+            }
+
+            _lastTerrainVisibleDrawObjectCount = drawnObjectCount;
+            _lastTerrainVisibleDrawTriangleCount = drawnTriangleCount;
+            _lastTerrainDrawVisibleChunkWindow = _lastVisibleChunkWindow;
+            _lastTerrainDrawAppliedVisualChunkWindow = _lastAppliedVisualChunkWindow;
+            _hasTerrainDrawDiagnosticBaseline = true;
+        }
+
+        private static void EmitTerrainFlickerDiagnostic(
+            string reason,
+            float minX,
+            float maxX,
+            float minY,
+            float maxY,
+            int drawnObjectCount,
+            int drawnTriangleCount,
+            List<string> previousObjectSnapshot)
+        {
+            if (!ShouldEmitTerrainFlickerDiagnostic(reason))
+            {
+                return;
+            }
+
+            _terrainFlickerDiagnosticCount++;
+            DebugLogger.PrintWarning(
+                $"[TerrainFlicker] #{_terrainFlickerDiagnosticCount} reason='{reason}' " +
+                $"time={Core.GAMETIME:0.000} residentObjects={ResidentTerrainVisualObjects.Count} " +
+                $"drawnObjects={drawnObjectCount} drawnTriangles={drawnTriangleCount} " +
+                $"residentTriangles={_residentTerrainVisualTriangleCount} coverage='{_terrainVisibleCoverageStatus}' " +
+                $"visibleWindow={FormatChunkBounds(_lastVisibleChunkWindow)} " +
+                $"targetMaterializedWindow={FormatChunkBounds(_lastMaterializedChunkWindow)} " +
+                $"targetVisualWindow={FormatChunkBounds(_lastTerrainVisualChunkWindow)} " +
+                $"appliedVisualWindow={TerrainAppliedVisualChunkWindow} " +
+                $"appliedColliderWindow={TerrainAppliedColliderChunkWindow} " +
+                $"colliderWindow={FormatChunkBounds(_lastTerrainColliderChunkWindow)} " +
+                $"pendingCritical={_terrainPendingCriticalChunkCount} pendingTotal={TerrainPendingChunkCount} " +
+                $"dirty={_terrainVisibleObjectsDirty} materializationInFlight={_terrainMaterializationTask != null} " +
+                $"startupReady={_startupVisibleTerrainReady} camera={FormatWorldRectangle(minX, maxX, minY, maxY)}");
+
+            LogTerrainVisualObjectDiagnostics(
+                "[TerrainFlickerObject]",
+                ResidentTerrainVisualObjects,
+                minX,
+                maxX,
+                minY,
+                maxY);
+
+            List<string> snapshotToLog = previousObjectSnapshot ??
+                (ResidentTerrainVisualObjects.Count == 0 ? _lastResidentTerrainVisualObjectSnapshot : null);
+            if ((snapshotToLog?.Count ?? 0) > 0)
+            {
+                int limit = Math.Min(snapshotToLog.Count, MaxTerrainFlickerObjectLogs);
+                for (int i = 0; i < limit; i++)
+                {
+                    DebugLogger.PrintDebug($"[TerrainFlickerObjectPrevious] #{_terrainFlickerDiagnosticCount} index={i} {snapshotToLog[i]}");
+                }
+
+                if (snapshotToLog.Count > limit)
+                {
+                    DebugLogger.PrintDebug($"[TerrainFlickerObjectPrevious] #{_terrainFlickerDiagnosticCount} suppressed={snapshotToLog.Count - limit}");
+                }
+            }
+        }
+
+        private static bool ShouldEmitTerrainFlickerDiagnostic(string reason)
+        {
+            float now = Core.GAMETIME;
+            if (!float.IsFinite(now))
+            {
+                now = 0f;
+            }
+
+            if (_terrainFlickerDiagnosticCount == 0 ||
+                !string.Equals(reason, _lastTerrainFlickerDiagnosticReason, StringComparison.Ordinal) ||
+                now - _lastTerrainFlickerDiagnosticTime >= TerrainFlickerDiagnosticCooldownSeconds)
+            {
+                _lastTerrainFlickerDiagnosticTime = now;
+                _lastTerrainFlickerDiagnosticReason = reason;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void LogTerrainVisualObjectDiagnostics(
+            string prefix,
+            IReadOnlyList<TerrainVisualObjectRecord> records,
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            int count = records?.Count ?? 0;
+            int limit = Math.Min(count, MaxTerrainFlickerObjectLogs);
+            for (int i = 0; i < limit; i++)
+            {
+                DebugLogger.PrintDebug($"{prefix} #{_terrainFlickerDiagnosticCount} index={i} {DescribeTerrainVisualObject(records[i], minX, maxX, minY, maxY)}");
+            }
+
+            if (count > limit)
+            {
+                DebugLogger.PrintDebug($"{prefix} #{_terrainFlickerDiagnosticCount} suppressed={count - limit}");
+            }
         }
 
         private static void DrawTerrainWorldBoundaryFill(
@@ -1700,6 +7089,11 @@ namespace op.io
             float minY,
             float maxY)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return;
+            }
+
             if (spriteBatch == null)
             {
                 return;
@@ -1800,6 +7194,11 @@ namespace op.io
             float maxY,
             Color terrainColor)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return 0;
+            }
+
             EnsureTerrainWorldBoundsInitialized();
 
             int vertexCount = 0;
@@ -1849,150 +7248,43 @@ namespace op.io
 
             if (Core.Instance?.GameObjects == null || Core.Instance.StaticObjects == null)
             {
-                DeactivateActiveTerrainColliders();
                 _activeTerrainColliderCount = 0;
                 _terrainColliderActivationCandidateCount = 0;
+                UpdateTerrainDynamicCollisionProbeTelemetry(0, 0);
                 return;
             }
 
-            DesiredTerrainColliderRecords.Clear();
-
+            int objectProbeCount = 0;
+            int bulletProbeCount = 0;
             List<GameObject> gameObjects = Core.Instance.GameObjects;
             for (int i = 0; i < gameObjects.Count; i++)
             {
-                GameObject gameObject = gameObjects[i];
-                if (gameObject == null ||
-                    !gameObject.DynamicPhysics ||
-                    !gameObject.IsCollidable ||
-                    gameObject.Shape == null)
+                if (!TryBuildTerrainActivationBoundsForDynamicGameObject(
+                    gameObjects[i],
+                    out _))
                 {
                     continue;
                 }
 
-                if (!TryBuildTerrainActivationBounds(
-                    gameObject.Position,
-                    gameObject.BoundingRadius,
-                    ResolveTerrainActivationVelocity(gameObject),
-                    out TerrainWorldBounds activationBounds))
-                {
-                    continue;
-                }
-
-                CollectTerrainColliderRecordsInBounds(activationBounds, DesiredTerrainColliderRecords);
+                objectProbeCount++;
             }
 
             IReadOnlyList<Bullet> bullets = BulletManager.GetBullets();
             for (int i = 0; i < bullets.Count; i++)
             {
-                Bullet bullet = bullets[i];
-                if (bullet == null ||
-                    bullet.IsDying ||
-                    bullet.IsBarrelLocked ||
-                    bullet.Shape == null)
+                if (!TryBuildTerrainActivationBoundsForBullet(
+                    bullets[i],
+                    out _))
                 {
                     continue;
                 }
 
-                if (!TryBuildTerrainActivationBounds(
-                    bullet.Position,
-                    bullet.BoundingRadius,
-                    bullet.Velocity,
-                    out TerrainWorldBounds activationBounds))
-                {
-                    continue;
-                }
-
-                CollectTerrainColliderRecordsInBounds(activationBounds, DesiredTerrainColliderRecords);
+                bulletProbeCount++;
             }
 
-            foreach (TerrainColliderObjectRecord record in DesiredTerrainColliderRecords)
-            {
-                if (!record.IsCollisionActive)
-                {
-                    SetTerrainColliderActive(record, true);
-                }
-            }
-
-            TerrainColliderDeactivateScratch.Clear();
-            foreach (TerrainColliderObjectRecord record in ActiveTerrainColliderRecords)
-            {
-                if (!DesiredTerrainColliderRecords.Contains(record))
-                {
-                    TerrainColliderDeactivateScratch.Add(record);
-                }
-            }
-
-            for (int i = 0; i < TerrainColliderDeactivateScratch.Count; i++)
-            {
-                SetTerrainColliderActive(TerrainColliderDeactivateScratch[i], false);
-            }
-
-            _terrainColliderActivationCandidateCount = DesiredTerrainColliderRecords.Count;
-            _activeTerrainColliderCount = ActiveTerrainColliderRecords.Count;
-            DesiredTerrainColliderRecords.Clear();
-            TerrainColliderDeactivateScratch.Clear();
-        }
-
-        private static void SetTerrainColliderActive(TerrainColliderObjectRecord record, bool isActive)
-        {
-            if (record == null || Core.Instance?.GameObjects == null || Core.Instance.StaticObjects == null)
-            {
-                return;
-            }
-
-            if (isActive)
-            {
-                GameObject colliderObject = record.EnsureColliderObjectCreated(CreateTerrainColliderObject);
-                if (colliderObject == null)
-                {
-                    return;
-                }
-
-                if (!Core.Instance.StaticObjects.Contains(colliderObject))
-                {
-                    Core.Instance.StaticObjects.Add(colliderObject);
-                }
-
-                if (!Core.Instance.GameObjects.Contains(colliderObject))
-                {
-                    Core.Instance.GameObjects.Add(colliderObject);
-                }
-            }
-            else
-            {
-                GameObject colliderObject = record.ColliderObject;
-                if (colliderObject != null)
-                {
-                    Core.Instance.StaticObjects.Remove(colliderObject);
-                    Core.Instance.GameObjects.Remove(colliderObject);
-                }
-            }
-
-            record.IsCollisionActive = isActive;
-            if (isActive)
-            {
-                ActiveTerrainColliderRecords.Add(record);
-            }
-            else
-            {
-                ActiveTerrainColliderRecords.Remove(record);
-            }
-        }
-
-        private static void DeactivateActiveTerrainColliders()
-        {
-            TerrainColliderDeactivateScratch.Clear();
-            foreach (TerrainColliderObjectRecord record in ActiveTerrainColliderRecords)
-            {
-                TerrainColliderDeactivateScratch.Add(record);
-            }
-
-            for (int i = 0; i < TerrainColliderDeactivateScratch.Count; i++)
-            {
-                SetTerrainColliderActive(TerrainColliderDeactivateScratch[i], false);
-            }
-
-            TerrainColliderDeactivateScratch.Clear();
+            UpdateTerrainDynamicCollisionProbeTelemetry(objectProbeCount, bulletProbeCount);
+            _terrainColliderActivationCandidateCount = 0;
+            _activeTerrainColliderCount = 0;
         }
 
         private static Vector2 ResolveTerrainActivationVelocity(GameObject gameObject)
@@ -2009,6 +7301,46 @@ namespace op.io
             }
 
             return IsFiniteVector(velocity) ? velocity : Vector2.Zero;
+        }
+
+        private static bool TryBuildTerrainActivationBoundsForDynamicGameObject(
+            GameObject gameObject,
+            out TerrainWorldBounds bounds)
+        {
+            bounds = default;
+            if (gameObject == null ||
+                !gameObject.DynamicPhysics ||
+                !gameObject.IsCollidable ||
+                gameObject.Shape == null)
+            {
+                return false;
+            }
+
+            return TryBuildTerrainActivationBounds(
+                gameObject.Position,
+                gameObject.BoundingRadius,
+                ResolveTerrainActivationVelocity(gameObject),
+                out bounds);
+        }
+
+        private static bool TryBuildTerrainActivationBoundsForBullet(
+            Bullet bullet,
+            out TerrainWorldBounds bounds)
+        {
+            bounds = default;
+            if (bullet == null ||
+                bullet.IsDying ||
+                bullet.IsBarrelLocked ||
+                bullet.Shape == null)
+            {
+                return false;
+            }
+
+            return TryBuildTerrainActivationBounds(
+                bullet.Position,
+                bullet.BoundingRadius,
+                bullet.Velocity,
+                out bounds);
         }
 
         private static bool TryBuildTerrainActivationBounds(
@@ -2041,42 +7373,10 @@ namespace op.io
             return true;
         }
 
-        private static void CollectTerrainColliderRecordsInBounds(
-            TerrainWorldBounds bounds,
-            HashSet<TerrainColliderObjectRecord> output)
-        {
-            if (output == null ||
-                !TryGetTerrainColliderRecordCellRange(bounds, out int minCellX, out int maxCellX, out int minCellY, out int maxCellY))
-            {
-                return;
-            }
-
-            for (int cellY = minCellY; cellY <= maxCellY; cellY++)
-            {
-                for (int cellX = minCellX; cellX <= maxCellX; cellX++)
-                {
-                    long cellKey = ComposeTerrainColliderCellKey(cellX, cellY);
-                    if (!TerrainColliderRecordCells.TryGetValue(cellKey, out List<TerrainColliderObjectRecord> records))
-                    {
-                        continue;
-                    }
-
-                    for (int i = 0; i < records.Count; i++)
-                    {
-                        TerrainColliderObjectRecord record = records[i];
-                        if (record != null &&
-                            record.Bounds.Intersects(bounds.MinX, bounds.MaxX, bounds.MinY, bounds.MaxY))
-                        {
-                            output.Add(record);
-                        }
-                    }
-                }
-            }
-        }
-
         private static void RefreshResidentTerrainWorldObjects(
             GraphicsDevice graphicsDevice,
             ChunkBounds materializedChunkWindow,
+            ChunkBounds visualChunkWindow,
             ChunkBounds colliderChunkWindow,
             ChunkBounds criticalChunkWindow)
         {
@@ -2101,6 +7401,7 @@ namespace op.io
 
             if (HasPendingChunkInBounds(criticalChunkWindow))
             {
+                _terrainDeferredVisibleMaterializationCount++;
                 return;
             }
 
@@ -2115,6 +7416,7 @@ namespace op.io
                     new CombinedResidentMask(Array.Empty<byte>(), 0, 0, materializedChunkWindow.MinChunkX, materializedChunkWindow.MinChunkY),
                     BuildChunkWorldBounds(colliderChunkWindow),
                     materializedChunkWindow,
+                    visualChunkWindow,
                     colliderChunkWindow);
                 return;
             }
@@ -2123,7 +7425,33 @@ namespace op.io
                 residentMask,
                 BuildChunkWorldBounds(colliderChunkWindow),
                 materializedChunkWindow,
+                visualChunkWindow,
                 colliderChunkWindow);
+        }
+
+        private static void UpdateTerrainVisibleCoverageStatus(ChunkBounds visibleChunkWindow)
+        {
+            if (HasPendingChunkInBounds(visibleChunkWindow))
+            {
+                _terrainVisibleCoverageStatus = $"visible terrain waiting on {CountPendingChunksInBounds(visibleChunkWindow)} chunks";
+                return;
+            }
+
+            if (!_hasAppliedTerrainVisualChunkWindow)
+            {
+                _terrainVisibleCoverageStatus = "visible terrain not materialized";
+                return;
+            }
+
+            if (!_lastAppliedVisualChunkWindow.Contains(visibleChunkWindow))
+            {
+                _terrainVisibleCoverageStatus = "visible terrain outside applied visual window";
+                return;
+            }
+
+            _terrainVisibleCoverageStatus = _terrainVisibleObjectsDirty
+                ? "visible terrain dirty"
+                : "visible terrain covered";
         }
 
         private static void UpdateStartupVisibleTerrainReadiness(ChunkBounds visibleChunkWindow)
@@ -2133,25 +7461,52 @@ namespace op.io
                 return;
             }
 
+            bool visibleWindowCovered = _hasAppliedTerrainVisualChunkWindow &&
+                _lastAppliedVisualChunkWindow.Contains(visibleChunkWindow) &&
+                _terrainPendingCriticalChunkCount == 0 &&
+                _terrainMaterializationTask == null &&
+                !_terrainWorldObjectsDirty;
+            if (visibleWindowCovered)
+            {
+                _startupVisibleTerrainReady = true;
+                _terrainStartupPhase = "visible terrain ready; background preload streaming";
+                _terrainStartupReadinessSummary = $"startup terrain ready: {_residentTerrainComponentCount} landforms in {FormatChunkBounds(visibleChunkWindow)}";
+                return;
+            }
+
+            if (_residentTerrainComponentCount > 0)
+            {
+                _startupFirstSightTerrainReady = true;
+                _terrainStartupPhase = _terrainPendingCriticalChunkCount > 0
+                    ? "nearby terrain ready; visible chunks streaming"
+                    : "nearby terrain ready; visible materialization pending";
+                _terrainStartupReadinessSummary = $"startup terrain warm: {_residentTerrainComponentCount} nearby landforms; visible window {FormatChunkBounds(visibleChunkWindow)} pending";
+                return;
+            }
+
             if (_terrainPendingCriticalChunkCount > 0)
             {
+                _terrainStartupPhase = "visible terrain chunks building";
                 _terrainStartupReadinessSummary = $"startup terrain pending: {_terrainPendingCriticalChunkCount} visible chunks still queued";
                 return;
             }
 
             if (_terrainMaterializationTask != null)
             {
+                _terrainStartupPhase = "visible terrain materializing";
                 _terrainStartupReadinessSummary = "startup terrain pending: visible terrain materialization in flight";
                 return;
             }
 
             if (_terrainWorldObjectsDirty)
             {
+                _terrainStartupPhase = "visible terrain materialization queued";
                 _terrainStartupReadinessSummary = "startup terrain pending: visible terrain materialization queued";
                 return;
             }
 
             _startupVisibleTerrainReady = true;
+            _terrainStartupPhase = "visible terrain ready; background preload streaming";
             _terrainStartupReadinessSummary = $"startup terrain ready: {FormatChunkBounds(visibleChunkWindow)} visible";
         }
 
@@ -2159,15 +7514,20 @@ namespace op.io
             CombinedResidentMask residentMask,
             TerrainWorldBounds colliderWorldBounds,
             ChunkBounds materializedChunkWindow,
+            ChunkBounds visualChunkWindow,
             ChunkBounds colliderChunkWindow)
         {
             int requestId = ++_terrainMaterializationRequestId;
             _terrainWorldObjectsDirty = false;
+            _terrainStartupPhase = _startupVisibleTerrainReady
+                ? "background terrain materializing"
+                : "visible terrain materializing";
             _terrainMaterializationTask = Task.Run(() => BuildTerrainMaterializationResult(
                 residentMask,
                 requestId,
                 colliderWorldBounds,
                 materializedChunkWindow,
+                visualChunkWindow,
                 colliderChunkWindow));
         }
 
@@ -2195,7 +7555,17 @@ namespace op.io
             }
 
             TerrainMaterializationResult result = task.Result;
-            if (_terrainWorldObjectsDirty || !IsTerrainMaterializationResultCurrent(result))
+            bool restartAfterApply = _terrainWorldObjectsDirty;
+            if (!IsTerrainMaterializationResultCurrent(result))
+            {
+                _terrainDiscardedStaleMaterializationCount++;
+                _terrainWorldObjectsDirty = true;
+                return;
+            }
+
+            if (restartAfterApply &&
+                (!result.VisualChunkWindow.Contains(_lastVisibleChunkWindow) ||
+                HasPendingChunkInBounds(_lastVisibleChunkWindow)))
             {
                 _terrainDiscardedStaleMaterializationCount++;
                 _terrainWorldObjectsDirty = true;
@@ -2203,12 +7573,18 @@ namespace op.io
             }
 
             ApplyTerrainMaterializationResult(result);
+            if (restartAfterApply)
+            {
+                _terrainAcceptedDirtyMaterializationCount++;
+                _terrainWorldObjectsDirty = true;
+            }
         }
 
         private static bool IsTerrainMaterializationResultCurrent(TerrainMaterializationResult result)
         {
             return result != null &&
                 result.RequestId == _terrainMaterializationRequestId &&
+                ChunkBoundsEqual(result.VisualChunkWindow, _lastTerrainVisualChunkWindow) &&
                 ChunkBoundsEqual(result.MaterializedChunkWindow, _lastMaterializedChunkWindow) &&
                 ChunkBoundsEqual(result.ColliderChunkWindow, _lastTerrainColliderChunkWindow);
         }
@@ -2228,6 +7604,7 @@ namespace op.io
                 requestId,
                 colliderWorldBounds,
                 materializedChunkWindow,
+                materializedChunkWindow,
                 materializedChunkWindow);
         }
 
@@ -2242,6 +7619,7 @@ namespace op.io
                 requestId,
                 colliderWorldBounds,
                 materializedChunkWindow,
+                materializedChunkWindow,
                 BuildChunkBounds(
                     colliderWorldBounds.MinX,
                     colliderWorldBounds.MaxX,
@@ -2254,15 +7632,16 @@ namespace op.io
             int requestId,
             TerrainWorldBounds colliderWorldBounds,
             ChunkBounds materializedChunkWindow,
+            ChunkBounds visualChunkWindow,
             ChunkBounds colliderChunkWindow)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            TerrainMaterializationResult result = new(requestId, materializedChunkWindow, colliderChunkWindow);
+            TerrainMaterializationResult result = new(requestId, materializedChunkWindow, visualChunkWindow, colliderChunkWindow);
             float sampleStepWorldUnits = ChunkWorldSize / ChunkTextureResolution;
             float worldLeft = residentMask.MinChunkX * ChunkWorldSize;
             float worldTop = residentMask.MinChunkY * ChunkWorldSize;
 
-            List<TerrainLoop> singleLoop = new(1);
+            List<TerrainLoop> singleVisualLoop = new(1);
             List<RefinedTerrainComponent> refinedComponents = BuildRefinedResidentComponents(
                 residentMask,
                 worldLeft,
@@ -2290,6 +7669,7 @@ namespace op.io
                     TerrainVisualLoopSimplifyToleranceCells,
                     includeInnerLoops: false,
                     smoothIterations: TerrainVisualSmoothIterations);
+                List<TerrainLoop> renderedCollisionLoops = new(visualLoops.Count);
 
                 for (int loopIndex = 0; loopIndex < visualLoops.Count; loopIndex++)
                 {
@@ -2304,8 +7684,8 @@ namespace op.io
                         continue;
                     }
 
-                    singleLoop.Clear();
-                    singleLoop.Add(loop);
+                    singleVisualLoop.Clear();
+                    singleVisualLoop.Add(loop);
                     TerrainWorldBounds loopBounds = BuildTerrainLoopBounds(
                         loop,
                         component.WorldLeft,
@@ -2317,7 +7697,7 @@ namespace op.io
                     }
 
                     VertexPositionColor[] visualVertices = BuildTerrainFillVertices(
-                        singleLoop,
+                        singleVisualLoop,
                         component.WorldLeft,
                         component.WorldTop,
                         component.SampleStepWorldUnits);
@@ -2327,32 +7707,39 @@ namespace op.io
                     }
 
                     result.VisualObjects.Add(new TerrainVisualObjectRecord(
+                        AllocateTerrainVisualObjectDiagnosticId(),
+                        requestId,
                         loopBounds,
-                        visualVertices));
-                    result.CollisionLoops.Add(new TerrainCollisionLoopRecord(
-                        loopBounds,
-                        BuildTerrainWorldLoop(loop, component.WorldLeft, component.WorldTop, component.SampleStepWorldUnits)));
+                        visualVertices,
+                        BuildTerrainVisualObjectSignature(loopBounds, visualVertices)));
                     result.ComponentCount++;
                     result.VisualTriangleCount += visualVertices.Length / 3;
+                    renderedCollisionLoops.Add(loop);
+                }
 
-                    if (loopBounds.Intersects(
-                        colliderWorldBounds.MinX,
-                        colliderWorldBounds.MaxX,
-                        colliderWorldBounds.MinY,
-                        colliderWorldBounds.MaxY))
+                for (int loopIndex = 0; loopIndex < renderedCollisionLoops.Count; loopIndex++)
+                {
+                    TerrainLoop collisionLoop = renderedCollisionLoops[loopIndex];
+                    if (collisionLoop?.Points == null || collisionLoop.Points.Count < 3)
                     {
-                        SpawnTerrainLoopColliders(
-                            singleLoop,
-                            component.WorldLeft,
-                            component.WorldTop,
-                            component.SampleStepWorldUnits,
-                            result,
-                            colliderWorldBounds);
+                        continue;
                     }
+
+                    TerrainWorldBounds loopBounds = BuildTerrainLoopBounds(
+                        collisionLoop,
+                        component.WorldLeft,
+                        component.WorldTop,
+                        component.SampleStepWorldUnits);
+                    if (!IsTerrainLoopWorldBoundsPlausible(loopBounds))
+                    {
+                        continue;
+                    }
+
+                    result.CollisionLoops.Add(new TerrainCollisionLoopRecord(
+                        loopBounds,
+                        BuildTerrainWorldLoop(collisionLoop, component.WorldLeft, component.WorldTop, component.SampleStepWorldUnits)));
                 }
             }
-
-            AddTerrainWorldBoundaryColliders(result, colliderWorldBounds);
 
             stopwatch.Stop();
             result.BuildMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
@@ -2377,22 +7764,83 @@ namespace op.io
                 return;
             }
 
+            int previousVisualObjectCount = ResidentTerrainVisualObjects.Count;
+            int previousVisualTriangleCount = _residentTerrainVisualTriangleCount;
+            List<string> previousVisualObjectSnapshot = CaptureTerrainVisualObjectSnapshot(ResidentTerrainVisualObjects);
+
             ClearResidentTerrainWorldObjects();
 
             ResidentTerrainVisualObjects.AddRange(result.VisualObjects);
             ResidentTerrainCollisionLoops.AddRange(result.CollisionLoops);
-            for (int i = 0; i < result.ColliderObjects.Count; i++)
-            {
-                TerrainColliderObjectRecord record = result.ColliderObjects[i];
-                ResidentTerrainColliderObjects.Add(record);
-                AddTerrainColliderRecordToSpatialIndex(record);
-            }
 
             _residentTerrainComponentCount = result.ComponentCount;
-            _residentTerrainColliderCount = result.ColliderCount;
+            _residentTerrainColliderCount = 0;
             _residentTerrainVisualTriangleCount = result.VisualTriangleCount;
             _lastTerrainMaterializationMilliseconds = result.BuildMilliseconds;
             _residentTerrainVertexColorValid = false;
+            _lastAppliedVisualChunkWindow = result.VisualChunkWindow;
+            _lastAppliedColliderChunkWindow = result.ColliderChunkWindow;
+            _hasAppliedTerrainVisualChunkWindow = true;
+            _terrainVisibleObjectsDirty = !result.VisualChunkWindow.Contains(_lastVisibleChunkWindow);
+            _lastResidentTerrainVisualObjectSnapshot.Clear();
+            _lastResidentTerrainVisualObjectSnapshot.AddRange(CaptureTerrainVisualObjectSnapshot(ResidentTerrainVisualObjects));
+            LogTerrainMaterializationApplyDiagnostics(
+                result,
+                previousVisualObjectCount,
+                previousVisualTriangleCount,
+                previousVisualObjectSnapshot);
+        }
+
+        private static void LogTerrainMaterializationApplyDiagnostics(
+            TerrainMaterializationResult result,
+            int previousVisualObjectCount,
+            int previousVisualTriangleCount,
+            List<string> previousVisualObjectSnapshot)
+        {
+            if (result == null)
+            {
+                return;
+            }
+
+            bool visibleWindowCovered = result.VisualChunkWindow.Contains(_lastVisibleChunkWindow);
+            DebugLogger.PrintDebug(
+                $"[TerrainMaterializationApply] request={result.RequestId} " +
+                $"oldObjects={previousVisualObjectCount} newObjects={ResidentTerrainVisualObjects.Count} " +
+                $"oldTriangles={previousVisualTriangleCount} newTriangles={_residentTerrainVisualTriangleCount} " +
+                $"buildMs={result.BuildMilliseconds:0.###} visibleWindow={FormatChunkBounds(_lastVisibleChunkWindow)} " +
+                $"resultMaterializedWindow={FormatChunkBounds(result.MaterializedChunkWindow)} " +
+                $"resultVisualWindow={FormatChunkBounds(result.VisualChunkWindow)} " +
+                $"resultColliderWindow={FormatChunkBounds(result.ColliderChunkWindow)} " +
+                $"covered={visibleWindowCovered} dirty={_terrainVisibleObjectsDirty} " +
+                $"pendingCritical={_terrainPendingCriticalChunkCount} pendingTotal={TerrainPendingChunkCount}");
+
+            bool removedCoveredVisuals =
+                previousVisualObjectCount > 0 &&
+                ResidentTerrainVisualObjects.Count == 0 &&
+                visibleWindowCovered &&
+                _terrainPendingCriticalChunkCount == 0;
+            bool removedMostCoveredVisuals =
+                previousVisualObjectCount >= 4 &&
+                ResidentTerrainVisualObjects.Count > 0 &&
+                ResidentTerrainVisualObjects.Count <= previousVisualObjectCount / 4 &&
+                visibleWindowCovered &&
+                _terrainPendingCriticalChunkCount == 0;
+
+            if (removedCoveredVisuals || removedMostCoveredVisuals)
+            {
+                string reason = removedCoveredVisuals
+                    ? "materialization removed all terrain visuals while visible window was covered"
+                    : "materialization removed most terrain visuals while visible window was covered";
+                EmitTerrainFlickerDiagnostic(
+                    reason,
+                    float.NaN,
+                    float.NaN,
+                    float.NaN,
+                    float.NaN,
+                    _lastTerrainVisibleDrawObjectCount,
+                    _lastTerrainVisibleDrawTriangleCount,
+                    previousVisualObjectSnapshot);
+            }
         }
 
         private static bool TryBuildCombinedResidentMask(ChunkBounds chunkBounds, out CombinedResidentMask residentMask)
@@ -2462,6 +7910,53 @@ namespace op.io
 
             residentMask = new CombinedResidentMask(mask, maskWidth, maskHeight, minChunkX, minChunkY);
             return true;
+        }
+
+        private static TerrainMapSnapshot BuildFullTerrainMapSnapshot(ChunkBounds chunkBounds)
+        {
+            int chunkColumns = Math.Max(1, chunkBounds.MaxChunkX - chunkBounds.MinChunkX + 1);
+            int chunkRows = Math.Max(1, chunkBounds.MaxChunkY - chunkBounds.MinChunkY + 1);
+            int maskWidth = chunkColumns * ChunkTextureResolution;
+            int maskHeight = chunkRows * ChunkTextureResolution;
+            byte[] mask = new byte[maskWidth * maskHeight];
+
+            for (int chunkY = chunkBounds.MinChunkY; chunkY <= chunkBounds.MaxChunkY; chunkY++)
+            {
+                for (int chunkX = chunkBounds.MinChunkX; chunkX <= chunkBounds.MaxChunkX; chunkX++)
+                {
+                    ChunkKey key = new(chunkX, chunkY);
+                    if (!ResidentChunks.TryGetValue(key, out TerrainChunkRecord chunk))
+                    {
+                        return null;
+                    }
+
+                    if (!chunk.HasLand || chunk.LandMask.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    int offsetX = (chunkX - chunkBounds.MinChunkX) * ChunkTextureResolution;
+                    int offsetY = (chunkY - chunkBounds.MinChunkY) * ChunkTextureResolution;
+                    for (int row = 0; row < ChunkTextureResolution; row++)
+                    {
+                        Array.Copy(
+                            chunk.LandMask,
+                            row * ChunkTextureResolution,
+                            mask,
+                            Index(offsetX, offsetY + row, maskWidth),
+                            ChunkTextureResolution);
+                    }
+                }
+            }
+
+            TerrainWorldBounds worldBounds = BuildChunkWorldBounds(chunkBounds);
+            return new TerrainMapSnapshot(
+                mask,
+                maskWidth,
+                maskHeight,
+                worldBounds.MinX,
+                worldBounds.MinY,
+                ChunkWorldSize / ChunkTextureResolution);
         }
 
         private static void CollectConnectedComponent(
@@ -2700,6 +8195,11 @@ namespace op.io
 
         private static bool TrySnapTerrainWorldBoundary(ref Vector2 worldPoint, float snapDistanceWorldUnits)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return false;
+            }
+
             EnsureTerrainWorldBoundsInitialized();
             float snapDistance = MathF.Max(0f, snapDistanceWorldUnits);
             bool snapped = false;
@@ -3834,235 +9334,6 @@ namespace op.io
             points.Add(point);
         }
 
-        private static void SpawnTerrainLoopColliders(
-            IReadOnlyList<TerrainLoop> loops,
-            float worldLeft,
-            float worldTop,
-            float sampleStepWorldUnits,
-            TerrainMaterializationResult materialization,
-            TerrainWorldBounds colliderWorldBounds)
-        {
-            if (materialization == null ||
-                loops == null ||
-                loops.Count == 0 ||
-                sampleStepWorldUnits <= 0f)
-            {
-                return;
-            }
-
-            float shellThickness = MathF.Max(2f, CentifootUnits.CentifootToWorld(TerrainCollisionShellThicknessCentifoot));
-            float halfShellThickness = shellThickness * 0.5f;
-
-            for (int loopIndex = 0; loopIndex < loops.Count; loopIndex++)
-            {
-                TerrainLoop loop = loops[loopIndex];
-                if (loop?.Points == null || loop.Points.Count < 3)
-                {
-                    continue;
-                }
-
-                for (int pointIndex = 0; pointIndex < loop.Points.Count; pointIndex++)
-                {
-                    if (materialization.ColliderCount >= MaxTerrainColliderRecordsPerRefresh)
-                    {
-                        return;
-                    }
-
-                    Vector2 localStart = loop.Points[pointIndex];
-                    Vector2 localEnd = loop.Points[(pointIndex + 1) % loop.Points.Count];
-                    Vector2 start = new(
-                        worldLeft + (localStart.X * sampleStepWorldUnits),
-                        worldTop + (localStart.Y * sampleStepWorldUnits));
-                    Vector2 end = new(
-                        worldLeft + (localEnd.X * sampleStepWorldUnits),
-                        worldTop + (localEnd.Y * sampleStepWorldUnits));
-                    Vector2 segment = end - start;
-                    float segmentLength = segment.Length();
-                    if (segmentLength <= 0.001f)
-                    {
-                        continue;
-                    }
-
-                    Vector2 segmentUnit = segment / segmentLength;
-                    Vector2 midpoint = (start + end) * 0.5f;
-                    Vector2 inwardNormal = ResolveTerrainLoopSegmentInwardNormal(
-                        loop.Points,
-                        localStart,
-                        localEnd,
-                        midpoint,
-                        segmentUnit,
-                        sampleStepWorldUnits,
-                        halfShellThickness);
-                    Vector2 position = midpoint + (inwardNormal * halfShellThickness);
-                    float rotation = MathF.Atan2(segment.Y, segment.X);
-                    float colliderLength = segmentLength + shellThickness;
-                    TerrainWorldBounds bounds = BuildTerrainSegmentColliderBounds(
-                        position,
-                        segmentUnit,
-                        inwardNormal,
-                        colliderLength,
-                        halfShellThickness);
-                    if (!colliderWorldBounds.Intersects(bounds.MinX, bounds.MaxX, bounds.MinY, bounds.MaxY))
-                    {
-                        continue;
-                    }
-
-                    materialization.ColliderObjects.Add(new TerrainColliderObjectRecord(
-                        bounds,
-                        position,
-                        rotation,
-                        colliderLength,
-                        shellThickness));
-                    materialization.ColliderCount++;
-                }
-            }
-        }
-
-        private static Vector2 ResolveTerrainLoopSegmentInwardNormal(
-            IReadOnlyList<Vector2> loopPoints,
-            Vector2 localStart,
-            Vector2 localEnd,
-            Vector2 worldMidpoint,
-            Vector2 segmentUnitWorld,
-            float sampleStepWorldUnits,
-            float halfShellThicknessWorldUnits)
-        {
-            Vector2 normalWorld = new(-segmentUnitWorld.Y, segmentUnitWorld.X);
-            if (normalWorld.LengthSquared() <= 0.0001f)
-            {
-                return Vector2.Zero;
-            }
-
-            normalWorld.Normalize();
-
-            if (loopPoints != null && loopPoints.Count >= 3 && sampleStepWorldUnits > 0f)
-            {
-                Vector2 localSegment = localEnd - localStart;
-                if (localSegment.LengthSquared() > 0.0001f)
-                {
-                    localSegment.Normalize();
-                    Vector2 normalLocal = new(-localSegment.Y, localSegment.X);
-                    Vector2 localMidpoint = (localStart + localEnd) * 0.5f;
-                    float localProbeDistance = MathF.Max(
-                        0.1f,
-                        (halfShellThicknessWorldUnits + 1f) / sampleStepWorldUnits);
-
-                    bool positiveInside = PointInsidePolygon(
-                        localMidpoint + (normalLocal * localProbeDistance),
-                        loopPoints);
-                    bool negativeInside = PointInsidePolygon(
-                        localMidpoint - (normalLocal * localProbeDistance),
-                        loopPoints);
-                    if (positiveInside != negativeInside)
-                    {
-                        return positiveInside ? normalWorld : -normalWorld;
-                    }
-                }
-            }
-
-            float worldProbeDistance = MathF.Max(2f, halfShellThicknessWorldUnits + 1f);
-            bool positiveLand = IsTerrainLandAtWorldPosition(worldMidpoint + (normalWorld * worldProbeDistance));
-            bool negativeLand = IsTerrainLandAtWorldPosition(worldMidpoint - (normalWorld * worldProbeDistance));
-            if (positiveLand != negativeLand)
-            {
-                return positiveLand ? normalWorld : -normalWorld;
-            }
-
-            return normalWorld;
-        }
-
-        private static TerrainWorldBounds BuildTerrainSegmentColliderBounds(
-            Vector2 position,
-            Vector2 segmentUnit,
-            Vector2 normal,
-            float length,
-            float halfThickness)
-        {
-            if (segmentUnit.LengthSquared() <= 0.0001f)
-            {
-                segmentUnit = Vector2.UnitX;
-            }
-            else
-            {
-                segmentUnit.Normalize();
-            }
-
-            if (normal.LengthSquared() <= 0.0001f)
-            {
-                normal = new Vector2(-segmentUnit.Y, segmentUnit.X);
-            }
-            else
-            {
-                normal.Normalize();
-            }
-
-            Vector2 halfAlong = segmentUnit * (MathF.Max(0f, length) * 0.5f);
-            Vector2 halfAcross = normal * MathF.Max(0f, halfThickness);
-            Vector2 cornerA = position - halfAlong - halfAcross;
-            Vector2 cornerB = position - halfAlong + halfAcross;
-            Vector2 cornerC = position + halfAlong - halfAcross;
-            Vector2 cornerD = position + halfAlong + halfAcross;
-
-            float minX = MathF.Min(MathF.Min(cornerA.X, cornerB.X), MathF.Min(cornerC.X, cornerD.X));
-            float maxX = MathF.Max(MathF.Max(cornerA.X, cornerB.X), MathF.Max(cornerC.X, cornerD.X));
-            float minY = MathF.Min(MathF.Min(cornerA.Y, cornerB.Y), MathF.Min(cornerC.Y, cornerD.Y));
-            float maxY = MathF.Max(MathF.Max(cornerA.Y, cornerB.Y), MathF.Max(cornerC.Y, cornerD.Y));
-            return new TerrainWorldBounds(minX, minY, maxX - minX, maxY - minY);
-        }
-
-        private static void AddTerrainWorldBoundaryColliders(
-            TerrainMaterializationResult materialization,
-            TerrainWorldBounds colliderWorldBounds)
-        {
-            if (materialization == null)
-            {
-                return;
-            }
-
-            EnsureTerrainWorldBoundsInitialized();
-            float thickness = MathF.Max(8f, TerrainWorldBoundaryThicknessWorldUnits);
-            float horizontalLength = TerrainWorldSizeWorldUnits + (thickness * 2f);
-            float verticalLength = TerrainWorldSizeWorldUnits + (thickness * 2f);
-            float centerX = (_terrainWorldBounds.MinX + _terrainWorldBounds.MaxX) * 0.5f;
-            float centerY = (_terrainWorldBounds.MinY + _terrainWorldBounds.MaxY) * 0.5f;
-
-            AddBoundaryCollider(new Vector2(centerX, _terrainWorldBounds.MinY - (thickness * 0.5f)), 0f, horizontalLength, thickness);
-            AddBoundaryCollider(new Vector2(centerX, _terrainWorldBounds.MaxY + (thickness * 0.5f)), 0f, horizontalLength, thickness);
-            AddBoundaryCollider(new Vector2(_terrainWorldBounds.MinX - (thickness * 0.5f), centerY), MathF.PI * 0.5f, verticalLength, thickness);
-            AddBoundaryCollider(new Vector2(_terrainWorldBounds.MaxX + (thickness * 0.5f), centerY), MathF.PI * 0.5f, verticalLength, thickness);
-
-            void AddBoundaryCollider(Vector2 position, float rotation, float length, float colliderThickness)
-            {
-                if (materialization.ColliderCount >= MaxTerrainColliderRecordsPerRefresh)
-                {
-                    return;
-                }
-
-                float halfLength = length * 0.5f;
-                float halfThickness = colliderThickness * 0.5f;
-                TerrainWorldBounds bounds = MathF.Abs(rotation) < 0.001f
-                    ? new TerrainWorldBounds(position.X - halfLength, position.Y - halfThickness, length, colliderThickness)
-                    : new TerrainWorldBounds(position.X - halfThickness, position.Y - halfLength, colliderThickness, length);
-
-                if (!bounds.Intersects(
-                    colliderWorldBounds.MinX,
-                    colliderWorldBounds.MaxX,
-                    colliderWorldBounds.MinY,
-                    colliderWorldBounds.MaxY))
-                {
-                    return;
-                }
-
-                materialization.ColliderObjects.Add(new TerrainColliderObjectRecord(
-                    bounds,
-                    position,
-                    rotation,
-                    length,
-                    colliderThickness));
-                materialization.ColliderCount++;
-            }
-        }
-
         private static List<Vector2> SimplifyLoop(IReadOnlyList<Vector2> points, float tolerance)
         {
             List<Vector2> simplified = CollapseCollinearLoop(points);
@@ -4252,117 +9523,6 @@ namespace op.io
             return inside;
         }
 
-        private static GameObject CreateTerrainColliderObject(
-            Vector2 position,
-            float rotation,
-            float length,
-            float thickness)
-        {
-            Shape colliderShape = new(
-                "Rectangle",
-                Math.Max(1, (int)MathF.Round(length)),
-                Math.Max(1, (int)MathF.Round(thickness)),
-                0,
-                Color.Transparent,
-                Color.Transparent,
-                0);
-            colliderShape.SkipHover = true;
-
-            GameObject colliderObject = new(
-                GameObjectManager.GetNextID(),
-                "TerrainCollider",
-                position,
-                rotation,
-                TerrainStaticMass,
-                false,
-                true,
-                false,
-                colliderShape,
-                Color.Transparent,
-                Color.Transparent,
-                0,
-                registerWithShapeManager: false);
-            colliderObject.DrawLayer = TerrainDrawLayer;
-            return colliderObject;
-        }
-
-        private static void AddTerrainColliderRecordToSpatialIndex(TerrainColliderObjectRecord record)
-        {
-            if (record == null ||
-                !TryGetTerrainColliderRecordCellRange(record.Bounds, out int minCellX, out int maxCellX, out int minCellY, out int maxCellY))
-            {
-                return;
-            }
-
-            for (int cellY = minCellY; cellY <= maxCellY; cellY++)
-            {
-                for (int cellX = minCellX; cellX <= maxCellX; cellX++)
-                {
-                    long cellKey = ComposeTerrainColliderCellKey(cellX, cellY);
-                    if (!TerrainColliderRecordCells.TryGetValue(cellKey, out List<TerrainColliderObjectRecord> records))
-                    {
-                        records = AvailableTerrainColliderRecordCellLists.Count > 0
-                            ? AvailableTerrainColliderRecordCellLists.Pop()
-                            : new List<TerrainColliderObjectRecord>();
-                        TerrainColliderRecordCells[cellKey] = records;
-                        TerrainColliderRecordCellKeys.Add(cellKey);
-                    }
-
-                    records.Add(record);
-                }
-            }
-        }
-
-        private static bool TryGetTerrainColliderRecordCellRange(
-            TerrainWorldBounds bounds,
-            out int minCellX,
-            out int maxCellX,
-            out int minCellY,
-            out int maxCellY)
-        {
-            minCellX = 0;
-            maxCellX = 0;
-            minCellY = 0;
-            maxCellY = 0;
-
-            if (!float.IsFinite(bounds.MinX) ||
-                !float.IsFinite(bounds.MaxX) ||
-                !float.IsFinite(bounds.MinY) ||
-                !float.IsFinite(bounds.MaxY))
-            {
-                return false;
-            }
-
-            minCellX = (int)MathF.Floor(bounds.MinX / TerrainColliderSpatialCellSizeWorldUnits);
-            maxCellX = (int)MathF.Floor(bounds.MaxX / TerrainColliderSpatialCellSizeWorldUnits);
-            minCellY = (int)MathF.Floor(bounds.MinY / TerrainColliderSpatialCellSizeWorldUnits);
-            maxCellY = (int)MathF.Floor(bounds.MaxY / TerrainColliderSpatialCellSizeWorldUnits);
-            return true;
-        }
-
-        private static long ComposeTerrainColliderCellKey(int cellX, int cellY)
-        {
-            return ((long)cellX << 32) | (uint)cellY;
-        }
-
-        private static void ClearTerrainColliderSpatialIndex()
-        {
-            for (int i = 0; i < TerrainColliderRecordCellKeys.Count; i++)
-            {
-                long cellKey = TerrainColliderRecordCellKeys[i];
-                if (!TerrainColliderRecordCells.TryGetValue(cellKey, out List<TerrainColliderObjectRecord> records))
-                {
-                    continue;
-                }
-
-                records.Clear();
-                TerrainColliderRecordCells.Remove(cellKey);
-                AvailableTerrainColliderRecordCellLists.Push(records);
-            }
-
-            TerrainColliderRecordCellKeys.Clear();
-        }
-
         private static bool IsFiniteVector(Vector2 value)
         {
             return float.IsFinite(value.X) && float.IsFinite(value.Y);
@@ -4370,36 +9530,22 @@ namespace op.io
 
         private static void ClearResidentTerrainWorldObjects()
         {
-            for (int i = ResidentTerrainColliderObjects.Count - 1; i >= 0; i--)
-            {
-                TerrainColliderObjectRecord colliderRecord = ResidentTerrainColliderObjects[i];
-                if (colliderRecord.IsCollisionActive && colliderRecord.ColliderObject != null)
-                {
-                    Core.Instance?.GameObjects?.Remove(colliderRecord.ColliderObject);
-                    Core.Instance?.StaticObjects?.Remove(colliderRecord.ColliderObject);
-                }
-
-                colliderRecord.ColliderObject?.Dispose();
-                colliderRecord.ReleaseColliderObject();
-            }
-
             for (int i = ResidentTerrainVisualObjects.Count - 1; i >= 0; i--)
             {
                 ResidentTerrainVisualObjects[i]?.Dispose();
             }
 
-            ResidentTerrainColliderObjects.Clear();
             ResidentTerrainVisualObjects.Clear();
             ResidentTerrainCollisionLoops.Clear();
-            ClearTerrainColliderSpatialIndex();
-            ActiveTerrainColliderRecords.Clear();
-            DesiredTerrainColliderRecords.Clear();
-            TerrainColliderDeactivateScratch.Clear();
+            _lastResidentTerrainVisualObjectSnapshot.Clear();
+            _hasAppliedTerrainVisualChunkWindow = false;
+            _terrainVisibleObjectsDirty = true;
             _residentTerrainComponentCount = 0;
             _residentTerrainColliderCount = 0;
             _residentTerrainVisualTriangleCount = 0;
             _activeTerrainColliderCount = 0;
             _terrainColliderActivationCandidateCount = 0;
+            UpdateTerrainDynamicCollisionProbeTelemetry(0, 0);
             _residentTerrainVertexColorValid = false;
         }
 
@@ -4710,6 +9856,11 @@ namespace op.io
 
         private static ChunkBounds ClampChunkBoundsToTerrainWorld(ChunkBounds chunkBounds)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return chunkBounds;
+            }
+
             EnsureTerrainWorldBoundsInitialized();
             ChunkBounds worldChunkBounds = BuildChunkBounds(
                 _terrainWorldBounds.MinX,
@@ -4736,6 +9887,11 @@ namespace op.io
 
         private static bool TerrainWorldContainsChunk(ChunkKey key)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return true;
+            }
+
             EnsureTerrainWorldBoundsInitialized();
             float chunkMinX = key.X * ChunkWorldSize;
             float chunkMinY = key.Y * ChunkWorldSize;
@@ -4749,6 +9905,11 @@ namespace op.io
 
         private static bool TerrainWorldContainsPoint(float worldX, float worldY)
         {
+            if (!TerrainWorldBoundaryEnabled)
+            {
+                return true;
+            }
+
             EnsureTerrainWorldBoundsInitialized();
             return worldX >= _terrainWorldBounds.MinX &&
                 worldX <= _terrainWorldBounds.MaxX &&
@@ -4776,6 +9937,131 @@ namespace op.io
         private static string FormatChunkBounds(ChunkBounds bounds)
         {
             return $"{bounds.MinChunkX}..{bounds.MaxChunkX}, {bounds.MinChunkY}..{bounds.MaxChunkY}";
+        }
+
+        private static ChunkBounds ExpandChunkBounds(ChunkBounds bounds, int marginChunks)
+        {
+            int margin = Math.Max(0, marginChunks);
+            return ClampChunkBoundsToTerrainWorld(new ChunkBounds(
+                bounds.MinChunkX - margin,
+                bounds.MaxChunkX + margin,
+                bounds.MinChunkY - margin,
+                bounds.MaxChunkY + margin));
+        }
+
+        private static ChunkBounds UnionChunkBounds(ChunkBounds left, ChunkBounds right)
+        {
+            return ClampChunkBoundsToTerrainWorld(new ChunkBounds(
+                Math.Min(left.MinChunkX, right.MinChunkX),
+                Math.Max(left.MaxChunkX, right.MaxChunkX),
+                Math.Min(left.MinChunkY, right.MinChunkY),
+                Math.Max(left.MaxChunkY, right.MaxChunkY)));
+        }
+
+        private static string FormatWorldRectangle(float minX, float maxX, float minY, float maxY)
+        {
+            if (!float.IsFinite(minX) ||
+                !float.IsFinite(maxX) ||
+                !float.IsFinite(minY) ||
+                !float.IsFinite(maxY))
+            {
+                return "unknown";
+            }
+
+            return $"{minX:0.#}..{maxX:0.#}, {minY:0.#}..{maxY:0.#}";
+        }
+
+        private static string FormatTerrainWorldBounds(TerrainWorldBounds bounds)
+        {
+            return $"{bounds.MinX:0.#},{bounds.MinY:0.#}->{bounds.MaxX:0.#},{bounds.MaxY:0.#}";
+        }
+
+        private static string DescribeTerrainVisualObject(
+            TerrainVisualObjectRecord record,
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            if (record == null)
+            {
+                return "terrainObject=null";
+            }
+
+            bool hasCameraBounds =
+                float.IsFinite(minX) &&
+                float.IsFinite(maxX) &&
+                float.IsFinite(minY) &&
+                float.IsFinite(maxY);
+            string intersectsCamera = hasCameraBounds
+                ? record.Bounds.Intersects(minX, maxX, minY, maxY).ToString()
+                : "unknown";
+            return
+                $"terrainObjectId={record.DiagnosticId} request={record.MaterializationRequestId} " +
+                $"bounds={FormatTerrainWorldBounds(record.Bounds)} " +
+                $"vertices={record.FillVertices?.Length ?? 0} primitives={record.FillPrimitiveCount} " +
+                $"signature={record.BoundsSignature} intersectsCamera={intersectsCamera}";
+        }
+
+        private static List<string> CaptureTerrainVisualObjectSnapshot(IReadOnlyList<TerrainVisualObjectRecord> records)
+        {
+            List<string> snapshot = new(records?.Count ?? 0);
+            if (records == null)
+            {
+                return snapshot;
+            }
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                snapshot.Add(DescribeTerrainVisualObject(
+                    records[i],
+                    float.NaN,
+                    float.NaN,
+                    float.NaN,
+                    float.NaN));
+            }
+
+            return snapshot;
+        }
+
+        private static int AllocateTerrainVisualObjectDiagnosticId()
+        {
+            unchecked
+            {
+                _terrainNextVisualObjectDiagnosticId++;
+                if (_terrainNextVisualObjectDiagnosticId <= 0)
+                {
+                    _terrainNextVisualObjectDiagnosticId = 1;
+                }
+
+                return _terrainNextVisualObjectDiagnosticId;
+            }
+        }
+
+        private static int BuildTerrainVisualObjectSignature(
+            TerrainWorldBounds bounds,
+            VertexPositionColor[] vertices)
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = (hash * 31) + bounds.MinX.GetHashCode();
+                hash = (hash * 31) + bounds.MinY.GetHashCode();
+                hash = (hash * 31) + bounds.MaxX.GetHashCode();
+                hash = (hash * 31) + bounds.MaxY.GetHashCode();
+                hash = (hash * 31) + (vertices?.Length ?? 0);
+                if (vertices != null && vertices.Length > 0)
+                {
+                    VertexPositionColor first = vertices[0];
+                    VertexPositionColor last = vertices[vertices.Length - 1];
+                    hash = (hash * 31) + first.Position.X.GetHashCode();
+                    hash = (hash * 31) + first.Position.Y.GetHashCode();
+                    hash = (hash * 31) + last.Position.X.GetHashCode();
+                    hash = (hash * 31) + last.Position.Y.GetHashCode();
+                }
+
+                return hash;
+            }
         }
 
         private static ChunkKey BuildChunkKey(float worldX, float worldY)
@@ -5003,6 +10289,11 @@ namespace op.io
             rotatedY = (x * sine) + (y * cosine);
         }
 
+        private static float DegreesToRadians(float degrees)
+        {
+            return degrees * MathF.PI / 180f;
+        }
+
         private static float SmoothStep(float edge0, float edge1, float x)
         {
             if (edge0 == edge1)
@@ -5020,6 +10311,147 @@ namespace op.io
             float warpY = Fbm((x * 0.09f) - 44.6f, (y * 0.09f) + 12.9f, seed + 911, 4) * strength;
             warpedX = x + warpX;
             warpedY = y + warpY;
+        }
+
+        private static IReadOnlyList<TerrainWorldPlacement> ResolveDefaultWorldPlacements(int seed)
+        {
+            lock (DefaultWorldPlacementCacheLock)
+            {
+                if (_cachedDefaultWorldPlacementSeed != seed)
+                {
+                    _cachedDefaultWorldPlacements = TerrainWorldPlacementGenerator.BuildDefaultArchipelagoPlacements(seed).ToArray();
+                    _cachedDefaultWorldPlacementSeed = seed;
+                }
+
+                return _cachedDefaultWorldPlacements;
+            }
+        }
+
+        private static IReadOnlyList<OceanZoneDistanceAnchor> ResolveDefaultOceanZoneDistanceAnchors(int seed)
+        {
+            lock (OceanZoneDistanceAnchorCacheLock)
+            {
+                if (_cachedOceanZoneDistanceAnchorSeed != seed)
+                {
+                    IReadOnlyList<TerrainWorldPlacement> placements = ResolveDefaultWorldPlacements(seed);
+                    OceanZoneDistanceAnchor[] anchors = new OceanZoneDistanceAnchor[placements.Count];
+                    for (int i = 0; i < placements.Count; i++)
+                    {
+                        TerrainWorldPlacement placement = placements[i];
+                        float centerTerrainX = DefaultWorldToTerrainCoordinate(placement.X);
+                        float centerTerrainY = DefaultWorldToTerrainCoordinate(placement.Y);
+                        Vector2 centerWorld = TerrainCoordinateToWorldPosition(centerTerrainX, centerTerrainY);
+                        TerrainSubstrateWeights substrate = ResolveDominantSubstrateWeights(centerTerrainX, centerTerrainY, seed);
+                        float radiusScale = Math.Clamp(
+                            0.86f +
+                            (substrate.VolcanicRock * 0.36f) +
+                            (substrate.LimestoneKarst * 0.20f) -
+                            (substrate.SandSediment * 0.08f),
+                            0.60f,
+                            1.45f);
+                        anchors[i] = new OceanZoneDistanceAnchor(
+                            centerWorld,
+                            Math.Max(1f, placement.Radius * radiusScale),
+                            Math.Clamp(ResolveDefaultWorldPlacementElongation(placement), 0.25f, 4f),
+                            DegreesToRadians(placement.RotationDegrees));
+                    }
+
+                    _cachedOceanZoneDistanceAnchors = anchors;
+                    _cachedOceanZoneDistanceAnchorSeed = seed;
+                }
+
+                return _cachedOceanZoneDistanceAnchors;
+            }
+        }
+
+        private static string FormatTerrainOceanZoneOrigin()
+        {
+            return "nearest default archipelago polygon border";
+        }
+
+        private static float ResolveTerrainOceanZoneOriginRadius()
+        {
+            return ResolveEffectiveOceanZoneTransitionDistance(DevWaterShallowDistance);
+        }
+
+        private static bool TryResolvePrimaryOceanZoneAnchor(
+            int seed,
+            out Vector2 centerWorld,
+            out float radiusWorldUnits,
+            out float elongation,
+            out float rotationRadians)
+        {
+            centerWorld = Vector2.Zero;
+            radiusWorldUnits = 0f;
+            elongation = 1f;
+            rotationRadians = 0f;
+
+            lock (OceanZoneAnchorCacheLock)
+            {
+                if (_cachedOceanZoneAnchorSeed == seed &&
+                    _cachedOceanZoneAnchorRadiusWorldUnits > 0f)
+                {
+                    centerWorld = _cachedOceanZoneAnchorCenterWorld;
+                    radiusWorldUnits = _cachedOceanZoneAnchorRadiusWorldUnits;
+                    elongation = _cachedOceanZoneAnchorElongation;
+                    rotationRadians = _cachedOceanZoneAnchorRotationRadians;
+                    return true;
+                }
+
+                IReadOnlyList<TerrainWorldPlacement> placements = ResolveDefaultWorldPlacements(seed);
+                if (placements.Count <= 0)
+                {
+                    _cachedOceanZoneAnchorSeed = int.MinValue;
+                    return false;
+                }
+
+                TerrainWorldPlacement primary = placements[0];
+                float centerTerrainX = DefaultWorldToTerrainCoordinate(primary.X);
+                float centerTerrainY = DefaultWorldToTerrainCoordinate(primary.Y);
+                TerrainSubstrateWeights substrate = ResolveDominantSubstrateWeights(centerTerrainX, centerTerrainY, seed);
+                float radiusScale = Math.Clamp(
+                    0.86f +
+                    (substrate.VolcanicRock * 0.36f) +
+                    (substrate.LimestoneKarst * 0.20f) -
+                    (substrate.SandSediment * 0.08f),
+                    0.60f,
+                    1.45f);
+
+                _cachedOceanZoneAnchorCenterWorld = TerrainCoordinateToWorldPosition(centerTerrainX, centerTerrainY);
+                _cachedOceanZoneAnchorRadiusWorldUnits = Math.Max(1f, primary.Radius * radiusScale);
+                _cachedOceanZoneAnchorElongation = ResolveDefaultWorldPlacementElongation(primary);
+                _cachedOceanZoneAnchorRotationRadians = DegreesToRadians(primary.RotationDegrees);
+                _cachedOceanZoneAnchorSeed = seed;
+
+                centerWorld = _cachedOceanZoneAnchorCenterWorld;
+                radiusWorldUnits = _cachedOceanZoneAnchorRadiusWorldUnits;
+                elongation = _cachedOceanZoneAnchorElongation;
+                rotationRadians = _cachedOceanZoneAnchorRotationRadians;
+                return true;
+            }
+        }
+
+        private static float DefaultWorldToTerrainCoordinate(float defaultWorldUnits)
+        {
+            return defaultWorldUnits / TerrainDefaultWorldUnitsPerTerrainCoordinate;
+        }
+
+        private static float TerrainCoordinateToDefaultWorld(float terrainCoordinate)
+        {
+            return terrainCoordinate * TerrainDefaultWorldUnitsPerTerrainCoordinate;
+        }
+
+        private static Vector2 TerrainCoordinateToWorldPosition(float terrainX, float terrainY)
+        {
+            return new Vector2(
+                TerrainCoordinateToDefaultWorld(terrainX - _terrainSeedAnchorCentifoot.X),
+                TerrainCoordinateToDefaultWorld(terrainY - _terrainSeedAnchorCentifoot.Y));
+        }
+
+        private static float ResolveDefaultWorldPlacementElongation(TerrainWorldPlacement placement)
+        {
+            float lengthRatio = TerrainWorldDefaults.MainIslandBaseLength / Math.Max(1f, TerrainWorldDefaults.MainIslandBaseRadius);
+            return Math.Clamp(0.76f + ((lengthRatio - 1f) * 0.36f) + ((placement.WidthScale - 1f) * 0.28f), 0.62f, 1.72f);
         }
 
         private static float IslandContribution(
@@ -5065,29 +10497,33 @@ namespace op.io
             elongation = 1f;
             angle = 0f;
             mainSeed = seed;
-
-            float presence = Hash2(islandCellX, islandCellY, seed + 1000);
-            if (presence < IslandCellPresenceThreshold)
+            IReadOnlyList<TerrainWorldPlacement> placements = ResolveDefaultWorldPlacements(seed);
+            for (int i = 0; i < placements.Count; i++)
             {
-                return false;
+                TerrainWorldPlacement placement = placements[i];
+                float candidateX = DefaultWorldToTerrainCoordinate(placement.X);
+                float candidateY = DefaultWorldToTerrainCoordinate(placement.Y);
+                if ((int)MathF.Floor(candidateX / ArchipelagoCellSize) != islandCellX ||
+                    (int)MathF.Floor(candidateY / ArchipelagoCellSize) != islandCellY)
+                {
+                    continue;
+                }
+
+                mainX = candidateX;
+                mainY = candidateY;
+                radius = Math.Max(0.2f, DefaultWorldToTerrainCoordinate(placement.Radius));
+                elongation = ResolveDefaultWorldPlacementElongation(placement);
+                angle = DegreesToRadians(placement.RotationDegrees);
+                mainSeed = seed + (i * 9973) + (placement.ClusterIndex * 193);
+                return true;
             }
 
-            float jitterX = Hash2(islandCellX, islandCellY, seed + 1001);
-            float jitterY = Hash2(islandCellX, islandCellY, seed + 1002);
-            mainX = (islandCellX + IslandMainJitterInset + (jitterX * IslandMainJitterRange)) * ArchipelagoCellSize;
-            mainY = (islandCellY + IslandMainJitterInset + (jitterY * IslandMainJitterRange)) * ArchipelagoCellSize;
-            radius = IslandMainRadiusBase + (Hash2(islandCellX, islandCellY, seed + 1003) * IslandMainRadiusRange);
-            elongation = 0.82f + (Hash2(islandCellX, islandCellY, seed + 1004) * 0.62f);
-            angle = Hash2(islandCellX, islandCellY, seed + 1005) * MathF.PI;
-            mainSeed = seed + (islandCellX * 83) + (islandCellY * 193);
-            return true;
+            return false;
         }
 
         private static int ResolveIslandSatelliteCount(int islandCellX, int islandCellY, int seed)
         {
-            return Math.Min(
-                IslandSatelliteMaxCount,
-                (int)(Hash2(islandCellX, islandCellY, seed + 1006) * (IslandSatelliteMaxCount + 1)));
+            return 0;
         }
 
         private static void ResolveIslandSatellite(
@@ -5152,80 +10588,28 @@ namespace op.io
 
         private static float EstimateBaseField(float x, float y, int seed, TerrainSubstrateWeights sampleSubstrate)
         {
-            int cellX = (int)MathF.Floor(x / ArchipelagoCellSize);
-            int cellY = (int)MathF.Floor(y / ArchipelagoCellSize);
             float field = -1.72f + (sampleSubstrate.ReefLimestone * 0.04f) + (sampleSubstrate.SandSediment * 0.03f);
-
-            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            IReadOnlyList<TerrainWorldPlacement> placements = ResolveDefaultWorldPlacements(seed);
+            for (int i = 0; i < placements.Count; i++)
             {
-                for (int offsetX = -1; offsetX <= 1; offsetX++)
+                TerrainWorldPlacement placement = placements[i];
+                float mainX = DefaultWorldToTerrainCoordinate(placement.X);
+                float mainY = DefaultWorldToTerrainCoordinate(placement.Y);
+                float radius = Math.Max(0.2f, DefaultWorldToTerrainCoordinate(placement.Radius));
+                float influenceRadius = radius * 2.35f;
+                if (Distance(x, y, mainX, mainY) > influenceRadius)
                 {
-                    int islandCellX = cellX + offsetX;
-                    int islandCellY = cellY + offsetY;
-                    if (!TryResolveIslandCluster(
-                        islandCellX,
-                        islandCellY,
-                        seed,
-                        out float mainX,
-                        out float mainY,
-                        out float radius,
-                        out float elongation,
-                        out float angle,
-                        out int mainSeed))
-                    {
-                        continue;
-                    }
-
-                    TerrainSubstrateWeights islandSubstrate = ResolveDominantSubstrateWeights(mainX, mainY, seed);
-                    float islandRadius = radius * (0.86f + (islandSubstrate.VolcanicRock * 0.36f) + (islandSubstrate.LimestoneKarst * 0.2f) - (islandSubstrate.SandSediment * 0.08f));
-                    if (Distance(x, y, mainX, mainY) > islandRadius * 2.15f)
-                    {
-                        continue;
-                    }
-
-                    float islandField = IslandContribution(x, y, mainX, mainY, islandRadius, mainSeed, elongation, angle);
-                    islandField += CliffWallField(x, y, mainX, mainY, islandRadius, mainSeed, elongation, angle, islandSubstrate);
-                    field = MathF.Max(field, islandField);
-
-                    int satellites = ResolveIslandSatelliteCount(islandCellX, islandCellY, seed);
-                    for (int satelliteIndex = 0; satelliteIndex < satellites; satelliteIndex++)
-                    {
-                        ResolveIslandSatellite(
-                            islandCellX,
-                            islandCellY,
-                            seed,
-                            satelliteIndex,
-                            mainX,
-                            mainY,
-                            radius,
-                            out float satelliteX,
-                            out float satelliteY,
-                            out float satelliteRadius,
-                            out float satelliteElongation,
-                            out float satelliteRotation,
-                            out int satelliteSeed);
-
-                        TerrainSubstrateWeights satelliteSubstrate = ResolveDominantSubstrateWeights(satelliteX, satelliteY, seed);
-                        float satelliteRadiusScale = 0.82f + (satelliteSubstrate.VolcanicRock * 0.22f) + (satelliteSubstrate.LimestoneKarst * 0.16f);
-                        float resolvedSatelliteRadius = satelliteRadius * satelliteRadiusScale;
-                        if (Distance(x, y, satelliteX, satelliteY) > resolvedSatelliteRadius * 2.15f)
-                        {
-                            continue;
-                        }
-
-                        field = MathF.Max(
-                            field,
-                            IslandContribution(
-                                x,
-                                y,
-                                satelliteX,
-                                satelliteY,
-                                resolvedSatelliteRadius,
-                                satelliteSeed,
-                                satelliteElongation,
-                                satelliteRotation));
-                    }
+                    continue;
                 }
+
+                TerrainSubstrateWeights islandSubstrate = ResolveDominantSubstrateWeights(mainX, mainY, seed);
+                float islandRadius = radius * (0.86f + (islandSubstrate.VolcanicRock * 0.36f) + (islandSubstrate.LimestoneKarst * 0.2f) - (islandSubstrate.SandSediment * 0.08f));
+                float elongation = ResolveDefaultWorldPlacementElongation(placement);
+                float angle = DegreesToRadians(placement.RotationDegrees);
+                int mainSeed = seed + (i * 9973) + (placement.ClusterIndex * 193);
+                float islandField = IslandContribution(x, y, mainX, mainY, islandRadius, mainSeed, elongation, angle);
+                islandField += CliffWallField(x, y, mainX, mainY, islandRadius, mainSeed, elongation, angle, islandSubstrate);
+                field = MathF.Max(field, islandField);
             }
 
             field += Fbm(x * 0.035f, y * 0.035f, seed + 1300, 5) * (0.18f + (sampleSubstrate.VolcanicRock * 0.1f));
@@ -5237,33 +10621,23 @@ namespace op.io
 
         private static float ArchipelagoClusterSupport(float x, float y, int seed)
         {
-            int cellX = (int)MathF.Floor(x / ArchipelagoMacroCellSize);
-            int cellY = (int)MathF.Floor(y / ArchipelagoMacroCellSize);
             float best = 0f;
-
-            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            IReadOnlyList<TerrainWorldPlacement> placements = ResolveDefaultWorldPlacements(seed);
+            for (int i = 0; i < placements.Count; i++)
             {
-                for (int offsetX = -1; offsetX <= 1; offsetX++)
-                {
-                    int macroCellX = cellX + offsetX;
-                    int macroCellY = cellY + offsetY;
-                    float presence = Hash2(macroCellX, macroCellY, seed + 1500);
-                    if (presence < 0.36f)
-                    {
-                        continue;
-                    }
-
-                    float centerX = (macroCellX + 0.18f + (Hash2(macroCellX, macroCellY, seed + 1501) * 0.64f)) * ArchipelagoMacroCellSize;
-                    float centerY = (macroCellY + 0.18f + (Hash2(macroCellX, macroCellY, seed + 1502) * 0.64f)) * ArchipelagoMacroCellSize;
-                    float radius = ArchipelagoMacroCellSize * (0.42f + (Hash2(macroCellX, macroCellY, seed + 1503) * 0.58f));
-                    float cluster = SmoothStep(radius, radius * 0.18f, Distance(x, y, centerX, centerY));
-                    best = MathF.Max(best, cluster);
-                }
+                TerrainWorldPlacement placement = placements[i];
+                float centerX = DefaultWorldToTerrainCoordinate(placement.X);
+                float centerY = DefaultWorldToTerrainCoordinate(placement.Y);
+                float islandRadius = DefaultWorldToTerrainCoordinate(placement.Radius);
+                float supportRadius = Math.Max(
+                    islandRadius * (2.6f + (TerrainWorldDefaults.WorldClusterSpread * 0.42f)),
+                    ArchipelagoMacroCellSize * (0.72f + (TerrainWorldDefaults.WorldChainBias * 0.28f)));
+                float cluster = SmoothStep(supportRadius, supportRadius * 0.18f, Distance(x, y, centerX, centerY));
+                best = MathF.Max(best, cluster);
             }
 
-            float ridge = SmoothStep(0.48f, 0.84f, RidgedFbm(x * 0.024f, y * 0.024f, seed + 1510, 4));
-            float shelf = SmoothStep(-0.12f, 0.56f, Fbm(x * 0.012f, y * 0.012f, seed + 1511, 5));
-            return Math.Clamp(MathF.Max(best, ridge * 0.54f) + (shelf * 0.22f), 0f, 1f);
+            float shelfNoise = (Fbm(x * 0.012f, y * 0.012f, seed + 1511, 5) + 1f) * 0.5f;
+            return Math.Clamp(best + (best * shelfNoise * 0.16f), 0f, 1f);
         }
 
         private static float CliffWallField(
@@ -6398,10 +11772,27 @@ namespace op.io
 
         private static float WorldField(float x, float y, int seed)
         {
-            return SampleLayeredTerrainCell(x, y, seed).Elevation;
+            return EstimateRuntimeTerrainField(x, y, seed);
         }
 
-        private static TerrainCell SampleLayeredTerrainCell(float x, float y, int seed)
+        private static float EstimateRuntimeTerrainField(float x, float y, int seed)
+        {
+            TerrainSubstrateWeights substrate = ResolveSubstrateWeights(x, y, seed);
+            float field = EstimateBaseField(x, y, seed, substrate);
+            float macroSupport = ArchipelagoClusterSupport(x, y, seed);
+            float selectedLandform = macroSupport > 0.02f ? SampleSelectedLandformField(x, y, seed) : -1.18f;
+            if (selectedLandform > -1f)
+            {
+                float landformGate = SmoothStep(0.04f, 0.22f, macroSupport);
+                field = MathF.Max(field, MathHelper.Lerp(-1.18f, selectedLandform * 0.92f, landformGate));
+            }
+
+            float coastBand = ResolveCoastBand(field, 0.58f);
+            field -= ErosiveOpeningCutField(x, y, seed, substrate, coastBand) * 0.42f;
+            return field;
+        }
+
+        private static TerrainCell SampleLayeredTerrainCell(float x, float y, int seed, bool resolveWaterType = true)
         {
             TerrainSubstrateWeights substrate = ResolveSubstrateWeights(x, y, seed);
             float macroSupport = ArchipelagoClusterSupport(x, y, seed);
@@ -6477,6 +11868,9 @@ namespace op.io
                 macroSupport,
                 enclosure,
                 substrate);
+            TerrainWaterType waterType = field <= SeaLevel && resolveWaterType
+                ? ResolveWaterTypeAtTerrainPosition(x, y, seed)
+                : TerrainWaterType.Shallow;
 
             return new TerrainCell(
                 field,
@@ -6490,6 +11884,7 @@ namespace op.io
                 tidalFlow,
                 macroSupport,
                 enclosure,
+                waterType,
                 substrate.Dominant,
                 tags);
         }
@@ -6545,7 +11940,9 @@ namespace op.io
             float y = ResolveTerrainCentifootY(worldPosition.Y);
             TerrainCell cell = SampleLayeredTerrainCell(x, y, _terrainWorldSeed);
             string tags = FormatTerrainLandformTags(cell.LandformTags);
-            string terrainState = cell.IsLand ? "land" : $"water depth {CentifootUnits.FormatNumber(cell.WaterDepth, "0.00")}";
+            string terrainState = cell.IsLand
+                ? "land"
+                : $"{FormatTerrainWaterType(cell.WaterType)} water depth {CentifootUnits.FormatNumber(cell.WaterDepth, "0.00")}";
             return $"{tags} | {FormatTerrainSubstrate(cell.Lithology)} | {terrainState} | elev {CentifootUnits.FormatNumber(cell.Elevation, "0.00")} | fracture {CentifootUnits.FormatNumber(cell.FractureStrength, "0.00")} | wave {CentifootUnits.FormatNumber(cell.WaveExposure, "0.00")} | sediment {CentifootUnits.FormatNumber(cell.Sediment, "0.00")} | reef {CentifootUnits.FormatNumber(cell.ReefSuitability, "0.00")}";
         }
 
@@ -6754,6 +12151,19 @@ namespace op.io
             }
 
             return "process terrain";
+        }
+
+        private static string FormatTerrainWaterType(TerrainWaterType waterType)
+        {
+            return waterType switch
+            {
+                TerrainWaterType.Shallow => "shallow",
+                TerrainWaterType.Sunlit => "sunlit",
+                TerrainWaterType.Twilight => "twilight",
+                TerrainWaterType.Midnight => "midnight",
+                TerrainWaterType.Abyss => "abyss",
+                _ => "unknown"
+            };
         }
 
         private static string ResolveDominantEnclosureProducerName(
@@ -7255,12 +12665,14 @@ namespace op.io
                 float tidalFlow,
                 float islandCluster,
                 float enclosure,
+                TerrainWaterType waterType,
                 TerrainSubstrate lithology,
                 TerrainLandformTag landformTags)
             {
                 Elevation = elevation;
                 SeaLevel = seaLevel;
                 WaterDepth = MathF.Max(0f, seaLevel - elevation);
+                WaterType = IsWater ? waterType : TerrainWaterType.Shallow;
                 Slope = slope;
                 WaveExposure = waveExposure;
                 Sediment = sediment;
@@ -7289,6 +12701,7 @@ namespace op.io
             public bool IsWater => Elevation <= SeaLevel;
             public bool IsLand => Elevation > SeaLevel;
             public bool IsCoast => MathF.Abs(Elevation - SeaLevel) <= 0.09f;
+            public TerrainWaterType WaterType { get; }
             public TerrainSubstrate Lithology { get; }
             public TerrainLandformTag LandformTags { get; }
         }
@@ -7354,6 +12767,14 @@ namespace op.io
                     key.X <= MaxChunkX &&
                     key.Y >= MinChunkY &&
                     key.Y <= MaxChunkY;
+            }
+
+            public bool Contains(ChunkBounds bounds)
+            {
+                return bounds.MinChunkX >= MinChunkX &&
+                    bounds.MaxChunkX <= MaxChunkX &&
+                    bounds.MinChunkY >= MinChunkY &&
+                    bounds.MaxChunkY <= MaxChunkY;
             }
         }
 
@@ -7428,6 +12849,284 @@ namespace op.io
             public int Height { get; }
             public int MinChunkX { get; }
             public int MinChunkY { get; }
+        }
+
+        private readonly struct OceanZoneDistanceAnchor
+        {
+            public OceanZoneDistanceAnchor(
+                Vector2 centerWorld,
+                float radiusWorldUnits,
+                float elongation,
+                float rotationRadians)
+            {
+                CenterWorld = centerWorld;
+                RadiusWorldUnits = MathF.Max(1f, radiusWorldUnits);
+                Elongation = Math.Clamp(elongation, 0.25f, 4f);
+                RotationRadians = rotationRadians;
+            }
+
+            public Vector2 CenterWorld { get; }
+            public float RadiusWorldUnits { get; }
+            public float Elongation { get; }
+            public float RotationRadians { get; }
+        }
+
+        private readonly struct OceanZoneDebugSample
+        {
+            public OceanZoneDebugSample(bool isWater, TerrainWaterType waterType, float offshoreDistance)
+            {
+                IsInitialized = true;
+                IsWater = isWater;
+                WaterType = waterType;
+                OffshoreDistance = MathF.Max(0f, offshoreDistance);
+            }
+
+            public bool IsInitialized { get; }
+            public bool IsWater { get; }
+            public TerrainWaterType WaterType { get; }
+            public float OffshoreDistance { get; }
+        }
+
+        private readonly struct OceanZoneDebugTileKey : IEquatable<OceanZoneDebugTileKey>
+        {
+            public OceanZoneDebugTileKey(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
+
+            public int X { get; }
+            public int Y { get; }
+
+            public bool Equals(OceanZoneDebugTileKey other) => X == other.X && Y == other.Y;
+            public override bool Equals(object obj) => obj is OceanZoneDebugTileKey other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(X, Y);
+        }
+
+        private readonly struct OceanZoneDebugTileBuildCandidate
+        {
+            public OceanZoneDebugTileBuildCandidate(OceanZoneDebugTileKey key, int distanceSq)
+            {
+                Key = key;
+                DistanceSq = distanceSq;
+            }
+
+            public OceanZoneDebugTileKey Key { get; }
+            public int DistanceSq { get; }
+        }
+
+        private readonly struct OceanZoneDebugTileBuildResult
+        {
+            public OceanZoneDebugTileBuildResult(
+                OceanZoneDebugTileKey key,
+                List<OceanZoneDebugSegment> segments,
+                double buildMilliseconds)
+            {
+                Key = key;
+                Segments = segments ?? new List<OceanZoneDebugSegment>();
+                BuildMilliseconds = buildMilliseconds;
+            }
+
+            public OceanZoneDebugTileKey Key { get; }
+            public List<OceanZoneDebugSegment> Segments { get; }
+            public double BuildMilliseconds { get; }
+        }
+
+        private sealed class TerrainMapSnapshot
+        {
+            public TerrainMapSnapshot(
+                byte[] mask,
+                int width,
+                int height,
+                float worldMinX,
+                float worldMinY,
+                float sampleStepWorldUnits)
+            {
+                Mask = mask ?? Array.Empty<byte>();
+                Width = Math.Max(0, width);
+                Height = Math.Max(0, height);
+                WorldMinX = worldMinX;
+                WorldMinY = worldMinY;
+                SampleStepWorldUnits = MathF.Max(0.0001f, sampleStepWorldUnits);
+                WorldMaxX = worldMinX + (Width * SampleStepWorldUnits);
+                WorldMaxY = worldMinY + (Height * SampleStepWorldUnits);
+            }
+
+            private byte[] Mask { get; }
+            private int Width { get; }
+            private int Height { get; }
+            private float WorldMinX { get; }
+            private float WorldMinY { get; }
+            private float WorldMaxX { get; }
+            private float WorldMaxY { get; }
+            private float SampleStepWorldUnits { get; }
+
+            public bool TrySample(float worldX, float worldY, out byte value)
+            {
+                value = Water;
+                if (Width <= 0 ||
+                    Height <= 0 ||
+                    Mask.Length < Width * Height ||
+                    !float.IsFinite(worldX) ||
+                    !float.IsFinite(worldY) ||
+                    worldX < WorldMinX ||
+                    worldX >= WorldMaxX ||
+                    worldY < WorldMinY ||
+                    worldY >= WorldMaxY)
+                {
+                    return false;
+                }
+
+                int x = Math.Clamp((int)MathF.Floor((worldX - WorldMinX) / SampleStepWorldUnits), 0, Width - 1);
+                int y = Math.Clamp((int)MathF.Floor((worldY - WorldMinY) / SampleStepWorldUnits), 0, Height - 1);
+                value = Mask[Index(x, y, Width)];
+                return true;
+            }
+
+            public bool TryResolveNearestLandDistance(
+                float worldX,
+                float worldY,
+                float maxDistanceWorldUnits,
+                out float distanceWorldUnits)
+            {
+                distanceWorldUnits = 0f;
+                if (Width <= 0 ||
+                    Height <= 0 ||
+                    Mask.Length < Width * Height ||
+                    !float.IsFinite(worldX) ||
+                    !float.IsFinite(worldY) ||
+                    !float.IsFinite(maxDistanceWorldUnits) ||
+                    worldX < WorldMinX ||
+                    worldX >= WorldMaxX ||
+                    worldY < WorldMinY ||
+                    worldY >= WorldMaxY)
+                {
+                    return false;
+                }
+
+                float maxDistance = MathF.Max(0f, maxDistanceWorldUnits);
+                int centerX = Math.Clamp((int)MathF.Floor((worldX - WorldMinX) / SampleStepWorldUnits), 0, Width - 1);
+                int centerY = Math.Clamp((int)MathF.Floor((worldY - WorldMinY) / SampleStepWorldUnits), 0, Height - 1);
+                if (Mask[Index(centerX, centerY, Width)] == Land)
+                {
+                    distanceWorldUnits = 0f;
+                    return true;
+                }
+
+                int cellRadius = Math.Max(1, (int)MathF.Ceiling(maxDistance / SampleStepWorldUnits));
+                int minX = Math.Max(0, centerX - cellRadius);
+                int maxX = Math.Min(Width - 1, centerX + cellRadius);
+                int minY = Math.Max(0, centerY - cellRadius);
+                int maxY = Math.Min(Height - 1, centerY + cellRadius);
+                float bestDistanceSq = float.PositiveInfinity;
+                float maxDistanceSq = maxDistance * maxDistance;
+
+                for (int y = minY; y <= maxY; y++)
+                {
+                    float sampleY = WorldMinY + ((y + 0.5f) * SampleStepWorldUnits);
+                    float dy = sampleY - worldY;
+                    for (int x = minX; x <= maxX; x++)
+                    {
+                        if (Mask[Index(x, y, Width)] != Land)
+                        {
+                            continue;
+                        }
+
+                        float sampleX = WorldMinX + ((x + 0.5f) * SampleStepWorldUnits);
+                        float dx = sampleX - worldX;
+                        float distanceSq = (dx * dx) + (dy * dy);
+                        if (distanceSq < bestDistanceSq)
+                        {
+                            bestDistanceSq = distanceSq;
+                        }
+                    }
+                }
+
+                if (bestDistanceSq <= maxDistanceSq)
+                {
+                    float cellHalfDiagonal = SampleStepWorldUnits * 0.70710677f;
+                    distanceWorldUnits = MathF.Max(0f, MathF.Sqrt(bestDistanceSq) - cellHalfDiagonal);
+                }
+                else
+                {
+                    distanceWorldUnits = maxDistance + TerrainOceanZoneFieldSampleStepWorldUnits;
+                }
+
+                return true;
+            }
+        }
+
+        private sealed class OceanZoneDebugFullMapBuildResult
+        {
+            public OceanZoneDebugFullMapBuildResult(
+                int seed,
+                ChunkBounds fullMapWindow,
+                List<OceanZoneDebugSegment> segments,
+                double buildMilliseconds,
+                int suppressedTinyZoneCount)
+            {
+                Seed = seed;
+                FullMapWindow = fullMapWindow;
+                Segments = segments ?? new List<OceanZoneDebugSegment>();
+                BuildMilliseconds = buildMilliseconds;
+                SuppressedTinyZoneCount = Math.Max(0, suppressedTinyZoneCount);
+            }
+
+            public int Seed { get; }
+            public ChunkBounds FullMapWindow { get; }
+            public List<OceanZoneDebugSegment> Segments { get; }
+            public double BuildMilliseconds { get; }
+            public int SuppressedTinyZoneCount { get; }
+        }
+
+        private readonly struct OceanZoneDebugLabelBounds
+        {
+            public OceanZoneDebugLabelBounds(float minX, float minY, float maxX, float maxY)
+            {
+                MinX = minX;
+                MinY = minY;
+                MaxX = maxX;
+                MaxY = maxY;
+            }
+
+            public float MinX { get; }
+            public float MinY { get; }
+            public float MaxX { get; }
+            public float MaxY { get; }
+
+            public bool Intersects(OceanZoneDebugLabelBounds other)
+            {
+                return MaxX >= other.MinX &&
+                    MinX <= other.MaxX &&
+                    MaxY >= other.MinY &&
+                    MinY <= other.MaxY;
+            }
+        }
+
+        private readonly struct OceanZoneDebugSegment
+        {
+            public OceanZoneDebugSegment(
+                Vector2 from,
+                Vector2 to,
+                Vector2 normal,
+                TerrainWaterType firstSide,
+                TerrainWaterType secondSide,
+                float threshold)
+            {
+                From = from;
+                To = to;
+                Normal = normal;
+                FirstSide = firstSide;
+                SecondSide = secondSide;
+                Threshold = threshold;
+            }
+
+            public Vector2 From { get; }
+            public Vector2 To { get; }
+            public Vector2 Normal { get; }
+            public TerrainWaterType FirstSide { get; }
+            public TerrainWaterType SecondSide { get; }
+            public float Threshold { get; }
         }
 
         private readonly struct TerrainComponentBounds
@@ -7519,18 +13218,20 @@ namespace op.io
             public TerrainMaterializationResult(
                 int requestId,
                 ChunkBounds materializedChunkWindow,
+                ChunkBounds visualChunkWindow,
                 ChunkBounds colliderChunkWindow)
             {
                 RequestId = requestId;
                 MaterializedChunkWindow = materializedChunkWindow;
+                VisualChunkWindow = visualChunkWindow;
                 ColliderChunkWindow = colliderChunkWindow;
             }
 
             public int RequestId { get; }
             public ChunkBounds MaterializedChunkWindow { get; }
+            public ChunkBounds VisualChunkWindow { get; }
             public ChunkBounds ColliderChunkWindow { get; }
             public List<TerrainVisualObjectRecord> VisualObjects { get; } = new();
-            public List<TerrainColliderObjectRecord> ColliderObjects { get; } = new();
             public List<TerrainCollisionLoopRecord> CollisionLoops { get; } = new();
             public int ComponentCount { get; set; }
             public int ColliderCount { get; set; }
@@ -7555,60 +13256,28 @@ namespace op.io
         private sealed class TerrainVisualObjectRecord
         {
             public TerrainVisualObjectRecord(
+                int diagnosticId,
+                int materializationRequestId,
                 TerrainWorldBounds bounds,
-                VertexPositionColor[] fillVertices)
+                VertexPositionColor[] fillVertices,
+                int boundsSignature)
             {
+                DiagnosticId = diagnosticId;
+                MaterializationRequestId = materializationRequestId;
                 Bounds = bounds;
                 FillVertices = fillVertices;
+                BoundsSignature = boundsSignature;
             }
 
+            public int DiagnosticId { get; }
+            public int MaterializationRequestId { get; }
             public TerrainWorldBounds Bounds { get; }
             public VertexPositionColor[] FillVertices { get; }
+            public int BoundsSignature { get; }
             public int FillPrimitiveCount => FillVertices?.Length / 3 ?? 0;
 
             public void Dispose()
             {
-            }
-        }
-
-        private sealed class TerrainColliderObjectRecord
-        {
-            public TerrainColliderObjectRecord(
-                TerrainWorldBounds bounds,
-                Vector2 position,
-                float rotation,
-                float length,
-                float thickness)
-            {
-                Bounds = bounds;
-                Position = position;
-                Rotation = rotation;
-                Length = length;
-                Thickness = thickness;
-            }
-
-            public GameObject ColliderObject { get; private set; }
-            public TerrainWorldBounds Bounds { get; }
-            public Vector2 Position { get; }
-            public float Rotation { get; }
-            public float Length { get; }
-            public float Thickness { get; }
-            public bool IsCollisionActive { get; set; }
-
-            public GameObject EnsureColliderObjectCreated(Func<Vector2, float, float, float, GameObject> factory)
-            {
-                if (ColliderObject != null)
-                {
-                    return ColliderObject;
-                }
-
-                ColliderObject = factory?.Invoke(Position, Rotation, Length, Thickness);
-                return ColliderObject;
-            }
-
-            public void ReleaseColliderObject()
-            {
-                ColliderObject = null;
             }
         }
 

@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS BarConfig (
 INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
 VALUES ('Shield', 0, 0, 10, 1, 0, 'Shield:BelowFull|Health:BelowFull', 0, '0.18');
 INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
-VALUES ('Health', 1, 0, 10, 1, 0, 'Shield:Empty', 0, '0.18');
+VALUES ('Health', 1, 0, 10, 1, 0, 'Health:Change|Shield:Empty', 0, '0.18');
 INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)
 VALUES ('XP', 2, 0, 10, 0, 0, 'XP:Change', 0, '0.18');
 INSERT OR IGNORE INTO BarConfig (BarType, BarRow, PositionInRow, SegmentCount, SegmentsEnabled, IsHidden, VisibilityRelations, ShowPercent, VisibilityFade)

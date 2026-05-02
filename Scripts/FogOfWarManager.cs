@@ -25,6 +25,30 @@ namespace op.io
             public float Radius { get; }
         }
 
+        internal readonly struct VisionRegion
+        {
+            public VisionRegion(Vector2 position, float radius)
+            {
+                Position = position;
+                Radius = MathF.Max(0f, radius);
+            }
+
+            public Vector2 Position { get; }
+            public float Radius { get; }
+
+            public bool Contains(Vector2 worldPosition, float paddingWorldUnits = 0f)
+            {
+                if (!float.IsFinite(worldPosition.X) ||
+                    !float.IsFinite(worldPosition.Y))
+                {
+                    return false;
+                }
+
+                float effectiveRadius = Radius + MathF.Max(0f, paddingWorldUnits);
+                return Vector2.DistanceSquared(worldPosition, Position) <= effectiveRadius * effectiveRadius;
+            }
+        }
+
         internal struct FogVisualParameters
         {
             public Color BaseColor;
@@ -418,6 +442,7 @@ namespace op.io
         private static byte[] _revealAlphaBuffer;
         private static Color[] _alphaMaskColorBuffer;
         private static byte[] _diskReadBuffer;
+        private static float _fogColorIntensity = 1f;
         private static byte[] _zeroAlphaBuffer;
         private static float[] _frontierLocalXCache;
         private static float[] _frontierLocalYCache;
@@ -496,6 +521,8 @@ namespace op.io
         public static float PlayerSightRadius { get; private set; }
         public static float FogBodyDetailMaskScale => _fogBodyDetailMaskScale;
         public static int FogBodyDetailMaskResolution => _detailMaskCacheSize;
+        public static float FogColorIntensity => _fogColorIntensity;
+        public static Color CurrentBaseColor => ApplyFogColorIntensity(_visualParameters.BaseColor, _fogColorIntensity);
         public static bool FrontierCacheLoadedFromDisk => false;
         public static int ActiveFrontierDirectionBin => _activeDirectionBin;
         public static int ActiveFrontierPhaseIndex => _activePhaseIndex;
@@ -584,8 +611,13 @@ namespace op.io
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
                 DepthStencilState.None, RasterizerState.CullNone, null, Matrix.Identity);
-            spriteBatch.Draw(_fogRenderTarget, destination, Color.White);
+            spriteBatch.Draw(_fogRenderTarget, destination, BuildFogOverlayTint());
             spriteBatch.End();
+        }
+
+        internal static void SetFogColorIntensity(float intensity)
+        {
+            _fogColorIntensity = MathHelper.Clamp(float.IsFinite(intensity) ? intensity : 1f, 0.05f, 2f);
         }
 
         public static bool IsWorldPositionVisible(Vector2 worldPosition, float visibleRadiusPadding = 0f)
@@ -685,6 +717,36 @@ namespace op.io
             return true;
         }
 
+        public static bool TryGetVisionRegions(List<VisionRegion> regions)
+        {
+            regions?.Clear();
+            if (regions == null)
+            {
+                return false;
+            }
+
+            if (!CollectVisionSources() || VisionSources.Count <= 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < VisionSources.Count; i++)
+            {
+                VisionSource source = VisionSources[i];
+                if (!float.IsFinite(source.Position.X) ||
+                    !float.IsFinite(source.Position.Y) ||
+                    !float.IsFinite(source.Radius) ||
+                    source.Radius <= 0f)
+                {
+                    continue;
+                }
+
+                regions.Add(new VisionRegion(source.Position, source.Radius));
+            }
+
+            return regions.Count > 0;
+        }
+
         private static bool CollectVisionSources()
         {
             VisionSources.Clear();
@@ -774,6 +836,19 @@ namespace op.io
             }
             _revealLiftRenderTarget?.Dispose();
             _revealLiftRenderTarget = null;
+        }
+
+        private static Color BuildFogOverlayTint()
+        {
+            float clamped = MathHelper.Clamp(_fogColorIntensity, 0f, 1f);
+            return new Color(clamped, clamped, clamped, 1f);
+        }
+
+        private static Color ApplyFogColorIntensity(Color color, float intensity)
+        {
+            float clamped = MathHelper.Clamp(float.IsFinite(intensity) ? intensity : 1f, 0.05f, 2f);
+            Vector3 rgb = Vector3.Clamp(color.ToVector3() * clamped, Vector3.Zero, Vector3.One);
+            return new Color(rgb.X, rgb.Y, rgb.Z, color.A / 255f);
         }
 
         private static void EnsureFogBodyTexture(GraphicsDevice graphicsDevice)

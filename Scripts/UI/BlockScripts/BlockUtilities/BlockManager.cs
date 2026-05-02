@@ -20,6 +20,7 @@ namespace op.io
         private const string PropertiesBlockKey = "properties";
         private const string ColorSchemeBlockKey = "colors";
         private const string AmbienceBlockKey = "ambience";
+        private const string LevelsBlockKey = "levels";
         private const string ControlsBlockKey = "controls";
         private const string NotesBlockKey = "notes";
         private const string ControlSetupsBlockKey = "controlsetups";
@@ -37,6 +38,7 @@ namespace op.io
             ControlSetupsBlockKey,
             InteractBlockKey,
             AmbienceBlockKey,
+            LevelsBlockKey,
             DockingSetupsBlockKey,
             BarsBlockKey,
             NotesBlockKey,
@@ -594,10 +596,11 @@ namespace op.io
                 Vector2 draggedOffset = _cameraPanAnchorOffset - rawDelta;
 
                 // Snap preview: only after the drag has left the snap zone at least once.
-                if (_cameraSnapRange > 0f && Core.Instance?.Player != null && _worldRenderTarget != null)
+                Agent player = Core.Instance?.PlayerOrNull;
+                if (_cameraSnapRange > 0f && player != null && _worldRenderTarget != null)
                 {
                     var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
-                    Vector2 playerCentered = Core.Instance.Player.Position - renderCenter;
+                    Vector2 playerCentered = player.Position - renderCenter;
                     float distFromPlayer;
                     string camMode = GetCameraMode();
 
@@ -625,6 +628,7 @@ namespace op.io
                 {
                     string camMode = GetCameraMode();
                     bool holdInputs = ControlStateManager.GetSwitchState(ControlKeyMigrations.HoldInputsKey);
+                    Agent player = Core.Instance?.PlayerOrNull;
 
                     if (string.Equals(camMode, "Scout", StringComparison.OrdinalIgnoreCase) || holdInputs)
                     {
@@ -632,21 +636,21 @@ namespace op.io
                         _lockedCameraOffset = Vector2.Zero;
                     }
                     else if (string.Equals(camMode, "Locked", StringComparison.OrdinalIgnoreCase)
-                             && Core.Instance?.Player != null && _worldRenderTarget != null)
+                             && player != null && _worldRenderTarget != null)
                     {
                         // Locked: keep current viewport position relative to player.
                         var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
-                        _lockedCameraOffset = CameraOffset - (Core.Instance.Player.Position - renderCenter);
+                        _lockedCameraOffset = CameraOffset - (player.Position - renderCenter);
                         // Snap back to player if armed and within configurable range.
                         if (_cameraDragArmed && _lockedCameraOffset.Length() <= _cameraSnapRange)
                             _lockedCameraOffset = Vector2.Zero;
                     }
                     else if (string.Equals(camMode, "Free", StringComparison.OrdinalIgnoreCase)
-                             && Core.Instance?.Player != null && _worldRenderTarget != null)
+                             && player != null && _worldRenderTarget != null)
                     {
                         // Free: snap to player if armed and close enough.
                         var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
-                        Vector2 playerCentered = Core.Instance.Player.Position - renderCenter;
+                        Vector2 playerCentered = player.Position - renderCenter;
                         if (_cameraDragArmed && (CameraOffset - playerCentered).Length() <= _cameraSnapRange)
                             CameraOffset = playerCentered;
                     }
@@ -655,14 +659,15 @@ namespace op.io
             }
 
             // ── Camera follow (Scout / Locked modes) ─────────────────────────────
-            if (!_cameraPanAnchorRaw.HasValue && _worldRenderTarget != null && Core.Instance?.Player != null)
+            Agent followPlayer = Core.Instance?.PlayerOrNull;
+            if (!_cameraPanAnchorRaw.HasValue && _worldRenderTarget != null && followPlayer != null)
             {
                 string camMode = GetCameraMode();
                 if (string.Equals(camMode, "Scout", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(camMode, "Locked", StringComparison.OrdinalIgnoreCase))
                 {
                     var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
-                    CameraOffset = Core.Instance.Player.Position - renderCenter + _lockedCameraOffset;
+                    CameraOffset = followPlayer.Position - renderCenter + _lockedCameraOffset;
                 }
             }
 
@@ -1690,6 +1695,7 @@ namespace op.io
                 ControlSetupsBlockKey => ControlsBlockKey,
                 InteractBlockKey => ControlsBlockKey,
                 AmbienceBlockKey => ControlsBlockKey,
+                LevelsBlockKey => ControlsBlockKey,
                 BarsBlockKey => PropertiesBlockKey,
                 DockingSetupsBlockKey => ColorSchemeBlockKey,
                 NotesBlockKey => BackendBlockKey,
@@ -2266,6 +2272,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(PropertiesBlockKey, PropertiesBlock.BlockTitle, DockBlockKind.Properties, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ColorSchemeBlockKey, ColorSchemeBlock.BlockTitle, DockBlockKind.ColorScheme, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(AmbienceBlockKey, AmbienceBlock.BlockTitle, DockBlockKind.Ambience, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(LevelsBlockKey, LevelsBlock.BlockTitle, DockBlockKind.Levels, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlsBlockKey, ControlsBlock.BlockTitle, DockBlockKind.Controls, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(NotesBlockKey, NotesBlock.BlockTitle, DockBlockKind.Notes, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(ControlSetupsBlockKey, ControlSetupsBlock.BlockTitle, DockBlockKind.ControlSetups, BlockMenuControlMode.Toggle, initialVisible: false));
@@ -2564,6 +2571,7 @@ namespace op.io
             MergeControlSetupsIntoControlsGroup();
             MergeInteractIntoControlsGroup();
             MergeAmbienceIntoControlsGroup();
+            MergeLevelsIntoControlsGroup();
             MergeDockingSetupsIntoColorsGroup();
             MergeBarsIntoPropertiesGroup();
             MergeBackendAndSpecs();
@@ -2655,6 +2663,35 @@ namespace op.io
             }
 
             MergeBlockIntoGroup(controlsGroup, AmbienceBlockKey);
+            controlsGroup.IsLocked = mergedGroupLocked;
+        }
+
+        private static void MergeLevelsIntoControlsGroup()
+        {
+            if (!_blocks.TryGetValue(ControlsBlockKey, out DockBlock controlsBlock) ||
+                controlsBlock == null)
+            {
+                return;
+            }
+
+            PanelGroup controlsGroup = GetPanelGroupForBlock(controlsBlock);
+            if (controlsGroup == null)
+            {
+                return;
+            }
+
+            bool mergedGroupLocked = controlsGroup.IsLocked;
+            if (_blocks.TryGetValue(LevelsBlockKey, out DockBlock levelsBlock) &&
+                levelsBlock != null)
+            {
+                PanelGroup levelsGroup = GetPanelGroupForBlock(levelsBlock);
+                if (levelsGroup != null && !ReferenceEquals(controlsGroup, levelsGroup))
+                {
+                    mergedGroupLocked |= levelsGroup.IsLocked;
+                }
+            }
+
+            MergeBlockIntoGroup(controlsGroup, LevelsBlockKey);
             controlsGroup.IsLocked = mergedGroupLocked;
         }
 
@@ -7974,6 +8011,9 @@ namespace op.io
                 case DockBlockKind.Ambience:
                     AmbienceBlock.Draw(spriteBatch, contentBounds);
                     break;
+                case DockBlockKind.Levels:
+                    LevelsBlock.Draw(spriteBatch, contentBounds);
+                    break;
                 case DockBlockKind.Controls:
                     ControlsBlock.Draw(spriteBatch, contentBounds);
                     break;
@@ -8049,6 +8089,7 @@ namespace op.io
                     ?? SpecsBlock.GetHoveredRowKey()
                     ?? ColorSchemeBlock.GetHoveredRowKey()
                     ?? AmbienceBlock.GetHoveredRowKey()
+                    ?? LevelsBlock.GetHoveredRowKey()
                     ?? BarsBlock.GetHoveredRowKey()
                     ?? PropertiesBlock.GetHoveredButtonKey()
                     ?? PropertiesBlock.GetHoveredPropRowKey()
@@ -8066,6 +8107,7 @@ namespace op.io
                         ?? SpecsBlock.GetHoveredRowLabel()
                         ?? ColorSchemeBlock.GetHoveredRowLabel()
                         ?? AmbienceBlock.GetHoveredRowLabel()
+                        ?? LevelsBlock.GetHoveredRowLabel()
                         ?? BarsBlock.GetHoveredRowLabel()
                         ?? PropertiesBlock.GetHoveredPropRowLabel()
                         ?? InteractBlock.GetHoveredRowLabel()
@@ -8597,6 +8639,9 @@ namespace op.io
                         break;
                     case DockBlockKind.Ambience:
                         AmbienceBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
+                    case DockBlockKind.Levels:
+                        LevelsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
                 case DockBlockKind.Controls:
                     ControlsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
@@ -11318,9 +11363,10 @@ namespace op.io
         /// </summary>
         public static void SnapCameraToPlayer()
         {
-            if (Core.Instance?.Player == null || _worldRenderTarget == null) return;
+            Agent player = Core.Instance?.PlayerOrNull;
+            if (player == null || _worldRenderTarget == null) return;
             var renderCenter = new Vector2(_worldRenderTarget.Width / 2f, _worldRenderTarget.Height / 2f);
-            CameraOffset = Core.Instance.Player.Position - renderCenter;
+            CameraOffset = player.Position - renderCenter;
         }
 
         /// <summary>
@@ -11347,6 +11393,48 @@ namespace op.io
 
             GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
             return graphicsDevice?.Viewport.Bounds ?? Rectangle.Empty;
+        }
+
+        public static bool TryGetGameContentWindowBounds(out Rectangle bounds)
+        {
+            bounds = GetCurrentGameContentBounds();
+            if (bounds.Width > 0 && bounds.Height > 0)
+            {
+                return true;
+            }
+
+            GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
+            if (graphicsDevice == null)
+            {
+                bounds = Rectangle.Empty;
+                return false;
+            }
+
+            bounds = graphicsDevice.Viewport.Bounds;
+            return bounds.Width > 0 && bounds.Height > 0;
+        }
+
+        public static bool TryGetGameRenderBounds(out Rectangle bounds)
+        {
+            if (_worldRenderTarget != null &&
+                !_worldRenderTarget.IsDisposed &&
+                _worldRenderTarget.Width > 0 &&
+                _worldRenderTarget.Height > 0)
+            {
+                bounds = new Rectangle(0, 0, _worldRenderTarget.Width, _worldRenderTarget.Height);
+                return true;
+            }
+
+            GraphicsDevice graphicsDevice = Core.Instance?.GraphicsDevice;
+            if (graphicsDevice == null)
+            {
+                bounds = Rectangle.Empty;
+                return false;
+            }
+
+            Viewport viewport = graphicsDevice.Viewport;
+            bounds = new Rectangle(0, 0, viewport.Width, viewport.Height);
+            return bounds.Width > 0 && bounds.Height > 0;
         }
 
         public static bool TryProjectGameToWindow(Vector2 gamePosition, out Vector2 windowPosition)

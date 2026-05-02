@@ -73,8 +73,8 @@ namespace op.io
             };
         }
 
-        /// <summary>True while the bullet cannot collide with or damage its owner.</summary>
-        public bool IsOwnerImmune => LifetimeElapsed < BulletManager.OwnerImmunityDuration;
+        /// <summary>True while the bullet is still inside its firing barrel.</summary>
+        public bool IsOwnerImmune => IsBarrelLocked;
 
         public void LockToBarrel(int ownerId, int barrelIndex, float barrelLength, float lockedSpeed)
         {
@@ -104,12 +104,10 @@ namespace op.io
             if (HitFlash > 0f)
                 HitFlash = MathHelper.Clamp(HitFlash - Core.DELTATIME, 0f, BulletManager.HitFlashDuration);
 
-            // During owner immunity, fade from fully transparent to fully opaque.
-            float immunityDuration = BulletManager.OwnerImmunityDuration;
-            if (immunityDuration > 0f && LifetimeElapsed < immunityDuration)
-                Opacity = MathHelper.Clamp(LifetimeElapsed / immunityDuration, 0f, 1f);
-            else if (!IsDying)
-                Opacity = 1f;
+            if (!IsDying)
+                Opacity = IsBarrelLocked && _barrelTravelDistance > 0f
+                    ? MathHelper.Clamp(_barrelTravelProgress / _barrelTravelDistance, 0f, 1f)
+                    : 1f;
 
             if (IsDying)
             {

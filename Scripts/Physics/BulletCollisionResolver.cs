@@ -72,13 +72,23 @@ namespace op.io
         // energy so the bullet loses more speed; light objects absorb less.
         private static void ReflectBullet(Bullet bullet, GameObject obj, Vector2 mtv)
         {
+            ReflectBulletOffStaticSurface(bullet, mtv, obj?.Mass ?? 0f);
+        }
+
+        internal static void ReflectBulletOffStaticSurface(Bullet bullet, Vector2 mtv, float surfaceMass)
+        {
+            if (bullet == null || mtv.LengthSquared() <= 1e-10f)
+            {
+                return;
+            }
+
             Vector2 normal = Vector2.Normalize(mtv);
             float vDotN = Vector2.Dot(bullet.Velocity, normal);
             bullet.Velocity -= 2f * vDotN * normal;
             bullet.Position -= mtv; // push bullet clear of the surface
 
             float mBullet = MathF.Max(bullet.Mass, 0.0001f);
-            float mObject = MathF.Max(obj.Mass, 0.0001f);
+            float mObject = MathF.Max(surfaceMass, 0.0001f);
             float massFraction = mObject / (mBullet + mObject); // 0 → light obj, 1 → infinitely heavy obj
             float speedRetained = MathF.Max(1f - BulletManager.BounceVelocityLoss * massFraction, 0f);
             bullet.Velocity *= speedRetained;

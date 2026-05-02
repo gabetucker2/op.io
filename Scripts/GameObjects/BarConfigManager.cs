@@ -114,7 +114,11 @@ namespace op.io
         public static List<BarRelation> GetDefaultVisibilityRelations(BarType type) => type switch
         {
             BarType.XP => new() { new() { SourceType = BarType.XP, RelationName = BarRelationName.Change } },
-            BarType.Health => new() { new() { SourceType = BarType.Shield, RelationName = BarRelationName.Empty } },
+            BarType.Health => new()
+            {
+                new() { SourceType = BarType.Health, RelationName = BarRelationName.Change },
+                new() { SourceType = BarType.Shield, RelationName = BarRelationName.Empty }
+            },
             BarType.Shield => new()
             {
                 new() { SourceType = BarType.Shield, RelationName = BarRelationName.BelowFull },

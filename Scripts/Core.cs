@@ -35,6 +35,7 @@ namespace op.io
         public PhysicsManager PhysicsManager { get; set; }
 
         private Agent _player { get; set; }
+        public Agent PlayerOrNull => _player;
         public Agent Player
         {
             get
@@ -96,10 +97,6 @@ namespace op.io
         protected override void LoadContent()
         {
             GameRenderer.LoadGraphics();
-            if (GameRenderer.PrepareStartupTerrainForWindowReveal())
-            {
-                GameInitializer.RevealStartupWindow();
-            }
         }
 
         protected override void Draw(GameTime gameTime)

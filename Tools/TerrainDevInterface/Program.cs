@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using op.io;
 
 namespace TerrainDevInterface;
 
@@ -38,7 +39,7 @@ internal static class TerrainRenderBenchmark
 {
     public static void Run(bool worldPreview)
     {
-        TerrainScene scene = TerrainScene.CreateDefault(1337);
+        TerrainScene scene = TerrainScene.CreateDefault(TerrainWorldDefaults.DefaultSeed);
         scene.WorldPreviewEnabled = worldPreview;
         Size size = new(1500, 900);
         float benchmarkZoom = worldPreview ? 0.22f : 0.90f;
@@ -92,7 +93,7 @@ internal static class TerrainRenderBenchmark
                 {
                     land++;
                 }
-                else if (color.ToArgb() == TerrainRenderer.WaterColor.ToArgb() || color.ToArgb() == TerrainRenderer.DeepOceanColor.ToArgb())
+                else if (TerrainRenderer.IsWaterColor(color))
                 {
                     water++;
                 }
@@ -128,7 +129,7 @@ internal sealed class TerrainEditorForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         KeyPreview = true;
 
-        _scene = TerrainScene.CreateDefault(1337);
+        _scene = TerrainScene.CreateDefault(TerrainWorldDefaults.DefaultSeed);
         _renderTimer = new System.Windows.Forms.Timer { Interval = 120 };
         _renderTimer.Tick += (_, _) =>
         {
@@ -376,10 +377,14 @@ internal sealed class TerrainEditorForm : Form
         AddWorldSlider("Cluster spread", () => _scene.WorldClusterSpread, value => _scene.WorldClusterSpread = value, 0.20f, 1.20f, 2);
         AddWorldSlider("Ridge / chain bias", () => _scene.WorldChainBias, value => _scene.WorldChainBias = value, 0f, 1f, 2);
         AddToggle("Show preview text", () => _scene.WorldPreviewLabelsVisible, value => _scene.WorldPreviewLabelsVisible = value, renderTerrain: false);
-        AddHeader("Deep Ocean");
-        AddWorldSlider("Deep ocean border distance", () => _scene.DeepOceanBorderDistance, value => _scene.DeepOceanBorderDistance = value, 120f, 900f, 0);
-        AddWorldSlider("Deep ocean border feather", () => _scene.DeepOceanBorderFeather, value => _scene.DeepOceanBorderFeather = value, 24f, 420f, 0);
-        AddWorldSlider("Deep ocean border rounding", () => _scene.DeepOceanBorderRounding, value => _scene.DeepOceanBorderRounding = value, 0f, 1f, 2);
+        AddHeader("Water Depth Zones");
+        AddWorldSlider("Shallow water distance", () => _scene.WaterShallowDistance, value => _scene.WaterShallowDistance = value, 24f, 260f, 0);
+        AddWorldSlider("Sunlit water distance", () => _scene.WaterSunlitDistance, value => _scene.WaterSunlitDistance = value, 80f, 460f, 0);
+        AddWorldSlider("Twilight water distance", () => _scene.WaterTwilightDistance, value => _scene.WaterTwilightDistance = value, 160f, 720f, 0);
+        AddWorldSlider("Midnight water distance", () => _scene.WaterMidnightDistance, value => _scene.WaterMidnightDistance = value, 260f, 980f, 0);
+        AddWorldSlider("Water stochastic reach", () => _scene.WaterStochasticReach, value => _scene.WaterStochasticReach = value, 0f, 180f, 0);
+        AddWorldSlider("Water stochastic scale", () => _scene.WaterStochasticScale, value => _scene.WaterStochasticScale = value, 120f, 980f, 0);
+        AddWorldSlider("Water coast rounding", () => _scene.WaterCoastShapeRounding, value => _scene.WaterCoastShapeRounding = value, 0f, 1f, 2);
         AddHeader("Archipelago Shape Seeds");
         AddWorldShapeSeedControl("Cluster shape seed", () => _scene.WorldClusterShapeSeed, value => _scene.WorldClusterShapeSeed = value, () => _scene.RerollWorldClusterShapeSeed());
         AddWorldShapeSeedControl("Island scatter seed", () => _scene.WorldIslandScatterSeed, value => _scene.WorldIslandScatterSeed = value, () => _scene.RerollWorldIslandScatterSeed());
@@ -1305,9 +1310,37 @@ internal sealed class TerrainCanvas : Control
 internal static class TerrainRenderer
 {
     private const float PreviewRenderScale = 1f;
-    public static readonly Color WaterColor = Color.FromArgb(0, 102, 204);
-    public static readonly Color DeepOceanColor = Color.FromArgb(0, 34, 88);
-    public static readonly Color LandColor = Color.Black;
+    public static readonly Color ShallowWaterColor = Color.FromArgb(TerrainColorPalette.ShallowWaterR, TerrainColorPalette.ShallowWaterG, TerrainColorPalette.ShallowWaterB);
+    public static readonly Color SunlitWaterColor = Color.FromArgb(TerrainColorPalette.SunlitWaterR, TerrainColorPalette.SunlitWaterG, TerrainColorPalette.SunlitWaterB);
+    public static readonly Color TwilightWaterColor = Color.FromArgb(TerrainColorPalette.TwilightWaterR, TerrainColorPalette.TwilightWaterG, TerrainColorPalette.TwilightWaterB);
+    public static readonly Color MidnightWaterColor = Color.FromArgb(TerrainColorPalette.MidnightWaterR, TerrainColorPalette.MidnightWaterG, TerrainColorPalette.MidnightWaterB);
+    public static readonly Color AbyssWaterColor = Color.FromArgb(TerrainColorPalette.AbyssWaterR, TerrainColorPalette.AbyssWaterG, TerrainColorPalette.AbyssWaterB);
+    public static readonly Color WaterColor = SunlitWaterColor;
+    public static readonly Color DeepOceanColor = AbyssWaterColor;
+    public static readonly Color LandColor = Color.FromArgb(TerrainColorPalette.LandR, TerrainColorPalette.LandG, TerrainColorPalette.LandB);
+
+    public static Color GetWaterColor(TerrainWaterType waterType)
+    {
+        return waterType switch
+        {
+            TerrainWaterType.Shallow => ShallowWaterColor,
+            TerrainWaterType.Sunlit => SunlitWaterColor,
+            TerrainWaterType.Twilight => TwilightWaterColor,
+            TerrainWaterType.Midnight => MidnightWaterColor,
+            TerrainWaterType.Abyss => AbyssWaterColor,
+            _ => SunlitWaterColor
+        };
+    }
+
+    public static bool IsWaterColor(Color color)
+    {
+        int argb = color.ToArgb();
+        return argb == ShallowWaterColor.ToArgb() ||
+            argb == SunlitWaterColor.ToArgb() ||
+            argb == TwilightWaterColor.ToArgb() ||
+            argb == MidnightWaterColor.ToArgb() ||
+            argb == AbyssWaterColor.ToArgb();
+    }
 
     public static Bitmap Render(TerrainScene scene, Size size, float cameraX, float cameraY, float zoom, bool settledQuality, CancellationToken cancellationToken)
     {
@@ -1764,8 +1797,8 @@ internal static class TerrainGenerator
 
 internal sealed class TerrainScene
 {
-    private const int WorldIslandGenerationLimit = 64;
-    private const int WorldLandformTypeGenerationLimit = 64;
+    private const int WorldIslandGenerationLimit = TerrainWorldDefaults.WorldIslandGenerationLimit;
+    private const int WorldLandformTypeGenerationLimit = TerrainWorldDefaults.WorldLandformTypeGenerationLimit;
     private readonly Dictionary<int, int> _landformIndexCache = [];
     private readonly Dictionary<int, EffectiveLandformValues> _effectiveLandformCache = [];
     private TerrainScene _cachedWorldPreviewScene;
@@ -1774,45 +1807,49 @@ internal sealed class TerrainScene
 
     public int Seed { get; private set; }
     public int SelectedId { get; set; }
-    public float GlobalScale { get; set; } = 1f;
-    public float GlobalWidthScale { get; set; } = 1f;
-    public float GlobalBasinCut { get; set; } = 1f;
-    public float GlobalOpeningWidth { get; set; } = 1f;
-    public float GlobalOpeningStrength { get; set; } = 1f;
-    public float GlobalRoughness { get; set; } = 0f;
-    public float GlobalEmergence { get; set; } = 1f;
-    public float RasterSmoothing { get; set; } = 1.35f;
-    public float DeepOceanBorderDistance { get; set; } = 520f;
-    public float DeepOceanBorderFeather { get; set; } = 180f;
-    public float DeepOceanBorderRounding { get; set; } = 0.70f;
-    public float WorldIslandCount { get; set; } = 18f;
-    public float WorldMinimumSpacing { get; set; } = 691f;
-    public float WorldInteractionSpacing { get; set; } = 980f;
-    public float WorldPlacementJitter { get; set; } = 223.44f;
-    public float WorldClusterCountMinimum { get; set; } = 1f;
-    public float WorldClusterCountMaximum { get; set; } = 6f;
-    public float WorldClusterSpread { get; set; } = 0.72f;
-    public float WorldChainBias { get; set; } = 0.62f;
-    public int WorldClusterShapeSeed { get; set; } = 41003;
-    public int WorldIslandScatterSeed { get; set; } = 57191;
-    public int WorldIslandVariationSeed { get; set; } = 74471;
-    public float WorldIslandSizeVariance { get; set; } = 0.26f;
-    public float WorldGiantRiverRngMinimum { get; set; } = 0f;
-    public float WorldGiantRiverRngMaximum { get; set; } = 1f;
-    public float WorldCalanqueRngMinimum { get; set; } = 0f;
-    public float WorldCalanqueRngMaximum { get; set; } = 2.95f;
-    public float WorldBarrierLagoonRngMinimum { get; set; } = 0f;
-    public float WorldBarrierLagoonRngMaximum { get; set; } = 3.6f;
-    public float WorldTowerStacksRngMinimum { get; set; } = 0f;
-    public float WorldTowerStacksRngMaximum { get; set; } = 1.8f;
-    public float WorldGiantRiverSizeMinimum { get; set; } = 0.90f;
-    public float WorldGiantRiverSizeMaximum { get; set; } = 1.8925f;
-    public float WorldCalanqueSizeMinimum { get; set; } = 0.82f;
-    public float WorldCalanqueSizeMaximum { get; set; } = 3.325f;
-    public float WorldBarrierLagoonSizeMinimum { get; set; } = 0.88f;
-    public float WorldBarrierLagoonSizeMaximum { get; set; } = 1.6f;
-    public float WorldTowerStacksSizeMinimum { get; set; } = 0.78f;
-    public float WorldTowerStacksSizeMaximum { get; set; } = 1.28f;
+    public float GlobalScale { get; set; } = TerrainWorldDefaults.GlobalScale;
+    public float GlobalWidthScale { get; set; } = TerrainWorldDefaults.GlobalWidthScale;
+    public float GlobalBasinCut { get; set; } = TerrainWorldDefaults.GlobalBasinCut;
+    public float GlobalOpeningWidth { get; set; } = TerrainWorldDefaults.GlobalOpeningWidth;
+    public float GlobalOpeningStrength { get; set; } = TerrainWorldDefaults.GlobalOpeningStrength;
+    public float GlobalRoughness { get; set; } = TerrainWorldDefaults.GlobalRoughness;
+    public float GlobalEmergence { get; set; } = TerrainWorldDefaults.GlobalEmergence;
+    public float RasterSmoothing { get; set; } = TerrainWorldDefaults.RasterSmoothing;
+    public float WaterShallowDistance { get; set; } = TerrainWorldDefaults.WaterShallowDistance;
+    public float WaterSunlitDistance { get; set; } = TerrainWorldDefaults.WaterSunlitDistance;
+    public float WaterTwilightDistance { get; set; } = TerrainWorldDefaults.WaterTwilightDistance;
+    public float WaterMidnightDistance { get; set; } = TerrainWorldDefaults.WaterMidnightDistance;
+    public float WaterStochasticReach { get; set; } = TerrainWorldDefaults.WaterStochasticReach;
+    public float WaterStochasticScale { get; set; } = TerrainWorldDefaults.WaterStochasticScale;
+    public float WaterCoastShapeRounding { get; set; } = TerrainWorldDefaults.WaterCoastShapeRounding;
+    public float WorldIslandCount { get; set; } = TerrainWorldDefaults.WorldIslandCount;
+    public float WorldMinimumSpacing { get; set; } = TerrainWorldDefaults.WorldMinimumSpacing;
+    public float WorldInteractionSpacing { get; set; } = TerrainWorldDefaults.WorldInteractionSpacing;
+    public float WorldPlacementJitter { get; set; } = TerrainWorldDefaults.WorldPlacementJitter;
+    public float WorldClusterCountMinimum { get; set; } = TerrainWorldDefaults.WorldClusterCountMinimum;
+    public float WorldClusterCountMaximum { get; set; } = TerrainWorldDefaults.WorldClusterCountMaximum;
+    public float WorldClusterSpread { get; set; } = TerrainWorldDefaults.WorldClusterSpread;
+    public float WorldChainBias { get; set; } = TerrainWorldDefaults.WorldChainBias;
+    public int WorldClusterShapeSeed { get; set; } = TerrainWorldDefaults.WorldClusterShapeSeed;
+    public int WorldIslandScatterSeed { get; set; } = TerrainWorldDefaults.WorldIslandScatterSeed;
+    public int WorldIslandVariationSeed { get; set; } = TerrainWorldDefaults.WorldIslandVariationSeed;
+    public float WorldIslandSizeVariance { get; set; } = TerrainWorldDefaults.WorldIslandSizeVariance;
+    public float WorldGiantRiverRngMinimum { get; set; } = TerrainWorldDefaults.WorldGiantRiverRngMinimum;
+    public float WorldGiantRiverRngMaximum { get; set; } = TerrainWorldDefaults.WorldGiantRiverRngMaximum;
+    public float WorldCalanqueRngMinimum { get; set; } = TerrainWorldDefaults.WorldCalanqueRngMinimum;
+    public float WorldCalanqueRngMaximum { get; set; } = TerrainWorldDefaults.WorldCalanqueRngMaximum;
+    public float WorldBarrierLagoonRngMinimum { get; set; } = TerrainWorldDefaults.WorldBarrierLagoonRngMinimum;
+    public float WorldBarrierLagoonRngMaximum { get; set; } = TerrainWorldDefaults.WorldBarrierLagoonRngMaximum;
+    public float WorldTowerStacksRngMinimum { get; set; } = TerrainWorldDefaults.WorldTowerStacksRngMinimum;
+    public float WorldTowerStacksRngMaximum { get; set; } = TerrainWorldDefaults.WorldTowerStacksRngMaximum;
+    public float WorldGiantRiverSizeMinimum { get; set; } = TerrainWorldDefaults.WorldGiantRiverSizeMinimum;
+    public float WorldGiantRiverSizeMaximum { get; set; } = TerrainWorldDefaults.WorldGiantRiverSizeMaximum;
+    public float WorldCalanqueSizeMinimum { get; set; } = TerrainWorldDefaults.WorldCalanqueSizeMinimum;
+    public float WorldCalanqueSizeMaximum { get; set; } = TerrainWorldDefaults.WorldCalanqueSizeMaximum;
+    public float WorldBarrierLagoonSizeMinimum { get; set; } = TerrainWorldDefaults.WorldBarrierLagoonSizeMinimum;
+    public float WorldBarrierLagoonSizeMaximum { get; set; } = TerrainWorldDefaults.WorldBarrierLagoonSizeMaximum;
+    public float WorldTowerStacksSizeMinimum { get; set; } = TerrainWorldDefaults.WorldTowerStacksSizeMinimum;
+    public float WorldTowerStacksSizeMaximum { get; set; } = TerrainWorldDefaults.WorldTowerStacksSizeMaximum;
     public bool WorldPreviewEnabled { get; set; }
     public bool WorldPreviewLabelsVisible { get; set; } = false;
     public TerrainOverlayMode OverlayMode { get; set; } = TerrainOverlayMode.SolidLandWater;
@@ -1823,8 +1860,8 @@ internal sealed class TerrainScene
     public static TerrainScene CreateDefault(int seed)
     {
         TerrainScene scene = new() { Seed = seed };
-        scene.Landforms.Add(new LandformInstance(1, LandformKind.ArchipelagoRegion, "world placement root", 0f, 0f, 980f, 1680f, 92f, 0f, -18f, 1.0f, 1.0f, 0.50f, 0.80f, 0.40f, 0.02f, 1.0f));
-        scene.Landforms.Add(new LandformInstance(10, LandformKind.MainIsland, "island body", 0f, 0f, 390f, 560f, 100f, -8f, -8f, 1.0f, 1.0f, 0.24f, 0.82f, 0.86f, 0.05f, 1.48f, 1));
+        scene.Landforms.Add(new LandformInstance(1, LandformKind.ArchipelagoRegion, "world placement root", TerrainWorldDefaults.RootCenterX, TerrainWorldDefaults.RootCenterY, TerrainWorldDefaults.RootBaseRadius, TerrainWorldDefaults.RootBaseLength, TerrainWorldDefaults.RootBaseWidth, TerrainWorldDefaults.RootRotationDegrees, TerrainWorldDefaults.RootLabelOffsetY, TerrainWorldDefaults.RootScale, TerrainWorldDefaults.RootWidthScale, TerrainWorldDefaults.RootBasinCut, TerrainWorldDefaults.RootOpeningWidth, TerrainWorldDefaults.RootOpeningStrength, TerrainWorldDefaults.RootRoughness, TerrainWorldDefaults.RootEmergence));
+        scene.Landforms.Add(new LandformInstance(10, LandformKind.MainIsland, "island body", TerrainWorldDefaults.MainIslandCenterX, TerrainWorldDefaults.MainIslandCenterY, TerrainWorldDefaults.MainIslandBaseRadius, TerrainWorldDefaults.MainIslandBaseLength, TerrainWorldDefaults.MainIslandBaseWidth, TerrainWorldDefaults.MainIslandRotationDegrees, TerrainWorldDefaults.MainIslandLabelOffsetY, TerrainWorldDefaults.MainIslandScale, TerrainWorldDefaults.MainIslandWidthScale, TerrainWorldDefaults.MainIslandBasinCut, TerrainWorldDefaults.MainIslandOpeningWidth, TerrainWorldDefaults.MainIslandOpeningStrength, TerrainWorldDefaults.MainIslandRoughness, TerrainWorldDefaults.MainIslandEmergence, 1));
         scene.SelectedId = 10;
         return scene;
     }
@@ -1880,45 +1917,49 @@ internal sealed class TerrainScene
 
     public void ResetGlobalVariables()
     {
-        GlobalScale = 1f;
-        GlobalWidthScale = 1f;
-        GlobalBasinCut = 1f;
-        GlobalOpeningWidth = 1f;
-        GlobalOpeningStrength = 1f;
-        GlobalRoughness = 0f;
-        GlobalEmergence = 1f;
-        RasterSmoothing = 1.35f;
-        DeepOceanBorderDistance = 520f;
-        DeepOceanBorderFeather = 180f;
-        DeepOceanBorderRounding = 0.70f;
-        WorldIslandCount = 18f;
-        WorldMinimumSpacing = 691f;
-        WorldInteractionSpacing = 980f;
-        WorldPlacementJitter = 223.44f;
-        WorldClusterCountMinimum = 1f;
-        WorldClusterCountMaximum = 6f;
-        WorldClusterSpread = 0.72f;
-        WorldChainBias = 0.62f;
-        WorldClusterShapeSeed = 41003;
-        WorldIslandScatterSeed = 57191;
-        WorldIslandVariationSeed = 74471;
-        WorldIslandSizeVariance = 0.26f;
-        WorldGiantRiverRngMinimum = 0f;
-        WorldGiantRiverRngMaximum = 1f;
-        WorldCalanqueRngMinimum = 0f;
-        WorldCalanqueRngMaximum = 2.95f;
-        WorldBarrierLagoonRngMinimum = 0f;
-        WorldBarrierLagoonRngMaximum = 3.6f;
-        WorldTowerStacksRngMinimum = 0f;
-        WorldTowerStacksRngMaximum = 1.8f;
-        WorldGiantRiverSizeMinimum = 0.90f;
-        WorldGiantRiverSizeMaximum = 1.8925f;
-        WorldCalanqueSizeMinimum = 0.82f;
-        WorldCalanqueSizeMaximum = 3.325f;
-        WorldBarrierLagoonSizeMinimum = 0.88f;
-        WorldBarrierLagoonSizeMaximum = 1.6f;
-        WorldTowerStacksSizeMinimum = 0.78f;
-        WorldTowerStacksSizeMaximum = 1.28f;
+        GlobalScale = TerrainWorldDefaults.GlobalScale;
+        GlobalWidthScale = TerrainWorldDefaults.GlobalWidthScale;
+        GlobalBasinCut = TerrainWorldDefaults.GlobalBasinCut;
+        GlobalOpeningWidth = TerrainWorldDefaults.GlobalOpeningWidth;
+        GlobalOpeningStrength = TerrainWorldDefaults.GlobalOpeningStrength;
+        GlobalRoughness = TerrainWorldDefaults.GlobalRoughness;
+        GlobalEmergence = TerrainWorldDefaults.GlobalEmergence;
+        RasterSmoothing = TerrainWorldDefaults.RasterSmoothing;
+        WaterShallowDistance = TerrainWorldDefaults.WaterShallowDistance;
+        WaterSunlitDistance = TerrainWorldDefaults.WaterSunlitDistance;
+        WaterTwilightDistance = TerrainWorldDefaults.WaterTwilightDistance;
+        WaterMidnightDistance = TerrainWorldDefaults.WaterMidnightDistance;
+        WaterStochasticReach = TerrainWorldDefaults.WaterStochasticReach;
+        WaterStochasticScale = TerrainWorldDefaults.WaterStochasticScale;
+        WaterCoastShapeRounding = TerrainWorldDefaults.WaterCoastShapeRounding;
+        WorldIslandCount = TerrainWorldDefaults.WorldIslandCount;
+        WorldMinimumSpacing = TerrainWorldDefaults.WorldMinimumSpacing;
+        WorldInteractionSpacing = TerrainWorldDefaults.WorldInteractionSpacing;
+        WorldPlacementJitter = TerrainWorldDefaults.WorldPlacementJitter;
+        WorldClusterCountMinimum = TerrainWorldDefaults.WorldClusterCountMinimum;
+        WorldClusterCountMaximum = TerrainWorldDefaults.WorldClusterCountMaximum;
+        WorldClusterSpread = TerrainWorldDefaults.WorldClusterSpread;
+        WorldChainBias = TerrainWorldDefaults.WorldChainBias;
+        WorldClusterShapeSeed = TerrainWorldDefaults.WorldClusterShapeSeed;
+        WorldIslandScatterSeed = TerrainWorldDefaults.WorldIslandScatterSeed;
+        WorldIslandVariationSeed = TerrainWorldDefaults.WorldIslandVariationSeed;
+        WorldIslandSizeVariance = TerrainWorldDefaults.WorldIslandSizeVariance;
+        WorldGiantRiverRngMinimum = TerrainWorldDefaults.WorldGiantRiverRngMinimum;
+        WorldGiantRiverRngMaximum = TerrainWorldDefaults.WorldGiantRiverRngMaximum;
+        WorldCalanqueRngMinimum = TerrainWorldDefaults.WorldCalanqueRngMinimum;
+        WorldCalanqueRngMaximum = TerrainWorldDefaults.WorldCalanqueRngMaximum;
+        WorldBarrierLagoonRngMinimum = TerrainWorldDefaults.WorldBarrierLagoonRngMinimum;
+        WorldBarrierLagoonRngMaximum = TerrainWorldDefaults.WorldBarrierLagoonRngMaximum;
+        WorldTowerStacksRngMinimum = TerrainWorldDefaults.WorldTowerStacksRngMinimum;
+        WorldTowerStacksRngMaximum = TerrainWorldDefaults.WorldTowerStacksRngMaximum;
+        WorldGiantRiverSizeMinimum = TerrainWorldDefaults.WorldGiantRiverSizeMinimum;
+        WorldGiantRiverSizeMaximum = TerrainWorldDefaults.WorldGiantRiverSizeMaximum;
+        WorldCalanqueSizeMinimum = TerrainWorldDefaults.WorldCalanqueSizeMinimum;
+        WorldCalanqueSizeMaximum = TerrainWorldDefaults.WorldCalanqueSizeMaximum;
+        WorldBarrierLagoonSizeMinimum = TerrainWorldDefaults.WorldBarrierLagoonSizeMinimum;
+        WorldBarrierLagoonSizeMaximum = TerrainWorldDefaults.WorldBarrierLagoonSizeMaximum;
+        WorldTowerStacksSizeMinimum = TerrainWorldDefaults.WorldTowerStacksSizeMinimum;
+        WorldTowerStacksSizeMaximum = TerrainWorldDefaults.WorldTowerStacksSizeMaximum;
         WorldPreviewLabelsVisible = false;
     }
 
@@ -1939,10 +1980,10 @@ internal sealed class TerrainScene
 
         LandformInstance instance = kind switch
         {
-            LandformKind.GiantRiver => new LandformInstance(id, kind, "giant river", placement.CenterX, placement.CenterY, 84f, 720f, 78f, placement.RotationDegrees, -6f, 1.06f, 1.0f, 1.28f, 1.50f, 1.34f, 0.02f, 0.72f, PrimaryIsland.Id),
-            LandformKind.CalanqueCove => new LandformInstance(id, kind, "calanque", placement.CenterX, placement.CenterY, 126f, 360f, 56f, placement.RotationDegrees, -6f, 1.10f, 0.94f, 1.12f, 0.68f, 1.04f, 0.012f, 0.86f, PrimaryIsland.Id),
-            LandformKind.BarrierIsland => new LandformInstance(id, kind, "barrier lagoon", placement.CenterX, placement.CenterY, 182f, 540f, 68f, placement.RotationDegrees, -6f, 1.08f, 0.96f, 1.12f, 1.04f, 1.06f, 0.010f, 0.86f, PrimaryIsland.Id),
-            LandformKind.StacksAndArches => new LandformInstance(id, kind, "tower stacks", placement.CenterX, placement.CenterY, 116f, 300f, 52f, placement.RotationDegrees, -6f, 1.00f, 0.90f, 0.62f, 0.64f, 0.78f, 0.012f, 0.82f, PrimaryIsland.Id),
+            LandformKind.GiantRiver => new LandformInstance(id, kind, "giant river", placement.CenterX, placement.CenterY, TerrainWorldDefaults.GiantRiverBaseRadius, TerrainWorldDefaults.GiantRiverBaseLength, TerrainWorldDefaults.GiantRiverBaseWidth, placement.RotationDegrees, TerrainWorldDefaults.GiantRiverLabelOffsetY, 1.06f, TerrainWorldDefaults.GiantRiverWidthScale, TerrainWorldDefaults.GiantRiverBasinCut, TerrainWorldDefaults.GiantRiverOpeningWidth, TerrainWorldDefaults.GiantRiverOpeningStrength, 0.02f, TerrainWorldDefaults.GiantRiverEmergence, PrimaryIsland.Id),
+            LandformKind.CalanqueCove => new LandformInstance(id, kind, "calanque", placement.CenterX, placement.CenterY, TerrainWorldDefaults.CalanqueBaseRadius, TerrainWorldDefaults.CalanqueBaseLength, TerrainWorldDefaults.CalanqueBaseWidth, placement.RotationDegrees, TerrainWorldDefaults.CalanqueLabelOffsetY, TerrainWorldDefaults.CalanqueScaleMultiplier, TerrainWorldDefaults.CalanqueWidthScale, TerrainWorldDefaults.CalanqueBasinCut, TerrainWorldDefaults.CalanqueOpeningWidth, TerrainWorldDefaults.CalanqueOpeningStrength, 0.012f, TerrainWorldDefaults.CalanqueEmergence, PrimaryIsland.Id),
+            LandformKind.BarrierIsland => new LandformInstance(id, kind, "barrier lagoon", placement.CenterX, placement.CenterY, TerrainWorldDefaults.BarrierLagoonBaseRadius, TerrainWorldDefaults.BarrierLagoonBaseLength, TerrainWorldDefaults.BarrierLagoonBaseWidth, placement.RotationDegrees, TerrainWorldDefaults.BarrierLagoonLabelOffsetY, TerrainWorldDefaults.BarrierLagoonScaleMultiplier, TerrainWorldDefaults.BarrierLagoonWidthScale, TerrainWorldDefaults.BarrierLagoonBasinCut, TerrainWorldDefaults.BarrierLagoonOpeningWidth, TerrainWorldDefaults.BarrierLagoonOpeningStrength, TerrainWorldDefaults.BarrierLagoonRoughness, TerrainWorldDefaults.BarrierLagoonEmergence, PrimaryIsland.Id),
+            LandformKind.StacksAndArches => new LandformInstance(id, kind, "tower stacks", placement.CenterX, placement.CenterY, TerrainWorldDefaults.TowerStacksBaseRadius, TerrainWorldDefaults.TowerStacksBaseLength, TerrainWorldDefaults.TowerStacksBaseWidth, placement.RotationDegrees, TerrainWorldDefaults.TowerStacksLabelOffsetY, 1.00f, TerrainWorldDefaults.TowerStacksWidthScale, TerrainWorldDefaults.TowerStacksBasinCut, TerrainWorldDefaults.TowerStacksOpeningWidth, TerrainWorldDefaults.TowerStacksOpeningStrength, 0.012f, TerrainWorldDefaults.TowerStacksEmergence, PrimaryIsland.Id),
             _ => new LandformInstance(id, kind, kind.ToString(), placement.CenterX, placement.CenterY, 118f, 280f, 48f, placement.RotationDegrees, -6f, 1f, 1f, 0.8f, 0.8f, 0.8f, 0.012f, 0.8f, PrimaryIsland.Id)
         };
 
@@ -2545,9 +2586,13 @@ internal sealed class TerrainScene
             .Append(GlobalRoughness.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(GlobalEmergence.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(RasterSmoothing.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(DeepOceanBorderDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(DeepOceanBorderFeather.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(DeepOceanBorderRounding.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterShallowDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterSunlitDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterTwilightDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterMidnightDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterStochasticReach.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterStochasticScale.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(WaterCoastShapeRounding.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(WorldIslandCount.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(WorldMinimumSpacing.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(WorldInteractionSpacing.ToString("R", CultureInfo.InvariantCulture)).Append('|')
@@ -2608,7 +2653,7 @@ internal sealed class TerrainScene
         TerrainScene world = CloneWithoutLandforms();
         world.WorldPreviewEnabled = true;
         LandformInstance root = Landforms.Find(landform => landform.Kind == LandformKind.ArchipelagoRegion)?.Clone() ??
-            new LandformInstance(1, LandformKind.ArchipelagoRegion, "world placement root", 0f, 0f, 1200f, 2200f, 92f, 0f, -18f, 1f, 1f, 0.50f, 0.80f, 0.40f, 0.02f, 1.0f);
+            new LandformInstance(1, LandformKind.ArchipelagoRegion, "world placement root", TerrainWorldDefaults.RootCenterX, TerrainWorldDefaults.RootCenterY, TerrainWorldDefaults.RootBaseRadius, TerrainWorldDefaults.RootBaseLength, TerrainWorldDefaults.RootBaseWidth, TerrainWorldDefaults.RootRotationDegrees, TerrainWorldDefaults.RootLabelOffsetY, TerrainWorldDefaults.RootScale, TerrainWorldDefaults.RootWidthScale, TerrainWorldDefaults.RootBasinCut, TerrainWorldDefaults.RootOpeningWidth, TerrainWorldDefaults.RootOpeningStrength, TerrainWorldDefaults.RootRoughness, TerrainWorldDefaults.RootEmergence);
         world.Landforms.Add(root);
 
         LandformInstance template = PrimaryIsland;
@@ -2679,9 +2724,13 @@ internal sealed class TerrainScene
             GlobalRoughness = GlobalRoughness,
             GlobalEmergence = GlobalEmergence,
             RasterSmoothing = RasterSmoothing,
-            DeepOceanBorderDistance = DeepOceanBorderDistance,
-            DeepOceanBorderFeather = DeepOceanBorderFeather,
-            DeepOceanBorderRounding = DeepOceanBorderRounding,
+            WaterShallowDistance = WaterShallowDistance,
+            WaterSunlitDistance = WaterSunlitDistance,
+            WaterTwilightDistance = WaterTwilightDistance,
+            WaterMidnightDistance = WaterMidnightDistance,
+            WaterStochasticReach = WaterStochasticReach,
+            WaterStochasticScale = WaterStochasticScale,
+            WaterCoastShapeRounding = WaterCoastShapeRounding,
             WorldIslandCount = WorldIslandCount,
             WorldMinimumSpacing = WorldMinimumSpacing,
             WorldInteractionSpacing = WorldInteractionSpacing,
@@ -2775,7 +2824,7 @@ internal sealed class TerrainScene
         if (kind == LandformKind.GiantRiver)
         {
             float trend = island.RotationDegrees + ((Hash(Seed + id * 19, islandIndex + landformIndex) - 0.5f) * 44f);
-            return new LandformInstance(id, kind, $"{island.DisplayName} river", island.CenterX, island.CenterY, 84f, 720f, 78f, NormalizeDegrees(trend), -6f, scale, 1.0f, 1.28f, 1.50f, 1.34f, 0.018f, 0.72f, island.Id);
+            return new LandformInstance(id, kind, $"{island.DisplayName} river", island.CenterX, island.CenterY, TerrainWorldDefaults.GiantRiverBaseRadius, TerrainWorldDefaults.GiantRiverBaseLength, TerrainWorldDefaults.GiantRiverBaseWidth, NormalizeDegrees(trend), TerrainWorldDefaults.GiantRiverLabelOffsetY, scale, TerrainWorldDefaults.GiantRiverWidthScale, TerrainWorldDefaults.GiantRiverBasinCut, TerrainWorldDefaults.GiantRiverOpeningWidth, TerrainWorldDefaults.GiantRiverOpeningStrength, TerrainWorldDefaults.GiantRiverRoughness, TerrainWorldDefaults.GiantRiverEmergence, island.Id);
         }
 
         float angle = (landformIndex * 2.3999631f) + (Hash(Seed + id * 29, islandIndex * 41) * MathF.Tau);
@@ -2797,9 +2846,9 @@ internal sealed class TerrainScene
 
         return kind switch
         {
-            LandformKind.CalanqueCove => new LandformInstance(id, kind, $"{island.DisplayName} calanque", island.CenterX + rotatedX - (normalX * 72f), island.CenterY + rotatedY - (normalY * 72f), 126f, 360f, 56f, NormalizeDegrees(outwardDegrees), -6f, scale * 1.10f, 0.94f, 1.12f, 0.68f, 1.04f, 0.010f, 0.86f, island.Id),
-            LandformKind.BarrierIsland => new LandformInstance(id, kind, $"{island.DisplayName} barrier", island.CenterX + rotatedX - (normalX * 62f), island.CenterY + rotatedY - (normalY * 62f), 182f, 540f, 68f, NormalizeDegrees(outwardDegrees + 90f + tangentJitter), -6f, scale * 1.08f, 0.96f, 1.12f, 1.04f, 1.06f, 0.010f, 0.86f, island.Id),
-            LandformKind.StacksAndArches => new LandformInstance(id, kind, $"{island.DisplayName} stacks", island.CenterX + rotatedX - (normalX * 42f), island.CenterY + rotatedY - (normalY * 42f), 116f, 300f, 52f, NormalizeDegrees(outwardDegrees + 90f + tangentJitter), -6f, scale, 0.90f, 0.62f, 0.64f, 0.78f, 0.010f, 0.82f, island.Id),
+            LandformKind.CalanqueCove => new LandformInstance(id, kind, $"{island.DisplayName} calanque", island.CenterX + rotatedX - (normalX * 72f), island.CenterY + rotatedY - (normalY * 72f), TerrainWorldDefaults.CalanqueBaseRadius, TerrainWorldDefaults.CalanqueBaseLength, TerrainWorldDefaults.CalanqueBaseWidth, NormalizeDegrees(outwardDegrees), TerrainWorldDefaults.CalanqueLabelOffsetY, scale * TerrainWorldDefaults.CalanqueScaleMultiplier, TerrainWorldDefaults.CalanqueWidthScale, TerrainWorldDefaults.CalanqueBasinCut, TerrainWorldDefaults.CalanqueOpeningWidth, TerrainWorldDefaults.CalanqueOpeningStrength, TerrainWorldDefaults.CalanqueRoughness, TerrainWorldDefaults.CalanqueEmergence, island.Id),
+            LandformKind.BarrierIsland => new LandformInstance(id, kind, $"{island.DisplayName} barrier", island.CenterX + rotatedX - (normalX * 62f), island.CenterY + rotatedY - (normalY * 62f), TerrainWorldDefaults.BarrierLagoonBaseRadius, TerrainWorldDefaults.BarrierLagoonBaseLength, TerrainWorldDefaults.BarrierLagoonBaseWidth, NormalizeDegrees(outwardDegrees + 90f + tangentJitter), TerrainWorldDefaults.BarrierLagoonLabelOffsetY, scale * TerrainWorldDefaults.BarrierLagoonScaleMultiplier, TerrainWorldDefaults.BarrierLagoonWidthScale, TerrainWorldDefaults.BarrierLagoonBasinCut, TerrainWorldDefaults.BarrierLagoonOpeningWidth, TerrainWorldDefaults.BarrierLagoonOpeningStrength, TerrainWorldDefaults.BarrierLagoonRoughness, TerrainWorldDefaults.BarrierLagoonEmergence, island.Id),
+            LandformKind.StacksAndArches => new LandformInstance(id, kind, $"{island.DisplayName} stacks", island.CenterX + rotatedX - (normalX * 42f), island.CenterY + rotatedY - (normalY * 42f), TerrainWorldDefaults.TowerStacksBaseRadius, TerrainWorldDefaults.TowerStacksBaseLength, TerrainWorldDefaults.TowerStacksBaseWidth, NormalizeDegrees(outwardDegrees + 90f + tangentJitter), TerrainWorldDefaults.TowerStacksLabelOffsetY, scale, TerrainWorldDefaults.TowerStacksWidthScale, TerrainWorldDefaults.TowerStacksBasinCut, TerrainWorldDefaults.TowerStacksOpeningWidth, TerrainWorldDefaults.TowerStacksOpeningStrength, TerrainWorldDefaults.TowerStacksRoughness, TerrainWorldDefaults.TowerStacksEmergence, island.Id),
             _ => new LandformInstance(id, kind, $"{island.DisplayName} landform", island.CenterX + rotatedX, island.CenterY + rotatedY, 118f, 280f, 48f, NormalizeDegrees(outwardDegrees), -6f, scale, 1f, 0.8f, 0.8f, 0.8f, 0.010f, 0.8f, island.Id)
         };
     }
@@ -3313,9 +3362,13 @@ internal static class TerrainSettingsEncoder
         Append(builder, "GlobalRoughness", scene.GlobalRoughness);
         Append(builder, "GlobalEmergence", scene.GlobalEmergence);
         Append(builder, "RasterSmoothing", scene.RasterSmoothing);
-        Append(builder, "DeepOceanBorderDistance", scene.DeepOceanBorderDistance);
-        Append(builder, "DeepOceanBorderFeather", scene.DeepOceanBorderFeather);
-        Append(builder, "DeepOceanBorderRounding", scene.DeepOceanBorderRounding);
+        Append(builder, "WaterShallowDistance", scene.WaterShallowDistance);
+        Append(builder, "WaterSunlitDistance", scene.WaterSunlitDistance);
+        Append(builder, "WaterTwilightDistance", scene.WaterTwilightDistance);
+        Append(builder, "WaterMidnightDistance", scene.WaterMidnightDistance);
+        Append(builder, "WaterStochasticReach", scene.WaterStochasticReach);
+        Append(builder, "WaterStochasticScale", scene.WaterStochasticScale);
+        Append(builder, "WaterCoastShapeRounding", scene.WaterCoastShapeRounding);
         Append(builder, "WorldIslandCount", scene.WorldIslandCount);
         Append(builder, "WorldMinimumSpacing", scene.WorldMinimumSpacing);
         Append(builder, "WorldInteractionSpacing", scene.WorldInteractionSpacing);
@@ -3389,9 +3442,13 @@ internal static class TerrainSettingsEncoder
         Append(builder, "Cluster spread", scene.WorldClusterSpread);
         Append(builder, "Ridge / chain bias", scene.WorldChainBias);
         Append(builder, "Show preview text", scene.WorldPreviewLabelsVisible);
-        Append(builder, "Deep ocean border distance", scene.DeepOceanBorderDistance);
-        Append(builder, "Deep ocean border feather", scene.DeepOceanBorderFeather);
-        Append(builder, "Deep ocean border rounding", scene.DeepOceanBorderRounding);
+        Append(builder, "Shallow water distance", scene.WaterShallowDistance);
+        Append(builder, "Sunlit water distance", scene.WaterSunlitDistance);
+        Append(builder, "Twilight water distance", scene.WaterTwilightDistance);
+        Append(builder, "Midnight water distance", scene.WaterMidnightDistance);
+        Append(builder, "Water stochastic reach", scene.WaterStochasticReach);
+        Append(builder, "Water stochastic scale", scene.WaterStochasticScale);
+        Append(builder, "Water coast rounding", scene.WaterCoastShapeRounding);
         Append(builder, "Cluster shape seed", scene.WorldClusterShapeSeed);
         Append(builder, "Island scatter seed", scene.WorldIslandScatterSeed);
         Append(builder, "Island variation seed", scene.WorldIslandVariationSeed);

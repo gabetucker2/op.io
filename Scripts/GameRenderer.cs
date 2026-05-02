@@ -50,7 +50,10 @@ namespace op.io
 
             if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
             {
-                DebugLogger.PrintWarning("No GameObjects to load content for.");
+                if (GameLevelManager.ActiveLevel.LoadsAnySceneObjects)
+                {
+                    DebugLogger.PrintWarning("No GameObjects to load content for.");
+                }
                 return;
             }
 
@@ -87,6 +90,7 @@ namespace op.io
             }
 
             Matrix camMatrix = BlockManager.GetCameraTransform();
+            AmbienceSettings.SyncFogOfWarWithOceanWater();
             FogOfWarManager.Prepare(camMatrix);
             Rectangle panelBounds = new(
                 0,
@@ -136,6 +140,7 @@ namespace op.io
             bool usingDockedLayout = BlockManager.BeginDockedFrame(Core.Instance.GraphicsDevice);
 
             Matrix camMatrix = BlockManager.GetCameraTransform();
+            GameBlockOceanBackground.UpdateOceanZoneTransitionForFrame(Core.GAMETIME);
             FogOfWarManager.Prepare(camMatrix);
             Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
 
@@ -144,6 +149,14 @@ namespace op.io
                 0,
                 Core.Instance.GraphicsDevice.Viewport.Width,
                 Core.Instance.GraphicsDevice.Viewport.Height);
+            if (!GameBlockTerrainBackground.TerrainStartupVisibleTerrainReady)
+            {
+                GameBlockTerrainBackground.PrepareStartupVisibleTerrain(
+                    Core.Instance.GraphicsDevice,
+                    panelBounds,
+                    camMatrix);
+            }
+
             GameBlockOceanBackground.Draw(Core.Instance.SpriteBatch, panelBounds, Core.GAMETIME, BlockManager.CameraZoom, camMatrix);
             GameBlockTerrainBackground.Draw(Core.Instance.SpriteBatch, panelBounds, camMatrix);
             if (GameBlockTerrainBackground.TerrainStartupVisibleTerrainReady)
@@ -162,17 +175,6 @@ namespace op.io
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
             XPClumpManager.DrawCore(Core.Instance.SpriteBatch);
             Core.Instance.SpriteBatch.End();
-
-            // Render debug direction line last to ensure visibility
-            if (DebugModeHandler.DEBUGENABLED)
-            {
-                Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
-                foreach (GameObject gameObject in Core.Instance.GameObjects)
-                {
-                    DebugRenderer.DrawDebugCircle(Core.Instance.SpriteBatch, gameObject);
-                }
-                Core.Instance.SpriteBatch.End();
-            }
 
             // Additive pass for hit-flash: adds brightness without washing to pure white
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, null, null, null, null, camMatrix);
@@ -193,10 +195,28 @@ namespace op.io
             // Fog-of-war overlay: vision circles are cut out of a fully obscuring fog layer.
             FogOfWarManager.DrawOverlay(Core.Instance.SpriteBatch);
 
+            if (DebugModeHandler.DEBUGENABLED)
+            {
+                Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
+                foreach (GameObject gameObject in Core.Instance.GameObjects)
+                {
+                    DebugRenderer.DrawDebugCircle(Core.Instance.SpriteBatch, gameObject);
+                }
+                Core.Instance.SpriteBatch.End();
+
+            }
+
             if (usingDockedLayout)
             {
                 BlockManager.CompleteDockedFrame(Core.Instance.SpriteBatch);
             }
+
+            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible)
+            {
+                GameBlockTerrainBackground.DrawOceanZoneDebugFinalOverlay(Core.Instance.SpriteBatch, camMatrix);
+            }
+
+            GameBlockOceanBackground.DrawOceanZoneTransitionOverlay(Core.Instance.SpriteBatch);
         }
 
         public static bool WorldGridRequested =>

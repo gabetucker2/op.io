@@ -463,13 +463,12 @@ namespace op.io
             float invMassB   = bStatic ? 0f : 1f / mB;
             float invMassSum = invMassA + invMassB;
             if (invMassSum < 1e-6f) return;
-            bool suppressImpulse = objA.SuppressCollisionImpulse || objB.SuppressCollisionImpulse;
 
             // === Velocity impulse (applied once per contact to prevent runaway accumulation) ===
             // On sustained contact, position correction keeps objects apart each frame;
             // the velocity impulse fires only on the first frame of contact so objects
             // receive a clean "push" rather than accelerating every frame.
-            if (isNewContact && !suppressImpulse)
+            if (isNewContact)
             {
                 // Use the pre-depenetration frame velocities. Spawn overlaps and resting
                 // contacts should not manufacture approach speed from the resolver's own

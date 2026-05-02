@@ -10,7 +10,53 @@ namespace op.io
         private static readonly HashSet<Bullet> _toRemove = new();
 
         public static IReadOnlyList<Bullet> GetBullets() => _bullets;
+        public static int ActiveBulletCount => _bullets.Count;
+        public static int BarrelLockedBulletCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (Bullet bullet in _bullets)
+                {
+                    if (bullet != null && !bullet.IsDying && bullet.IsBarrelLocked)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
+        public static int CollisionReadyBulletCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (Bullet bullet in _bullets)
+                {
+                    if (bullet != null && !bullet.IsDying && !bullet.IsBarrelLocked)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
         private static int _nextId = 100000;
+
+        public static void Clear()
+        {
+            foreach (Bullet bullet in _bullets)
+            {
+                bullet?.Dispose();
+            }
+
+            _bullets.Clear();
+            _toRemove.Clear();
+        }
 
         private static float? _cachedAirResistanceScalar = null;
         public static float AirResistanceScalar
@@ -202,17 +248,6 @@ namespace op.io
         // Shared attenuation scalar for bullet momentum transfer into dynamic targets.
         // Backed by the legacy BulletFarmKnockbackScalar setting for compatibility.
         public static float BulletDynamicKnockbackScalar => BulletFarmKnockbackScalar;
-
-        private static float? _cachedOwnerImmunityDuration = null;
-        public static float OwnerImmunityDuration
-        {
-            get
-            {
-                if (!_cachedOwnerImmunityDuration.HasValue)
-                    _cachedOwnerImmunityDuration = DatabaseFetch.GetValue<float>("BulletPhysics", "Value", "SettingKey", "OwnerImmunityDuration");
-                return _cachedOwnerImmunityDuration.Value;
-            }
-        }
 
         private static (float FadeIn, float Hold, float FadeOut)? _cachedHitFlashAnim;
         private static (float FadeIn, float Hold, float FadeOut) HitFlashAnim =>

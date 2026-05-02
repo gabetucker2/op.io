@@ -6,6 +6,11 @@ namespace op.io
 {
     public class Shape : IDisposable
     {
+        private const int MaxRuntimeContentLoadLogs = 16;
+
+        private static int _runtimeContentLoadCount;
+        private static int _drawSkippedMissingTextureCount;
+
         public string ShapeType { get; private set; }
         public int Width { get; private set; }
         public int Height { get; private set; }
@@ -30,8 +35,12 @@ namespace op.io
         private Color[] _customTextureData;
         private int _customTextureWidth;
         private int _customTextureHeight;
+        private bool _missingContentWarningIssued;
 
         private ShapeRenderer _renderer;
+
+        public static int RuntimeContentLoadCount => _runtimeContentLoadCount;
+        public static int DrawSkippedMissingTextureCount => _drawSkippedMissingTextureCount;
 
         public Shape(string shapeType, int width, int height, int sides, Color fillColor, Color outlineColor, int outlineWidth, bool isPrototype = false)
         {
@@ -148,6 +157,10 @@ namespace op.io
         public void LoadContent(GraphicsDevice graphicsDevice)
         {
             _renderer.LoadContent(this, graphicsDevice);
+            if (_renderer.IsContentLoaded)
+            {
+                _missingContentWarningIssued = false;
+            }
         }
 
         // This method is used to get the transformed vertices, no changes in logic here
@@ -174,27 +187,89 @@ namespace op.io
         // Delegate the Draw call to ShapeRenderer
         public void Draw(SpriteBatch spriteBatch, GameObject GO)
         {
+            if (!EnsureContentLoaded(spriteBatch?.GraphicsDevice, GO == null ? "Draw" : $"Draw GO ID={GO.ID}, Name={GO.Name}"))
+            {
+                return;
+            }
+
             _renderer.Draw(spriteBatch, GO);
         }
 
         public void DrawFlash(SpriteBatch spriteBatch, GameObject GO)
         {
+            if (!EnsureContentLoaded(spriteBatch?.GraphicsDevice, GO == null ? "DrawFlash" : $"DrawFlash GO ID={GO.ID}, Name={GO.Name}"))
+            {
+                return;
+            }
+
             _renderer.DrawFlash(spriteBatch, GO);
         }
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, bool applyWorldTint = false)
         {
+            if (!EnsureContentLoaded(spriteBatch?.GraphicsDevice, "DrawAt"))
+            {
+                return;
+            }
+
             _renderer.DrawAt(spriteBatch, position, rotation, applyWorldTint);
         }
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, bool applyWorldTint = false)
         {
+            if (!EnsureContentLoaded(spriteBatch?.GraphicsDevice, "DrawAt scaled"))
+            {
+                return;
+            }
+
             _renderer.DrawAt(spriteBatch, position, rotation, scale, applyWorldTint);
         }
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity, bool applyWorldTint = false)
         {
+            if (!EnsureContentLoaded(spriteBatch?.GraphicsDevice, "DrawAt scaled opacity"))
+            {
+                return;
+            }
+
             _renderer.DrawAt(spriteBatch, position, rotation, scale, opacity, applyWorldTint);
+        }
+
+        private bool EnsureContentLoaded(GraphicsDevice graphicsDevice, string context)
+        {
+            if (_renderer.IsContentLoaded)
+            {
+                return true;
+            }
+
+            if (graphicsDevice != null)
+            {
+                _renderer.LoadContent(this, graphicsDevice);
+                if (_renderer.IsContentLoaded)
+                {
+                    _missingContentWarningIssued = false;
+                    _runtimeContentLoadCount++;
+                    if (_runtimeContentLoadCount <= MaxRuntimeContentLoadLogs)
+                    {
+                        DebugLogger.PrintWarning(
+                            $"[ShapeRuntimeLoad] Loaded missing shape texture during {context}. " +
+                            $"type={ShapeType}, size={Width}x{Height}, prototype={IsPrototype}, runtimeLoads={_runtimeContentLoadCount}");
+                    }
+
+                    return true;
+                }
+            }
+
+            if (!_missingContentWarningIssued)
+            {
+                _missingContentWarningIssued = true;
+                _drawSkippedMissingTextureCount++;
+                DebugLogger.PrintWarning(
+                    $"[ShapeMissingTexture] Skipped draw with no texture and no GraphicsDevice. " +
+                    $"context={context}, type={ShapeType}, size={Width}x{Height}, skips={_drawSkippedMissingTextureCount}");
+            }
+
+            return false;
         }
 
         // Dispose method to clean up resources

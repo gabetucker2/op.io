@@ -74,6 +74,12 @@ namespace op.io
         private static readonly List<StackEntry>                  _active  = new();
         private static readonly Dictionary<(int, int), PendingEntry> _pending = new();
 
+        public static void Clear()
+        {
+            _active.Clear();
+            _pending.Clear();
+        }
+
         // ── Bounce animation constants ────────────────────────────────────────
         private const float BounceIn   = 0.05f;
         private const float BounceOut  = 0.10f;

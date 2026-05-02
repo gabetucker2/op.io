@@ -30,7 +30,7 @@ namespace op.io
                 return;
             }
 
-            Agent player = Core.Instance.Player;
+            Agent player = Core.Instance.PlayerOrNull;
             bool playerCanAct = player != null && !player.IsDeadOrDying;
 
             // Fire Action — silently ignored when player has no barrels equipped
@@ -189,7 +189,7 @@ namespace op.io
 
         private static void RespawnPlayer()
         {
-            Agent dead = Core.Instance.Player;
+            Agent dead = Core.Instance.PlayerOrNull;
             if (dead == null)
             {
                 DebugLogger.PrintError("Respawn failed: no player reference to respawn.");

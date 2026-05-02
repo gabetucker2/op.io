@@ -31,6 +31,7 @@ namespace op.io
         internal const string ShowHiddenAttrsKey    = "ShowHiddenAttrs";
         internal const string DisableToolTipsKey    = "DisableToolTips";
         internal const string GridKey               = "Grid";
+        internal const string OceanZoneDebugKey     = "OceanZoneDebug";
         internal const string BodyLeftKey           = "BodyLeft";
         internal const string BodyRightKey          = "BodyRight";
         internal const string YourBarKey            = "YourBar";
@@ -81,6 +82,7 @@ namespace op.io
                 EnsureTabSwitchRequiresBlockModeControl();
                 EnsureDisableToolTipsControl();
                 EnsureGridControl();
+                EnsureOceanZoneDebugControl();
                 EnsureYourBarControl();
                 EnsureRespawnControl();
                 EnsureCameraLockModeControl();
@@ -533,6 +535,43 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             ControlKeyData.EnsureSwitchStartState(GridKey, 0);
         }
 
+        private static void EnsureOceanZoneDebugControl()
+        {
+            ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
+            {
+                SettingKey = OceanZoneDebugKey,
+                InputKey = "Z",
+                InputType = "SaveSwitch",
+                SwitchStartState = 1,
+                MetaControl = false,
+                RenderOrder = 22
+            });
+
+            ControlKeyData.SetInputType(OceanZoneDebugKey, "SaveSwitch");
+            ControlKeyData.EnsureInputKey(OceanZoneDebugKey, "Z");
+            ControlKeyData.EnsureSwitchStartState(OceanZoneDebugKey, 1);
+            EnsureOceanZoneDebugDefaultOnApplied();
+        }
+
+        private static void EnsureOceanZoneDebugDefaultOnApplied()
+        {
+            try
+            {
+                string markerPath = Path.Combine(DatabaseConfig.DatabaseDirectory, ".ocean_zone_debug_default_on_applied");
+                if (File.Exists(markerPath))
+                {
+                    return;
+                }
+
+                ControlKeyData.SetSwitchStartState(OceanZoneDebugKey, 1);
+                File.WriteAllText(markerPath, DateTime.UtcNow.ToString("O"));
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.PrintError($"Failed to apply {OceanZoneDebugKey} default ON migration: {ex.Message}");
+            }
+        }
+
         private static void EnsureDockingModeDefaultOff()
         {
             const string key = "DockingMode";
@@ -758,7 +797,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 InputType = "Trigger",
                 SwitchStartState = 0,
                 MetaControl = false,
-                RenderOrder = 22,
+                RenderOrder = 23,
                 RenderCategory = categoryKey,
                 RenderCategoryOrder = ControlRowCategoryCatalog.GetDefaultCategoryOrder(categoryKey)
             });
@@ -1198,6 +1237,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 (CtrlBufferKey,                     "Seconds after releasing Ctrl that a Ctrl+key combo still registers (e.g. release Ctrl then press Space within this window)."),
                 (ShowHiddenAttrsKey,                "Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately."),
                 (GridKey,                           "Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting."),
+                (OceanZoneDebugKey,                 "Toggle ocean zone borders and labels."),
                 (DisableToolTipsKey,                "When enabled, tooltips are hidden throughout the UI."),
                 ("EnumDisabledOptions",             "Lists disabled enum options by control key in the format ControlKey[option,option]."),
             };

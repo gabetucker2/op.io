@@ -10,14 +10,26 @@ namespace op.io
         private Texture2D _flashTexture;
         private Vector2 _origin;
         private Vector2 _worldScale = Vector2.One;
+        private bool _missingTextureWarningIssued;
+
+        public bool IsContentLoaded => _texture != null && !_texture.IsDisposed;
 
         public void LoadContent(Shape shape, GraphicsDevice graphicsDevice)
         {
+            if (shape == null)
+            {
+                DebugLogger.PrintError("LoadContent failed: Shape is null.");
+                return;
+            }
+
             if (graphicsDevice == null)
             {
                 DebugLogger.PrintError("LoadContent failed: GraphicsDevice is null.");
                 return;
             }
+
+            Dispose();
+            _missingTextureWarningIssued = false;
 
             int textureWidth = shape.HasCustomTexture
                 ? shape.CustomTextureWidth
@@ -106,9 +118,11 @@ namespace op.io
 
         public void Draw(SpriteBatch spriteBatch, GameObject GO)
         {
-            if (_texture == null)
+            if (!IsContentLoaded)
             {
-                DebugLogger.PrintError("ShapeRenderer attempted to draw without texture. Call LoadContent first.");
+                LogMissingTextureOnce(GO == null
+                    ? "Draw"
+                    : $"Draw GO ID={GO.ID}, Name={GO.Name}");
                 return;
             }
 
@@ -132,9 +146,9 @@ namespace op.io
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, bool applyWorldTint = false)
         {
-            if (_texture == null)
+            if (!IsContentLoaded)
             {
-                DebugLogger.PrintError("ShapeRenderer attempted to draw without texture. Call LoadContent first.");
+                LogMissingTextureOnce("DrawAt");
                 return;
             }
 
@@ -144,9 +158,9 @@ namespace op.io
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, bool applyWorldTint = false)
         {
-            if (_texture == null)
+            if (!IsContentLoaded)
             {
-                DebugLogger.PrintError("ShapeRenderer attempted to draw without texture. Call LoadContent first.");
+                LogMissingTextureOnce("DrawAt scaled");
                 return;
             }
 
@@ -156,9 +170,9 @@ namespace op.io
 
         public void DrawAt(SpriteBatch spriteBatch, Vector2 position, float rotation, Vector2 scale, float opacity, bool applyWorldTint = false)
         {
-            if (_texture == null)
+            if (!IsContentLoaded)
             {
-                DebugLogger.PrintError("ShapeRenderer attempted to draw without texture. Call LoadContent first.");
+                LogMissingTextureOnce("DrawAt scaled opacity");
                 return;
             }
 
@@ -171,10 +185,23 @@ namespace op.io
             spriteBatch.Draw(_texture, position, null, drawColor, rotation, _origin, scale * _worldScale, SpriteEffects.None, 0f);
         }
 
+        private void LogMissingTextureOnce(string context)
+        {
+            if (_missingTextureWarningIssued)
+            {
+                return;
+            }
+
+            _missingTextureWarningIssued = true;
+            DebugLogger.PrintWarning($"ShapeRenderer skipped draw without texture after lazy load attempt. Context={context}.");
+        }
+
         public void Dispose()
         {
             _texture?.Dispose();
             _flashTexture?.Dispose();
+            _texture = null;
+            _flashTexture = null;
         }
     }
 }

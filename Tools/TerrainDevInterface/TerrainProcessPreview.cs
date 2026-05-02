@@ -22,6 +22,15 @@ internal enum TerrainOverlayMode
     IslandClusters
 }
 
+internal enum TerrainWaterType : byte
+{
+    Shallow,
+    Sunlit,
+    Twilight,
+    Midnight,
+    Abyss
+}
+
 internal enum TerrainLithology
 {
     Limestone,
@@ -79,7 +88,10 @@ internal readonly struct TerrainProcessCell
         float tidalFlow,
         float islandCluster,
         float enclosure,
-        float shallowOceanInfluence,
+        float nearLandWaterInfluence,
+        float offshoreDistance,
+        float waterStochasticOffset,
+        TerrainWaterType waterType,
         TerrainLithology lithology,
         TerrainLandformTag landformTags)
     {
@@ -95,7 +107,10 @@ internal readonly struct TerrainProcessCell
         TidalFlow = tidalFlow;
         IslandCluster = islandCluster;
         Enclosure = enclosure;
-        ShallowOceanInfluence = shallowOceanInfluence;
+        NearLandWaterInfluence = nearLandWaterInfluence;
+        OffshoreDistance = offshoreDistance;
+        WaterStochasticOffset = waterStochasticOffset;
+        WaterType = waterType;
         Lithology = lithology;
         LandformTags = landformTags;
     }
@@ -112,10 +127,13 @@ internal readonly struct TerrainProcessCell
     public float TidalFlow { get; }
     public float IslandCluster { get; }
     public float Enclosure { get; }
-    public float ShallowOceanInfluence { get; }
+    public float NearLandWaterInfluence { get; }
+    public float OffshoreDistance { get; }
+    public float WaterStochasticOffset { get; }
+    public TerrainWaterType WaterType { get; }
     public bool IsWater => Elevation <= SeaLevel;
     public bool IsLand => Elevation > SeaLevel;
-    public bool IsDeepOcean => IsWater && ShallowOceanInfluence < 0.50f;
+    public bool IsDeepOcean => IsWater && WaterType >= TerrainWaterType.Midnight;
     public bool IsCoast => MathF.Abs(Elevation - SeaLevel) <= 0.09f;
     public TerrainLithology Lithology { get; }
     public TerrainLandformTag LandformTags { get; }
@@ -206,7 +224,7 @@ internal static class TerrainProcessPreview
 
         private static bool IntersectsInfluenceBounds(RegionSamplingContext region, RectangleF viewportBounds)
         {
-            float bound = IsOceanZoneProducer(region.Region.Kind) ? region.OceanZoneBound : region.InfluenceBound;
+            float bound = IsWaterDistanceProducer(region.Region.Kind) ? region.OceanZoneBound : region.InfluenceBound;
             return region.Region.CenterX + bound >= viewportBounds.Left &&
                 region.Region.CenterX - bound <= viewportBounds.Right &&
                 region.Region.CenterY + bound >= viewportBounds.Top &&
@@ -245,7 +263,11 @@ internal static class TerrainProcessPreview
             WidthScale = Math.Clamp(EffectiveWidthScale * scene.GlobalWidthScale, 0.25f, 3.2f);
             InfluenceRadiusY = Radius * (0.92f + (EffectiveWidthScale * 0.24f));
             InfluenceBound = Math.Max(Length, InfluenceRadiusY) * 1.18f + Math.Max(36f, Radius * 0.08f);
-            OceanZoneBound = InfluenceBound + Math.Max(0f, scene.DeepOceanBorderDistance) + Math.Max(0f, scene.DeepOceanBorderFeather);
+            OceanZoneBound = InfluenceBound + Math.Max(
+                0f,
+                Math.Max(
+                    Math.Max(scene.WaterShallowDistance, scene.WaterSunlitDistance),
+                    Math.Max(scene.WaterTwilightDistance, scene.WaterMidnightDistance))) + Math.Max(0f, scene.WaterStochasticReach);
             InfluenceBoundSquared = InfluenceBound * InfluenceBound;
             float angle = DegreesToRadians(region.RotationDegrees);
             CosRotation = MathF.Cos(angle);
@@ -295,7 +317,7 @@ internal static class TerrainProcessPreview
         byte[] landMask = scene.OverlayMode == TerrainOverlayMode.SolidLandWater && scene.RasterSmoothing > 0.01f
             ? new byte[width * height]
             : null;
-        byte[] deepOceanMask = scene.OverlayMode == TerrainOverlayMode.SolidLandWater
+        byte[] waterTypeMap = scene.OverlayMode == TerrainOverlayMode.SolidLandWater
             ? new byte[width * height]
             : null;
 
@@ -307,8 +329,6 @@ internal static class TerrainProcessPreview
         bool includeDebugFields = scene.OverlayMode != TerrainOverlayMode.SolidLandWater;
         bool solidLandWater = scene.OverlayMode == TerrainOverlayMode.SolidLandWater;
         int solidLandColor = TerrainRenderer.LandColor.ToArgb();
-        int solidWaterColor = TerrainRenderer.WaterColor.ToArgb();
-        int solidDeepOceanColor = TerrainRenderer.DeepOceanColor.ToArgb();
         int regionCount = samplingContext.Regions.Length;
 
         Parallel.For(
@@ -331,12 +351,12 @@ internal static class TerrainProcessPreview
                     if (landMask != null)
                     {
                         landMask[pixelIndex] = cell.IsLand ? (byte)1 : (byte)0;
-                        deepOceanMask[pixelIndex] = cell.IsDeepOcean ? (byte)1 : (byte)0;
+                        waterTypeMap[pixelIndex] = (byte)cell.WaterType;
                         continue;
                     }
 
                     pixels[pixelIndex] = solidLandWater
-                        ? cell.IsLand ? solidLandColor : cell.IsDeepOcean ? solidDeepOceanColor : solidWaterColor
+                        ? cell.IsLand ? solidLandColor : TerrainRenderer.GetWaterColor(cell.WaterType).ToArgb()
                         : ResolveColor(cell, scene.OverlayMode).ToArgb();
                 }
 
@@ -347,7 +367,7 @@ internal static class TerrainProcessPreview
         cancellationToken.ThrowIfCancellationRequested();
         if (landMask != null)
         {
-            ApplyLandWaterCoherenceSmoothing(pixels, landMask, deepOceanMask, width, height, scene.RasterSmoothing, cancellationToken);
+            ApplyLandWaterCoherenceSmoothing(pixels, landMask, waterTypeMap, width, height, scene.RasterSmoothing, cancellationToken);
         }
 
         Bitmap bitmap = new(width, height, PixelFormat.Format32bppArgb);
@@ -373,7 +393,7 @@ internal static class TerrainProcessPreview
     private static void ApplyLandWaterCoherenceSmoothing(
         int[] pixels,
         byte[] landMask,
-        byte[] deepOceanMask,
+        byte[] waterTypeMap,
         int width,
         int height,
         float strength,
@@ -387,8 +407,6 @@ internal static class TerrainProcessPreview
 
         int passes = Math.Clamp((int)MathF.Ceiling(strength), 1, 4);
         int landColor = TerrainRenderer.LandColor.ToArgb();
-        int waterColor = TerrainRenderer.WaterColor.ToArgb();
-        int deepOceanColor = TerrainRenderer.DeepOceanColor.ToArgb();
         byte[] source = landMask;
         byte[] target = new byte[area];
 
@@ -448,7 +466,7 @@ internal static class TerrainProcessPreview
 
         for (int i = 0; i < area; i++)
         {
-            pixels[i] = source[i] == 1 ? landColor : deepOceanMask[i] == 1 ? deepOceanColor : waterColor;
+            pixels[i] = source[i] == 1 ? landColor : TerrainRenderer.GetWaterColor((TerrainWaterType)waterTypeMap[i]).ToArgb();
         }
     }
 
@@ -522,7 +540,14 @@ internal static class TerrainProcessPreview
             strongestRegion = region;
         }
 
-        float shallowOceanInfluence = ResolveShallowOceanInfluence(worldX, worldY, context, activeRegionIndexes);
+        TerrainWaterType waterType = ResolveWaterProfile(
+            worldX,
+            worldY,
+            context,
+            activeRegionIndexes,
+            out float nearLandWaterInfluence,
+            out float offshoreDistance,
+            out float waterStochasticOffset);
         if (!includeDebugFields && clusterInfluence <= RegionInfluenceFloor)
         {
             return new TerrainProcessCell(
@@ -537,7 +562,10 @@ internal static class TerrainProcessPreview
                 0f,
                 0f,
                 0f,
-                shallowOceanInfluence,
+                nearLandWaterInfluence,
+                offshoreDistance,
+                waterStochasticOffset,
+                waterType,
                 TerrainLithology.SandMud,
                 TerrainLandformTag.None);
         }
@@ -602,7 +630,10 @@ internal static class TerrainProcessPreview
                 tidalFlow,
                 clusterInfluence,
                 enclosure,
-                shallowOceanInfluence,
+                nearLandWaterInfluence,
+                offshoreDistance,
+                waterStochasticOffset,
+                waterType,
                 lithology.Dominant,
                 TerrainLandformTag.None);
         }
@@ -647,7 +678,10 @@ internal static class TerrainProcessPreview
             tidalFlow,
             clusterInfluence,
             enclosure,
-            shallowOceanInfluence,
+            nearLandWaterInfluence,
+            offshoreDistance,
+            waterStochasticOffset,
+            waterType,
             lithology.Dominant,
             tags);
     }
@@ -656,7 +690,7 @@ internal static class TerrainProcessPreview
     {
         return mode switch
         {
-            TerrainOverlayMode.SolidLandWater => "Solid land/water",
+            TerrainOverlayMode.SolidLandWater => "Solid terrain/water zones",
             TerrainOverlayMode.WaterDepth => "Water depth",
             TerrainOverlayMode.FractureStrength => "Fracture strength",
             TerrainOverlayMode.ReefSuitability => "Reef suitability",
@@ -667,49 +701,103 @@ internal static class TerrainProcessPreview
         };
     }
 
-    private static float ResolveShallowOceanInfluence(float worldX, float worldY, TerrainSamplingContext context, ReadOnlySpan<int> activeRegionIndexes)
+    private static TerrainWaterType ResolveWaterProfile(
+        float worldX,
+        float worldY,
+        TerrainSamplingContext context,
+        ReadOnlySpan<int> activeRegionIndexes,
+        out float nearLandWaterInfluence,
+        out float offshoreDistance,
+        out float waterStochasticOffset)
     {
         TerrainScene scene = context.Scene;
-        float border = Math.Max(0f, scene.DeepOceanBorderDistance);
-        float feather = Math.Max(1f, scene.DeepOceanBorderFeather);
-        float rounding = Math.Clamp(scene.DeepOceanBorderRounding, 0f, 1f);
-        float shallowInfluence = 0f;
+        float rounding = Math.Clamp(scene.WaterCoastShapeRounding, 0f, 1f);
+        float nearestOffshoreDistance = float.PositiveInfinity;
 
         for (int activeIndex = 0; activeIndex < activeRegionIndexes.Length; activeIndex++)
         {
             int i = activeRegionIndexes[activeIndex];
             RegionSamplingContext regionContext = context.Regions[i];
             LandformInstance region = regionContext.Region;
-            if (!IsOceanZoneProducer(region.Kind))
+            if (!IsWaterDistanceProducer(region.Kind))
             {
                 continue;
             }
 
-            float zoneLength = Math.Max(1f, regionContext.Length + border);
-            float zoneHeight = Math.Max(1f, regionContext.InfluenceRadiusY + border);
+            float landLength = Math.Max(1f, regionContext.Length);
+            float landHeight = Math.Max(1f, regionContext.InfluenceRadiusY);
             float dx = worldX - region.CenterX;
             float dy = worldY - region.CenterY;
             float localX = (dx * regionContext.CosRotation) + (dy * regionContext.SinRotation);
             float localY = (-dx * regionContext.SinRotation) + (dy * regionContext.CosRotation);
-            float nx = MathF.Abs(localX) / zoneLength;
-            float ny = MathF.Abs(localY) / zoneHeight;
+            float nx = MathF.Abs(localX) / landLength;
+            float ny = MathF.Abs(localY) / landHeight;
             float ellipseDistance = MathF.Sqrt((nx * nx) + (ny * ny));
             float roundedBoxDistance = MathF.Max(nx, ny);
-            float distance = Lerp(roundedBoxDistance, ellipseDistance, rounding);
-            float featherRatio = Math.Clamp(feather / MathF.Min(zoneLength, zoneHeight), 0.015f, 0.75f);
-            shallowInfluence = MathF.Max(shallowInfluence, SmoothStep(1f, 1f - featherRatio, distance));
-            if (shallowInfluence >= 0.999f)
+            float landDistance = Lerp(roundedBoxDistance, ellipseDistance, rounding);
+            float regionOffshoreDistance = MathF.Max(0f, landDistance - 1f) * MathF.Min(landLength, landHeight);
+            if (regionOffshoreDistance < nearestOffshoreDistance)
             {
-                return 1f;
+                nearestOffshoreDistance = regionOffshoreDistance;
             }
         }
 
-        return shallowInfluence;
+        if (float.IsPositiveInfinity(nearestOffshoreDistance))
+        {
+            nearestOffshoreDistance = Math.Max(1f, scene.WaterMidnightDistance);
+        }
+
+        float shallowDistance = Math.Max(1f, scene.WaterShallowDistance);
+        float sunlitDistance = Math.Max(shallowDistance + 1f, scene.WaterSunlitDistance);
+        float twilightDistance = Math.Max(sunlitDistance + 1f, scene.WaterTwilightDistance);
+        float midnightDistance = Math.Max(1f, scene.WaterMidnightDistance);
+        float midnightLimit = Math.Max(twilightDistance + 1f, midnightDistance);
+        float stochasticScale = Math.Max(1f, scene.WaterStochasticScale);
+        float offshoreNoiseInfluence = SmoothStep(sunlitDistance, midnightLimit, nearestOffshoreDistance);
+        waterStochasticOffset = Fbm(worldX / stochasticScale, worldY / stochasticScale, scene.Seed + 1901, 4) *
+            Math.Max(0f, scene.WaterStochasticReach) *
+            offshoreNoiseInfluence;
+        offshoreDistance = MathF.Max(0f, nearestOffshoreDistance + waterStochasticOffset);
+        nearLandWaterInfluence = 1f - Math.Clamp(offshoreDistance / midnightDistance, 0f, 1f);
+
+        if (offshoreDistance <= shallowDistance)
+        {
+            return TerrainWaterType.Shallow;
+        }
+
+        if (offshoreDistance <= sunlitDistance)
+        {
+            return TerrainWaterType.Sunlit;
+        }
+
+        if (offshoreDistance <= twilightDistance)
+        {
+            return TerrainWaterType.Twilight;
+        }
+
+        return offshoreDistance <= midnightLimit ? TerrainWaterType.Midnight : TerrainWaterType.Abyss;
     }
 
-    private static bool IsOceanZoneProducer(LandformKind kind)
+    private static bool IsWaterDistanceProducer(LandformKind kind)
     {
-        return kind is LandformKind.MainIsland or LandformKind.IslandCluster or LandformKind.ReefShelf or LandformKind.SedimentShelf;
+        return kind is LandformKind.Atoll
+            or LandformKind.BarrierReef
+            or LandformKind.BarrierIsland
+            or LandformKind.SpitAndTombolo
+            or LandformKind.IslandCluster
+            or LandformKind.MainIsland
+            or LandformKind.CliffCoast
+            or LandformKind.CalanqueCove
+            or LandformKind.KarstTowerField
+            or LandformKind.KarstHong
+            or LandformKind.StacksAndArches
+            or LandformKind.IslandRing
+            or LandformKind.AtollLagoon
+            or LandformKind.ReefBarrierLagoon
+            or LandformKind.BarrierIslandLagoon
+            or LandformKind.KarstHongLagoon
+            or LandformKind.IslandRingLagoon
+            or LandformKind.CalanqueCoveLagoon;
     }
 
     private static void ApplyRegionProcess(
@@ -1173,7 +1261,7 @@ internal static class TerrainProcessPreview
     {
         if (overlayMode == TerrainOverlayMode.SolidLandWater)
         {
-            return cell.IsLand ? TerrainRenderer.LandColor : cell.IsDeepOcean ? TerrainRenderer.DeepOceanColor : TerrainRenderer.WaterColor;
+            return cell.IsLand ? TerrainRenderer.LandColor : TerrainRenderer.GetWaterColor(cell.WaterType);
         }
 
         return overlayMode switch
@@ -1181,7 +1269,7 @@ internal static class TerrainProcessPreview
             TerrainOverlayMode.Elevation => Ramp(cell.Elevation, -0.72f, 0.92f, Color.FromArgb(0, 30, 96), Color.White),
             TerrainOverlayMode.WaterDepth => cell.IsWater
                 ? Ramp(cell.WaterDepth, 0f, 1.10f, Color.FromArgb(90, 190, 255), Color.FromArgb(0, 12, 64))
-                : Color.Black,
+                : TerrainRenderer.LandColor,
             TerrainOverlayMode.Lithology => cell.Lithology switch
             {
                 TerrainLithology.Limestone => Color.FromArgb(212, 214, 190),
@@ -1197,9 +1285,9 @@ internal static class TerrainProcessPreview
             TerrainOverlayMode.Sediment => Ramp(cell.Sediment, 0f, 1f, Color.FromArgb(18, 48, 58), Color.FromArgb(244, 211, 112)),
             TerrainOverlayMode.ReefSuitability => Ramp(cell.ReefSuitability, 0f, 1f, Color.FromArgb(3, 32, 64), Color.FromArgb(108, 255, 230)),
             TerrainOverlayMode.ClassifiedLandforms => ResolveTagColor(cell.LandformTags, cell.IsLand),
-            TerrainOverlayMode.LagoonOpenings => Ramp(cell.TidalFlow, 0f, 1f, cell.IsLand ? Color.Black : TerrainRenderer.WaterColor, Color.White),
+            TerrainOverlayMode.LagoonOpenings => Ramp(cell.TidalFlow, 0f, 1f, cell.IsLand ? TerrainRenderer.LandColor : TerrainRenderer.GetWaterColor(cell.WaterType), Color.White),
             TerrainOverlayMode.IslandClusters => Ramp(cell.IslandCluster, 0f, 1f, TerrainRenderer.WaterColor, Color.Black),
-            _ => cell.IsLand ? TerrainRenderer.LandColor : cell.IsDeepOcean ? TerrainRenderer.DeepOceanColor : TerrainRenderer.WaterColor
+            _ => cell.IsLand ? TerrainRenderer.LandColor : TerrainRenderer.GetWaterColor(cell.WaterType)
         };
     }
 

@@ -138,7 +138,7 @@ DrawAgentBody:
                 gameObject.Shape.Draw(spriteBatch, gameObject);
                 DrawnWorldObjectCount++;
 
-                if (DebugModeHandler.DEBUGENABLED && gameObject == Core.Instance.Player)
+                if (DebugModeHandler.DEBUGENABLED && gameObject == Core.Instance.PlayerOrNull)
                 {
                     // DebugLogger.PrintDebug($"Drawing rotation pointer for Player ID={gameObject.ID} at Pos={gameObject.Position}");
                     DebugRenderer.DrawRotationPointer(spriteBatch, (Agent)gameObject);

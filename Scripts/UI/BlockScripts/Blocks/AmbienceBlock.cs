@@ -14,6 +14,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public const string BlockTitle = "Ambience";
 
         private static readonly float[] ColWeights = { 0.14f, 0.24f, 0.20f, 0.42f };
+        private const int OceanZoneHeaderHeight = 16;
         private const int HeaderRowHeight = 16;
         private const int SwatchPadding = 6;
         private const int SwatchMinSize = 12;
@@ -69,10 +70,13 @@ namespace op.io.UI.BlockScripts.Blocks
 
             RefreshRows();
 
-            int headerHeight = headerFunCol.HeaderVisible ? HeaderRowHeight : 0;
-            Rectangle headerStrip = new(contentBounds.X, contentBounds.Y, contentBounds.Width, headerHeight);
+            int oceanZoneHeaderHeight = ResolveOceanZoneHeaderHeight(contentBounds);
+            int headerHeight = Math.Min(
+                headerFunCol.HeaderVisible ? HeaderRowHeight : 0,
+                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight));
+            Rectangle headerStrip = new(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, headerHeight);
             headerFunCol.ShowHeaderToggle = BlockManager.DockingModeEnabled && !blockLocked && contentBounds.Contains(mouseState.Position);
-            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
+            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, HeaderRowHeight);
             headerFunCol.UpdateHeaderHover(headerStrip, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
 
             if (headerFunCol.HeaderToggleClicked)
@@ -89,9 +93,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
             Rectangle listArea = new(
                 contentBounds.X,
-                contentBounds.Y + headerHeight,
+                contentBounds.Y + oceanZoneHeaderHeight + headerHeight,
                 contentBounds.Width,
-                Math.Max(0, contentBounds.Height - headerHeight));
+                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight - headerHeight));
 
             float contentHeight = CalculateContentHeight(boldFont, listArea.Width);
             _scrollPanel.Update(listArea, contentHeight,
@@ -122,7 +126,7 @@ namespace op.io.UI.BlockScripts.Blocks
             _tooltipRowKey = hitRow;
             _tooltipRowLabel = hitRow != null && TryGetRow(hitRow, out AmbienceRow hoveredRow) ? hoveredRow.Label : null;
 
-            if (!blockLocked && leftClickStarted && TryGetRow(hitRow, out AmbienceRow rowToEdit))
+            if (!blockLocked && leftClickStarted && TryGetRow(hitRow, out AmbienceRow rowToEdit) && rowToEdit.IsEditable)
             {
                 OpenRowEditor(rowToEdit);
             }
@@ -146,12 +150,15 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsurePixelTexture();
 
             FunColInterface headerFunCol = GetOrEnsureHeaderFunCol();
-            int headerHeight = headerFunCol.HeaderVisible ? HeaderRowHeight : 0;
+            int oceanZoneHeaderHeight = ResolveOceanZoneHeaderHeight(contentBounds);
+            int headerHeight = Math.Min(
+                headerFunCol.HeaderVisible ? HeaderRowHeight : 0,
+                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight));
             Rectangle listArea = new(
                 contentBounds.X,
-                contentBounds.Y + headerHeight,
+                contentBounds.Y + oceanZoneHeaderHeight + headerHeight,
                 contentBounds.Width,
-                Math.Max(0, contentBounds.Height - headerHeight));
+                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight - headerHeight));
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -207,8 +214,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _scrollPanel.Draw(spriteBatch, blockLocked);
 
-            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, HeaderRowHeight);
-            headerFunCol.DrawHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, headerHeight), boldFont, _pixelTexture);
+            DrawOceanZoneHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, oceanZoneHeaderHeight), boldFont);
+            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, HeaderRowHeight);
+            headerFunCol.DrawHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, headerHeight), boldFont, _pixelTexture);
         }
 
         private static void RefreshRows()
@@ -217,16 +225,19 @@ namespace op.io.UI.BlockScripts.Blocks
             _rows.Add(new AmbienceRow(
                 AmbienceSettings.FogOfWarRowKey,
                 "Fog of war",
+                AmbienceSettings.CurrentFogOfWarColor,
                 AmbienceSettings.FogOfWarColor,
-                "Base color of hidden territory."));
+                "Hidden territory color follows the live ocean water hue."));
             _rows.Add(new AmbienceRow(
                 AmbienceSettings.OceanWaterRowKey,
                 "Ocean water",
+                AmbienceSettings.CurrentOceanWaterColor,
                 AmbienceSettings.OceanWaterColor,
                 "Base hue driving the ocean water shader."));
             _rows.Add(new AmbienceRow(
                 AmbienceSettings.BackgroundWavesRowKey,
                 "Background waves",
+                AmbienceSettings.CurrentBackgroundWavesColor,
                 AmbienceSettings.BackgroundWavesColor,
                 "Highlight color of the ocean's background wave crests."));
             _rows.Add(new AmbienceRow(
@@ -237,8 +248,14 @@ namespace op.io.UI.BlockScripts.Blocks
             _rows.Add(new AmbienceRow(
                 AmbienceSettings.WorldTintRowKey,
                 "World tint",
+                AmbienceSettings.CurrentWorldTintColor,
                 AmbienceSettings.WorldTintColor,
-                "50% gray is neutral. Other colors tint gameplay objects already in the world."));
+                "Optional tint for gameplay objects. Neutral gray applies no tint."));
+        }
+
+        private static int ResolveOceanZoneHeaderHeight(Rectangle contentBounds)
+        {
+            return Math.Min(OceanZoneHeaderHeight, Math.Max(0, contentBounds.Height));
         }
 
         private static float CalculateContentHeight(UIStyle.UIFont font, int listWidth)
@@ -316,6 +333,102 @@ namespace op.io.UI.BlockScripts.Blocks
             }
 
             funCol.Draw(spriteBatch, row.Bounds, font, _pixelTexture);
+        }
+
+        private static void DrawOceanZoneHeader(SpriteBatch spriteBatch, Rectangle bounds, UIStyle.UIFont font)
+        {
+            if (bounds.Width <= 0 || bounds.Height <= 0 || _pixelTexture == null)
+            {
+                return;
+            }
+
+            Color oceanColor = AmbienceSettings.CurrentOceanWaterColor;
+            FillRect(spriteBatch, bounds, UIStyle.BlockBackground);
+            FillRect(spriteBatch, bounds, oceanColor * 0.28f);
+
+            int swatchSize = Math.Min(10, Math.Max(0, bounds.Height - 4));
+            int textX = bounds.X + 4;
+            if (swatchSize >= 4)
+            {
+                Rectangle swatchBounds = new(bounds.X + 4, bounds.Y + (bounds.Height - swatchSize) / 2, swatchSize, swatchSize);
+                FillRect(spriteBatch, swatchBounds, oceanColor);
+                DrawRectOutline(spriteBatch, swatchBounds, UIStyle.BlockBorder, 1);
+                textX = swatchBounds.Right + 5;
+            }
+
+            if (font.IsAvailable)
+            {
+                string text = BuildOceanZoneHeaderText();
+                int availableWidth = Math.Max(0, bounds.Right - textX - 4);
+                string display = TruncateText(font, text, availableWidth);
+                if (!string.IsNullOrEmpty(display))
+                {
+                    Vector2 size = font.MeasureString(display);
+                    font.DrawString(
+                        spriteBatch,
+                        display,
+                        new Vector2(textX, bounds.Y + (bounds.Height - size.Y) / 2f),
+                        Color.White * 0.94f);
+                }
+            }
+
+            FillRect(spriteBatch, new Rectangle(bounds.X, bounds.Bottom - 1, bounds.Width, 1), UIStyle.BlockBorder);
+        }
+
+        private static string BuildOceanZoneHeaderText()
+        {
+            string detected = GameBlockOceanBackground.DetectedOceanZone;
+            string target = GameBlockOceanBackground.TargetOceanZone;
+            if (string.IsNullOrWhiteSpace(detected))
+            {
+                detected = string.IsNullOrWhiteSpace(target) ? "Unknown" : target;
+            }
+
+            if (GameBlockOceanBackground.OceanZoneTransitioning &&
+                !string.IsNullOrWhiteSpace(target) &&
+                !string.Equals(detected, target, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Ocean: {detected} -> {target}";
+            }
+
+            return $"Ocean: {detected}";
+        }
+
+        private static string TruncateText(UIStyle.UIFont font, string text, int maxWidth)
+        {
+            if (!font.IsAvailable || string.IsNullOrEmpty(text) || maxWidth <= 0)
+            {
+                return string.Empty;
+            }
+
+            if (font.MeasureString(text).X <= maxWidth)
+            {
+                return text;
+            }
+
+            const string Ellipsis = "...";
+            if (font.MeasureString(Ellipsis).X > maxWidth)
+            {
+                return string.Empty;
+            }
+
+            int lo = 0;
+            int hi = text.Length;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                string candidate = text.Substring(0, mid) + Ellipsis;
+                if (font.MeasureString(candidate).X <= maxWidth)
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            return lo > 0 ? text.Substring(0, lo) + Ellipsis : string.Empty;
         }
 
         private static Rectangle BuildSwatchBounds(Rectangle previewColumnBounds)
@@ -497,7 +610,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static void OpenRowEditor(AmbienceRow row)
         {
-            Color originalColor = row.Color;
+            Color originalColor = row.EditColor;
             ColorSchemeBlock.OpenExternalColorEditor(
                 nameof(AmbienceBlock),
                 row.Label,
@@ -593,18 +706,27 @@ namespace op.io.UI.BlockScripts.Blocks
         private struct AmbienceRow
         {
             public AmbienceRow(string key, string label, Color color, string description)
+                : this(key, label, color, color, description)
+            {
+            }
+
+            public AmbienceRow(string key, string label, Color color, Color editColor, string description, bool isEditable = true)
             {
                 Key = key;
                 Label = label;
                 Color = color;
+                EditColor = editColor;
                 Description = description;
+                IsEditable = isEditable;
                 Bounds = Rectangle.Empty;
             }
 
             public string Key;
             public string Label;
             public Color Color;
+            public Color EditColor;
             public string Description;
+            public bool IsEditable;
             public Rectangle Bounds;
         }
     }

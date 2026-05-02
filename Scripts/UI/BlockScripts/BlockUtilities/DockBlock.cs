@@ -20,7 +20,8 @@ namespace op.io
         Chat = 12,
         Performance = 13,
         Interact = 14,
-        Ambience = 15
+        Ambience = 15,
+        Levels = 16
     }
 
     /// <summary>
