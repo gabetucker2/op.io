@@ -262,6 +262,15 @@ namespace op.io
                 if (!SuppressDeadPlayerMotion(player))
                 {
                     Vector2 direction = uiConsumingMouse ? Vector2.Zero : InputManager.GetMoveVector();
+                    Vector2 requestedMovementDelta = direction != Vector2.Zero
+                        ? Vector2.Normalize(direction) * player.Speed * Core.DELTATIME
+                        : player.MovementVelocity * Core.DELTATIME;
+                    if (!GameBlockTerrainBackground.TryPreparePlayerTerrainForMovement(player, requestedMovementDelta))
+                    {
+                        direction = Vector2.Zero;
+                        player.MovementVelocity = Vector2.Zero;
+                    }
+
                     float accelDelay = AttributeDerived.AccelerationDelay(player.BodyAttributes.Control);
                     if (accelDelay <= 0f)
                     {

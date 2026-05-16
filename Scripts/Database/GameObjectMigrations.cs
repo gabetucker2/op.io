@@ -93,7 +93,7 @@ namespace op.io
                 EnsureBodyTransitionBackendTooltips();
                 EnsureYourBarBackendTooltips();
                 EnsureTerrainWorldSeedSetting();
-                EnsureTerrainOceanZoneSettings();
+                EnsureTerrainOceanBiomeSettings();
                 EnsureTerrainBackendTooltips();
                 EnsureLevelBackendTooltips();
                 EnsureLevelLaunchDefault();
@@ -2469,10 +2469,10 @@ WHERE Name = 'ScoutSentryBody'
             DebugLogger.PrintDatabase("EnsureTerrainWorldSeedSetting: inserted TerrainWorldSeed = 1337.");
         }
 
-        private static void EnsureTerrainOceanZoneSettings()
+        private static void EnsureTerrainOceanBiomeSettings()
         {
-            EnsureGeneralSetting("TerrainWaterZoneDistanceScale", "1.0");
-            EnsureGeneralSetting("TerrainOceanZoneMinimumTransitionVolumeDistance", "240");
+            EnsureGeneralSetting("TerrainOceanBiomeDistanceScale", "1.0");
+            EnsureGeneralSetting("TerrainOceanBiomeMinimumTransitionVolumeDistance", "240");
         }
 
         private static void EnsureGeneralSetting(string key, string value)
@@ -2517,15 +2517,18 @@ WHERE Name = 'ScoutSentryBody'
                 ("TerrainCollisionIntrusionCorrectionCount", "How many dynamic world objects were force-corrected back out of terrain this frame after collision resolution to prevent embeds and freeze-state glitches."),
                 ("TerrainBulletCollisionCorrectionCount", "How many bullets were reflected out of visible terrain collision loops this frame without using hidden scene proxy colliders."),
                 ("TerrainPendingChunkCount", "How many terrain chunks are currently queued or building in the background."),
-                ("TerrainPendingCriticalChunkCount", "How many camera-or-fog-visible terrain chunks are still building; resident terrain visuals are held stable while this is above zero."),
+                ("TerrainPendingCriticalChunkCount", "How many camera-or-fog-visible terrain chunks are missing, queued, building, or awaiting promotion; resident terrain visuals are held stable while this is above zero."),
                 ("TerrainFullMapChunkWindow", "Inclusive chunk-coordinate window for the finite terrain map cache used by full-map ocean border generation."),
+                ("TerrainFullMapGenerationEnabled", "Whether deterministic terrain-data chunks are preloaded for the full configured terrain map so ocean biomes resolve from one authoritative terrain snapshot."),
                 ("TerrainFullMapChunkCount", "How many deterministic terrain chunks make up the full terrain map cache."),
                 ("TerrainFullMapGeneratedChunkCount", "How many full-map terrain chunks have been generated and retained in memory."),
-                ("TerrainFullMapPendingChunkCount", "How many full-map terrain chunks are still queued, building, or awaiting promotion."),
+                ("TerrainFullMapPendingChunkCount", "How many full-map terrain-data chunks are not yet generated and retained in memory."),
                 ("TerrainFullMapGenerationComplete", "Whether every chunk in the finite terrain map cache has finished generating."),
-                ("TerrainFullMapSnapshotReady", "Whether the generated full terrain map has been copied into the immutable mask used by ocean-zone border generation."),
+                ("TerrainFullMapSnapshotReady", "Whether the generated full terrain map has been copied into the immutable mask used by ocean-biome border generation."),
                 ("TerrainAccessRequestActive", "Shows whether player movement requested terrain streaming around the target area without blocking movement."),
                 ("TerrainAccessRequestStatus", "Current non-blocking terrain-access target and radius being queued for generation."),
+                ("TerrainNonBlockingChunkLoadRequestCount", "How many runtime visible-or-near-visible chunk loads were routed to the terrain worker instead of being built on the main thread."),
+                ("TerrainNonBlockingChunkLoadQueuedCount", "How many terrain chunks were queued by the non-blocking visible/proximity streaming path."),
                 ("TerrainMovementBlockedUntilReadyCount", "Legacy count of movement attempts blocked by terrain streaming; should remain zero."),
                 ("TerrainDiscardedStaleMaterializationCount", "How many completed terrain mesh builds were discarded because the camera or vision window changed before they finished."),
                 ("TerrainChunkBuildsInFlight", "Shows whether any terrain chunk builds are currently in flight."),
@@ -2536,31 +2539,41 @@ WHERE Name = 'ScoutSentryBody'
                 ("TerrainArchipelagoEnclosureCellSize", "Terrain-space size of the larger enclosure-producer cells used by reef rings, barrier systems, island rings, and cove/ravine cuts."),
                 ("TerrainGenerationPipeline", "Current terrain generation order used by the layered archipelago sampler."),
                 ("TerrainLandformSelectionMode", "Whether terrain is generated from direct archetype placement or from layered geological processes with post-classification."),
-                ("TerrainOceanZoneDistanceMode", "Current ocean-zone distance source. Nearest-border distance keeps shallow water wrapped around every terrain coastline."),
-                ("TerrainOceanZoneOrigin", "Distance anchor used by ocean zones. Nearest generated terrain border means every coast starts at shallow water."),
-                ("TerrainOceanZoneOriginRadius", "Effective shallow-water transition distance from the nearest terrain border."),
-                ("TerrainOceanDebugWorkerStatus", "Full-map ocean-zone debug border state. Borders build only after the full terrain map cache has finished."),
-                ("TerrainOceanDebugFullMapReady", "Whether the full-map ocean-zone border cache has finished building from the complete terrain map."),
-                ("TerrainOceanDebugFullMapSegmentCount", "How many ocean-zone border segments were generated for the full map cache."),
-                ("TerrainOceanDebugFullMapBuildMilliseconds", "Milliseconds spent building the full-map ocean-zone border cache on the background task."),
-                ("TerrainOceanDebugFullMapStatus", "Detailed full-map ocean-zone border generation status and readiness summary."),
-                ("TerrainOceanDebugSuppressedTinyZoneCount", "How many connected ocean-zone components were removed because no same-zone core circle met the minimum stable radius."),
-                ("TerrainOceanDebugMinimumStableZoneRadius", "Minimum unobstructed same-zone radius required inside an ocean-zone component before debug borders are allowed to render it."),
-                ("TerrainOceanDebugTinyZoneViolationSummary", "Summary of any remaining tiny ocean-zone components that failed the minimum stable radius validation."),
-                ("GameBlockOceanPlayerZone", "Current ocean zone under the runtime player, or None when the player is on terrain or unavailable."),
-                ("GameBlockOceanPlayerZoneStatus", "Player ocean-zone probe detail including resolved zone, offshore distance, and water depth."),
-                ("GameBlockOceanCursorZone", "Current ocean zone under the cursor while it is hovering the Game block."),
-                ("GameBlockOceanCursorZoneStatus", "Cursor ocean-zone probe detail including hover availability, resolved zone, offshore distance, and water depth."),
-                ("GameBlockOceanCursorZoneValid", "Shows whether the cursor currently resolves to an ocean zone in the Game block."),
-                ("GameBlockOceanCursorZoneDepth", "Water depth resolved under the cursor's Game-block hover position."),
-                ("GameBlockOceanCursorZoneOffshoreDistance", "Offshore distance resolved under the cursor's Game-block hover position."),
-                ("GameBlockOceanZoneTransitionBanner", "Current top-center Game overlay text for an ocean-zone transition, or none when inactive."),
-                ("TerrainWaterZoneDistanceScale", "SQL-backed multiplier applied to ocean-zone offshore thresholds before water changes to the next deeper zone."),
-                ("TerrainWaterShallowDistance", "Maximum offshore distance classified as shallow water around generated landmasses."),
-                ("TerrainWaterSunlitDistance", "Maximum offshore distance classified as sunlit water after the shallow band."),
-                ("TerrainWaterTwilightDistance", "Maximum offshore distance classified as twilight water after the sunlit band."),
-                ("TerrainWaterMidnightDistance", "Maximum offshore distance classified as midnight water before open water becomes abyss."),
-                ("TerrainOceanZoneMinimumTransitionVolumeDistance", "SQL-backed cumulative offshore spread added per water-zone transition before deeper zones begin."),
+                ("TerrainOceanBiomeDistanceMode", "Current ocean-biome distance source. Nearest-border distance keeps the shallow ocean biome wrapped around every terrain coastline."),
+                ("TerrainOceanBiomeOrigin", "Distance anchor used by ocean biomes. Nearest generated terrain border means every coast starts in the shallow ocean biome."),
+                ("TerrainOceanBiomeOriginRadius", "Effective shallow-water transition distance from the nearest terrain border."),
+                ("TerrainOceanDebugWorkerStatus", "Full-map ocean-biome debug border state. Borders build only after the full terrain map cache has finished."),
+                ("TerrainOceanDebugFullMapReady", "Whether the full-map ocean-biome border cache has finished building from the complete terrain map."),
+                ("TerrainOceanDebugFullMapSegmentCount", "How many ocean-biome border segments were generated for the full map cache."),
+                ("TerrainOceanDebugFullMapBuildMilliseconds", "Milliseconds spent building the full-map ocean-biome border cache on the background task."),
+                ("TerrainOceanDebugFullMapStatus", "Detailed full-map ocean-biome border generation status and readiness summary."),
+                ("TerrainOceanDebugBorderValidationCheckedSegmentCount", "How many full-map ocean-biome border segments were sampled against the runtime ocean-biome resolver."),
+                ("TerrainOceanDebugBorderValidationMismatchCount", "How many sampled full-map ocean-biome border segments failed to match the runtime ocean-biome resolver."),
+                ("TerrainOceanDebugBorderValidationCheckedIntersectionPairCount", "How many full-map ocean-biome border segment pairs were checked for improper crossings."),
+                ("TerrainOceanDebugBorderValidationCrossingIntersectionCount", "How many improper crossings were found in the full-map ocean-biome border segments."),
+                ("TerrainOceanDebugBorderValidationStatus", "Pass/fail summary proving full-map ocean-biome borders match runtime ocean-biome locations and do not improperly overlap."),
+                ("TerrainOceanDebugDrawStatus", "Latest ocean-biome border render summary: drawn visible segments, viewport candidates, full-map segment count, and clipping mode."),
+                ("TerrainOceanDebugVisionClipActive", "Whether ocean-biome border rendering is currently clipped to fog-of-war vision."),
+                ("TerrainOceanDebugVisionClipRegionCount", "How many fog-of-war vision regions are available for clipping ocean-biome borders."),
+                ("TerrainOceanDebugVisionClipStatus", "Current fog-of-war clipping state for ocean-biome border rendering."),
+                ("TerrainOceanDebugSuppressedTinyBiomeCount", "How many connected ocean-biome components were removed because no same-biome core circle met the minimum stable radius."),
+                ("TerrainOceanDebugMinimumTransitionSpacingAdjustmentCount", "How many ocean-biome debug cells were moved to the next shallower transition band to preserve uniform minimum spacing between biome layers."),
+                ("TerrainOceanDebugMinimumStableBiomeRadius", "Minimum unobstructed same-biome radius required inside an ocean-biome component before debug borders are allowed to render it."),
+                ("TerrainOceanDebugTinyBiomeViolationSummary", "Summary of any remaining tiny ocean-biome components that failed the minimum stable radius validation."),
+                ("GameBlockOceanPlayerBiome", "Current ocean biome under the runtime player, or None when the player is on terrain or unavailable."),
+                ("GameBlockOceanPlayerBiomeStatus", "Player ocean-biome probe detail including resolved biome, offshore distance, and water depth."),
+                ("GameBlockOceanCursorBiome", "Current ocean biome under the cursor while it is hovering the Game block."),
+                ("GameBlockOceanCursorBiomeStatus", "Cursor ocean-biome probe detail including hover availability, resolved biome, offshore distance, and water depth."),
+                ("GameBlockOceanCursorBiomeValid", "Shows whether the cursor currently resolves to an ocean biome in the Game block."),
+                ("GameBlockOceanCursorBiomeDepth", "Water depth resolved under the cursor's Game-block hover position."),
+                ("GameBlockOceanCursorBiomeOffshoreDistance", "Offshore distance resolved under the cursor's Game-block hover position."),
+                ("GameBlockOceanBiomeTransitionBanner", "Current top-center Game overlay text for an ocean-biome transition, or none when inactive."),
+                ("TerrainOceanBiomeDistanceScale", "SQL-backed multiplier applied to ocean-biome offshore thresholds before water changes to the next deeper biome."),
+                ("TerrainOceanBiomeShallowDistance", "Maximum offshore distance classified as the shallow ocean biome around generated landmasses."),
+                ("TerrainOceanBiomeSunlitDistance", "Maximum offshore distance classified as the sunlit ocean biome after the shallow band."),
+                ("TerrainOceanBiomeTwilightDistance", "Maximum offshore distance classified as the twilight ocean biome after the sunlit band."),
+                ("TerrainOceanBiomeMidnightDistance", "Maximum offshore distance classified as the midnight ocean biome before open water becomes abyss."),
+                ("TerrainOceanBiomeMinimumTransitionVolumeDistance", "SQL-backed cumulative offshore spread added per ocean-biome transition before deeper biomes begin."),
                 ("TerrainLagoonOpeningTarget", "Target pass count used by opening producers so lagoons usually retain one or two navigable breaks instead of sealing shut."),
                 ("TerrainContourResolutionMultiplier", "Multiplier used when extracting procedural contour geometry from the sampled terrain field before simplifying it into vector terrain polygons and collider shells."),
                 ("TerrainTargetVisualTextureOversample", "Legacy terrain texture oversample setting. Vector terrain rendering keeps this at 0 because visuals are generated from polygon triangles instead of raster textures."),
@@ -2610,10 +2623,10 @@ WHERE Name = 'ScoutSentryBody'
                 ("GameLevelLoadInProgress", "Shows whether a level load is currently clearing and rebuilding scene objects."),
                 ("GameLevelLoadoutSummary", "Scene object groups and world systems loaded by the active level."),
                 ("GameLevelTerrainConfiguration", "Terrain configuration key requested by the active level."),
-                ("GameLevelOceanZoneConfiguration", "Ocean-zone configuration key requested by the active level."),
+                ("GameLevelOceanBiomeConfiguration", "Ocean-biome configuration key requested by the active level."),
                 ("GameLevelPrevious", "Load the previous game level in the registered level list."),
                 ("GameLevelNext", "Load the next game level in the registered level list."),
-                ("GameLevelReload", "Reload the active level from its object, farm, terrain, and ocean-zone configuration."),
+                ("GameLevelReload", "Reload the active level from its object, farm, terrain, and ocean-biome configuration."),
                 ("GameLevelManual", "Manual level: loads the current authored test scene with scout, farms, walls, zones, terrain, and ocean."),
                 ("GameLevelNatural", "Natural level: loads the runtime player with generated terrain and ocean, without ScoutSentry1, farms, walls, or zones."),
             ];

@@ -1,11 +1,13 @@
 @echo off
 setlocal
-pushd "%~dp0..\.."
-for /d %%D in ("Tools\TerrainDevInterface\bin\Run\*") do rd /s /q "%%D" 2>nul
+set "TERRAIN_PROJECT_DIR=%~dp0"
+for %%I in ("%TERRAIN_PROJECT_DIR%..\..") do set "TERRAIN_REPO_ROOT=%%~fI"
+pushd "%TERRAIN_REPO_ROOT%"
+for /d %%D in ("%TERRAIN_PROJECT_DIR%bin\Run\*") do rd /s /q "%%D" 2>nul
 set TERRAIN_RUN_ID=%RANDOM%%RANDOM%
-set TERRAIN_OUTPUT=bin\Run\%TERRAIN_RUN_ID%\
-set TERRAIN_EXE=Tools\TerrainDevInterface\%TERRAIN_OUTPUT%TerrainDevInterface.exe
-dotnet build "Tools\TerrainDevInterface\TerrainDevInterface.csproj" --nologo --verbosity quiet -p:OutputPath="%TERRAIN_OUTPUT%"
+set "TERRAIN_OUTPUT=%TERRAIN_PROJECT_DIR%bin\Run\%TERRAIN_RUN_ID%\"
+set "TERRAIN_EXE=%TERRAIN_OUTPUT%TerrainDevInterface.exe"
+dotnet build "%TERRAIN_PROJECT_DIR%TerrainDevInterface.csproj" --nologo --verbosity quiet -p:OutputPath="%TERRAIN_OUTPUT%"
 if errorlevel 1 (
     echo Failed to build TerrainDevInterface.
     pause

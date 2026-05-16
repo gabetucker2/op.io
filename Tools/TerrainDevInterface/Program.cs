@@ -377,11 +377,11 @@ internal sealed class TerrainEditorForm : Form
         AddWorldSlider("Cluster spread", () => _scene.WorldClusterSpread, value => _scene.WorldClusterSpread = value, 0.20f, 1.20f, 2);
         AddWorldSlider("Ridge / chain bias", () => _scene.WorldChainBias, value => _scene.WorldChainBias = value, 0f, 1f, 2);
         AddToggle("Show preview text", () => _scene.WorldPreviewLabelsVisible, value => _scene.WorldPreviewLabelsVisible = value, renderTerrain: false);
-        AddHeader("Water Depth Zones");
-        AddWorldSlider("Shallow water distance", () => _scene.WaterShallowDistance, value => _scene.WaterShallowDistance = value, 24f, 260f, 0);
-        AddWorldSlider("Sunlit water distance", () => _scene.WaterSunlitDistance, value => _scene.WaterSunlitDistance = value, 80f, 460f, 0);
-        AddWorldSlider("Twilight water distance", () => _scene.WaterTwilightDistance, value => _scene.WaterTwilightDistance = value, 160f, 720f, 0);
-        AddWorldSlider("Midnight water distance", () => _scene.WaterMidnightDistance, value => _scene.WaterMidnightDistance = value, 260f, 980f, 0);
+        AddHeader("Ocean Biomes");
+        AddWorldSlider("Shallow ocean biome distance", () => _scene.OceanBiomeShallowDistance, value => _scene.OceanBiomeShallowDistance = value, 24f, 260f, 0);
+        AddWorldSlider("Sunlit ocean biome distance", () => _scene.OceanBiomeSunlitDistance, value => _scene.OceanBiomeSunlitDistance = value, 80f, 460f, 0);
+        AddWorldSlider("Twilight ocean biome distance", () => _scene.OceanBiomeTwilightDistance, value => _scene.OceanBiomeTwilightDistance = value, 160f, 720f, 0);
+        AddWorldSlider("Midnight ocean biome distance", () => _scene.OceanBiomeMidnightDistance, value => _scene.OceanBiomeMidnightDistance = value, 260f, 980f, 0);
         AddWorldSlider("Water stochastic reach", () => _scene.WaterStochasticReach, value => _scene.WaterStochasticReach = value, 0f, 180f, 0);
         AddWorldSlider("Water stochastic scale", () => _scene.WaterStochasticScale, value => _scene.WaterStochasticScale = value, 120f, 980f, 0);
         AddWorldSlider("Water coast rounding", () => _scene.WaterCoastShapeRounding, value => _scene.WaterCoastShapeRounding = value, 0f, 1f, 2);
@@ -1319,15 +1319,15 @@ internal static class TerrainRenderer
     public static readonly Color DeepOceanColor = AbyssWaterColor;
     public static readonly Color LandColor = Color.FromArgb(TerrainColorPalette.LandR, TerrainColorPalette.LandG, TerrainColorPalette.LandB);
 
-    public static Color GetWaterColor(TerrainWaterType waterType)
+    public static Color GetOceanBiomeColor(OceanBiomeType oceanBiome)
     {
-        return waterType switch
+        return oceanBiome switch
         {
-            TerrainWaterType.Shallow => ShallowWaterColor,
-            TerrainWaterType.Sunlit => SunlitWaterColor,
-            TerrainWaterType.Twilight => TwilightWaterColor,
-            TerrainWaterType.Midnight => MidnightWaterColor,
-            TerrainWaterType.Abyss => AbyssWaterColor,
+            OceanBiomeType.Shallow => ShallowWaterColor,
+            OceanBiomeType.Sunlit => SunlitWaterColor,
+            OceanBiomeType.Twilight => TwilightWaterColor,
+            OceanBiomeType.Midnight => MidnightWaterColor,
+            OceanBiomeType.Abyss => AbyssWaterColor,
             _ => SunlitWaterColor
         };
     }
@@ -1815,10 +1815,10 @@ internal sealed class TerrainScene
     public float GlobalRoughness { get; set; } = TerrainWorldDefaults.GlobalRoughness;
     public float GlobalEmergence { get; set; } = TerrainWorldDefaults.GlobalEmergence;
     public float RasterSmoothing { get; set; } = TerrainWorldDefaults.RasterSmoothing;
-    public float WaterShallowDistance { get; set; } = TerrainWorldDefaults.WaterShallowDistance;
-    public float WaterSunlitDistance { get; set; } = TerrainWorldDefaults.WaterSunlitDistance;
-    public float WaterTwilightDistance { get; set; } = TerrainWorldDefaults.WaterTwilightDistance;
-    public float WaterMidnightDistance { get; set; } = TerrainWorldDefaults.WaterMidnightDistance;
+    public float OceanBiomeShallowDistance { get; set; } = TerrainWorldDefaults.OceanBiomeShallowDistance;
+    public float OceanBiomeSunlitDistance { get; set; } = TerrainWorldDefaults.OceanBiomeSunlitDistance;
+    public float OceanBiomeTwilightDistance { get; set; } = TerrainWorldDefaults.OceanBiomeTwilightDistance;
+    public float OceanBiomeMidnightDistance { get; set; } = TerrainWorldDefaults.OceanBiomeMidnightDistance;
     public float WaterStochasticReach { get; set; } = TerrainWorldDefaults.WaterStochasticReach;
     public float WaterStochasticScale { get; set; } = TerrainWorldDefaults.WaterStochasticScale;
     public float WaterCoastShapeRounding { get; set; } = TerrainWorldDefaults.WaterCoastShapeRounding;
@@ -1925,10 +1925,10 @@ internal sealed class TerrainScene
         GlobalRoughness = TerrainWorldDefaults.GlobalRoughness;
         GlobalEmergence = TerrainWorldDefaults.GlobalEmergence;
         RasterSmoothing = TerrainWorldDefaults.RasterSmoothing;
-        WaterShallowDistance = TerrainWorldDefaults.WaterShallowDistance;
-        WaterSunlitDistance = TerrainWorldDefaults.WaterSunlitDistance;
-        WaterTwilightDistance = TerrainWorldDefaults.WaterTwilightDistance;
-        WaterMidnightDistance = TerrainWorldDefaults.WaterMidnightDistance;
+        OceanBiomeShallowDistance = TerrainWorldDefaults.OceanBiomeShallowDistance;
+        OceanBiomeSunlitDistance = TerrainWorldDefaults.OceanBiomeSunlitDistance;
+        OceanBiomeTwilightDistance = TerrainWorldDefaults.OceanBiomeTwilightDistance;
+        OceanBiomeMidnightDistance = TerrainWorldDefaults.OceanBiomeMidnightDistance;
         WaterStochasticReach = TerrainWorldDefaults.WaterStochasticReach;
         WaterStochasticScale = TerrainWorldDefaults.WaterStochasticScale;
         WaterCoastShapeRounding = TerrainWorldDefaults.WaterCoastShapeRounding;
@@ -2586,10 +2586,10 @@ internal sealed class TerrainScene
             .Append(GlobalRoughness.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(GlobalEmergence.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(RasterSmoothing.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(WaterShallowDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(WaterSunlitDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(WaterTwilightDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
-            .Append(WaterMidnightDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(OceanBiomeShallowDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(OceanBiomeSunlitDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(OceanBiomeTwilightDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
+            .Append(OceanBiomeMidnightDistance.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(WaterStochasticReach.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(WaterStochasticScale.ToString("R", CultureInfo.InvariantCulture)).Append('|')
             .Append(WaterCoastShapeRounding.ToString("R", CultureInfo.InvariantCulture)).Append('|')
@@ -2724,10 +2724,10 @@ internal sealed class TerrainScene
             GlobalRoughness = GlobalRoughness,
             GlobalEmergence = GlobalEmergence,
             RasterSmoothing = RasterSmoothing,
-            WaterShallowDistance = WaterShallowDistance,
-            WaterSunlitDistance = WaterSunlitDistance,
-            WaterTwilightDistance = WaterTwilightDistance,
-            WaterMidnightDistance = WaterMidnightDistance,
+            OceanBiomeShallowDistance = OceanBiomeShallowDistance,
+            OceanBiomeSunlitDistance = OceanBiomeSunlitDistance,
+            OceanBiomeTwilightDistance = OceanBiomeTwilightDistance,
+            OceanBiomeMidnightDistance = OceanBiomeMidnightDistance,
             WaterStochasticReach = WaterStochasticReach,
             WaterStochasticScale = WaterStochasticScale,
             WaterCoastShapeRounding = WaterCoastShapeRounding,
@@ -3362,10 +3362,10 @@ internal static class TerrainSettingsEncoder
         Append(builder, "GlobalRoughness", scene.GlobalRoughness);
         Append(builder, "GlobalEmergence", scene.GlobalEmergence);
         Append(builder, "RasterSmoothing", scene.RasterSmoothing);
-        Append(builder, "WaterShallowDistance", scene.WaterShallowDistance);
-        Append(builder, "WaterSunlitDistance", scene.WaterSunlitDistance);
-        Append(builder, "WaterTwilightDistance", scene.WaterTwilightDistance);
-        Append(builder, "WaterMidnightDistance", scene.WaterMidnightDistance);
+        Append(builder, "OceanBiomeShallowDistance", scene.OceanBiomeShallowDistance);
+        Append(builder, "OceanBiomeSunlitDistance", scene.OceanBiomeSunlitDistance);
+        Append(builder, "OceanBiomeTwilightDistance", scene.OceanBiomeTwilightDistance);
+        Append(builder, "OceanBiomeMidnightDistance", scene.OceanBiomeMidnightDistance);
         Append(builder, "WaterStochasticReach", scene.WaterStochasticReach);
         Append(builder, "WaterStochasticScale", scene.WaterStochasticScale);
         Append(builder, "WaterCoastShapeRounding", scene.WaterCoastShapeRounding);
@@ -3442,10 +3442,10 @@ internal static class TerrainSettingsEncoder
         Append(builder, "Cluster spread", scene.WorldClusterSpread);
         Append(builder, "Ridge / chain bias", scene.WorldChainBias);
         Append(builder, "Show preview text", scene.WorldPreviewLabelsVisible);
-        Append(builder, "Shallow water distance", scene.WaterShallowDistance);
-        Append(builder, "Sunlit water distance", scene.WaterSunlitDistance);
-        Append(builder, "Twilight water distance", scene.WaterTwilightDistance);
-        Append(builder, "Midnight water distance", scene.WaterMidnightDistance);
+        Append(builder, "Shallow ocean biome distance", scene.OceanBiomeShallowDistance);
+        Append(builder, "Sunlit ocean biome distance", scene.OceanBiomeSunlitDistance);
+        Append(builder, "Twilight ocean biome distance", scene.OceanBiomeTwilightDistance);
+        Append(builder, "Midnight ocean biome distance", scene.OceanBiomeMidnightDistance);
         Append(builder, "Water stochastic reach", scene.WaterStochasticReach);
         Append(builder, "Water stochastic scale", scene.WaterStochasticScale);
         Append(builder, "Water coast rounding", scene.WaterCoastShapeRounding);

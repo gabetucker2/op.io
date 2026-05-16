@@ -228,6 +228,7 @@ namespace op.io
         private static ResizePaintHook _resizePaintHook;
         private static IntPtr _resizeHookHandle;
         private static bool _inResizeDraw;
+        private static bool _resizeDrawBlockedForGraphicsLoadLogged;
         private static bool _nativeWindowResizeEdgesEnabled;
         private static bool _customDockingResizeEdgesEnabled;
 
@@ -456,6 +457,16 @@ namespace op.io
             if (_resizeTarget?.SpriteBatch == null)
                 return;
 
+            if (!GameRenderer.CanDrawResizeFrame)
+            {
+                if (!_resizeDrawBlockedForGraphicsLoadLogged)
+                {
+                    DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Blocked: renderer graphics are still loading.");
+                    _resizeDrawBlockedForGraphicsLoadLogged = true;
+                }
+                return;
+            }
+
             if (GameRenderer.IsDrawing)
             {
                 DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Blocked: GameRenderer.Draw() is already executing (re-entrant WndProc call).");
@@ -468,6 +479,7 @@ namespace op.io
                 DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Starting resize draw.");
                 GameRenderer.Draw();
                 _resizeTarget.GraphicsDevice.Present();
+                _resizeDrawBlockedForGraphicsLoadLogged = false;
                 DebugLogger.PrintUI("[ScreenManager] [RunResizeDraw] Resize draw complete.");
             }
             catch (Exception ex)
@@ -890,6 +902,11 @@ namespace op.io
             {
                 DebugLogger.PrintUI("Failed to preserve outer window bounds after docking chrome toggle.");
             }
+        }
+
+        public static void RequestWindowRepaint(Core game)
+        {
+            RequestWindowRepaint(game?.Window?.Handle ?? IntPtr.Zero);
         }
 
         private static void RequestWindowRepaint(IntPtr hwnd)

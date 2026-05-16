@@ -8,9 +8,9 @@ namespace op.io
     {
         // Manual settings
 
-        // do not use `ForceDebugMode` unless `DebugMode` in `InitDB_StartData_Settlings.sql` isn't working.
-        // this will wipe all locally saved data, use with caution
+        // This wipes all locally saved data each launch; keep enabled for clean deterministic dev startup data.
         public static bool RestartDB { get; set; } = true;
+        // do not use `ForceDebugMode` unless `DebugMode` in `InitDB_StartData_Settlings.sql` isn't working.
         public static bool ForceDebugMode { get; set; } = false;
 
         public static Color TransparentWindowColor { get; set; }
@@ -107,6 +107,7 @@ namespace op.io
 
         protected override void Update(GameTime gameTime)
         {
+            GameRenderer.ProcessDeferredStartupReveal();
             GameUpdater.Update(gameTime);
             base.Update(gameTime);
         }

@@ -24,7 +24,7 @@ namespace op.io
                 loadFarms: true,
                 loadZoneBlocks: true,
                 terrainConfigurationKey: "default-generated-terrain",
-                oceanZoneConfigurationKey: "generated-coastline-zones"),
+                oceanBiomeConfigurationKey: "generated-coastline-biomes"),
             new GameLevelDefinition(
                 GameLevelKind.Natural,
                 "natural",
@@ -36,7 +36,7 @@ namespace op.io
                 loadFarms: false,
                 loadZoneBlocks: false,
                 terrainConfigurationKey: "default-generated-terrain",
-                oceanZoneConfigurationKey: "generated-coastline-zones")
+                oceanBiomeConfigurationKey: "generated-coastline-biomes")
         ];
 
         private static GameLevelDefinition _activeLevel = DefinedLevels[1];
@@ -51,7 +51,7 @@ namespace op.io
         public static string ActiveLevelKey => ActiveLevel.Key;
         public static string ActiveLevelName => ActiveLevel.DisplayName;
         public static string ActiveLevelTerrainConfiguration => ActiveLevel.TerrainConfigurationKey;
-        public static string ActiveLevelOceanZoneConfiguration => ActiveLevel.OceanZoneConfigurationKey;
+        public static string ActiveLevelOceanBiomeConfiguration => ActiveLevel.OceanBiomeConfigurationKey;
         public static string ActiveLevelLoadoutSummary => BuildLevelLoadoutSummary(ActiveLevel);
 
         public static GameLevelDefinition ActiveLevel

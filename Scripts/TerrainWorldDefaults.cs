@@ -18,11 +18,11 @@ namespace op.io
         public const float GlobalEmergence = 1f;
         public const float RasterSmoothing = 1.35f;
 
-        public const float WaterZoneDistanceScale = 0.6f;
-        public const float WaterShallowDistance = 220f * WaterZoneDistanceScale;
-        public const float WaterSunlitDistance = 560f * WaterZoneDistanceScale;
-        public const float WaterTwilightDistance = 1040f * WaterZoneDistanceScale;
-        public const float WaterMidnightDistance = 1520f * WaterZoneDistanceScale;
+        public const float OceanBiomeDistanceScale = 0.6f;
+        public const float OceanBiomeShallowDistance = 220f * OceanBiomeDistanceScale;
+        public const float OceanBiomeSunlitDistance = 560f * OceanBiomeDistanceScale;
+        public const float OceanBiomeTwilightDistance = 1040f * OceanBiomeDistanceScale;
+        public const float OceanBiomeMidnightDistance = 1520f * OceanBiomeDistanceScale;
         public const float WaterStochasticReach = 160f;
         public const float WaterStochasticScale = 840f;
         public const float WaterCoastShapeRounding = 0.70f;

@@ -193,6 +193,7 @@ namespace op.io
         private const float FrontierFieldBlurRadiusFloorTexels = 0.01f;
         private const float FrontierCenterRefreshBorderRatio = 0.04f;
         private const float FrontierRadiusRefreshBorderRatio = 0.05f;
+        private const byte DefaultClearVisionAlphaThreshold = 255;
 
         private static readonly List<VisionSource> VisionSources = new();
         private static readonly object FrontierComputeSync = new();
@@ -615,6 +616,18 @@ namespace op.io
             spriteBatch.End();
         }
 
+        internal static bool TryGetFogRenderTarget(out Texture2D fogTexture)
+        {
+            fogTexture = null;
+            if (!IsFogActive || _fogRenderTarget == null || _fogRenderTarget.IsDisposed)
+            {
+                return false;
+            }
+
+            fogTexture = _fogRenderTarget;
+            return true;
+        }
+
         internal static void SetFogColorIntensity(float intensity)
         {
             _fogColorIntensity = MathHelper.Clamp(float.IsFinite(intensity) ? intensity : 1f, 0.05f, 2f);
@@ -647,6 +660,125 @@ namespace op.io
             }
 
             return false;
+        }
+
+        internal static bool IsWorldPositionClearOfFog(Vector2 worldPosition)
+        {
+            Agent player = Core.Instance?.PlayerOrNull;
+            if (player == null)
+            {
+                return true;
+            }
+
+            if (!float.IsFinite(worldPosition.X) ||
+                !float.IsFinite(worldPosition.Y))
+            {
+                return false;
+            }
+
+            if (VisionSources.Count <= 0 &&
+                (!CollectVisionSources() || VisionSources.Count <= 0))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < VisionSources.Count; i++)
+            {
+                VisionSource source = VisionSources[i];
+                if (TrySampleVisionCutoutAlpha(source, worldPosition, out byte alpha))
+                {
+                    if (alpha >= DefaultClearVisionAlphaThreshold)
+                    {
+                        return true;
+                    }
+
+                    continue;
+                }
+
+                if (IsInsideFallbackClearVision(source, worldPosition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        internal static bool IsWorldDiscClearOfFog(Vector2 worldPosition, float radiusWorldUnits)
+        {
+            if (!IsWorldPositionClearOfFog(worldPosition))
+            {
+                return false;
+            }
+
+            float radius = MathF.Max(0f, radiusWorldUnits);
+            if (radius <= 0.001f)
+            {
+                return true;
+            }
+
+            return IsWorldPositionClearOfFog(worldPosition + new Vector2(radius, 0f)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(-radius, 0f)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(0f, radius)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(0f, -radius)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(radius, radius)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(-radius, radius)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(radius, -radius)) &&
+                IsWorldPositionClearOfFog(worldPosition + new Vector2(-radius, -radius));
+        }
+
+        private static bool TrySampleVisionCutoutAlpha(VisionSource source, Vector2 worldPosition, out byte alpha)
+        {
+            alpha = 0;
+            FrontierSourceSample sample = FindFrontierSourceSample(source.SourceId);
+            byte[] mask = sample?.VisionMaskAlpha;
+            if (mask == null || mask.Length <= 0)
+            {
+                return false;
+            }
+
+            int size = (int)MathF.Round(MathF.Sqrt(mask.Length));
+            if (size <= 1 || size * size != mask.Length)
+            {
+                return false;
+            }
+
+            float referenceRadius = MathF.Max(1f, sample.BorderReferenceRadius);
+            Vector2 local = (worldPosition - source.Position) / referenceRadius;
+            float center = (size - 1) * 0.5f;
+            float texelScale = (size * 0.5f) / FrontierDomainExtent;
+            float texelX = center + (local.X * texelScale);
+            float texelY = center + (local.Y * texelScale);
+            if (!float.IsFinite(texelX) ||
+                !float.IsFinite(texelY) ||
+                texelX < 0f ||
+                texelY < 0f ||
+                texelX > size - 1 ||
+                texelY > size - 1)
+            {
+                return true;
+            }
+
+            int x0 = Math.Clamp((int)MathF.Floor(texelX), 0, size - 1);
+            int y0 = Math.Clamp((int)MathF.Floor(texelY), 0, size - 1);
+            int x1 = Math.Min(size - 1, x0 + 1);
+            int y1 = Math.Min(size - 1, y0 + 1);
+            float tx = texelX - x0;
+            float ty = texelY - y0;
+
+            float top = MathHelper.Lerp(mask[(y0 * size) + x0], mask[(y0 * size) + x1], tx);
+            float bottom = MathHelper.Lerp(mask[(y1 * size) + x0], mask[(y1 * size) + x1], tx);
+            alpha = (byte)Math.Clamp((int)MathF.Round(MathHelper.Lerp(top, bottom, ty)), 0, 255);
+            return true;
+        }
+
+        private static bool IsInsideFallbackClearVision(VisionSource source, Vector2 worldPosition)
+        {
+            float inset = MathF.Max(
+                _visualParameters.WideWidth + _visualParameters.BoundarySoftness,
+                _visualParameters.BorderThickness * 3f);
+            float effectiveRadius = MathF.Max(0f, source.Radius - inset);
+            return Vector2.DistanceSquared(worldPosition, source.Position) <= effectiveRadius * effectiveRadius;
         }
 
         public static bool TryGetVisionWorldBounds(

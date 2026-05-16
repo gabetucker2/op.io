@@ -155,7 +155,7 @@ namespace op.io
                 [ControlKeyMigrations.DisableToolTipsKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.ShowHiddenAttrsKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.GridKey] = InterfaceCategoryKey,
-                [ControlKeyMigrations.OceanZoneDebugKey] = InterfaceCategoryKey,
+                [ControlKeyMigrations.OceanBiomeDebugKey] = InterfaceCategoryKey,
                 [ControlKeyMigrations.YourBarKey] = InterfaceCategoryKey,
 
                 // System

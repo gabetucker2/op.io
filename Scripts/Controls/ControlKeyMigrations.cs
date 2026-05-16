@@ -31,7 +31,7 @@ namespace op.io
         internal const string ShowHiddenAttrsKey    = "ShowHiddenAttrs";
         internal const string DisableToolTipsKey    = "DisableToolTips";
         internal const string GridKey               = "Grid";
-        internal const string OceanZoneDebugKey     = "OceanZoneDebug";
+        internal const string OceanBiomeDebugKey     = "OceanBiomeDebug";
         internal const string BodyLeftKey           = "BodyLeft";
         internal const string BodyRightKey          = "BodyRight";
         internal const string YourBarKey            = "YourBar";
@@ -82,7 +82,7 @@ namespace op.io
                 EnsureTabSwitchRequiresBlockModeControl();
                 EnsureDisableToolTipsControl();
                 EnsureGridControl();
-                EnsureOceanZoneDebugControl();
+                EnsureOceanBiomeDebugControl();
                 EnsureYourBarControl();
                 EnsureRespawnControl();
                 EnsureCameraLockModeControl();
@@ -535,11 +535,11 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
             ControlKeyData.EnsureSwitchStartState(GridKey, 0);
         }
 
-        private static void EnsureOceanZoneDebugControl()
+        private static void EnsureOceanBiomeDebugControl()
         {
             ControlKeyData.EnsureControlExists(new ControlKeyData.ControlKeyRecord
             {
-                SettingKey = OceanZoneDebugKey,
+                SettingKey = OceanBiomeDebugKey,
                 InputKey = "Z",
                 InputType = "SaveSwitch",
                 SwitchStartState = 1,
@@ -547,13 +547,13 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 RenderOrder = 22
             });
 
-            ControlKeyData.SetInputType(OceanZoneDebugKey, "SaveSwitch");
-            ControlKeyData.EnsureInputKey(OceanZoneDebugKey, "Z");
-            ControlKeyData.EnsureSwitchStartState(OceanZoneDebugKey, 1);
-            EnsureOceanZoneDebugDefaultOnApplied();
+            ControlKeyData.SetInputType(OceanBiomeDebugKey, "SaveSwitch");
+            ControlKeyData.EnsureInputKey(OceanBiomeDebugKey, "Z");
+            ControlKeyData.EnsureSwitchStartState(OceanBiomeDebugKey, 1);
+            EnsureOceanBiomeDebugDefaultOnApplied();
         }
 
-        private static void EnsureOceanZoneDebugDefaultOnApplied()
+        private static void EnsureOceanBiomeDebugDefaultOnApplied()
         {
             try
             {
@@ -563,12 +563,12 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                     return;
                 }
 
-                ControlKeyData.SetSwitchStartState(OceanZoneDebugKey, 1);
+                ControlKeyData.SetSwitchStartState(OceanBiomeDebugKey, 1);
                 File.WriteAllText(markerPath, DateTime.UtcNow.ToString("O"));
             }
             catch (Exception ex)
             {
-                DebugLogger.PrintError($"Failed to apply {OceanZoneDebugKey} default ON migration: {ex.Message}");
+                DebugLogger.PrintError($"Failed to apply {OceanBiomeDebugKey} default ON migration: {ex.Message}");
             }
         }
 
@@ -1237,7 +1237,7 @@ WHERE SettingKey = 'TransparentTabBlocking' AND (SwitchStartState IS NULL OR Swi
                 (CtrlBufferKey,                     "Seconds after releasing Ctrl that a Ctrl+key combo still registers (e.g. release Ctrl then press Space within this window)."),
                 (ShowHiddenAttrsKey,                "Default visibility of hidden attributes in the Properties block. Per-object overrides are remembered separately."),
                 (GridKey,                           "Toggle the world grid overlay. Draws 1-centifoot grey grid lines with major 5-centifoot coordinate plotting."),
-                (OceanZoneDebugKey,                 "Toggle ocean zone borders and labels."),
+                (OceanBiomeDebugKey,                 "Toggle ocean biome borders and labels."),
                 (DisableToolTipsKey,                "When enabled, tooltips are hidden throughout the UI."),
                 ("EnumDisabledOptions",             "Lists disabled enum options by control key in the format ControlKey[option,option]."),
             };

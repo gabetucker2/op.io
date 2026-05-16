@@ -358,7 +358,7 @@ namespace op.io.UI.BlockScripts.Blocks
             Vector2 loadoutPosition = new(row.Bounds.X + RowPadding, row.Bounds.Y + RowPadding + (_lineHeight * 2f));
             regularFont.DrawString(spriteBatch, loadout, loadoutPosition, UIStyle.MutedTextColor);
 
-            string config = $"Terrain: {row.Level.TerrainConfigurationKey} | Ocean: {row.Level.OceanZoneConfigurationKey}";
+            string config = $"Terrain: {row.Level.TerrainConfigurationKey} | Ocean: {row.Level.OceanBiomeConfigurationKey}";
             Vector2 configPosition = new(row.Bounds.X + RowPadding, row.Bounds.Y + RowPadding + (_lineHeight * 3f));
             regularFont.DrawString(spriteBatch, TruncateToWidth(config, regularFont, textWidth), configPosition, UIStyle.MutedTextColor);
 

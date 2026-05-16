@@ -14,7 +14,7 @@ namespace op.io.UI.BlockScripts.Blocks
         public const string BlockTitle = "Ambience";
 
         private static readonly float[] ColWeights = { 0.14f, 0.24f, 0.20f, 0.42f };
-        private const int OceanZoneHeaderHeight = 16;
+        private const int OceanBiomeHeaderHeight = 16;
         private const int HeaderRowHeight = 16;
         private const int SwatchPadding = 6;
         private const int SwatchMinSize = 12;
@@ -70,13 +70,13 @@ namespace op.io.UI.BlockScripts.Blocks
 
             RefreshRows();
 
-            int oceanZoneHeaderHeight = ResolveOceanZoneHeaderHeight(contentBounds);
+            int oceanBiomeHeaderHeight = ResolveOceanBiomeHeaderHeight(contentBounds);
             int headerHeight = Math.Min(
                 headerFunCol.HeaderVisible ? HeaderRowHeight : 0,
-                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight));
-            Rectangle headerStrip = new(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, headerHeight);
+                Math.Max(0, contentBounds.Height - oceanBiomeHeaderHeight));
+            Rectangle headerStrip = new(contentBounds.X, contentBounds.Y + oceanBiomeHeaderHeight, contentBounds.Width, headerHeight);
             headerFunCol.ShowHeaderToggle = BlockManager.DockingModeEnabled && !blockLocked && contentBounds.Contains(mouseState.Position);
-            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, HeaderRowHeight);
+            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y + oceanBiomeHeaderHeight, contentBounds.Width, HeaderRowHeight);
             headerFunCol.UpdateHeaderHover(headerStrip, mouseState, blockLocked ? (MouseState?)previousMouseState : null);
 
             if (headerFunCol.HeaderToggleClicked)
@@ -93,9 +93,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
             Rectangle listArea = new(
                 contentBounds.X,
-                contentBounds.Y + oceanZoneHeaderHeight + headerHeight,
+                contentBounds.Y + oceanBiomeHeaderHeight + headerHeight,
                 contentBounds.Width,
-                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight - headerHeight));
+                Math.Max(0, contentBounds.Height - oceanBiomeHeaderHeight - headerHeight));
 
             float contentHeight = CalculateContentHeight(boldFont, listArea.Width);
             _scrollPanel.Update(listArea, contentHeight,
@@ -150,15 +150,15 @@ namespace op.io.UI.BlockScripts.Blocks
             EnsurePixelTexture();
 
             FunColInterface headerFunCol = GetOrEnsureHeaderFunCol();
-            int oceanZoneHeaderHeight = ResolveOceanZoneHeaderHeight(contentBounds);
+            int oceanBiomeHeaderHeight = ResolveOceanBiomeHeaderHeight(contentBounds);
             int headerHeight = Math.Min(
                 headerFunCol.HeaderVisible ? HeaderRowHeight : 0,
-                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight));
+                Math.Max(0, contentBounds.Height - oceanBiomeHeaderHeight));
             Rectangle listArea = new(
                 contentBounds.X,
-                contentBounds.Y + oceanZoneHeaderHeight + headerHeight,
+                contentBounds.Y + oceanBiomeHeaderHeight + headerHeight,
                 contentBounds.Width,
-                Math.Max(0, contentBounds.Height - oceanZoneHeaderHeight - headerHeight));
+                Math.Max(0, contentBounds.Height - oceanBiomeHeaderHeight - headerHeight));
 
             Rectangle listBounds = _scrollPanel.ContentViewportBounds;
             if (listBounds == Rectangle.Empty)
@@ -214,9 +214,9 @@ namespace op.io.UI.BlockScripts.Blocks
 
             _scrollPanel.Draw(spriteBatch, blockLocked);
 
-            DrawOceanZoneHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, oceanZoneHeaderHeight), boldFont);
-            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, HeaderRowHeight);
-            headerFunCol.DrawHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y + oceanZoneHeaderHeight, contentBounds.Width, headerHeight), boldFont, _pixelTexture);
+            DrawOceanBiomeHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y, contentBounds.Width, oceanBiomeHeaderHeight), boldFont);
+            headerFunCol.CollapsedToggleBounds = new Rectangle(contentBounds.X, contentBounds.Y + oceanBiomeHeaderHeight, contentBounds.Width, HeaderRowHeight);
+            headerFunCol.DrawHeader(spriteBatch, new Rectangle(contentBounds.X, contentBounds.Y + oceanBiomeHeaderHeight, contentBounds.Width, headerHeight), boldFont, _pixelTexture);
         }
 
         private static void RefreshRows()
@@ -253,9 +253,9 @@ namespace op.io.UI.BlockScripts.Blocks
                 "Optional tint for gameplay objects. Neutral gray applies no tint."));
         }
 
-        private static int ResolveOceanZoneHeaderHeight(Rectangle contentBounds)
+        private static int ResolveOceanBiomeHeaderHeight(Rectangle contentBounds)
         {
-            return Math.Min(OceanZoneHeaderHeight, Math.Max(0, contentBounds.Height));
+            return Math.Min(OceanBiomeHeaderHeight, Math.Max(0, contentBounds.Height));
         }
 
         private static float CalculateContentHeight(UIStyle.UIFont font, int listWidth)
@@ -335,7 +335,7 @@ namespace op.io.UI.BlockScripts.Blocks
             funCol.Draw(spriteBatch, row.Bounds, font, _pixelTexture);
         }
 
-        private static void DrawOceanZoneHeader(SpriteBatch spriteBatch, Rectangle bounds, UIStyle.UIFont font)
+        private static void DrawOceanBiomeHeader(SpriteBatch spriteBatch, Rectangle bounds, UIStyle.UIFont font)
         {
             if (bounds.Width <= 0 || bounds.Height <= 0 || _pixelTexture == null)
             {
@@ -358,7 +358,7 @@ namespace op.io.UI.BlockScripts.Blocks
 
             if (font.IsAvailable)
             {
-                string text = BuildOceanZoneHeaderText();
+                string text = BuildOceanBiomeHeaderText();
                 int availableWidth = Math.Max(0, bounds.Right - textX - 4);
                 string display = TruncateText(font, text, availableWidth);
                 if (!string.IsNullOrEmpty(display))
@@ -375,16 +375,16 @@ namespace op.io.UI.BlockScripts.Blocks
             FillRect(spriteBatch, new Rectangle(bounds.X, bounds.Bottom - 1, bounds.Width, 1), UIStyle.BlockBorder);
         }
 
-        private static string BuildOceanZoneHeaderText()
+        private static string BuildOceanBiomeHeaderText()
         {
-            string detected = GameBlockOceanBackground.DetectedOceanZone;
-            string target = GameBlockOceanBackground.TargetOceanZone;
+            string detected = GameBlockOceanBackground.DetectedOceanBiome;
+            string target = GameBlockOceanBackground.TargetOceanBiome;
             if (string.IsNullOrWhiteSpace(detected))
             {
                 detected = string.IsNullOrWhiteSpace(target) ? "Unknown" : target;
             }
 
-            if (GameBlockOceanBackground.OceanZoneTransitioning &&
+            if (GameBlockOceanBackground.OceanBiomeTransitioning &&
                 !string.IsNullOrWhiteSpace(target) &&
                 !string.Equals(detected, target, StringComparison.OrdinalIgnoreCase))
             {

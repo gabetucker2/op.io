@@ -23,9 +23,9 @@ namespace op.io
         private const float DefaultWaveSet1Strength = 0.86f;
         private const float DefaultWaveSet2Strength = 0.56f;
         private const float DefaultWaveSet3Strength = 0.38f;
-        private const float OceanZoneTransitionSeconds = 3f;
-        private const float OceanZoneBannerDurationSeconds = 2.6f;
-        private const float OceanZoneBannerFadeSeconds = 0.35f;
+        private const float OceanBiomeTransitionSeconds = 3f;
+        private const float OceanBiomeBannerDurationSeconds = 2.6f;
+        private const float OceanBiomeBannerFadeSeconds = 0.35f;
         private const int FieldTextureResolution = 320;
         private const int AnimationLoopFrameCount = 12;
         private const float DetailAnimationCycleSeconds = 3.10f;
@@ -109,32 +109,34 @@ namespace op.io
         private static float[] _staticYsBase;
         private static bool _loggedShaderWorldSpan;
         private static readonly VertexPositionColorTexture[] ShaderQuadVertices = new VertexPositionColorTexture[6];
-        private static bool _oceanZoneTransitionInitialized;
-        private static TerrainWaterType _detectedOceanZone = TerrainWaterType.Sunlit;
-        private static TerrainWaterType _playerOceanZone = TerrainWaterType.Sunlit;
-        private static bool _playerOceanZoneValid;
-        private static TerrainWaterType _targetOceanZone = TerrainWaterType.Sunlit;
-        private static TerrainWaterType _cursorOceanZone = TerrainWaterType.Sunlit;
-        private static bool _cursorOceanZoneValid;
+        private static bool _oceanBiomeTransitionInitialized;
+        private static OceanBiomeType _detectedOceanBiome = OceanBiomeType.Sunlit;
+        private static OceanBiomeType _playerOceanBiome = OceanBiomeType.Sunlit;
+        private static bool _playerOceanBiomeValid;
+        private static OceanBiomeType _targetOceanBiome = OceanBiomeType.Sunlit;
+        private static OceanBiomeType _cursorOceanBiome = OceanBiomeType.Sunlit;
+        private static bool _cursorOceanBiomeValid;
         private static float _lastDetectedOceanDepth;
         private static float _lastDetectedOceanOffshoreDistance;
-        private static float _cursorOceanZoneDepth;
-        private static float _cursorOceanZoneOffshoreDistance;
-        private static float _targetOceanZoneDarkness = 1f;
-        private static float _currentOceanZoneDarkness = 1f;
-        private static string _oceanZoneProbeStatus = "uninitialized";
-        private static string _playerOceanZoneStatus = "uninitialized";
-        private static string _cursorOceanZoneStatus = "cursor uninitialized";
-        private static bool _oceanZoneBannerActive;
-        private static float _oceanZoneBannerElapsedSeconds;
-        private static TerrainWaterType _oceanZoneBannerOldZone = TerrainWaterType.Sunlit;
-        private static TerrainWaterType _oceanZoneBannerNewZone = TerrainWaterType.Sunlit;
-        private static string _oceanZoneTransitionBanner = "none";
+        private static float _cursorOceanBiomeDepth;
+        private static float _cursorOceanBiomeOffshoreDistance;
+        private static float _targetOceanBiomeDarkness = 1f;
+        private static float _currentOceanBiomeDarkness = 1f;
+        private static string _oceanBiomeProbeStatus = "uninitialized";
+        private static string _playerOceanBiomeStatus = "uninitialized";
+        private static string _cursorOceanBiomeStatus = "cursor uninitialized";
+        private static string _playerOceanBiomeSource = "uninitialized";
+        private static string _cursorOceanBiomeSource = "uninitialized";
+        private static bool _oceanBiomeBannerActive;
+        private static float _oceanBiomeBannerElapsedSeconds;
+        private static OceanBiomeType _oceanBiomeBannerOldBiome = OceanBiomeType.Sunlit;
+        private static OceanBiomeType _oceanBiomeBannerNewBiome = OceanBiomeType.Sunlit;
+        private static string _oceanBiomeTransitionBanner = "none";
         private static InterruptibleVector4Transition _baseColorTransition;
         private static InterruptibleVector4Transition _waveColorTransition;
         private static Vector4 _currentBaseColor = new(DefaultBaseColor, DefaultBaseAlpha);
         private static Vector4 _currentWaveColor = new(DefaultWaveColor, DefaultWaveAlpha);
-        private static float _lastOceanZoneTransitionUpdateTime = float.NaN;
+        private static float _lastOceanBiomeTransitionUpdateTime = float.NaN;
 
         private sealed class GeneratedTileFrame
         {
@@ -184,25 +186,27 @@ namespace op.io
             $"{ClampToByte(CurrentWaveColorVector.X)}, {ClampToByte(CurrentWaveColorVector.Y)}, {ClampToByte(CurrentWaveColorVector.Z)}";
         public static Color CurrentBaseColor => ToColor(CurrentBaseColorVector);
         public static Color CurrentWaveColor => ToColor(CurrentWaveColorVector);
-        public static string DetectedOceanZone => _detectedOceanZone.ToString();
-        public static string PlayerOceanZone => _playerOceanZoneValid ? _playerOceanZone.ToString() : "None";
-        public static string PlayerOceanZoneStatus => _playerOceanZoneStatus;
-        public static string TargetOceanZone => _targetOceanZone.ToString();
-        public static string CursorOceanZone => _cursorOceanZoneValid ? _cursorOceanZone.ToString() : "None";
-        public static string CursorOceanZoneStatus => _cursorOceanZoneStatus;
-        public static float CursorOceanZoneDepth => _cursorOceanZoneDepth;
-        public static float CursorOceanZoneOffshoreDistance => _cursorOceanZoneOffshoreDistance;
-        public static bool CursorOceanZoneValid => _cursorOceanZoneValid;
-        public static string OceanZoneProbeStatus => _oceanZoneProbeStatus;
-        public static float OceanZoneDepth => _lastDetectedOceanDepth;
-        public static float OceanZoneOffshoreDistance => _lastDetectedOceanOffshoreDistance;
-        public static float OceanZoneDarkness => _targetOceanZoneDarkness;
-        public static float OceanZoneCurrentDarkness => _currentOceanZoneDarkness;
-        public static string OceanZoneTransitionBanner => _oceanZoneTransitionBanner;
-        public static bool OceanZoneTransitioning =>
-            _oceanZoneTransitionInitialized && (_baseColorTransition.IsActive || _waveColorTransition.IsActive);
-        public static float OceanZoneTransitionProgress =>
-            _oceanZoneTransitionInitialized
+        public static string DetectedOceanBiome => _detectedOceanBiome.ToString();
+        public static string PlayerOceanBiome => _playerOceanBiomeValid ? _playerOceanBiome.ToString() : "None";
+        public static string PlayerOceanBiomeStatus => _playerOceanBiomeStatus;
+        public static string PlayerOceanBiomeSource => _playerOceanBiomeSource;
+        public static string TargetOceanBiome => _targetOceanBiome.ToString();
+        public static string CursorOceanBiome => _cursorOceanBiomeValid ? _cursorOceanBiome.ToString() : "None";
+        public static string CursorOceanBiomeStatus => _cursorOceanBiomeStatus;
+        public static string CursorOceanBiomeSource => _cursorOceanBiomeSource;
+        public static float CursorOceanBiomeDepth => _cursorOceanBiomeDepth;
+        public static float CursorOceanBiomeOffshoreDistance => _cursorOceanBiomeOffshoreDistance;
+        public static bool CursorOceanBiomeValid => _cursorOceanBiomeValid;
+        public static string OceanBiomeProbeStatus => _oceanBiomeProbeStatus;
+        public static float OceanBiomeDepth => _lastDetectedOceanDepth;
+        public static float OceanBiomeOffshoreDistance => _lastDetectedOceanOffshoreDistance;
+        public static float OceanBiomeDarkness => _targetOceanBiomeDarkness;
+        public static float OceanBiomeCurrentDarkness => _currentOceanBiomeDarkness;
+        public static string OceanBiomeTransitionBanner => _oceanBiomeTransitionBanner;
+        public static bool OceanBiomeTransitioning =>
+            _oceanBiomeTransitionInitialized && (_baseColorTransition.IsActive || _waveColorTransition.IsActive);
+        public static float OceanBiomeTransitionProgress =>
+            _oceanBiomeTransitionInitialized
                 ? MathHelper.Clamp(MathF.Min(_baseColorTransition.Progress, _waveColorTransition.Progress), 0f, 1f)
                 : 1f;
         public static float LastResolvedRenderScale => _lastResolvedFieldScale;
@@ -262,7 +266,7 @@ namespace op.io
 
             _lastCameraZoom = Math.Max(0.05f, cameraZoom);
             _lastDrawTimeSeconds = Math.Max(0f, timeSeconds);
-            UpdateOceanZoneTransitionForFrame(timeSeconds);
+            UpdateOceanBiomeTransitionForFrame(timeSeconds);
             float fieldScale = ResolveFieldScale();
             _lastResolvedFieldScale = fieldScale;
             _lastPanelWidth = Math.Max(1, panelBounds.Width);
@@ -314,163 +318,170 @@ namespace op.io
                         : $"CPU ocean fallback active ({_tileWidth}x{_tileHeight}, fieldScale {fieldScale:0.00}, zoom {_lastCameraZoom:0.00})";
         }
 
-        public static void UpdateOceanZoneTransitionForFrame(float timeSeconds)
+        public static void UpdateOceanBiomeTransitionForFrame(float timeSeconds)
         {
             float clampedTime = Math.Max(0f, timeSeconds);
-            if (!float.IsNaN(_lastOceanZoneTransitionUpdateTime) &&
-                MathF.Abs(_lastOceanZoneTransitionUpdateTime - clampedTime) <= 0.0001f)
+            if (!float.IsNaN(_lastOceanBiomeTransitionUpdateTime) &&
+                MathF.Abs(_lastOceanBiomeTransitionUpdateTime - clampedTime) <= 0.0001f)
             {
                 return;
             }
 
-            _lastOceanZoneTransitionUpdateTime = clampedTime;
-            UpdateOceanZoneTransition();
+            _lastOceanBiomeTransitionUpdateTime = clampedTime;
+            UpdateOceanBiomeTransition();
         }
 
-        private static void UpdateOceanZoneTransition()
+        private static void UpdateOceanBiomeTransition()
         {
             AmbienceSettings.Initialize();
-            UpdateCursorOceanZone();
+            UpdateCursorOceanBiome();
 
-            TerrainWaterType desiredZone = _targetOceanZone;
+            OceanBiomeType desiredBiome = _targetOceanBiome;
             Agent player = Core.Instance?.PlayerOrNull;
             if (player != null &&
-                GameBlockTerrainBackground.TryResolveOceanZoneAtWorldPosition(
+                GameBlockTerrainBackground.TryResolveOceanBiomeAtWorldPosition(
                     player.Position,
-                    out TerrainWaterType playerWaterType,
+                    out OceanBiomeType playerOceanBiome,
                     out float playerWaterDepth,
-                    out float playerOffshoreDistance))
+                    out float playerOffshoreDistance,
+                    out string playerOceanBiomeSource))
             {
-                desiredZone = playerWaterType;
-                _detectedOceanZone = playerWaterType;
-                _playerOceanZone = playerWaterType;
-                _playerOceanZoneValid = true;
+                desiredBiome = playerOceanBiome;
+                _detectedOceanBiome = playerOceanBiome;
+                _playerOceanBiome = playerOceanBiome;
+                _playerOceanBiomeValid = true;
                 _lastDetectedOceanDepth = playerWaterDepth;
                 _lastDetectedOceanOffshoreDistance = playerOffshoreDistance;
-                _playerOceanZoneStatus = $"player water: {playerWaterType} offshore={playerOffshoreDistance:0.#} depth={playerWaterDepth:0.00}";
-                _oceanZoneProbeStatus = _playerOceanZoneStatus;
+                _playerOceanBiomeSource = playerOceanBiomeSource;
+                _playerOceanBiomeStatus = $"player ocean biome: {playerOceanBiome} offshore={playerOffshoreDistance:0.#} depth={playerWaterDepth:0.00} source={playerOceanBiomeSource}";
+                _oceanBiomeProbeStatus = _playerOceanBiomeStatus;
             }
             else
             {
-                _playerOceanZoneValid = false;
+                _playerOceanBiomeValid = false;
                 _lastDetectedOceanDepth = 0f;
                 _lastDetectedOceanOffshoreDistance = 0f;
-                _playerOceanZoneStatus = player == null ? "player unavailable" : "player not over ocean";
-                _oceanZoneProbeStatus = _playerOceanZoneStatus;
+                _playerOceanBiomeSource = player == null ? "player unavailable" : "not ocean";
+                _playerOceanBiomeStatus = player == null ? "player unavailable" : "player not over ocean";
+                _oceanBiomeProbeStatus = _playerOceanBiomeStatus;
             }
 
-            Vector4 targetBase = ResolveOceanZoneColor(AmbienceSettings.OceanWaterColor, desiredZone);
-            Vector4 targetWave = ResolveOceanZoneColor(AmbienceSettings.BackgroundWavesColor, desiredZone);
+            Vector4 targetBase = ResolveOceanBiomeColor(AmbienceSettings.OceanWaterColor, desiredBiome);
+            Vector4 targetWave = ResolveOceanBiomeColor(AmbienceSettings.BackgroundWavesColor, desiredBiome);
             float deltaSeconds = MathF.Max(0f, Core.DELTATIME);
 
-            if (!_oceanZoneTransitionInitialized)
+            if (!_oceanBiomeTransitionInitialized)
             {
-                _targetOceanZone = desiredZone;
-                _detectedOceanZone = desiredZone;
-                _playerOceanZone = desiredZone;
-                _targetOceanZoneDarkness = ResolveOceanZoneDarkness(desiredZone);
+                _targetOceanBiome = desiredBiome;
+                _detectedOceanBiome = desiredBiome;
+                _playerOceanBiome = desiredBiome;
+                _targetOceanBiomeDarkness = ResolveOceanBiomeDarkness(desiredBiome);
                 _baseColorTransition.Reset(targetBase);
                 _waveColorTransition.Reset(targetWave);
-                _oceanZoneTransitionInitialized = true;
-                ResetOceanZoneTransitionBanner();
+                _oceanBiomeTransitionInitialized = true;
+                ResetOceanBiomeTransitionBanner();
             }
-            else if (desiredZone != _targetOceanZone ||
+            else if (desiredBiome != _targetOceanBiome ||
                 !Vector4NearlyEqual(_baseColorTransition.Target, targetBase) ||
                 !Vector4NearlyEqual(_waveColorTransition.Target, targetWave))
             {
-                if (desiredZone != _targetOceanZone)
+                if (desiredBiome != _targetOceanBiome)
                 {
-                    StartOceanZoneTransitionBanner(_targetOceanZone, desiredZone);
+                    StartOceanBiomeTransitionBanner(_targetOceanBiome, desiredBiome);
                 }
 
-                _targetOceanZone = desiredZone;
-                _targetOceanZoneDarkness = ResolveOceanZoneDarkness(desiredZone);
-                _baseColorTransition.Retarget(targetBase, OceanZoneTransitionSeconds);
-                _waveColorTransition.Retarget(targetWave, OceanZoneTransitionSeconds);
+                _targetOceanBiome = desiredBiome;
+                _targetOceanBiomeDarkness = ResolveOceanBiomeDarkness(desiredBiome);
+                _baseColorTransition.Retarget(targetBase, OceanBiomeTransitionSeconds);
+                _waveColorTransition.Retarget(targetWave, OceanBiomeTransitionSeconds);
             }
 
-            UpdateOceanZoneTransitionBanner(deltaSeconds);
+            UpdateOceanBiomeTransitionBanner(deltaSeconds);
             _baseColorTransition.Update(deltaSeconds);
             _waveColorTransition.Update(deltaSeconds);
             _currentBaseColor = _baseColorTransition.Current;
             _currentWaveColor = _waveColorTransition.Current;
-            _currentOceanZoneDarkness = ResolveCurrentOceanZoneDarkness();
+            _currentOceanBiomeDarkness = ResolveCurrentOceanBiomeDarkness();
             AmbienceSettings.SyncFogOfWarWithOceanWater(ToColor(_currentBaseColor));
         }
 
-        private static void UpdateCursorOceanZone()
+        private static void UpdateCursorOceanBiome()
         {
             if (!BlockManager.IsCursorWithinGameBlock())
             {
-                _cursorOceanZoneValid = false;
-                _cursorOceanZoneDepth = 0f;
-                _cursorOceanZoneOffshoreDistance = 0f;
-                _cursorOceanZoneStatus = "cursor outside Game";
+                _cursorOceanBiomeValid = false;
+                _cursorOceanBiomeDepth = 0f;
+                _cursorOceanBiomeOffshoreDistance = 0f;
+                _cursorOceanBiomeSource = "cursor outside Game";
+                _cursorOceanBiomeStatus = "cursor outside Game";
                 return;
             }
 
             Vector2 cursorWorldPosition = BlockManager.ToGameSpace(Mouse.GetState().Position);
-            if (GameBlockTerrainBackground.TryResolveOceanZoneAtWorldPosition(
+            if (GameBlockTerrainBackground.TryResolveOceanBiomeAtWorldPosition(
                     cursorWorldPosition,
-                    out TerrainWaterType cursorWaterType,
+                    out OceanBiomeType cursorOceanBiome,
                     out float cursorWaterDepth,
-                    out float cursorOffshoreDistance))
+                    out float cursorOffshoreDistance,
+                    out string cursorOceanBiomeSource))
             {
-                _cursorOceanZone = cursorWaterType;
-                _cursorOceanZoneValid = true;
-                _cursorOceanZoneDepth = cursorWaterDepth;
-                _cursorOceanZoneOffshoreDistance = cursorOffshoreDistance;
-                _cursorOceanZoneStatus = $"cursor water: {cursorWaterType} offshore={cursorOffshoreDistance:0.#} depth={cursorWaterDepth:0.00}";
+                _cursorOceanBiome = cursorOceanBiome;
+                _cursorOceanBiomeValid = true;
+                _cursorOceanBiomeDepth = cursorWaterDepth;
+                _cursorOceanBiomeOffshoreDistance = cursorOffshoreDistance;
+                _cursorOceanBiomeSource = cursorOceanBiomeSource;
+                _cursorOceanBiomeStatus = $"cursor ocean biome: {cursorOceanBiome} offshore={cursorOffshoreDistance:0.#} depth={cursorWaterDepth:0.00} source={cursorOceanBiomeSource}";
                 return;
             }
 
-            _cursorOceanZoneValid = false;
-            _cursorOceanZoneDepth = 0f;
-            _cursorOceanZoneOffshoreDistance = 0f;
-            _cursorOceanZoneStatus = "cursor not over ocean";
+            _cursorOceanBiomeValid = false;
+            _cursorOceanBiomeDepth = 0f;
+            _cursorOceanBiomeOffshoreDistance = 0f;
+            _cursorOceanBiomeSource = "not ocean";
+            _cursorOceanBiomeStatus = "cursor not over ocean";
         }
 
-        private static void StartOceanZoneTransitionBanner(TerrainWaterType oldZone, TerrainWaterType newZone)
+        private static void StartOceanBiomeTransitionBanner(OceanBiomeType oldBiome, OceanBiomeType newBiome)
         {
-            if (oldZone == newZone)
-            {
-                return;
-            }
-
-            _oceanZoneBannerOldZone = oldZone;
-            _oceanZoneBannerNewZone = newZone;
-            _oceanZoneBannerElapsedSeconds = 0f;
-            _oceanZoneBannerActive = true;
-            _oceanZoneTransitionBanner = $"Ocean zone {oldZone} to {newZone}";
-            DebugLogger.Print($"Ocean zone transition: {oldZone} -> {newZone}");
-        }
-
-        private static void UpdateOceanZoneTransitionBanner(float deltaSeconds)
-        {
-            if (!_oceanZoneBannerActive)
+            if (oldBiome == newBiome)
             {
                 return;
             }
 
-            _oceanZoneBannerElapsedSeconds += MathF.Max(0f, deltaSeconds);
-            if (_oceanZoneBannerElapsedSeconds >= OceanZoneBannerDurationSeconds)
+            _oceanBiomeBannerOldBiome = oldBiome;
+            _oceanBiomeBannerNewBiome = newBiome;
+            _oceanBiomeBannerElapsedSeconds = 0f;
+            _oceanBiomeBannerActive = true;
+            _oceanBiomeTransitionBanner = $"Ocean biome {oldBiome} to {newBiome}";
+            DebugLogger.Print($"Ocean biome transition: {oldBiome} -> {newBiome}");
+        }
+
+        private static void UpdateOceanBiomeTransitionBanner(float deltaSeconds)
+        {
+            if (!_oceanBiomeBannerActive)
             {
-                ResetOceanZoneTransitionBanner();
+                return;
+            }
+
+            _oceanBiomeBannerElapsedSeconds += MathF.Max(0f, deltaSeconds);
+            if (_oceanBiomeBannerElapsedSeconds >= OceanBiomeBannerDurationSeconds)
+            {
+                ResetOceanBiomeTransitionBanner();
             }
         }
 
-        private static void ResetOceanZoneTransitionBanner()
+        private static void ResetOceanBiomeTransitionBanner()
         {
-            _oceanZoneBannerActive = false;
-            _oceanZoneBannerElapsedSeconds = 0f;
-            _oceanZoneTransitionBanner = "none";
+            _oceanBiomeBannerActive = false;
+            _oceanBiomeBannerElapsedSeconds = 0f;
+            _oceanBiomeTransitionBanner = "none";
         }
 
-        public static void DrawOceanZoneTransitionOverlay(SpriteBatch spriteBatch)
+        public static void DrawOceanBiomeTransitionOverlay(SpriteBatch spriteBatch)
         {
-            if (!_oceanZoneBannerActive ||
+            if (!_oceanBiomeBannerActive ||
                 spriteBatch == null ||
-                string.IsNullOrWhiteSpace(_oceanZoneTransitionBanner) ||
+                string.IsNullOrWhiteSpace(_oceanBiomeTransitionBanner) ||
                 !BlockManager.TryGetGameContentWindowBounds(out Rectangle gameWindowBounds) ||
                 gameWindowBounds.Width <= 0 ||
                 gameWindowBounds.Height <= 0)
@@ -484,15 +495,15 @@ namespace op.io
                 return;
             }
 
-            Vector2 textSize = font.MeasureString(_oceanZoneTransitionBanner);
+            Vector2 textSize = font.MeasureString(_oceanBiomeTransitionBanner);
             if (textSize.X <= 0f || textSize.Y <= 0f)
             {
                 return;
             }
 
-            float fadeInAlpha = MathHelper.Clamp(_oceanZoneBannerElapsedSeconds / OceanZoneBannerFadeSeconds, 0f, 1f);
+            float fadeInAlpha = MathHelper.Clamp(_oceanBiomeBannerElapsedSeconds / OceanBiomeBannerFadeSeconds, 0f, 1f);
             float fadeOutAlpha = MathHelper.Clamp(
-                (OceanZoneBannerDurationSeconds - _oceanZoneBannerElapsedSeconds) / OceanZoneBannerFadeSeconds,
+                (OceanBiomeBannerDurationSeconds - _oceanBiomeBannerElapsedSeconds) / OceanBiomeBannerFadeSeconds,
                 0f,
                 1f);
             float alpha = InterruptibleTransitionCurves.SmoothStep(MathF.Min(fadeInAlpha, fadeOutAlpha));
@@ -503,27 +514,27 @@ namespace op.io
 
             EnsureFullscreenPixel(spriteBatch.GraphicsDevice);
 
-            string prefixText = "Ocean zone";
-            string oldZoneText = _oceanZoneBannerOldZone.ToString();
-            string newZoneText = _oceanZoneBannerNewZone.ToString();
+            string prefixText = "Ocean biome";
+            string oldBiomeText = _oceanBiomeBannerOldBiome.ToString();
+            string newBiomeText = _oceanBiomeBannerNewBiome.ToString();
             Vector2 prefixSize = font.MeasureString(prefixText);
-            Vector2 oldZoneSize = font.MeasureString(oldZoneText);
-            Vector2 newZoneSize = font.MeasureString(newZoneText);
+            Vector2 oldBiomeSize = font.MeasureString(oldBiomeText);
+            Vector2 newBiomeSize = font.MeasureString(newBiomeText);
             float gap = 12f;
             float arrowWidth = 44f;
-            float unscaledWidth = prefixSize.X + oldZoneSize.X + newZoneSize.X + (gap * 4f) + arrowWidth;
+            float unscaledWidth = prefixSize.X + oldBiomeSize.X + newBiomeSize.X + (gap * 4f) + arrowWidth;
             float maxContentWidth = Math.Max(1f, gameWindowBounds.Width - 48f);
             float scale = unscaledWidth > maxContentWidth ? MathHelper.Clamp(maxContentWidth / unscaledWidth, 0.58f, 1f) : 1f;
             gap *= scale;
             arrowWidth *= scale;
-            float lineHeight = MathF.Max(prefixSize.Y, MathF.Max(oldZoneSize.Y, newZoneSize.Y)) * scale;
-            float contentWidth = (prefixSize.X + oldZoneSize.X + newZoneSize.X) * scale + (gap * 4f) + arrowWidth;
+            float lineHeight = MathF.Max(prefixSize.Y, MathF.Max(oldBiomeSize.Y, newBiomeSize.Y)) * scale;
+            float contentWidth = (prefixSize.X + oldBiomeSize.X + newBiomeSize.X) * scale + (gap * 4f) + arrowWidth;
             Vector2 position = new(
                 gameWindowBounds.X + ((gameWindowBounds.Width - contentWidth) * 0.5f),
                 gameWindowBounds.Y + 20f - ((1f - alpha) * 8f));
 
-            Color oldColor = ResolveOceanZoneBannerColor(_oceanZoneBannerOldZone) * (0.86f * alpha);
-            Color mainColor = ResolveOceanZoneBannerColor(_oceanZoneBannerNewZone) * alpha;
+            Color oldColor = ResolveOceanBiomeBannerColor(_oceanBiomeBannerOldBiome) * (0.86f * alpha);
+            Color mainColor = ResolveOceanBiomeBannerColor(_oceanBiomeBannerNewBiome) * alpha;
             Color prefixColor = Color.White * (0.88f * alpha);
             Color shadowColor = Color.Black * (0.78f * alpha);
             Color panelColor = Color.Black * (0.36f * alpha);
@@ -539,31 +550,31 @@ namespace op.io
                     (int)MathF.Floor(position.Y - paddingY),
                     (int)MathF.Ceiling(contentWidth + (paddingX * 2f)),
                     (int)MathF.Ceiling(lineHeight + (paddingY * 2f)));
-                DrawOceanZoneBannerRect(spriteBatch, panel, panelColor);
-                DrawOceanZoneBannerRect(spriteBatch, new Rectangle(panel.X, panel.Bottom - 2, panel.Width, 2), underlineColor);
+                DrawOceanBiomeBannerRect(spriteBatch, panel, panelColor);
+                DrawOceanBiomeBannerRect(spriteBatch, new Rectangle(panel.X, panel.Bottom - 2, panel.Width, 2), underlineColor);
             }
 
             Vector2 cursor = position;
-            DrawScaledOceanZoneBannerText(spriteBatch, font, prefixText, cursor + new Vector2(2f, 2f), shadowColor, scale);
-            DrawScaledOceanZoneBannerText(spriteBatch, font, prefixText, cursor, prefixColor, scale);
+            DrawScaledOceanBiomeBannerText(spriteBatch, font, prefixText, cursor + new Vector2(2f, 2f), shadowColor, scale);
+            DrawScaledOceanBiomeBannerText(spriteBatch, font, prefixText, cursor, prefixColor, scale);
             cursor.X += (prefixSize.X * scale) + gap;
 
-            DrawScaledOceanZoneBannerText(spriteBatch, font, oldZoneText, cursor + new Vector2(2f, 2f), shadowColor, scale);
-            DrawScaledOceanZoneBannerText(spriteBatch, font, oldZoneText, cursor, oldColor, scale);
-            cursor.X += (oldZoneSize.X * scale) + gap;
+            DrawScaledOceanBiomeBannerText(spriteBatch, font, oldBiomeText, cursor + new Vector2(2f, 2f), shadowColor, scale);
+            DrawScaledOceanBiomeBannerText(spriteBatch, font, oldBiomeText, cursor, oldColor, scale);
+            cursor.X += (oldBiomeSize.X * scale) + gap;
 
             Vector2 arrowStart = new(cursor.X, position.Y + (lineHeight * 0.54f));
             Vector2 arrowEnd = new(cursor.X + arrowWidth, arrowStart.Y);
-            DrawOceanZoneBannerArrow(spriteBatch, arrowStart + new Vector2(1f, 1f), arrowEnd + new Vector2(1f, 1f), shadowColor, scale);
-            DrawOceanZoneBannerArrow(spriteBatch, arrowStart, arrowEnd, mainColor, scale);
+            DrawOceanBiomeBannerArrow(spriteBatch, arrowStart + new Vector2(1f, 1f), arrowEnd + new Vector2(1f, 1f), shadowColor, scale);
+            DrawOceanBiomeBannerArrow(spriteBatch, arrowStart, arrowEnd, mainColor, scale);
             cursor.X += arrowWidth + gap;
 
-            DrawScaledOceanZoneBannerText(spriteBatch, font, newZoneText, cursor + new Vector2(2f, 2f), shadowColor, scale);
-            DrawScaledOceanZoneBannerText(spriteBatch, font, newZoneText, cursor, mainColor, scale);
+            DrawScaledOceanBiomeBannerText(spriteBatch, font, newBiomeText, cursor + new Vector2(2f, 2f), shadowColor, scale);
+            DrawScaledOceanBiomeBannerText(spriteBatch, font, newBiomeText, cursor, mainColor, scale);
             spriteBatch.End();
         }
 
-        private static void DrawScaledOceanZoneBannerText(
+        private static void DrawScaledOceanBiomeBannerText(
             SpriteBatch spriteBatch,
             UIStyle.UIFont font,
             string text,
@@ -589,7 +600,7 @@ namespace op.io
                 0f);
         }
 
-        private static void DrawOceanZoneBannerArrow(
+        private static void DrawOceanBiomeBannerArrow(
             SpriteBatch spriteBatch,
             Vector2 start,
             Vector2 end,
@@ -616,12 +627,12 @@ namespace op.io
             Vector2 leftHead = end - (delta * headLength) + (perpendicular * headSpread);
             Vector2 rightHead = end - (delta * headLength) - (perpendicular * headSpread);
 
-            DrawOceanZoneBannerLine(spriteBatch, start, shaftEnd, color, thickness);
-            DrawOceanZoneBannerLine(spriteBatch, leftHead, end, color, thickness);
-            DrawOceanZoneBannerLine(spriteBatch, rightHead, end, color, thickness);
+            DrawOceanBiomeBannerLine(spriteBatch, start, shaftEnd, color, thickness);
+            DrawOceanBiomeBannerLine(spriteBatch, leftHead, end, color, thickness);
+            DrawOceanBiomeBannerLine(spriteBatch, rightHead, end, color, thickness);
         }
 
-        private static void DrawOceanZoneBannerLine(
+        private static void DrawOceanBiomeBannerLine(
             SpriteBatch spriteBatch,
             Vector2 start,
             Vector2 end,
@@ -647,7 +658,7 @@ namespace op.io
                 0f);
         }
 
-        private static void DrawOceanZoneBannerRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)
+        private static void DrawOceanBiomeBannerRect(SpriteBatch spriteBatch, Rectangle bounds, Color color)
         {
             if (_fullscreenPixel == null || _fullscreenPixel.IsDisposed || bounds.Width <= 0 || bounds.Height <= 0)
             {
@@ -657,39 +668,39 @@ namespace op.io
             spriteBatch.Draw(_fullscreenPixel, bounds, color);
         }
 
-        private static Color ResolveOceanZoneBannerColor(TerrainWaterType waterType)
+        private static Color ResolveOceanBiomeBannerColor(OceanBiomeType oceanBiome)
         {
-            Color zoneColor = waterType switch
+            Color biomeColor = oceanBiome switch
             {
-                TerrainWaterType.Shallow => DevShallowWaterColor,
-                TerrainWaterType.Sunlit => DevSunlitWaterColor,
-                TerrainWaterType.Twilight => DevTwilightWaterColor,
-                TerrainWaterType.Midnight => DevMidnightWaterColor,
-                TerrainWaterType.Abyss => DevAbyssWaterColor,
+                OceanBiomeType.Shallow => DevShallowWaterColor,
+                OceanBiomeType.Sunlit => DevSunlitWaterColor,
+                OceanBiomeType.Twilight => DevTwilightWaterColor,
+                OceanBiomeType.Midnight => DevMidnightWaterColor,
+                OceanBiomeType.Abyss => DevAbyssWaterColor,
                 _ => DevSunlitWaterColor
             };
 
-            Vector3 brightened = Vector3.Lerp(zoneColor.ToVector3(), Vector3.One, 0.58f);
+            Vector3 brightened = Vector3.Lerp(biomeColor.ToVector3(), Vector3.One, 0.58f);
             return new Color(brightened.X, brightened.Y, brightened.Z, 1f);
         }
 
-        private static Vector4 ResolveOceanZoneColor(Color ambienceColor, TerrainWaterType waterType)
+        private static Vector4 ResolveOceanBiomeColor(Color ambienceColor, OceanBiomeType oceanBiome)
         {
-            float darkness = ResolveOceanZoneDarkness(waterType);
+            float darkness = ResolveOceanBiomeDarkness(oceanBiome);
             Vector3 rgb = Vector3.Clamp(ambienceColor.ToVector3() * darkness, Vector3.Zero, Vector3.One);
             return new Vector4(rgb, ambienceColor.A / 255f);
         }
 
-        private static float ResolveOceanZoneDarkness(TerrainWaterType waterType)
+        private static float ResolveOceanBiomeDarkness(OceanBiomeType oceanBiome)
         {
             float sunlitLuminance = MathF.Max(0.0001f, PerceivedLuminance(DevSunlitWaterColor));
-            return waterType switch
+            return oceanBiome switch
             {
-                TerrainWaterType.Shallow => PerceivedLuminance(DevShallowWaterColor) / sunlitLuminance,
-                TerrainWaterType.Sunlit => 1f,
-                TerrainWaterType.Twilight => PerceivedLuminance(DevTwilightWaterColor) / sunlitLuminance,
-                TerrainWaterType.Midnight => PerceivedLuminance(DevMidnightWaterColor) / sunlitLuminance,
-                TerrainWaterType.Abyss => PerceivedLuminance(DevAbyssWaterColor) / sunlitLuminance,
+                OceanBiomeType.Shallow => PerceivedLuminance(DevShallowWaterColor) / sunlitLuminance,
+                OceanBiomeType.Sunlit => 1f,
+                OceanBiomeType.Twilight => PerceivedLuminance(DevTwilightWaterColor) / sunlitLuminance,
+                OceanBiomeType.Midnight => PerceivedLuminance(DevMidnightWaterColor) / sunlitLuminance,
+                OceanBiomeType.Abyss => PerceivedLuminance(DevAbyssWaterColor) / sunlitLuminance,
                 _ => 1f
             };
         }
@@ -715,12 +726,12 @@ namespace op.io
         }
 
         private static Vector4 CurrentBaseColorVector =>
-            _oceanZoneTransitionInitialized ? _currentBaseColor : new Vector4(BaseColor, BaseAlpha);
+            _oceanBiomeTransitionInitialized ? _currentBaseColor : new Vector4(BaseColor, BaseAlpha);
 
         private static Vector4 CurrentWaveColorVector =>
-            _oceanZoneTransitionInitialized ? _currentWaveColor : new Vector4(WaveColor, WaveAlpha);
+            _oceanBiomeTransitionInitialized ? _currentWaveColor : new Vector4(WaveColor, WaveAlpha);
 
-        private static float ResolveCurrentOceanZoneDarkness()
+        private static float ResolveCurrentOceanBiomeDarkness()
         {
             float configuredLuminance = PerceivedLuminance(ToColor(BaseColor, BaseAlpha));
             if (configuredLuminance <= 0.0001f)
@@ -1847,7 +1858,7 @@ namespace op.io
             int endTileX = (int)MathF.Ceiling(maxX / _tileWidth) + 1;
             int startTileY = (int)MathF.Floor((minY - scrollOffset) / _tileHeight) - 1;
             int endTileY = (int)MathF.Ceiling((maxY - scrollOffset) / _tileHeight) + 1;
-            float darkness = MathHelper.Clamp(_currentOceanZoneDarkness, 0.05f, 2f);
+            float darkness = MathHelper.Clamp(_currentOceanBiomeDarkness, 0.05f, 2f);
             Color tint = new(
                 MathHelper.Clamp(darkness, 0f, 1f),
                 MathHelper.Clamp(darkness, 0f, 1f),

@@ -7,6 +7,7 @@ namespace op.io
     public static class GameTracker
     {
         public static bool FreezeGameInputs { get; internal set; }
+        public static bool RestartDB => Core.RestartDB;
 
         /// <summary>
         /// Explains why FreezeGameInputs is currently true. Set by InputManager
@@ -21,8 +22,8 @@ namespace op.io
                                                    ControlStateManager.GetSwitchState(ControlKeyMigrations.DisableToolTipsKey);
         public static bool GridRequested       => GameRenderer.WorldGridRequested;
         public static bool Grid                => GameRenderer.WorldGridVisible;
-        public static bool OceanZoneDebugRequested => GameBlockTerrainBackground.TerrainOceanDebugOverlayRequested;
-        public static bool OceanZoneDebugVisible => GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible;
+        public static bool OceanBiomeDebugRequested => GameBlockTerrainBackground.TerrainOceanDebugOverlayRequested;
+        public static bool OceanBiomeDebugVisible => GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible;
         public static bool BlockMenuOpen        => BlockManager.IsBlockMenuOpen();
         public static bool InputBlocked         => BlockManager.IsInputBlocked();
         public static bool DraggingLayout       => BlockManager.IsDraggingLayout;
@@ -48,6 +49,11 @@ namespace op.io
         public static string LogFile => LogFileHandler.CurrentLogFileName;
         public static string RedFlagsFile => LogFileHandler.CurrentRedFlagsFileName;
         public static int MaxLogFiles => LogFileHandler.MaxLogFiles;
+        public static bool RendererGraphicsLoaded => GameRenderer.IsGraphicsLoaded;
+        public static bool RendererLoadingGraphics => GameRenderer.IsLoadingGraphics;
+        public static bool RendererCanDrawResizeFrame => GameRenderer.CanDrawResizeFrame;
+        public static bool RendererStartupRevealPending => GameRenderer.StartupRevealPending;
+        public static bool RendererStartupRevealRequested => GameRenderer.StartupRevealRequested;
         public static string AmbienceFogOfWarColor => AmbienceSettings.FogOfWarHex;
         public static string AmbienceOceanWaterColor => AmbienceSettings.OceanWaterHex;
         public static string AmbienceOceanWaterLiveColor => AmbienceSettings.CurrentOceanWaterHex;
@@ -66,28 +72,30 @@ namespace op.io
         public static int GameLevelPlayerSpawnSearchAttempts => GameObjectInitializer.PlayerSpawnSearchAttempts;
         public static string GameLevelLoadoutSummary => GameLevelManager.ActiveLevelLoadoutSummary;
         public static string GameLevelTerrainConfiguration => GameLevelManager.ActiveLevelTerrainConfiguration;
-        public static string GameLevelOceanZoneConfiguration => GameLevelManager.ActiveLevelOceanZoneConfiguration;
+        public static string GameLevelOceanBiomeConfiguration => GameLevelManager.ActiveLevelOceanBiomeConfiguration;
         public static bool GameBlockOceanShaderReady => GameBlockOceanBackground.ShaderReady;
         public static bool GameBlockOceanUsingShaderPath => GameBlockOceanBackground.UsingShaderPath;
         public static string GameBlockOceanShaderStatus => GameBlockOceanBackground.ShaderStatus;
         public static string GameBlockOceanBaseColor => GameBlockOceanBackground.BaseColorRgb;
         public static string GameBlockOceanWaveColor => GameBlockOceanBackground.WaveColorRgb;
-        public static string GameBlockOceanDetectedZone => GameBlockOceanBackground.DetectedOceanZone;
-        public static string GameBlockOceanPlayerZone => GameBlockOceanBackground.PlayerOceanZone;
-        public static string GameBlockOceanPlayerZoneStatus => GameBlockOceanBackground.PlayerOceanZoneStatus;
-        public static string GameBlockOceanTargetZone => GameBlockOceanBackground.TargetOceanZone;
-        public static string GameBlockOceanCursorZone => GameBlockOceanBackground.CursorOceanZone;
-        public static string GameBlockOceanCursorZoneStatus => GameBlockOceanBackground.CursorOceanZoneStatus;
-        public static bool GameBlockOceanCursorZoneValid => GameBlockOceanBackground.CursorOceanZoneValid;
-        public static float GameBlockOceanCursorZoneDepth => GameBlockOceanBackground.CursorOceanZoneDepth;
-        public static float GameBlockOceanCursorZoneOffshoreDistance => GameBlockOceanBackground.CursorOceanZoneOffshoreDistance;
-        public static string GameBlockOceanZoneProbeStatus => GameBlockOceanBackground.OceanZoneProbeStatus;
-        public static float GameBlockOceanZoneDepth => GameBlockOceanBackground.OceanZoneDepth;
-        public static float GameBlockOceanZoneOffshoreDistance => GameBlockOceanBackground.OceanZoneOffshoreDistance;
-        public static float GameBlockOceanZoneDarkness => GameBlockOceanBackground.OceanZoneDarkness;
-        public static string GameBlockOceanZoneTransitionBanner => GameBlockOceanBackground.OceanZoneTransitionBanner;
-        public static bool GameBlockOceanZoneTransitioning => GameBlockOceanBackground.OceanZoneTransitioning;
-        public static float GameBlockOceanZoneTransitionProgress => GameBlockOceanBackground.OceanZoneTransitionProgress;
+        public static string GameBlockOceanDetectedBiome => GameBlockOceanBackground.DetectedOceanBiome;
+        public static string GameBlockOceanPlayerBiome => GameBlockOceanBackground.PlayerOceanBiome;
+        public static string GameBlockOceanPlayerBiomeStatus => GameBlockOceanBackground.PlayerOceanBiomeStatus;
+        public static string GameBlockOceanPlayerBiomeSource => GameBlockOceanBackground.PlayerOceanBiomeSource;
+        public static string GameBlockOceanTargetBiome => GameBlockOceanBackground.TargetOceanBiome;
+        public static string GameBlockOceanCursorBiome => GameBlockOceanBackground.CursorOceanBiome;
+        public static string GameBlockOceanCursorBiomeStatus => GameBlockOceanBackground.CursorOceanBiomeStatus;
+        public static string GameBlockOceanCursorBiomeSource => GameBlockOceanBackground.CursorOceanBiomeSource;
+        public static bool GameBlockOceanCursorBiomeValid => GameBlockOceanBackground.CursorOceanBiomeValid;
+        public static float GameBlockOceanCursorBiomeDepth => GameBlockOceanBackground.CursorOceanBiomeDepth;
+        public static float GameBlockOceanCursorBiomeOffshoreDistance => GameBlockOceanBackground.CursorOceanBiomeOffshoreDistance;
+        public static string GameBlockOceanBiomeProbeStatus => GameBlockOceanBackground.OceanBiomeProbeStatus;
+        public static float GameBlockOceanBiomeDepth => GameBlockOceanBackground.OceanBiomeDepth;
+        public static float GameBlockOceanBiomeOffshoreDistance => GameBlockOceanBackground.OceanBiomeOffshoreDistance;
+        public static float GameBlockOceanBiomeDarkness => GameBlockOceanBackground.OceanBiomeDarkness;
+        public static string GameBlockOceanBiomeTransitionBanner => GameBlockOceanBackground.OceanBiomeTransitionBanner;
+        public static bool GameBlockOceanBiomeTransitioning => GameBlockOceanBackground.OceanBiomeTransitioning;
+        public static float GameBlockOceanBiomeTransitionProgress => GameBlockOceanBackground.OceanBiomeTransitionProgress;
         public static float GameBlockOceanTimeScale => GameBlockOceanBackground.TimeScale;
         public static float GameBlockOceanDownwardSpeed => GameBlockOceanBackground.DownwardSpeed;
         public static float GameBlockOceanBackgroundVariationStrength => GameBlockOceanBackground.BackgroundVariationStrength;
@@ -144,7 +152,13 @@ namespace op.io
         public static string TerrainStartupReadinessSummary => GameBlockTerrainBackground.TerrainStartupReadinessSummary;
         public static string TerrainStartupPhase => GameBlockTerrainBackground.TerrainStartupPhase;
         public static int TerrainStartupSynchronousChunkBuildCount => GameBlockTerrainBackground.TerrainStartupSynchronousChunkBuildCount;
+        public static int TerrainSynchronousVisionChunkBuildCount => GameBlockTerrainBackground.TerrainSynchronousVisionChunkBuildCount;
         public static int TerrainBackgroundQueuedChunkBuildCount => GameBlockTerrainBackground.TerrainBackgroundQueuedChunkBuildCount;
+        public static int TerrainNonBlockingChunkLoadRequestCount => GameBlockTerrainBackground.TerrainNonBlockingChunkLoadRequestCount;
+        public static int TerrainNonBlockingChunkLoadQueuedCount => GameBlockTerrainBackground.TerrainNonBlockingChunkLoadQueuedCount;
+        public static int TerrainMovementBlockedUntilReadyCount => GameBlockTerrainBackground.TerrainMovementBlockedUntilReadyCount;
+        public static bool TerrainGenerationBarrierActive => GameBlockTerrainBackground.TerrainGenerationBarrierActive;
+        public static string TerrainCriticalGenerationStatus => GameBlockTerrainBackground.TerrainCriticalGenerationStatus;
         public static bool TerrainStartupFirstSightTerrainReady => GameBlockTerrainBackground.TerrainStartupFirstSightTerrainReady;
         public static int TerrainStartupWarmupChunkCount => GameBlockTerrainBackground.TerrainStartupWarmupChunkCount;
         public static int TerrainRuntimeFieldCollisionFallbackSuppressedCount => GameBlockTerrainBackground.TerrainRuntimeFieldCollisionFallbackSuppressedCount;
@@ -157,29 +171,31 @@ namespace op.io
         public static string TerrainLastVisibleDrawSummary => GameBlockTerrainBackground.TerrainLastVisibleDrawSummary;
         public static bool TerrainAccessRequestActive => GameBlockTerrainBackground.TerrainAccessRequestActive;
         public static string TerrainAccessRequestStatus => GameBlockTerrainBackground.TerrainAccessRequestStatus;
-        public static int TerrainMovementBlockedUntilReadyCount => GameBlockTerrainBackground.TerrainMovementBlockedUntilReadyCount;
         public static bool TerrainWorldBoundaryActive => GameBlockTerrainBackground.TerrainWorldBoundaryActive;
         public static int TerrainWorldDefaultIslandCount => GameBlockTerrainBackground.TerrainWorldDefaultIslandCount;
         public static float TerrainWorldDefaultMinimumSpacing => GameBlockTerrainBackground.TerrainWorldDefaultMinimumSpacing;
         public static float TerrainWorldDefaultInteractionSpacing => GameBlockTerrainBackground.TerrainWorldDefaultInteractionSpacing;
         public static string TerrainWorldDefaultClusterCountRange => GameBlockTerrainBackground.TerrainWorldDefaultClusterCountRange;
         public static float TerrainChunkWorldSize => GameBlockTerrainBackground.TerrainChunkWorldSize;
+        public static int TerrainOceanBiomeChunkResolution => GameBlockTerrainBackground.TerrainOceanBiomeChunkResolution;
+        public static bool TerrainFullMapGenerationEnabled => GameBlockTerrainBackground.TerrainFullMapGenerationEnabled;
         public static float TerrainFeatureWorldScaleMultiplier => GameBlockTerrainBackground.TerrainFeatureWorldScaleMultiplier;
         public static float TerrainArchipelagoMacroCellSize => GameBlockTerrainBackground.TerrainArchipelagoMacroCellSize;
         public static float TerrainArchipelagoSubstrateCellSize => GameBlockTerrainBackground.TerrainArchipelagoSubstrateCellSize;
         public static float TerrainArchipelagoEnclosureCellSize => GameBlockTerrainBackground.TerrainArchipelagoEnclosureCellSize;
         public static float TerrainArchipelagoLandformCellSize => GameBlockTerrainBackground.TerrainArchipelagoLandformCellSize;
         public static string TerrainGenerationPipeline => GameBlockTerrainBackground.TerrainGenerationPipeline;
+        public static string TerrainChunkGenerationMode => GameBlockTerrainBackground.TerrainChunkGenerationMode;
         public static string TerrainLandformSelectionMode => GameBlockTerrainBackground.TerrainLandformSelectionMode;
-        public static string TerrainOceanZoneDistanceMode => GameBlockTerrainBackground.TerrainOceanZoneDistanceMode;
-        public static string TerrainOceanZoneOrigin => GameBlockTerrainBackground.TerrainOceanZoneOrigin;
-        public static float TerrainOceanZoneOriginRadius => GameBlockTerrainBackground.TerrainOceanZoneOriginRadius;
-        public static float TerrainWaterZoneDistanceScale => GameBlockTerrainBackground.TerrainWaterZoneDistanceScale;
-        public static float TerrainWaterShallowDistance => GameBlockTerrainBackground.TerrainWaterShallowDistance;
-        public static float TerrainWaterSunlitDistance => GameBlockTerrainBackground.TerrainWaterSunlitDistance;
-        public static float TerrainWaterTwilightDistance => GameBlockTerrainBackground.TerrainWaterTwilightDistance;
-        public static float TerrainWaterMidnightDistance => GameBlockTerrainBackground.TerrainWaterMidnightDistance;
-        public static float TerrainOceanZoneMinimumTransitionVolumeDistance => GameBlockTerrainBackground.TerrainOceanZoneMinimumTransitionVolumeDistance;
+        public static string TerrainOceanBiomeDistanceMode => GameBlockTerrainBackground.TerrainOceanBiomeDistanceMode;
+        public static string TerrainOceanBiomeOrigin => GameBlockTerrainBackground.TerrainOceanBiomeOrigin;
+        public static float TerrainOceanBiomeOriginRadius => GameBlockTerrainBackground.TerrainOceanBiomeOriginRadius;
+        public static float TerrainOceanBiomeDistanceScale => GameBlockTerrainBackground.TerrainOceanBiomeDistanceScale;
+        public static float TerrainOceanBiomeShallowDistance => GameBlockTerrainBackground.TerrainOceanBiomeShallowDistance;
+        public static float TerrainOceanBiomeSunlitDistance => GameBlockTerrainBackground.TerrainOceanBiomeSunlitDistance;
+        public static float TerrainOceanBiomeTwilightDistance => GameBlockTerrainBackground.TerrainOceanBiomeTwilightDistance;
+        public static float TerrainOceanBiomeMidnightDistance => GameBlockTerrainBackground.TerrainOceanBiomeMidnightDistance;
+        public static float TerrainOceanBiomeMinimumTransitionVolumeDistance => GameBlockTerrainBackground.TerrainOceanBiomeMinimumTransitionVolumeDistance;
         public static string TerrainLagoonOpeningTarget => GameBlockTerrainBackground.TerrainLagoonOpeningTarget;
         public static float TerrainLagoonBasinCutStrength => GameBlockTerrainBackground.TerrainLagoonBasinCutStrength;
         public static float TerrainRegionalTidalChannelCutStrength => GameBlockTerrainBackground.TerrainRegionalTidalChannelCutStrength;
@@ -201,14 +217,24 @@ namespace op.io
         public static float TerrainWorldScaleMultiplier => GameBlockTerrainBackground.TerrainWorldScaleMultiplier;
         public static int TerrainOceanDebugBorderSegmentCount => GameBlockTerrainBackground.TerrainOceanDebugBorderSegmentCount;
         public static int TerrainOceanDebugBorderLabelCount => GameBlockTerrainBackground.TerrainOceanDebugBorderLabelCount;
+        public static string TerrainOceanDebugDrawStatus => GameBlockTerrainBackground.TerrainOceanDebugDrawStatus;
         public static double TerrainOceanDebugBuildMilliseconds => GameBlockTerrainBackground.TerrainOceanDebugBuildMilliseconds;
+        public static bool TerrainOceanDebugVisionClipActive => GameBlockTerrainBackground.TerrainOceanDebugVisionClipActive;
+        public static int TerrainOceanDebugVisionClipRegionCount => GameBlockTerrainBackground.TerrainOceanDebugVisionClipRegionCount;
+        public static string TerrainOceanDebugVisionClipStatus => GameBlockTerrainBackground.TerrainOceanDebugVisionClipStatus;
         public static bool TerrainOceanDebugFullMapReady => GameBlockTerrainBackground.TerrainOceanDebugFullMapReady;
         public static int TerrainOceanDebugFullMapSegmentCount => GameBlockTerrainBackground.TerrainOceanDebugFullMapSegmentCount;
         public static double TerrainOceanDebugFullMapBuildMilliseconds => GameBlockTerrainBackground.TerrainOceanDebugFullMapBuildMilliseconds;
         public static string TerrainOceanDebugFullMapStatus => GameBlockTerrainBackground.TerrainOceanDebugFullMapStatus;
-        public static int TerrainOceanDebugSuppressedTinyZoneCount => GameBlockTerrainBackground.TerrainOceanDebugSuppressedTinyZoneCount;
-        public static float TerrainOceanDebugMinimumStableZoneRadius => GameBlockTerrainBackground.TerrainOceanDebugMinimumStableZoneRadius;
-        public static string TerrainOceanDebugTinyZoneViolationSummary => GameBlockTerrainBackground.TerrainOceanDebugTinyZoneViolationSummary;
+        public static int TerrainOceanDebugBorderValidationCheckedSegmentCount => GameBlockTerrainBackground.TerrainOceanDebugBorderValidationCheckedSegmentCount;
+        public static int TerrainOceanDebugBorderValidationMismatchCount => GameBlockTerrainBackground.TerrainOceanDebugBorderValidationMismatchCount;
+        public static int TerrainOceanDebugBorderValidationCheckedIntersectionPairCount => GameBlockTerrainBackground.TerrainOceanDebugBorderValidationCheckedIntersectionPairCount;
+        public static int TerrainOceanDebugBorderValidationCrossingIntersectionCount => GameBlockTerrainBackground.TerrainOceanDebugBorderValidationCrossingIntersectionCount;
+        public static string TerrainOceanDebugBorderValidationStatus => GameBlockTerrainBackground.TerrainOceanDebugBorderValidationStatus;
+        public static int TerrainOceanDebugSuppressedTinyBiomeCount => GameBlockTerrainBackground.TerrainOceanDebugSuppressedTinyBiomeCount;
+        public static int TerrainOceanDebugMinimumTransitionSpacingAdjustmentCount => GameBlockTerrainBackground.TerrainOceanDebugMinimumTransitionSpacingAdjustmentCount;
+        public static float TerrainOceanDebugMinimumStableBiomeRadius => GameBlockTerrainBackground.TerrainOceanDebugMinimumStableBiomeRadius;
+        public static string TerrainOceanDebugTinyBiomeViolationSummary => GameBlockTerrainBackground.TerrainOceanDebugTinyBiomeViolationSummary;
         public static int TerrainOceanDebugTileCacheCount => GameBlockTerrainBackground.TerrainOceanDebugTileCacheCount;
         public static int TerrainOceanDebugQueuedTileCount => GameBlockTerrainBackground.TerrainOceanDebugQueuedTileCount;
         public static int TerrainOceanDebugActiveTileBuildCount => GameBlockTerrainBackground.TerrainOceanDebugActiveTileBuildCount;
@@ -409,7 +435,7 @@ namespace op.io
             }
 
             if (variableName.StartsWith("Terrain", StringComparison.OrdinalIgnoreCase) ||
-                variableName.StartsWith("OceanZoneDebug", StringComparison.OrdinalIgnoreCase))
+                variableName.StartsWith("OceanBiomeDebug", StringComparison.OrdinalIgnoreCase))
             {
                 return "Terrain";
             }
@@ -442,7 +468,9 @@ namespace op.io
 
             if (variableName.StartsWith("Log", StringComparison.OrdinalIgnoreCase) ||
                 variableName.StartsWith("RedFlags", StringComparison.OrdinalIgnoreCase) ||
-                variableName.StartsWith("MaxLog", StringComparison.OrdinalIgnoreCase))
+                variableName.StartsWith("MaxLog", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("RestartDB", StringComparison.OrdinalIgnoreCase) ||
+                variableName.StartsWith("Renderer", StringComparison.OrdinalIgnoreCase))
             {
                 return "Debug";
             }
@@ -485,22 +513,22 @@ namespace op.io
             return variableName switch
             {
                 nameof(PlayerSightRadius) => CentifootUnits.FormatDistance(numericValue),
-                nameof(GameBlockOceanZoneDepth) => CentifootUnits.FormatNumber(numericValue, "0.00"),
-                nameof(GameBlockOceanZoneOffshoreDistance) => CentifootUnits.FormatDistance(numericValue),
-                nameof(GameBlockOceanCursorZoneDepth) => CentifootUnits.FormatNumber(numericValue, "0.00"),
-                nameof(GameBlockOceanCursorZoneOffshoreDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(GameBlockOceanBiomeDepth) => CentifootUnits.FormatNumber(numericValue, "0.00"),
+                nameof(GameBlockOceanBiomeOffshoreDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(GameBlockOceanCursorBiomeDepth) => CentifootUnits.FormatNumber(numericValue, "0.00"),
+                nameof(GameBlockOceanCursorBiomeOffshoreDistance) => CentifootUnits.FormatDistance(numericValue),
                 nameof(GameLevelPlayerSpawnRelocationDistance) => CentifootUnits.FormatDistance(numericValue),
                 nameof(TerrainOceanDebugBuildMilliseconds) => CentifootUnits.FormatNumber(numericValue, "0.00"),
                 nameof(TerrainChunkWorldSize) => CentifootUnits.FormatDistance(numericValue),
                 nameof(TerrainPreloadMarginWorldUnits) => CentifootUnits.FormatDistance(numericValue),
                 nameof(TerrainWorldDefaultMinimumSpacing) => CentifootUnits.FormatDistance(numericValue),
                 nameof(TerrainWorldDefaultInteractionSpacing) => CentifootUnits.FormatDistance(numericValue),
-                nameof(TerrainWaterShallowDistance) => CentifootUnits.FormatDistance(numericValue),
-                nameof(TerrainWaterSunlitDistance) => CentifootUnits.FormatDistance(numericValue),
-                nameof(TerrainWaterTwilightDistance) => CentifootUnits.FormatDistance(numericValue),
-                nameof(TerrainWaterMidnightDistance) => CentifootUnits.FormatDistance(numericValue),
-                nameof(TerrainOceanZoneMinimumTransitionVolumeDistance) => CentifootUnits.FormatDistance(numericValue),
-                nameof(TerrainOceanZoneOriginRadius) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainOceanBiomeShallowDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainOceanBiomeSunlitDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainOceanBiomeTwilightDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainOceanBiomeMidnightDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainOceanBiomeMinimumTransitionVolumeDistance) => CentifootUnits.FormatDistance(numericValue),
+                nameof(TerrainOceanBiomeOriginRadius) => CentifootUnits.FormatDistance(numericValue),
                 nameof(XPClumpDeadZoneRadius) => CentifootUnits.FormatDistance(numericValue),
                 nameof(XPClumpPullZoneRadius) => CentifootUnits.FormatDistance(numericValue),
                 nameof(XPClumpAbsorbZoneRadius) => CentifootUnits.FormatDistance(numericValue),

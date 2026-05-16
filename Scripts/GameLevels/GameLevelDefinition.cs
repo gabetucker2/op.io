@@ -23,7 +23,7 @@ namespace op.io
             bool loadFarms,
             bool loadZoneBlocks,
             string terrainConfigurationKey,
-            string oceanZoneConfigurationKey,
+            string oceanBiomeConfigurationKey,
             IEnumerable<string> includedAgentNames = null)
         {
             Kind = kind;
@@ -36,7 +36,7 @@ namespace op.io
             LoadFarms = loadFarms;
             LoadZoneBlocks = loadZoneBlocks;
             TerrainConfigurationKey = string.IsNullOrWhiteSpace(terrainConfigurationKey) ? "default-terrain" : terrainConfigurationKey.Trim();
-            OceanZoneConfigurationKey = string.IsNullOrWhiteSpace(oceanZoneConfigurationKey) ? "generated-coastline-zones" : oceanZoneConfigurationKey.Trim();
+            OceanBiomeConfigurationKey = string.IsNullOrWhiteSpace(oceanBiomeConfigurationKey) ? "generated-coastline-biomes" : oceanBiomeConfigurationKey.Trim();
             IncludedAgentNames = includedAgentNames?
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Select(name => name.Trim())
@@ -54,7 +54,7 @@ namespace op.io
         public bool LoadFarms { get; }
         public bool LoadZoneBlocks { get; }
         public string TerrainConfigurationKey { get; }
-        public string OceanZoneConfigurationKey { get; }
+        public string OceanBiomeConfigurationKey { get; }
         public IReadOnlyList<string> IncludedAgentNames { get; }
         public bool LoadsSelectedAgents => IncludedAgentNames.Count > 0;
         public bool LoadsAnySceneObjects => SpawnPlayer || LoadMapObjects || LoadAgents || LoadsSelectedAgents || LoadFarms || LoadZoneBlocks;

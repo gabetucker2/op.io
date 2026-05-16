@@ -1,0 +1,122 @@
+Log created at 2026-05-14T17:41:56.4232263-04:00
+[GAMEOBJECT] Loading all Agents from database... | AgentLoader.cs::LoadAgents @ Line 72
+[DATABASE] Executing query:  |             SELECT  |             g.ID, |             g.Name, |             g.PositionX, |             g.PositionY, |             g.Rotation,        -- Ensure this is included for rotation |             g.Width, |             g.Height, |             g.Sides, |             g.FillR, g.FillG, g.FillB, g.FillA, |             g.OutlineR, g.OutlineG, g.OutlineB, g.OutlineA, |             g.OutlineWidth, |             g.IsCollidable, |             g.IsDestructible, |             g.Mass, |             g.StaticPhysics, |             g.Shape, s.IsPlayer, s.TriggerCooldown, s.SwitchCooldown, s.BaseSpeed, COALESCE(s.Mass, g.Mass) AS BodyMass, s.HealthRegen, s.HealthRegenDelay, s.HealthArmor, s.MaxShield, s.ShieldRegen, s.ShieldRegenDelay, s.ShieldArmor, s.BodyPenetration, s.BodyCollisionDamage, s.CollisionDamageResistance, s.BulletDamageResistance, COALESCE(s.Speed, 1.0) AS Speed, COALESCE(s.Control, 1.0) AS Control, COALESCE(s.Sight, 0.0) AS Sight, COALESCE(s.BodyActionBuff, 0.0) AS BodyActionBuff, COALESCE(s.MaxXP, 0) AS MaxXP, COALESCE(d.DeathPointReward, 0.0) AS DeathPointReward |             FROM Agents s |             INNER JOIN GameObjects g ON s.ID = g.ID |             LEFT JOIN Destructibles d ON d.ID = g.ID; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] No parameters provided. | DatabaseQuery.cs::ExecuteQuery @ Line 27
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 2 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Retrieved 2 rows from Agents + GameObjects. | AgentLoader.cs::LoadAgents @ Line 96
+[DATABASE] Row keys: ID, Name, PositionX, PositionY, Rotation, Width, Height, Sides, FillR, FillG, FillB, FillA, OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth, IsCollidable, IsDestructible, Mass, StaticPhysics, Shape, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed, BodyMass, HealthRegen, HealthRegenDelay, HealthArmor, MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor, BodyPenetration, BodyCollisionDamage, CollisionDamageResistance, BulletDamageResistance, Speed, Control, Sight, BodyActionBuff, MaxXP, DeathPointReward | AgentLoader.cs::LoadAgents @ Line 100
+[DATABASE] Executing query: SELECT Value FROM BulletDefaults WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DefaultBulletMass | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM BulletDefaults WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: DefaultBulletSpeed | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM BulletPhysics WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: BulletRadiusScalar | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[DATABASE] Executing query: SELECT Value FROM BulletPhysics WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: BarrelHeightScalar | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[PLAYER] Agent created with TriggerCooldown: 0, SwitchCooldown: 0 | Agent.cs::.ctor @ Line 353
+[DATABASE] Executing query: SELECT Value FROM PhysicsSettings WHERE SettingKey = @value LIMIT 1; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @value: BodyRadiusScalar | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 1 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded Agent ID=1, Pos={X:100 Y:100}, Shape=Circle | AgentLoader.cs::LoadAgents @ Line 106
+[DATABASE] Row keys: ID, Name, PositionX, PositionY, Rotation, Width, Height, Sides, FillR, FillG, FillB, FillA, OutlineR, OutlineG, OutlineB, OutlineA, OutlineWidth, IsCollidable, IsDestructible, Mass, StaticPhysics, Shape, IsPlayer, TriggerCooldown, SwitchCooldown, BaseSpeed, BodyMass, HealthRegen, HealthRegenDelay, HealthArmor, MaxShield, ShieldRegen, ShieldRegenDelay, ShieldArmor, BodyPenetration, BodyCollisionDamage, CollisionDamageResistance, BulletDamageResistance, Speed, Control, Sight, BodyActionBuff, MaxXP, DeathPointReward | AgentLoader.cs::LoadAgents @ Line 100
+[PLAYER] Agent created with TriggerCooldown: 0, SwitchCooldown: 0 | Agent.cs::.ctor @ Line 353
+[GAMEOBJECT] Loaded Agent ID=3, Pos={X:420 Y:100}, Shape=Circle | AgentLoader.cs::LoadAgents @ Line 106
+[GAMEOBJECT] Total agents loaded: 2 | AgentLoader.cs::LoadAgents @ Line 114
+[DATABASE] Executing query: SELECT bp.BulletDamage, bp.BulletPenetration, bp.BulletSpeed,        bp.ReloadSpeed, bp.BulletMaxLifespan, bp.BulletMass, bp.BulletHealth,        bp.BulletControl,        bp.BulletFillR, bp.BulletFillG, bp.BulletFillB, bp.BulletFillA,        bp.BulletOutlineR, bp.BulletOutlineG, bp.BulletOutlineB, bp.BulletOutlineA,        bp.BulletOutlineWidth FROM AgentBarrels ab JOIN BarrelPrototypes bp ON ab.BarrelPrototypeID = bp.ID WHERE ab.AgentID = @AgentID ORDER BY ab.SlotIndex; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @AgentID: 1 | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 2 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 2 barrel(s) for agent ID=1 | BarrelLoader.cs::LoadBarrelsForAgent @ Line 63
+[DATABASE] Executing query: SELECT bp.Name, bp.Mass,        bp.HealthRegen, bp.HealthRegenDelay, bp.HealthArmor,        bp.MaxShield, bp.ShieldRegen, bp.ShieldRegenDelay, bp.ShieldArmor,        bp.BodyCollisionDamage, bp.BodyPenetration,        bp.CollisionDamageResistance, bp.BulletDamageResistance,        bp.Speed, bp.Control, bp.Sight, bp.BodyActionBuff,        bp.FillR, bp.FillG, bp.FillB, bp.FillA,        bp.OutlineR, bp.OutlineG, bp.OutlineB, bp.OutlineA, bp.OutlineWidth FROM AgentBodies ab JOIN BodyPrototypes bp ON ab.BodyPrototypeID = bp.ID WHERE ab.AgentID = @AgentID ORDER BY ab.SlotIndex; | DatabaseQuery.cs::ExecuteQuery @ Line 16
+[DATABASE] With parameters: | DatabaseQuery.cs::ExecuteQuery @ Line 19
+[DATABASE]   @AgentID: 1 | DatabaseQuery.cs::ExecuteQuery @ Line 22
+[DATABASE] Opening database connection... | DatabaseQuery.cs::ExecuteQuery @ Line 33
+[DATABASE] Database connection opened successfully. | DatabaseQuery.cs::ExecuteQuery @ Line 35
+[DATABASE] Executing query and reading results... | DatabaseQuery.cs::ExecuteQuery @ Line 49
+[DATABASE] Query executed successfully. Retrieved 2 rows. | DatabaseQuery.cs::ExecuteQuery @ Line 61
+[GAMEOBJECT] Loaded 2 body/bodies for agent ID=1 | BodyLoader.cs::LoadBodiesForAgent @ Line 66
+[DEBUG] [TerrainChunkBuild] key=0,0 totalMs=967.2 setupMs=0.2 maskMs=961.2 cleanupMs=2.6 landMaskMs=0.1 oceanBiomeMs=3.1 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainMaterializationApply] request=2 oldObjects=0 newObjects=0 oldTriangles=0 newTriangles=0 buildMs=5.444 visibleWindow=0..0, 0..0 resultMaterializedWindow=0..0, 0..0 resultVisualWindow=0..0, 0..0 resultColliderWindow=0..0, 0..0 covered=True dirty=False pendingCritical=0 pendingTotal=0 | GameBlockTerrainBackground.cs::LogTerrainMaterializationApplyDiagnostics @ Line 9996
+[DEBUG] [TerrainChunkBuild] key=0,1 totalMs=820.7 setupMs=0.0 maskMs=815.4 cleanupMs=2.7 landMaskMs=0.1 oceanBiomeMs=2.5 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=1,0 totalMs=891.9 setupMs=0.0 maskMs=887.1 cleanupMs=1.9 landMaskMs=0.0 oceanBiomeMs=2.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,1 totalMs=965.2 setupMs=0.0 maskMs=960.1 cleanupMs=2.1 landMaskMs=0.0 oceanBiomeMs=2.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,0 totalMs=1029.5 setupMs=0.0 maskMs=1025.7 cleanupMs=2.3 landMaskMs=0.0 oceanBiomeMs=1.4 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,-1 totalMs=1065.8 setupMs=0.0 maskMs=1059.1 cleanupMs=2.7 landMaskMs=0.1 oceanBiomeMs=3.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=0,-1 totalMs=1094.3 setupMs=0.0 maskMs=1090.5 cleanupMs=2.0 landMaskMs=0.0 oceanBiomeMs=1.7 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=1,1 totalMs=648.5 setupMs=0.0 maskMs=646.5 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=0.5 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=0,2 totalMs=759.8 setupMs=0.0 maskMs=755.0 cleanupMs=2.9 landMaskMs=0.1 oceanBiomeMs=1.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=1,-1 totalMs=1007.6 setupMs=0.0 maskMs=1000.4 cleanupMs=2.6 landMaskMs=0.1 oceanBiomeMs=4.5 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,0 totalMs=835.1 setupMs=0.0 maskMs=830.3 cleanupMs=2.0 landMaskMs=0.1 oceanBiomeMs=2.7 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,0 totalMs=1001.3 setupMs=0.0 maskMs=995.9 cleanupMs=2.2 landMaskMs=0.1 oceanBiomeMs=3.1 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=0,-2 totalMs=1072.1 setupMs=0.0 maskMs=1067.9 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=2.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,-1 totalMs=996.1 setupMs=0.0 maskMs=991.6 cleanupMs=1.7 landMaskMs=0.0 oceanBiomeMs=2.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,2 totalMs=907.4 setupMs=0.0 maskMs=902.6 cleanupMs=1.9 landMaskMs=0.1 oceanBiomeMs=2.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,1 totalMs=1037.8 setupMs=0.0 maskMs=1032.8 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=3.3 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,-1 totalMs=850.2 setupMs=0.0 maskMs=844.7 cleanupMs=2.1 landMaskMs=0.1 oceanBiomeMs=3.3 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=1,-2 totalMs=944.7 setupMs=0.0 maskMs=942.3 cleanupMs=1.7 landMaskMs=0.0 oceanBiomeMs=0.7 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,-2 totalMs=1015.4 setupMs=0.0 maskMs=1010.4 cleanupMs=2.3 landMaskMs=0.0 oceanBiomeMs=2.7 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,-2 totalMs=809.8 setupMs=0.0 maskMs=806.2 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=2.0 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,-2 totalMs=828.5 setupMs=0.0 maskMs=824.2 cleanupMs=1.9 landMaskMs=0.0 oceanBiomeMs=2.4 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,2 totalMs=990.3 setupMs=0.0 maskMs=986.1 cleanupMs=2.2 landMaskMs=0.0 oceanBiomeMs=2.0 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=3,0 totalMs=316.8 setupMs=0.0 maskMs=314.2 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=1.1 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-3,0 totalMs=828.1 setupMs=0.0 maskMs=821.5 cleanupMs=2.6 landMaskMs=0.1 oceanBiomeMs=3.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=0,-3 totalMs=908.8 setupMs=0.0 maskMs=904.1 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=3.0 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=0,3 totalMs=715.7 setupMs=0.0 maskMs=713.7 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=0.5 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=3,-1 totalMs=472.0 setupMs=0.0 maskMs=469.8 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=0.5 hasLand=False | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=1,-3 totalMs=902.4 setupMs=0.0 maskMs=897.7 cleanupMs=2.1 landMaskMs=0.0 oceanBiomeMs=2.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,3 totalMs=821.4 setupMs=0.0 maskMs=817.0 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=2.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,-3 totalMs=842.3 setupMs=0.0 maskMs=838.7 cleanupMs=1.8 landMaskMs=0.0 oceanBiomeMs=1.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-3,1 totalMs=957.2 setupMs=0.0 maskMs=949.7 cleanupMs=2.5 landMaskMs=0.1 oceanBiomeMs=4.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,2 totalMs=4770.3 setupMs=0.0 maskMs=126.9 cleanupMs=2.0 landMaskMs=0.1 oceanBiomeMs=4641.2 hasLand=False | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,3 totalMs=1165.7 setupMs=0.0 maskMs=120.3 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=1043.9 hasLand=False | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,-3 totalMs=702.4 setupMs=0.0 maskMs=699.4 cleanupMs=2.1 landMaskMs=0.0 oceanBiomeMs=0.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-3,-2 totalMs=717.2 setupMs=0.0 maskMs=714.2 cleanupMs=2.2 landMaskMs=0.0 oceanBiomeMs=0.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=3,-2 totalMs=598.4 setupMs=0.0 maskMs=595.2 cleanupMs=1.7 landMaskMs=0.0 oceanBiomeMs=1.5 hasLand=False | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,-3 totalMs=862.7 setupMs=0.0 maskMs=859.3 cleanupMs=1.6 landMaskMs=0.0 oceanBiomeMs=1.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-2,3 totalMs=1140.2 setupMs=0.0 maskMs=1134.5 cleanupMs=2.1 landMaskMs=0.0 oceanBiomeMs=3.5 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-3,2 totalMs=1170.0 setupMs=0.0 maskMs=1163.5 cleanupMs=2.5 landMaskMs=0.1 oceanBiomeMs=3.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-1,-4 totalMs=403.5 setupMs=0.0 maskMs=400.1 cleanupMs=2.5 landMaskMs=0.0 oceanBiomeMs=0.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=0,-4 totalMs=579.9 setupMs=0.0 maskMs=576.8 cleanupMs=2.0 landMaskMs=0.0 oceanBiomeMs=1.1 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=1,-4 totalMs=743.2 setupMs=0.0 maskMs=741.1 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=0.5 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-4,0 totalMs=790.8 setupMs=0.0 maskMs=787.7 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=1.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-3,-3 totalMs=350.6 setupMs=0.0 maskMs=347.2 cleanupMs=2.6 landMaskMs=0.1 oceanBiomeMs=0.7 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-4,-1 totalMs=589.7 setupMs=0.0 maskMs=587.2 cleanupMs=1.5 landMaskMs=0.0 oceanBiomeMs=1.0 hasLand=False | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=3,-3 totalMs=631.2 setupMs=0.0 maskMs=628.3 cleanupMs=2.0 landMaskMs=0.0 oceanBiomeMs=0.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-4,1 totalMs=918.3 setupMs=0.0 maskMs=912.9 cleanupMs=2.6 landMaskMs=0.1 oceanBiomeMs=2.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=2,-4 totalMs=758.7 setupMs=0.0 maskMs=755.0 cleanupMs=1.7 landMaskMs=0.0 oceanBiomeMs=1.9 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=3,-4 totalMs=462.5 setupMs=0.0 maskMs=459.6 cleanupMs=2.2 landMaskMs=0.0 oceanBiomeMs=0.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-3,3 totalMs=1137.9 setupMs=0.0 maskMs=1132.7 cleanupMs=2.3 landMaskMs=0.1 oceanBiomeMs=2.8 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-4,2 totalMs=962.8 setupMs=0.0 maskMs=958.7 cleanupMs=1.5 landMaskMs=0.1 oceanBiomeMs=2.6 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] [TerrainChunkBuild] key=-4,3 totalMs=974.9 setupMs=0.0 maskMs=970.8 cleanupMs=1.7 landMaskMs=0.1 oceanBiomeMs=2.3 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 6569
+[DEBUG] GameBlockTerrainBackground: full terrain map generated 64/64 chunks in -4..3, -4..3. | GameBlockTerrainBackground.cs::UpdateFullTerrainMapGenerationState @ Line 5726
+[DEBUG] GameBlockTerrainBackground: full-map ocean borders built 922 segments in 4445.2 ms; transitionSpacingAdjusted=281; tinyBiomesSuppressed=10; validation=pass checked=922 mismatches=0 crossings=0. | GameBlockTerrainBackground.cs::TryApplyCompletedFullOceanBiomeDebugBuild @ Line 2446

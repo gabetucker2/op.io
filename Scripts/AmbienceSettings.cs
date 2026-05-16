@@ -198,7 +198,7 @@ namespace op.io
             EnsureInitialized();
             OceanWaterColor = color;
             ApplyOceanWaterColor(OceanWaterColor);
-            SyncFogOfWarWithOceanWater(BuildOceanColorAtCurrentZoneDarkness(OceanWaterColor));
+            SyncFogOfWarWithOceanWater(BuildOceanColorAtCurrentBiomeDarkness(OceanWaterColor));
             if (persist)
             {
                 PersistColor(OceanWaterRowKey, OceanWaterColor);
@@ -360,9 +360,9 @@ namespace op.io
             return new Color(oceanColor.R, oceanColor.G, oceanColor.B, alpha);
         }
 
-        private static Color BuildOceanColorAtCurrentZoneDarkness(Color oceanColor)
+        private static Color BuildOceanColorAtCurrentBiomeDarkness(Color oceanColor)
         {
-            float darkness = MathHelper.Clamp(GameBlockOceanBackground.OceanZoneCurrentDarkness, 0.05f, 2f);
+            float darkness = MathHelper.Clamp(GameBlockOceanBackground.OceanBiomeCurrentDarkness, 0.05f, 2f);
             Vector3 rgb = Vector3.Clamp(oceanColor.ToVector3() * darkness, Vector3.Zero, Vector3.One);
             return new Color(rgb.X, rgb.Y, rgb.Z, oceanColor.A / 255f);
         }

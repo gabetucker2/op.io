@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -18,67 +18,126 @@ namespace op.io
         private static readonly Color GridCoordinateTextColor = new(210, 210, 210, 174);
         private static readonly Color GridCoordinateTextShadowColor = new(0, 0, 0, 120);
         private static Texture2D _gridPixelTexture;
+        private static bool _startupRevealPending;
+        private static bool _startupRevealRequested;
 
         public static bool IsDrawing { get; private set; }
+        public static bool IsGraphicsLoaded { get; private set; }
+        public static bool IsLoadingGraphics { get; private set; }
+        public static bool StartupRevealPending => _startupRevealPending;
+        public static bool StartupRevealRequested => _startupRevealRequested;
+
+        public static bool CanDrawResizeFrame => IsGraphicsLoaded && !IsLoadingGraphics;
+
         public static void LoadGraphics()
         {
+            IsGraphicsLoaded = false;
+            IsLoadingGraphics = true;
+            _startupRevealPending = false;
+            _startupRevealRequested = false;
+            bool graphicsLoadedThisCall = false;
+
             if (Core.Instance == null)
             {
                 DebugLogger.PrintError("LoadGraphics failed: Core.Instance is null.");
+                IsLoadingGraphics = false;
                 return;
             }
 
             if (Core.Instance.GraphicsDevice == null)
             {
                 DebugLogger.PrintError("LoadGraphics failed: GraphicsDevice is null.");
+                IsLoadingGraphics = false;
                 return;
             }
 
-            if (Core.Instance.SpriteBatch == null)
+            try
             {
-                Core.Instance.SpriteBatch = new SpriteBatch(Core.Instance.GraphicsDevice);
-                DebugLogger.Print("SpriteBatch initialized successfully.");
-            }
-
-            DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
-            BlockManager.OnGraphicsReady();
-            GameBlockOceanBackground.Initialize(Core.Instance.GraphicsDevice, Core.Instance.Content);
-            GameBlockTerrainBackground.Initialize(Core.Instance.GraphicsDevice);
-            AmbienceSettings.Initialize();
-            GameBlock.Initialize(Core.Instance.Content);
-            XPClumpManager.LoadContent(Core.Instance.GraphicsDevice);
-
-            if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
-            {
-                if (GameLevelManager.ActiveLevel.LoadsAnySceneObjects)
+                if (Core.Instance.SpriteBatch == null)
                 {
-                    DebugLogger.PrintWarning("No GameObjects to load content for.");
+                    Core.Instance.SpriteBatch = new SpriteBatch(Core.Instance.GraphicsDevice);
+                    DebugLogger.Print("SpriteBatch initialized successfully.");
                 }
+
+                DebugRenderer.Initialize(Core.Instance.GraphicsDevice);
+                BlockManager.OnGraphicsReady();
+                GameBlockOceanBackground.Initialize(Core.Instance.GraphicsDevice, Core.Instance.Content);
+                GameBlockTerrainBackground.Initialize(Core.Instance.GraphicsDevice);
+                AmbienceSettings.Initialize();
+                GameBlock.Initialize(Core.Instance.Content);
+                XPClumpManager.LoadContent(Core.Instance.GraphicsDevice);
+
+                if (Core.Instance.GameObjects == null || Core.Instance.GameObjects.Count == 0)
+                {
+                    if (GameLevelManager.ActiveLevel.LoadsAnySceneObjects)
+                    {
+                        DebugLogger.PrintWarning("No GameObjects to load content for.");
+                    }
+
+                    IsGraphicsLoaded = true;
+                    graphicsLoadedThisCall = true;
+                    return;
+                }
+
+                HashSet<Shape> loadedShapes = [];
+
+                foreach (GameObject obj in Core.Instance.GameObjects)
+                {
+                    if (obj.Shape != null && !loadedShapes.Contains(obj.Shape))
+                    {
+                        obj.Shape.LoadContent(Core.Instance.GraphicsDevice);
+                        loadedShapes.Add(obj.Shape);
+                    }
+                }
+
+                // Load barrel shapes for all barrel slots on each agent
+                foreach (GameObject obj in Core.Instance.GameObjects)
+                {
+                    if (obj is Agent agent)
+                    {
+                        foreach (var slot in agent.Barrels)
+                            slot.FullShape?.LoadContent(Core.Instance.GraphicsDevice);
+                    }
+                }
+
+                IsGraphicsLoaded = true;
+                graphicsLoadedThisCall = true;
+                DebugLogger.Print("GameRenderer: Graphics and GameObjects loaded successfully.");
+            }
+            finally
+            {
+                IsLoadingGraphics = false;
+                if (graphicsLoadedThisCall)
+                {
+                    QueueStartupRevealAfterGraphicsLoad();
+                }
+            }
+        }
+
+        public static void ProcessDeferredStartupReveal()
+        {
+            if (!_startupRevealPending || !IsGraphicsLoaded || IsLoadingGraphics)
+            {
                 return;
             }
 
-            HashSet<Shape> loadedShapes = [];
-
-            foreach (GameObject obj in Core.Instance.GameObjects)
+            if (Core.Instance?.Window == null)
             {
-                if (obj.Shape != null && !loadedShapes.Contains(obj.Shape))
-                {
-                    obj.Shape.LoadContent(Core.Instance.GraphicsDevice);
-                    loadedShapes.Add(obj.Shape);
-                }
+                return;
             }
 
-            // Load barrel shapes for all barrel slots on each agent
-            foreach (GameObject obj in Core.Instance.GameObjects)
-            {
-                if (obj is Agent agent)
-                {
-                    foreach (var slot in agent.Barrels)
-                        slot.FullShape?.LoadContent(Core.Instance.GraphicsDevice);
-                }
-            }
+            _startupRevealPending = false;
+            _startupRevealRequested = true;
+            DebugLogger.Print("GameRenderer: Revealing startup window after graphics load.");
+            GameInitializer.RevealStartupWindow();
+            ScreenManager.RequestWindowRepaint(Core.Instance);
+            DebugLogger.Print("GameRenderer: Startup window reveal requested after graphics load.");
+        }
 
-            DebugLogger.Print("GameRenderer: Graphics and GameObjects loaded successfully.");
+        private static void QueueStartupRevealAfterGraphicsLoad()
+        {
+            _startupRevealPending = true;
+            DebugLogger.Print("GameRenderer: Startup window reveal queued after graphics load.");
         }
 
         public static bool PrepareStartupTerrainForWindowReveal()
@@ -140,8 +199,15 @@ namespace op.io
             bool usingDockedLayout = BlockManager.BeginDockedFrame(Core.Instance.GraphicsDevice);
 
             Matrix camMatrix = BlockManager.GetCameraTransform();
-            GameBlockOceanBackground.UpdateOceanZoneTransitionForFrame(Core.GAMETIME);
+            GameBlockOceanBackground.UpdateOceanBiomeTransitionForFrame(Core.GAMETIME);
             FogOfWarManager.Prepare(camMatrix);
+            // Ocean debug borders need their own mask before backbuffer drawing starts:
+            // switching render targets after world draw can discard the backbuffer on MonoGame.
+            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible)
+            {
+                GameBlockTerrainBackground.PrepareOceanBiomeDebugOverlayForFrame(Core.Instance.SpriteBatch, camMatrix);
+            }
+
             Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
 
             Rectangle panelBounds = new(
@@ -195,6 +261,13 @@ namespace op.io
             // Fog-of-war overlay: vision circles are cut out of a fully obscuring fog layer.
             FogOfWarManager.DrawOverlay(Core.Instance.SpriteBatch);
 
+            // Draw prepared borders after fog so clear-area borders stay readable while masked fog pixels stay hidden.
+            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible &&
+                !GameBlockTerrainBackground.DrawPreparedOceanBiomeDebugOverlay(Core.Instance.SpriteBatch))
+            {
+                GameBlockTerrainBackground.DrawOceanBiomeDebugOverlay(Core.Instance.SpriteBatch, camMatrix);
+            }
+
             if (DebugModeHandler.DEBUGENABLED)
             {
                 Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
@@ -211,12 +284,7 @@ namespace op.io
                 BlockManager.CompleteDockedFrame(Core.Instance.SpriteBatch);
             }
 
-            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible)
-            {
-                GameBlockTerrainBackground.DrawOceanZoneDebugFinalOverlay(Core.Instance.SpriteBatch, camMatrix);
-            }
-
-            GameBlockOceanBackground.DrawOceanZoneTransitionOverlay(Core.Instance.SpriteBatch);
+            GameBlockOceanBackground.DrawOceanBiomeTransitionOverlay(Core.Instance.SpriteBatch);
         }
 
         public static bool WorldGridRequested =>
