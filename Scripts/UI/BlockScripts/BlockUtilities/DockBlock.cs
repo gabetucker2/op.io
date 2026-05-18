@@ -21,7 +21,8 @@ namespace op.io
         Performance = 13,
         Interact = 14,
         Ambience = 15,
-        Levels = 16
+        Levels = 16,
+        Map = 17
     }
 
     /// <summary>

@@ -101,6 +101,9 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanBiom
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanBiomeTwilightDistance', 'Maximum offshore distance classified as the twilight ocean biome after the sunlit band.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanBiomeMidnightDistance', 'Maximum offshore distance classified as the midnight ocean biome before open water becomes abyss.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanBiomeMinimumTransitionVolumeDistance', 'SQL-backed cumulative offshore spread added per ocean-biome transition before deeper biomes begin.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanDebugStreamedTileSegmentCount', 'How many visible ocean-biome border segments came from streamed local debug tiles instead of the full-map cache.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanDebugMissingVisibleTileCount', 'How many visible ocean-biome debug tiles are still missing because their terrain chunks or border tile builds are not ready yet.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainOceanDebugStreamedTileStatus', 'Current streamed ocean-biome debug tile coverage status for areas outside the full-map border cache.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainPreloadMarginWorldUnits', 'Extra world-space margin around the camera-and-fog-visible terrain streaming window that chunk loading prebuilds ahead of view.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainSeedAnchor', 'Seed-derived terrain-space anchor applied before chunk sampling so the spawn region opens near generated land instead of empty ocean.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('TerrainCenterChunk', 'Chunk coordinate currently centered under the terrain streaming focus.');
@@ -143,6 +146,7 @@ INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletRecoilScal
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletFarmKnockbackScalar', 'Knockback attenuation for farm objects hit by bullets.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletActiveCount',          'Number of active bullets currently managed by BulletManager.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletBarrelLockedCount',    'Number of active bullets still traveling inside their firing barrels.');
+INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletOwnerImmuneCount',     'Number of active bullets currently unable to hit their firing owner because they have not physically cleared that owner''s body.');
 INSERT OR IGNORE INTO UITooltips (RowKey, TooltipText) VALUES ('BulletCollisionReadyCount',  'Number of active bullets that have left the barrel and can collide.');
 
 -- Controls block — XP bar toggle

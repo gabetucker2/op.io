@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using op.io.UI.BlockScripts.Blocks;
 
 namespace op.io
 {
@@ -28,6 +29,9 @@ namespace op.io
         public static bool InputBlocked         => BlockManager.IsInputBlocked();
         public static bool DraggingLayout       => BlockManager.IsDraggingLayout;
         public static bool SuperimposeLocked    => BlockManager.IsSuperimposeLocked;
+        public static int HidePanelWhenNotDockingEnabledPanelCount => BlockManager.HidePanelWhenNotDockingEnabledPanelCount;
+        public static int HidePanelWhenNotDockingSuppressedPanelCount => BlockManager.HidePanelWhenNotDockingSuppressedPanelCount;
+        public static string HidePanelWhenNotDockingSuppressedPanels => BlockManager.HidePanelWhenNotDockingSuppressedPanels;
         public static bool CursorOnGameBlock    => BlockManager.IsCursorWithinGameBlock();
         public static bool NativeWindowResizeEdges => ScreenManager.NativeWindowResizeEdgesEnabled;
         public static bool CustomDockingResizeEdges => ScreenManager.CustomDockingResizeEdgesEnabled;
@@ -54,6 +58,16 @@ namespace op.io
         public static bool RendererCanDrawResizeFrame => GameRenderer.CanDrawResizeFrame;
         public static bool RendererStartupRevealPending => GameRenderer.StartupRevealPending;
         public static bool RendererStartupRevealRequested => GameRenderer.StartupRevealRequested;
+        public static int MainThreadStallCount => MainThreadStallLogger.StallCount;
+        public static string MainThreadLastStallStage => MainThreadStallLogger.LastStallStage;
+        public static double MainThreadLastStallMilliseconds => MainThreadStallLogger.LastStallMilliseconds;
+        public static double MainThreadStallThresholdMilliseconds => MainThreadStallLogger.StallThresholdMs;
+        public static string MainThreadLastStallSourceSummary => MainThreadStallLogger.LastStallSourceSummary;
+        public static int BlockLoadActiveCount => BlockAsyncLoadManager.ActiveBlockLoadCount;
+        public static int BlockLoadPendingCount => BlockAsyncLoadManager.PendingBlockLoadCount;
+        public static int BlockLoadMaxConcurrency => BlockAsyncLoadManager.MaxConcurrentBlockLoads;
+        public static string BlockLoadStatus => BlockAsyncLoadManager.StatusSummary;
+        public static bool GameBlockLoading => BlockAsyncLoadManager.IsBlockLoading(DockBlockKind.Game);
         public static string AmbienceFogOfWarColor => AmbienceSettings.FogOfWarHex;
         public static string AmbienceOceanWaterColor => AmbienceSettings.OceanWaterHex;
         public static string AmbienceOceanWaterLiveColor => AmbienceSettings.CurrentOceanWaterHex;
@@ -218,6 +232,9 @@ namespace op.io
         public static int TerrainOceanDebugBorderSegmentCount => GameBlockTerrainBackground.TerrainOceanDebugBorderSegmentCount;
         public static int TerrainOceanDebugBorderLabelCount => GameBlockTerrainBackground.TerrainOceanDebugBorderLabelCount;
         public static string TerrainOceanDebugDrawStatus => GameBlockTerrainBackground.TerrainOceanDebugDrawStatus;
+        public static int TerrainOceanDebugStreamedTileSegmentCount => GameBlockTerrainBackground.TerrainOceanDebugStreamedTileSegmentCount;
+        public static int TerrainOceanDebugMissingVisibleTileCount => GameBlockTerrainBackground.TerrainOceanDebugMissingVisibleTileCount;
+        public static string TerrainOceanDebugStreamedTileStatus => GameBlockTerrainBackground.TerrainOceanDebugStreamedTileStatus;
         public static double TerrainOceanDebugBuildMilliseconds => GameBlockTerrainBackground.TerrainOceanDebugBuildMilliseconds;
         public static bool TerrainOceanDebugVisionClipActive => GameBlockTerrainBackground.TerrainOceanDebugVisionClipActive;
         public static int TerrainOceanDebugVisionClipRegionCount => GameBlockTerrainBackground.TerrainOceanDebugVisionClipRegionCount;
@@ -241,6 +258,19 @@ namespace op.io
         public static int TerrainOceanDebugCompletedTileQueueCount => GameBlockTerrainBackground.TerrainOceanDebugCompletedTileQueueCount;
         public static int TerrainOceanDebugQueuedTileBuildCount => GameBlockTerrainBackground.TerrainOceanDebugQueuedTileBuildCount;
         public static string TerrainOceanDebugWorkerStatus => GameBlockTerrainBackground.TerrainOceanDebugWorkerStatus;
+        public static string MapBlockMode => MapBlock.CurrentModeName;
+        public static int MapBlockLastSampleCount => MapBlock.LastSampleCount;
+        public static double MapBlockLastRebuildMilliseconds => MapBlock.LastRebuildMilliseconds;
+        public static string MapBlockLastBounds => MapBlock.LastBoundsSummary;
+        public static string MapBlockLastTextureResolution => MapBlock.LastTextureResolution;
+        public static string MapBlockLastLodSummary => MapBlock.LastLodSummary;
+        public static int MapBlockLastLodCellPixels => MapBlock.LastLodCellPixels;
+        public static float MapBlockLastWorldUnitsPerTexel => MapBlock.LastWorldUnitsPerTexel;
+        public static string MapBlockLoadStatus => MapBlock.LoadStatus;
+        public static long MapBlockQueuedTextureRequestId => MapBlock.QueuedTextureRequestId;
+        public static long MapBlockLastAppliedTextureRequestId => MapBlock.LastAppliedTextureRequestId;
+        public static bool MapBlockHasDeferredTextureBuild => MapBlock.HasDeferredTextureBuild;
+        public static int MapBlockDeferredTextureRebuildCount => MapBlock.DeferredTextureRebuildCount;
 
         /// <summary>
         /// Shows the DockBlockCategory (Standard / Overlay / Dynamic) of the
@@ -266,6 +296,7 @@ namespace op.io
         public static float BulletFarmKnockbackScalar   => BulletManager.BulletFarmKnockbackScalar;
         public static int BulletActiveCount             => BulletManager.ActiveBulletCount;
         public static int BulletBarrelLockedCount       => BulletManager.BarrelLockedBulletCount;
+        public static int BulletOwnerImmuneCount        => BulletManager.OwnerImmuneBulletCount;
         public static int BulletCollisionReadyCount     => BulletManager.CollisionReadyBulletCount;
         public static int WorldRenderRegisteredObjectCount => ShapeManager.RegisteredWorldObjectCount;
         public static int WorldRenderDrawnObjectCount => ShapeManager.DrawnWorldObjectCount;

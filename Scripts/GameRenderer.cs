@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using op.io.UI.BlockScripts.Blocks;
@@ -178,6 +179,7 @@ namespace op.io
             }
 
             IsDrawing = true;
+            Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
                 DrawInternal();
@@ -190,41 +192,54 @@ namespace op.io
             }
             finally
             {
+                stopwatch.Stop();
+                MainThreadStallLogger.ReportIfStalled("Draw", stopwatch.Elapsed.TotalMilliseconds);
                 IsDrawing = false;
             }
         }
 
         private static void DrawInternal()
         {
+            FrameProfiler.BeginSample("GameRenderer.BeginDockedFrame", "GameRenderer");
             bool usingDockedLayout = BlockManager.BeginDockedFrame(Core.Instance.GraphicsDevice);
+            FrameProfiler.EndSample("GameRenderer.BeginDockedFrame");
 
             Matrix camMatrix = BlockManager.GetCameraTransform();
+            FrameProfiler.BeginSample("GameBlockOceanBackground.UpdateOceanBiomeTransitionForFrame", "GameBlockOceanBackground");
             GameBlockOceanBackground.UpdateOceanBiomeTransitionForFrame(Core.GAMETIME);
+            FrameProfiler.EndSample("GameBlockOceanBackground.UpdateOceanBiomeTransitionForFrame");
+            FrameProfiler.BeginSample("FogOfWarManager.Prepare", "FogOfWarManager");
             FogOfWarManager.Prepare(camMatrix);
-            // Ocean debug borders need their own mask before backbuffer drawing starts:
-            // switching render targets after world draw can discard the backbuffer on MonoGame.
-            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible)
-            {
-                GameBlockTerrainBackground.PrepareOceanBiomeDebugOverlayForFrame(Core.Instance.SpriteBatch, camMatrix);
-            }
-
-            Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
-
+            FrameProfiler.EndSample("FogOfWarManager.Prepare");
             Rectangle panelBounds = new(
                 0,
                 0,
                 Core.Instance.GraphicsDevice.Viewport.Width,
                 Core.Instance.GraphicsDevice.Viewport.Height);
-            if (!GameBlockTerrainBackground.TerrainStartupVisibleTerrainReady)
+            FrameProfiler.BeginSample("GameBlockTerrainBackground.PrepareVisibleTerrainForFrame", "GameBlockTerrainBackground");
+            GameBlockTerrainBackground.PrepareVisibleTerrainForFrame(
+                Core.Instance.GraphicsDevice,
+                panelBounds,
+                camMatrix);
+            FrameProfiler.EndSample("GameBlockTerrainBackground.PrepareVisibleTerrainForFrame");
+
+            // Ocean debug borders need their own mask before backbuffer drawing starts:
+            // switching render targets after world draw can discard the backbuffer on MonoGame.
+            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible)
             {
-                GameBlockTerrainBackground.PrepareStartupVisibleTerrain(
-                    Core.Instance.GraphicsDevice,
-                    panelBounds,
-                    camMatrix);
+                FrameProfiler.BeginSample("GameBlockTerrainBackground.PrepareOceanBiomeDebugOverlayForFrame", "GameBlockTerrainBackground");
+                GameBlockTerrainBackground.PrepareOceanBiomeDebugOverlayForFrame(Core.Instance.SpriteBatch, camMatrix);
+                FrameProfiler.EndSample("GameBlockTerrainBackground.PrepareOceanBiomeDebugOverlayForFrame");
             }
 
+            Core.Instance.GraphicsDevice.Clear(Core.Instance.BackgroundColor);
+
+            FrameProfiler.BeginSample("GameBlockOceanBackground.Draw", "GameBlockOceanBackground");
             GameBlockOceanBackground.Draw(Core.Instance.SpriteBatch, panelBounds, Core.GAMETIME, BlockManager.CameraZoom, camMatrix);
+            FrameProfiler.EndSample("GameBlockOceanBackground.Draw");
+            FrameProfiler.BeginSample("GameBlockTerrainBackground.Draw", "GameBlockTerrainBackground");
             GameBlockTerrainBackground.Draw(Core.Instance.SpriteBatch, panelBounds, camMatrix);
+            FrameProfiler.EndSample("GameBlockTerrainBackground.Draw");
             if (GameBlockTerrainBackground.TerrainStartupVisibleTerrainReady)
             {
                 GameInitializer.RevealStartupWindow();
@@ -233,39 +248,60 @@ namespace op.io
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
 
             // Draw all shapes once; ShapeManager already iterates registered objects.
+            FrameProfiler.BeginSample("ShapeManager.DrawShapes", "ShapeManager");
             ShapeManager.Instance.DrawShapes(Core.Instance.SpriteBatch);
             DrawWorldGrid(Core.Instance.SpriteBatch, camMatrix);
+            FrameProfiler.EndSample("ShapeManager.DrawShapes");
             Core.Instance.SpriteBatch.End();
 
             // Draw clumps in their own world-layer pass so they always render over map geometry.
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
+            FrameProfiler.BeginSample("XPClumpManager.DrawCore", "XPClumpManager");
             XPClumpManager.DrawCore(Core.Instance.SpriteBatch);
+            FrameProfiler.EndSample("XPClumpManager.DrawCore");
             Core.Instance.SpriteBatch.End();
 
             // Additive pass for hit-flash: adds brightness without washing to pure white
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, null, null, null, null, camMatrix);
+            FrameProfiler.BeginSample("WorldAdditiveDraw", "GameRenderer");
             ShapeManager.Instance.DrawFlashes(Core.Instance.SpriteBatch);
             XPClumpManager.DrawGlow(Core.Instance.SpriteBatch);
+            FrameProfiler.EndSample("WorldAdditiveDraw");
             Core.Instance.SpriteBatch.End();
 
             // Health bar pass — drawn on top of game world, below damage numbers and UI
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
+            FrameProfiler.BeginSample("HealthBarManager.Draw", "HealthBarManager");
             HealthBarManager.Draw(Core.Instance.SpriteBatch);
+            FrameProfiler.EndSample("HealthBarManager.Draw");
             Core.Instance.SpriteBatch.End();
 
             // Damage number pass — drawn on top of game world, below UI
             Core.Instance.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, null, camMatrix);
+            FrameProfiler.BeginSample("DamageNumberManager.Draw", "DamageNumberManager");
             DamageNumberManager.Draw(Core.Instance.SpriteBatch);
+            FrameProfiler.EndSample("DamageNumberManager.Draw");
             Core.Instance.SpriteBatch.End();
 
             // Fog-of-war overlay: vision circles are cut out of a fully obscuring fog layer.
+            FrameProfiler.BeginSample("FogOfWarManager.DrawOverlay", "FogOfWarManager");
             FogOfWarManager.DrawOverlay(Core.Instance.SpriteBatch);
+            FrameProfiler.EndSample("FogOfWarManager.DrawOverlay");
 
             // Draw prepared borders after fog so clear-area borders stay readable while masked fog pixels stay hidden.
-            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible &&
-                !GameBlockTerrainBackground.DrawPreparedOceanBiomeDebugOverlay(Core.Instance.SpriteBatch))
+            bool preparedOceanDebugDrawn = false;
+            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible)
             {
+                FrameProfiler.BeginSample("GameBlockTerrainBackground.DrawPreparedOceanBiomeDebugOverlay", "GameBlockTerrainBackground");
+                preparedOceanDebugDrawn = GameBlockTerrainBackground.DrawPreparedOceanBiomeDebugOverlay(Core.Instance.SpriteBatch);
+                FrameProfiler.EndSample("GameBlockTerrainBackground.DrawPreparedOceanBiomeDebugOverlay");
+            }
+
+            if (GameBlockTerrainBackground.TerrainOceanDebugOverlayVisible && !preparedOceanDebugDrawn)
+            {
+                FrameProfiler.BeginSample("GameBlockTerrainBackground.DrawOceanBiomeDebugOverlay", "GameBlockTerrainBackground");
                 GameBlockTerrainBackground.DrawOceanBiomeDebugOverlay(Core.Instance.SpriteBatch, camMatrix);
+                FrameProfiler.EndSample("GameBlockTerrainBackground.DrawOceanBiomeDebugOverlay");
             }
 
             if (DebugModeHandler.DEBUGENABLED)
@@ -281,10 +317,14 @@ namespace op.io
 
             if (usingDockedLayout)
             {
+                FrameProfiler.BeginSample("BlockManager.CompleteDockedFrame", "BlockManager");
                 BlockManager.CompleteDockedFrame(Core.Instance.SpriteBatch);
+                FrameProfiler.EndSample("BlockManager.CompleteDockedFrame");
             }
 
+            FrameProfiler.BeginSample("GameBlockOceanBackground.DrawOceanBiomeTransitionOverlay", "GameBlockOceanBackground");
             GameBlockOceanBackground.DrawOceanBiomeTransitionOverlay(Core.Instance.SpriteBatch);
+            FrameProfiler.EndSample("GameBlockOceanBackground.DrawOceanBiomeTransitionOverlay");
         }
 
         public static bool WorldGridRequested =>

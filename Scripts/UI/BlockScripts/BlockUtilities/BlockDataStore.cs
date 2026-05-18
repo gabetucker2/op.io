@@ -19,10 +19,14 @@ namespace op.io.UI.BlockScripts.BlockUtilities
         private const string RowDataColumnName = "RowData";
 
         private static readonly Dictionary<string, bool> _tableReady = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly object _tableReadyLock = new();
 
         public static void ResetCache()
         {
-            _tableReady.Clear();
+            lock (_tableReadyLock)
+            {
+                _tableReady.Clear();
+            }
         }
 
         public static void EnsureTables(SQLiteConnection connection, params DockBlockKind[] blockKinds)
@@ -438,6 +442,14 @@ ON CONFLICT(RowKey) DO UPDATE SET {RowDataColumnName} = excluded.{RowDataColumnN
 
         private static void EnsureTable(DockBlockKind blockKind, SQLiteConnection connection = null)
         {
+            lock (_tableReadyLock)
+            {
+                EnsureTableLocked(blockKind, connection);
+            }
+        }
+
+        private static void EnsureTableLocked(DockBlockKind blockKind, SQLiteConnection connection = null)
+        {
             string tableName = GetTableName(blockKind);
             if (_tableReady.ContainsKey(tableName))
             {
@@ -680,7 +692,7 @@ DELETE FROM {tableName} WHERE RowKey = @oldKey;";
 
         private static bool IsLockedByDefault(DockBlockKind blockKind)
         {
-            if (blockKind == DockBlockKind.Properties || blockKind == DockBlockKind.Bars || blockKind == DockBlockKind.Interact)
+            if (blockKind == DockBlockKind.Properties || blockKind == DockBlockKind.Bars || blockKind == DockBlockKind.Map || blockKind == DockBlockKind.Interact)
             {
                 return false;
             }

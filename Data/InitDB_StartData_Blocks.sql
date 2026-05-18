@@ -359,6 +359,7 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
     { "kind": "Chat", "mode": "Toggle", "count": 0, "visible": false },
     { "kind": "Performance", "mode": "Toggle", "count": 0, "visible": false },
     { "kind": "Bars", "mode": "Toggle", "count": 0, "visible": true },
+    { "kind": "Map", "mode": "Toggle", "count": 0, "visible": true },
     { "kind": "Interact", "mode": "Toggle", "count": 0, "visible": true }
   ],
   "panels": [
@@ -367,7 +368,7 @@ INSERT OR REPLACE INTO BlockDockingSetups (RowKey, RowData) VALUES ('Default', '
     { "id": "controls", "active": "ambience", "blocks": ["interact", "controls", "ambience"] },
     { "id": "backend", "active": "backend", "blocks": ["backend", "debuglogs", "chat", "specs"] },
     { "id": "blank", "active": "blank", "blocks": ["blank"] },
-    { "id": "properties", "active": "properties", "blocks": ["properties", "bars"] }
+    { "id": "properties", "active": "properties", "blocks": ["properties", "bars", "map"] }
   ],
   "layout": {
     "type": "Split",

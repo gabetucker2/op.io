@@ -724,6 +724,7 @@ AND BulletDamage IN (4, 10, 15);");
                 updated |= UpsertMenuToggleVisibility(menu, "DebugLogs", false);
                 updated |= UpsertMenuToggleVisibility(menu, "Chat", false);
                 updated |= UpsertMenuToggleVisibility(menu, "Performance", false);
+                updated |= EnsureMenuToggleEntry(menu, "Map", true);
 
                 if (!updated)
                 {
@@ -898,6 +899,7 @@ AND BulletDamage IN (4, 10, 15);");
 
                     bool updated = false;
                     updated |= EnsureMenuToggleEntry(menu, "Bars", true);
+                    updated |= EnsureMenuToggleEntry(menu, "Map", true);
                     updated |= UpsertMenuToggleVisibility(menu, "Ambience", true);
                     updated |= UpsertMenuToggleVisibility(menu, "Levels", true);
                     updated |= EnsureMenuToggleEntry(menu, "Interact", true);
@@ -909,6 +911,7 @@ AND BulletDamage IN (4, 10, 15);");
                     updated |= UpsertMenuToggleVisibility(menu, "Chat", false);
                     updated |= UpsertMenuToggleVisibility(menu, "Performance", false);
                     updated |= MoveBlockToPanel(panels, "properties", "bars", "properties");
+                    updated |= MoveBlockToPanel(panels, "properties", "map", "bars");
                     updated |= MoveBlockToPanel(panels, "controls", "interact");
                     updated |= MoveBlockToPanel(panels, "controls", "ambience", "controls");
                     updated |= MoveBlockToPanel(panels, "controls", "levels", "ambience");
@@ -925,6 +928,7 @@ AND BulletDamage IN (4, 10, 15);");
                     }
                     updated |= RemoveBlocksFromOverlays(overlays,
                         "bars",
+                        "map",
                         "interact",
                         "ambience",
                         "levels",
@@ -2503,8 +2507,32 @@ WHERE Name = 'ScoutSentryBody'
             [
                 ("BulletActiveCount", "Number of active bullets currently managed by BulletManager."),
                 ("BulletBarrelLockedCount", "Number of active bullets still traveling inside their firing barrels."),
+                ("BulletOwnerImmuneCount", "Number of active bullets currently unable to hit their firing owner because they have not physically cleared that owner's body."),
                 ("BulletCollisionReadyCount", "Number of active bullets that have left the barrel and can collide."),
+                ("MainThreadStallCount", "Number of update or draw calls that exceeded the main-thread stall warning threshold this run."),
+                ("MainThreadLastStallStage", "Whether the most recent main-thread stall was detected during Update or Draw."),
+                ("MainThreadLastStallMilliseconds", "Elapsed milliseconds measured for the most recent main-thread stall."),
+                ("MainThreadStallThresholdMilliseconds", "Elapsed milliseconds required before update or draw is logged as a main-thread stall."),
+                ("MainThreadLastStallSourceSummary", "Largest current-frame profiler samples captured when the most recent main-thread stall was detected."),
+                ("BlockLoadActiveCount", "Number of block-owned background load jobs currently running inside the global concurrency cap."),
+                ("BlockLoadPendingCount", "Number of block-owned background load jobs queued behind a block worker or the global concurrency cap."),
+                ("BlockLoadMaxConcurrency", "Maximum number of block-owned background load jobs allowed to run at once."),
+                ("BlockLoadStatus", "Compact status summary of block-owned background load jobs that are pending or running."),
+                ("GameBlockLoading", "Shows whether Game block-owned loading is active and currently pausing game simulation and non-meta gameplay inputs."),
                 ("TerrainWorldSeed", "Seed used with chunk coordinates to deterministically regenerate terrain without saving chunk payloads."),
+                ("MapBlockMode", "Current Map block render mode persisted in BlockMap SQL row data."),
+                ("MapBlockLastSampleCount", "Number of terrain and ocean-biome samples used by the Map block during its latest texture rebuild."),
+                ("MapBlockLastRebuildMilliseconds", "Milliseconds spent rebuilding the Map block texture on its block-owned background worker."),
+                ("MapBlockLastBounds", "World bounds visualized by the Map block during its latest texture rebuild."),
+                ("MapBlockLastTextureResolution", "Texture resolution used by the Map block during its latest terrain and biome render."),
+                ("MapBlockLastLodSummary", "Latest Map block level-of-detail summary, including how many display pixels are approximated by each map texel."),
+                ("MapBlockLastLodCellPixels", "How many Map block display pixels are represented by each sampled map texel in the latest texture build."),
+                ("MapBlockLastWorldUnitsPerTexel", "Approximate world-space span represented by each Map block texture texel in the latest texture build."),
+                ("MapBlockLoadStatus", "Current Map block background load status, including pending or running map texture builds."),
+                ("MapBlockQueuedTextureRequestId", "Most recent queued Map block texture build request id."),
+                ("MapBlockLastAppliedTextureRequestId", "Most recent Map block texture build request id uploaded to the GPU on the main thread."),
+                ("MapBlockHasDeferredTextureBuild", "Whether the Map block has a newer camera or mode request waiting for the active texture build to finish instead of canceling it."),
+                ("MapBlockDeferredTextureRebuildCount", "How many distinct Map block texture rebuild requests were deferred while an older texture build was already active."),
                 ("TerrainResidentChunkCount", "How many terrain chunks are currently cached in memory, including water-only chunk records."),
                 ("TerrainResidentComponentCount", "How many connected terrain landmass render objects are currently resident after stitching loaded chunks together."),
                 ("TerrainResidentColliderCount", "How many legacy terrain collider proxy bodies are resident; should remain zero because terrain collision no longer creates hidden scene objects."),
@@ -2525,11 +2553,11 @@ WHERE Name = 'ScoutSentryBody'
                 ("TerrainFullMapPendingChunkCount", "How many full-map terrain-data chunks are not yet generated and retained in memory."),
                 ("TerrainFullMapGenerationComplete", "Whether every chunk in the finite terrain map cache has finished generating."),
                 ("TerrainFullMapSnapshotReady", "Whether the generated full terrain map has been copied into the immutable mask used by ocean-biome border generation."),
-                ("TerrainAccessRequestActive", "Shows whether player movement requested terrain streaming around the target area without blocking movement."),
-                ("TerrainAccessRequestStatus", "Current non-blocking terrain-access target and radius being queued for generation."),
+                ("TerrainAccessRequestActive", "Shows whether a deferred terrain access request is active after the immediate critical-window barrier could not finish."),
+                ("TerrainAccessRequestStatus", "Current deferred terrain-access target and radius being queued after an immediate readiness miss."),
                 ("TerrainNonBlockingChunkLoadRequestCount", "How many runtime visible-or-near-visible chunk loads were routed to the terrain worker instead of being built on the main thread."),
                 ("TerrainNonBlockingChunkLoadQueuedCount", "How many terrain chunks were queued by the non-blocking visible/proximity streaming path."),
-                ("TerrainMovementBlockedUntilReadyCount", "Legacy count of movement attempts blocked by terrain streaming; should remain zero."),
+                ("TerrainMovementBlockedUntilReadyCount", "How many movement attempts were held because critical terrain or ocean-border readiness could not be completed immediately."),
                 ("TerrainDiscardedStaleMaterializationCount", "How many completed terrain mesh builds were discarded because the camera or vision window changed before they finished."),
                 ("TerrainChunkBuildsInFlight", "Shows whether any terrain chunk builds are currently in flight."),
                 ("TerrainChunkWorldSize", "World-space width and height covered by each deterministic terrain chunk."),
@@ -2553,6 +2581,9 @@ WHERE Name = 'ScoutSentryBody'
                 ("TerrainOceanDebugBorderValidationCrossingIntersectionCount", "How many improper crossings were found in the full-map ocean-biome border segments."),
                 ("TerrainOceanDebugBorderValidationStatus", "Pass/fail summary proving full-map ocean-biome borders match runtime ocean-biome locations and do not improperly overlap."),
                 ("TerrainOceanDebugDrawStatus", "Latest ocean-biome border render summary: drawn visible segments, viewport candidates, full-map segment count, and clipping mode."),
+                ("TerrainOceanDebugStreamedTileSegmentCount", "How many visible ocean-biome border segments came from streamed local debug tiles instead of the full-map cache."),
+                ("TerrainOceanDebugMissingVisibleTileCount", "How many visible ocean-biome debug tiles are still missing because their terrain chunks or border tile builds are not ready yet."),
+                ("TerrainOceanDebugStreamedTileStatus", "Current streamed ocean-biome debug tile coverage status for areas outside the full-map border cache."),
                 ("TerrainOceanDebugVisionClipActive", "Whether ocean-biome border rendering is currently clipped to fog-of-war vision."),
                 ("TerrainOceanDebugVisionClipRegionCount", "How many fog-of-war vision regions are available for clipping ocean-biome borders."),
                 ("TerrainOceanDebugVisionClipStatus", "Current fog-of-war clipping state for ocean-biome border rendering."),

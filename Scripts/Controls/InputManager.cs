@@ -1179,6 +1179,10 @@ namespace op.io
             bool guiInteracting    = mouseInteracting && !draggingLayout && BlockManager.IsAnyGuiInteracting;
 
             bool focusLost = TryGetFocusModeSuppressionReason(isFocus, out string focusReason);
+            bool gameBlockLoading = BlockAsyncLoadManager.IsBlockLoading(DockBlockKind.Game);
+            string gameBlockLoadingReason = gameBlockLoading
+                ? $"Game block loading: {BlockAsyncLoadManager.GetBlockLoadingLine(DockBlockKind.Game)}"
+                : string.Empty;
 
             // MouseLeave (and any unrecognised) mode suppresses when cursor leaves the game block.
             bool cursorOutside = !isNone && !isLimited && !isFocus && !BlockManager.IsCursorWithinGameBlock();
@@ -1189,6 +1193,8 @@ namespace op.io
                 noneMode:       isNone,
                 inspectMode:    InspectModeState.IsNonMetaSuppressed,
                 inputBlocked:   BlockManager.IsInputBlocked(),
+                gameBlockLoading: gameBlockLoading,
+                gameBlockLoadingReason: gameBlockLoadingReason,
                 focusLost:      focusLost,
                 focusReason:    focusReason,
                 draggingLayout: draggingLayout,
@@ -1206,6 +1212,8 @@ namespace op.io
             bool   noneMode,
             bool   inspectMode,
             bool   inputBlocked,
+            bool   gameBlockLoading,
+            string gameBlockLoadingReason,
             bool   focusLost,
             string focusReason,
             bool   draggingLayout,
@@ -1213,6 +1221,8 @@ namespace op.io
             bool   cursorOutside,
             string modeLabel)
         {
+            if (gameBlockLoading)
+                return Freeze(true, string.IsNullOrWhiteSpace(gameBlockLoadingReason) ? "Game block loading" : gameBlockLoadingReason);
             if (noneMode)
                 return Freeze(false, string.Empty);
             if (inspectMode)

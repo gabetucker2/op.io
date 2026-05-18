@@ -1,0 +1,3 @@
+Log created at 2026-05-17T20:23:09.4603733-04:00
+[DEBUG] [TerrainChunkBuild] key=0,0 totalMs=1836.0 setupMs=0.3 maskMs=979.2 cleanupMs=2.4 landMaskMs=0.0 oceanBiomeMs=854.1 hasLand=True | GameBlockTerrainBackground.cs::BuildChunkData @ Line 7663
+[DEBUG] [TerrainMaterializationApply] request=1 oldObjects=0 newObjects=0 oldTriangles=0 newTriangles=0 buildMs=5.983 visibleWindow=0..0, 0..0 resultMaterializedWindow=0..0, 0..0 resultVisualWindow=0..0, 0..0 resultColliderWindow=0..0, 0..0 covered=True dirty=False pendingCritical=0 pendingTotal=0 | GameBlockTerrainBackground.cs::LogTerrainMaterializationApplyDiagnostics @ Line 11463

@@ -30,7 +30,8 @@ namespace op.io
             Color? textColorOverride = null,
             Color? fillOverride = null,
             Color? hoverFillOverride = null,
-            Color? borderOverride = null)
+            Color? borderOverride = null,
+            float textScale = 1f)
         {
             if (spriteBatch == null || bounds == Rectangle.Empty)
             {
@@ -53,9 +54,26 @@ namespace op.io
             DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
 
             label ??= string.Empty;
-            Vector2 textSize = font.MeasureString(label);
+            float resolvedTextScale = Math.Clamp(textScale, 0.45f, 1.25f);
+            Vector2 textSize = font.MeasureString(label) * resolvedTextScale;
             Vector2 textPosition = new(bounds.X + (bounds.Width - textSize.X) / 2f, bounds.Y + (bounds.Height - textSize.Y) / 2f);
-            font.DrawString(spriteBatch, label, textPosition, textColor);
+            if (MathF.Abs(resolvedTextScale - 1f) <= 0.001f)
+            {
+                font.DrawString(spriteBatch, label, textPosition, textColor);
+            }
+            else
+            {
+                spriteBatch.DrawString(
+                    font.Font,
+                    label,
+                    textPosition,
+                    textColor,
+                    0f,
+                    Vector2.Zero,
+                    font.Scale * resolvedTextScale,
+                    SpriteEffects.None,
+                    0f);
+            }
         }
 
         public static void DrawIcon(

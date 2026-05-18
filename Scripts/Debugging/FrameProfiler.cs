@@ -22,6 +22,7 @@ namespace op.io
             public long BeginGCBytes;
             public readonly Queue<double> Durations = new();
             public double SumMs;
+            public double LastMs;
             public double AvgMs;
             public double PeakMs;
             public long LastAllocBytes;
@@ -73,6 +74,7 @@ namespace op.io
 
             state.Durations.Enqueue(elapsedMs);
             state.SumMs += elapsedMs;
+            state.LastMs = elapsedMs;
             while (state.Durations.Count > RollingWindow)
                 state.SumMs -= state.Durations.Dequeue();
 
@@ -120,6 +122,7 @@ namespace op.io
                 entries[i] = new ProfileEntry(
                     functionName:      key,
                     parentScript:      s.ParentScript,
+                    lastMs:            s.LastMs,
                     avgMs:             s.AvgMs,
                     peakMs:            s.PeakMs,
                     percentOfFrame:    (float)(s.AvgMs / frameMs * 100.0),
@@ -136,11 +139,12 @@ namespace op.io
     public readonly struct ProfileEntry
     {
         public ProfileEntry(string functionName, string parentScript,
-            double avgMs, double peakMs, float percentOfFrame, long avgAllocBytes, long peakAllocBytes,
+            double lastMs, double avgMs, double peakMs, float percentOfFrame, long avgAllocBytes, long peakAllocBytes,
             long currentAllocBytes = 0)
         {
             FunctionName      = functionName   ?? string.Empty;
             ParentScript      = parentScript   ?? string.Empty;
+            LastMs            = lastMs;
             AvgMs             = avgMs;
             PeakMs            = peakMs;
             PercentOfFrame    = percentOfFrame;
@@ -151,6 +155,7 @@ namespace op.io
 
         public string FunctionName    { get; }
         public string ParentScript    { get; }
+        public double LastMs          { get; }
         public double AvgMs           { get; }
         public double PeakMs          { get; }
         /// <summary>Percentage of the current frame time this sample consumed (0–100+).</summary>

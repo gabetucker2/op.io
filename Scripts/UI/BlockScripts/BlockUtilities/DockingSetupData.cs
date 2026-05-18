@@ -27,6 +27,9 @@ namespace op.io
         [JsonPropertyName("panelLocks")]
         public Dictionary<string, bool> PanelLocks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+        [JsonPropertyName("panelHideWhenNotDocking")]
+        public Dictionary<string, bool> PanelHideWhenNotDocking { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
         [JsonPropertyName("overlays")]
         public List<DockingSetupOverlay> Overlays { get; set; } = new();
 
@@ -56,6 +59,9 @@ namespace op.io
 
         [JsonPropertyName("active")]
         public string Active { get; set; }
+
+        [JsonPropertyName("hidePanelWhenNotDocking")]
+        public bool HidePanelWhenNotDocking { get; set; }
 
         [JsonPropertyName("blocks")]
         public List<string> Blocks { get; set; } = new();

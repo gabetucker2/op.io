@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 
 namespace op.io
@@ -42,6 +43,40 @@ namespace op.io
             return true;
         }
 
+        private static void SuppressGameBlockLoadingRuntime()
+        {
+            InputManager.ClearHoldLatch();
+
+            Agent player = Core.Instance?.PlayerOrNull;
+            if (player == null)
+            {
+                return;
+            }
+
+            player.MovementVelocity = Vector2.Zero;
+            if (player.IsDeadOrDying)
+            {
+                player.PhysicsVelocity = Vector2.Zero;
+                player.DeathImpulse = Vector2.Zero;
+            }
+        }
+
+        private static void UpdateBlockManagerAndFrameFinalizers(GameTime gameTime)
+        {
+            FrameProfiler.BeginSample("BlockManager.Update", "BlockManager");
+            BlockManager.Update(gameTime);
+            FrameProfiler.EndSample("BlockManager.Update");
+
+            // Reset triggers
+            TriggerManager.Tickwise_TriggerReset();
+
+            // Assess "prev" switch state management mechanism
+            ControlStateManager.Tickwise_PrevSwitchTrackUpdate();
+
+            // Capture current input states for next-frame comparisons (trigger/switch edge detection)
+            InputTypeManager.Update();
+        }
+
         public static void ResetSceneTransientState()
         {
             for (int i = _dyingObjects.Count - 1; i >= 0; i--)
@@ -54,6 +89,7 @@ namespace op.io
 
         public static void Update(GameTime gameTime)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
                 UpdateInternal(gameTime);
@@ -61,6 +97,11 @@ namespace op.io
             catch (Exception ex)
             {
                 DebugLogger.PrintError($"[GameUpdater] Exception in Update: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            }
+            finally
+            {
+                stopwatch.Stop();
+                MainThreadStallLogger.ReportIfStalled("Update", stopwatch.Elapsed.TotalMilliseconds);
             }
         }
 
@@ -250,6 +291,13 @@ namespace op.io
             // IsAnyGuiInteracting returns the current-frame answer instead of last frame's cached state.
             BlockManager.PreUpdateInteractionStates();
 
+            if (BlockAsyncLoadManager.IsBlockLoading(DockBlockKind.Game))
+            {
+                SuppressGameBlockLoadingRuntime();
+                UpdateBlockManagerAndFrameFinalizers(gameTime);
+                return;
+            }
+
             // Handle player transform — suppress when the UI is actively consuming mouse input
             // (dragging a slider, resize handle, block, etc.) so UI interactions don't move the player.
             bool uiConsumingMouse = BlockManager.IsConsumingMouseInput();
@@ -408,18 +456,7 @@ namespace op.io
             // the corresponding Dynamic content in the Interact block.
             ZoneBlockDetector.Update();
 
-            FrameProfiler.BeginSample("BlockManager.Update", "BlockManager");
-            BlockManager.Update(gameTime);
-            FrameProfiler.EndSample("BlockManager.Update");
-
-            // Reset triggers
-            TriggerManager.Tickwise_TriggerReset();
-
-            // Assess "prev" switch state management mechanism
-            ControlStateManager.Tickwise_PrevSwitchTrackUpdate();
-
-            // Capture current input states for next-frame comparisons (trigger/switch edge detection)
-            InputTypeManager.Update();
+            UpdateBlockManagerAndFrameFinalizers(gameTime);
         }
     }
 }

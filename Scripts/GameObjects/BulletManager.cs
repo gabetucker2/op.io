@@ -45,6 +45,23 @@ namespace op.io
             }
         }
 
+        public static int OwnerImmuneBulletCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (Bullet bullet in _bullets)
+                {
+                    if (bullet != null && !bullet.IsDying && bullet.IsOwnerImmune)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
         private static int _nextId = 100000;
 
         public static void Clear()
@@ -348,7 +365,8 @@ namespace op.io
             float bulletDamage      = attrs.BulletDamage      >= 0 ? attrs.BulletDamage      : DefaultBulletDamage;
             float bulletPenetration = attrs.BulletPenetration >= 0 ? attrs.BulletPenetration : DefaultBulletPenetration;
             float bulletKnockback   = AttributeDerived.BulletKnockback(bulletPenetration, BulletKnockbackScalar); // hidden: derived from BulletPenetration
-            float bulletMaxSpeed    = speed + agent.BaseSpeed; // hidden: ceiling = bulletSpeed + body speed
+            float inheritedSpeedCap = MathF.Max(agent.BaseSpeed, MathF.Max(agent.Speed, inheritedVelocity.Length()));
+            float bulletMaxSpeed    = MathF.Max(speed + inheritedSpeedCap, velocity.Length()); // hidden: ceiling = muzzle speed + inherited body speed
             string sourceBarrelName = null;
             if (agent.BarrelCount > 0 && sourceBarrelIndex >= 0 && sourceBarrelIndex < agent.BarrelCount)
             {
@@ -364,6 +382,7 @@ namespace op.io
             bullet.SourceID = HashCode.Combine(agent.ID, agent.ActiveBarrelIndex);
             bullet.SourceBarrelIndex = sourceBarrelIndex;
             bullet.SourceBarrelName = sourceBarrelName;
+            bullet.BeginOwnerClearance(agent.ID);
 
             if (barrelResolved)
             {

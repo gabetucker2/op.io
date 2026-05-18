@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -29,6 +30,7 @@ namespace op.io
         private const string SpecsBlockKey = "specs";
         private const string DebugLogsBlockKey = "debuglogs";
         private const string BarsBlockKey = "bars";
+        private const string MapBlockKey = "map";
         private const string ChatBlockKey = "chat";
         private const string PerformanceBlockKey = "performance";
 
@@ -45,7 +47,8 @@ namespace op.io
             SpecsBlockKey,
             DebugLogsBlockKey,
             ChatBlockKey,
-            PerformanceBlockKey
+            PerformanceBlockKey,
+            MapBlockKey
         ];
         private const string BlockMenuControlKey = "BlockMenu";
         private const string DockingSetupActiveRowKey = "__ActiveSetup";
@@ -108,6 +111,7 @@ namespace op.io
 
         private static bool _dockingModeEnabled = false;
         private static bool _blockDefinitionsReady;
+        private static bool _startupBlockLoadsQueued;
         private static bool _renderingDockedFrame;
         private const int CornerSnapDistance = 16;
         private static DockingSetupDefinition _pendingDockingSetup;
@@ -129,6 +133,7 @@ namespace op.io
         private static readonly List<string> _orderedPanelIds = new();
         private static readonly Dictionary<string, bool> _blockLockStates = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, string> _lastNonDockingActiveByPanel = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> _hideWhenNotDockingSuppressedPanelIds = new(StringComparer.OrdinalIgnoreCase);
         private static DockNode _rootNode;
         private static Rectangle _cachedViewportBounds;
         private static Rectangle _layoutBounds;
@@ -138,6 +143,7 @@ namespace op.io
         private static bool _viewportPushed;
         private static RenderTarget2D _worldRenderTarget;
         private static Texture2D _pixelTexture;
+        private static Texture2D _loadingCircleTexture;
         private static Texture2D _lockedIcon;
         private static Texture2D _unlockedIcon;
         private static MouseState _previousMouseState;
@@ -407,6 +413,11 @@ namespace op.io
                 return true;
             }
 
+            if (BlockAsyncLoadManager.IsBlockLoading(block.Kind))
+            {
+                return true;
+            }
+
             if (IsBlockLocked(block))
             {
                 return false;
@@ -493,11 +504,13 @@ namespace op.io
                 {
                     CollapseInteractions();
                     ClearResizeEdges();
+                    ApplyHidePanelWhenNotDockingVisibility();
                     MarkLayoutDirty();
                 }
                 else
                 {
                     EnsureBlocks();
+                    ApplyHidePanelWhenNotDockingVisibility();
                     MarkLayoutDirty();
                 }
 
@@ -529,6 +542,7 @@ namespace op.io
             }
 
             EnsureBlocks();
+            ApplyHidePanelWhenNotDockingVisibility();
             EnsureFocusedBlockValid();
             UpdateLayoutCache();
             EnsureSurfaceResources(Core.Instance.GraphicsDevice);
@@ -906,6 +920,7 @@ namespace op.io
                 _blockTooltips["props_btn:hidden:show"]   = [("Reveal hidden attributes in the details panel", string.Empty)];
                 _blockTooltips["props_btn:hidden:hide"]   = [("Collapse hidden attributes in the details panel", string.Empty)];
                 _blockTooltips["Btn_PanelLock"]           = [("Toggle panel lock for drag-bar layout actions.", string.Empty)];
+                _blockTooltips["Btn_PanelHideWhenNotDocking"] = [("Toggle whether this panel hides while DockingMode is off.", string.Empty)];
                 _blockTooltips["Btn_TabLock"]             = [("Toggle lock for this tab's block.", string.Empty)];
                 _blockTooltips["Btn_TabRelease"]          = [("Move this overlay tab back into its parent panel.", string.Empty)];
                 _blockTooltips["Btn_OverlayMerge"]        = [("Move overlay tab(s) from this panel back to the parent panel.", string.Empty)];
@@ -932,6 +947,7 @@ namespace op.io
 
             if (_blockDefinitionsReady)
             {
+                QueueStartupBlockLoads();
                 return;
             }
 
@@ -946,6 +962,7 @@ namespace op.io
                 if (ApplyDockingSetupDefinition(setup))
                 {
                     _blockMenuDirty = false;
+                    QueueStartupBlockLoads();
                     return;
                 }
             }
@@ -960,6 +977,7 @@ namespace op.io
 
             _blockDefinitionsReady = true;
             _blockMenuDirty = false;
+            QueueStartupBlockLoads();
             MarkLayoutDirty();
         }
 
@@ -975,7 +993,47 @@ namespace op.io
             _orderedPanelIds.Clear();
             _blockLockStates.Clear();
             _lastNonDockingActiveByPanel.Clear();
+            _hideWhenNotDockingSuppressedPanelIds.Clear();
+            _startupBlockLoadsQueued = false;
             ClearDockingInteractions();
+        }
+
+        private static void QueueStartupBlockLoads()
+        {
+            if (_startupBlockLoadsQueued || _orderedBlocks.Count == 0)
+            {
+                return;
+            }
+
+            _startupBlockLoadsQueued = true;
+            HashSet<DockBlockKind> queuedKinds = new();
+            foreach (DockBlock block in _orderedBlocks)
+            {
+                if (block == null || !queuedKinds.Add(block.Kind))
+                {
+                    continue;
+                }
+
+                DockBlockKind kind = block.Kind;
+                BlockAsyncLoadManager.QueueLatest(
+                    kind,
+                    "Startup",
+                    "preloading block SQL state",
+                    token => PreloadBlockState(kind, token));
+            }
+        }
+
+        private static object PreloadBlockState(DockBlockKind kind, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            BlockDataStore.LoadRowData(kind);
+            token.ThrowIfCancellationRequested();
+            BlockDataStore.LoadRowOrders(kind);
+            token.ThrowIfCancellationRequested();
+            BlockDataStore.LoadRowLocks(kind);
+            token.ThrowIfCancellationRequested();
+            BlockDataStore.GetBlockLock(kind);
+            return null;
         }
 
         private static void CreateBlocksFromMenuEntries()
@@ -1054,7 +1112,7 @@ namespace op.io
             List<DockingSetupPanelGroup> panelGroups = BuildPanelGroupDefinitions();
             DockingSetupDefinition setup = new()
             {
-                Version = 3,
+                Version = 4,
                 Panels = panelGroups,
                 GroupBars = panelGroups.ToList()
             };
@@ -1130,7 +1188,8 @@ namespace op.io
                 DockingSetupPanelGroup panelGroup = new()
                 {
                     Id = group.PanelId,
-                    Active = activeId
+                    Active = activeId,
+                    HidePanelWhenNotDocking = group.HidePanelWhenNotDocking
                 };
 
                 foreach (DockBlock block in group.Blocks)
@@ -1311,6 +1370,7 @@ namespace op.io
                 }
 
                 setup.PanelLocks[group.PanelId] = group.IsLocked;
+                setup.PanelHideWhenNotDocking[group.PanelId] = group.HidePanelWhenNotDocking;
             }
         }
 
@@ -1451,6 +1511,7 @@ namespace op.io
             // Specs is now a regular tab in the Backend panel; no overlay migration needed.
 
             ApplyDockingSetupOpacities(setup.BlockOpacities);
+            ApplyHidePanelWhenNotDockingVisibility();
 
             _blockDefinitionsReady = true;
             MarkLayoutDirty();
@@ -1631,6 +1692,8 @@ namespace op.io
                     continue;
                 }
 
+                targetGroup.HidePanelWhenNotDocking = group.HidePanelWhenNotDocking;
+
                 for (int i = 0; i < orderedBlocks.Count; i++)
                 {
                     string blockId = orderedBlocks[i];
@@ -1697,6 +1760,7 @@ namespace op.io
                 AmbienceBlockKey => ControlsBlockKey,
                 LevelsBlockKey => ControlsBlockKey,
                 BarsBlockKey => PropertiesBlockKey,
+                MapBlockKey => PropertiesBlockKey,
                 DockingSetupsBlockKey => ColorSchemeBlockKey,
                 NotesBlockKey => BackendBlockKey,
                 SpecsBlockKey => BackendBlockKey,
@@ -1943,6 +2007,23 @@ namespace op.io
                     if (_panelGroups.TryGetValue(pair.Key, out PanelGroup group) && group != null)
                     {
                         group.IsLocked = pair.Value;
+                    }
+                }
+            }
+
+            if (setup.PanelHideWhenNotDocking != null)
+            {
+                foreach (KeyValuePair<string, bool> pair in setup.PanelHideWhenNotDocking)
+                {
+                    if (string.IsNullOrWhiteSpace(pair.Key))
+                    {
+                        continue;
+                    }
+
+                    PanelGroup group = ResolvePanelGroupById(pair.Key);
+                    if (group != null)
+                    {
+                        group.HidePanelWhenNotDocking = pair.Value;
                     }
                 }
             }
@@ -2259,6 +2340,29 @@ namespace op.io
             }
         }
 
+        private static void PersistActiveDockingSetupState()
+        {
+            Dictionary<string, string> data = BlockDataStore.LoadRowData(DockBlockKind.DockingSetups);
+            if (data == null ||
+                !data.TryGetValue(DockingSetupActiveRowKey, out string activeName) ||
+                string.IsNullOrWhiteSpace(activeName))
+            {
+                return;
+            }
+
+            activeName = activeName.Trim();
+            if (!data.ContainsKey(activeName))
+            {
+                return;
+            }
+
+            string payload = CaptureDockingSetup();
+            if (!string.IsNullOrWhiteSpace(payload))
+            {
+                BlockDataStore.SetRowData(DockBlockKind.DockingSetups, activeName, payload);
+            }
+        }
+
         private static void EnsureBlockMenuEntries()
         {
             if (_blockMenuEntries.Count > 0)
@@ -2281,6 +2385,7 @@ namespace op.io
             _blockMenuEntries.Add(new BlockMenuEntry(DebugLogsBlockKey, DebugLogsBlock.BlockTitle, DockBlockKind.DebugLogs, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(SpecsBlockKey, SpecsBlock.BlockTitle, DockBlockKind.Specs, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(BarsBlockKey, BarsBlock.BlockTitle, DockBlockKind.Bars, BlockMenuControlMode.Toggle, initialVisible: true));
+            _blockMenuEntries.Add(new BlockMenuEntry(MapBlockKey, MapBlock.BlockTitle, DockBlockKind.Map, BlockMenuControlMode.Toggle, initialVisible: true));
             _blockMenuEntries.Add(new BlockMenuEntry(ChatBlockKey, ChatBlock.BlockTitle, DockBlockKind.Chat, BlockMenuControlMode.Toggle, initialVisible: false));
             _blockMenuEntries.Add(new BlockMenuEntry(PerformanceBlockKey, PerformanceBlock.BlockTitle, DockBlockKind.Performance, BlockMenuControlMode.Toggle, initialVisible: false));
 
@@ -2749,7 +2854,18 @@ namespace op.io
                 }
             }
 
+            if (_blocks.TryGetValue(MapBlockKey, out DockBlock mapBlock) &&
+                mapBlock != null)
+            {
+                PanelGroup mapGroup = GetPanelGroupForBlock(mapBlock);
+                if (mapGroup != null && !ReferenceEquals(propertiesGroup, mapGroup))
+                {
+                    mergedGroupLocked |= mapGroup.IsLocked;
+                }
+            }
+
             MergeBlockIntoGroup(propertiesGroup, BarsBlockKey);
+            MergeBlockIntoGroup(propertiesGroup, MapBlockKey);
             propertiesGroup.IsLocked = mergedGroupLocked;
         }
 
@@ -3197,7 +3313,7 @@ namespace op.io
             int buttonStart = headerRect.Right - DragBarButtonPadding;
             if (dragBarHeight > 0)
             {
-                GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
+                GetDragBarButtonBounds(block, dragBarHeight, out Rectangle hideBounds, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
                 if (closeBounds != Rectangle.Empty)
                 {
                     buttonStart = Math.Min(buttonStart, closeBounds.X);
@@ -3206,6 +3322,11 @@ namespace op.io
                 if (panelLockBounds != Rectangle.Empty)
                 {
                     buttonStart = Math.Min(buttonStart, panelLockBounds.X);
+                }
+
+                if (hideBounds != Rectangle.Empty)
+                {
+                    buttonStart = Math.Min(buttonStart, hideBounds.X);
                 }
 
                 if (mergeBounds != Rectangle.Empty)
@@ -3238,7 +3359,7 @@ namespace op.io
                 return Rectangle.Empty;
             }
 
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle hideBounds, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
             int buttonStart = dragBar.Right - DragBarButtonPadding;
             if (closeBounds != Rectangle.Empty)
             {
@@ -3248,6 +3369,11 @@ namespace op.io
             if (panelLockBounds != Rectangle.Empty)
             {
                 buttonStart = Math.Min(buttonStart, panelLockBounds.X);
+            }
+
+            if (hideBounds != Rectangle.Empty)
+            {
+                buttonStart = Math.Min(buttonStart, hideBounds.X);
             }
 
             if (mergeBounds != Rectangle.Empty)
@@ -3341,9 +3467,96 @@ namespace op.io
             }
 
             _lastNonDockingActiveByPanel.Remove(group.PanelId);
+            _hideWhenNotDockingSuppressedPanelIds.Remove(group.PanelId);
             _panelGroups.Remove(group.PanelId);
             _orderedPanelIds.Remove(group.PanelId);
         }
+
+        private static bool ShouldHidePanelForDockingMode(PanelGroup group) =>
+            group != null && group.HidePanelWhenNotDocking && !DockingModeEnabled;
+
+        private static void ApplyHidePanelWhenNotDockingVisibility()
+        {
+            if (_panelGroups.Count == 0)
+            {
+                _hideWhenNotDockingSuppressedPanelIds.Clear();
+                return;
+            }
+
+            bool changed = false;
+            foreach (PanelGroup group in _panelGroups.Values)
+            {
+                if (group == null || string.IsNullOrWhiteSpace(group.PanelId))
+                {
+                    continue;
+                }
+
+                bool shouldHide = ShouldHidePanelForDockingMode(group);
+                bool wasSuppressed = _hideWhenNotDockingSuppressedPanelIds.Contains(group.PanelId);
+
+                if (shouldHide)
+                {
+                    bool hidVisibleBlock = false;
+                    foreach (DockBlock block in group.Blocks)
+                    {
+                        if (block == null || !block.IsVisible)
+                        {
+                            continue;
+                        }
+
+                        block.IsVisible = false;
+                        hidVisibleBlock = true;
+                        changed = true;
+                    }
+
+                    if (hidVisibleBlock || wasSuppressed)
+                    {
+                        _hideWhenNotDockingSuppressedPanelIds.Add(group.PanelId);
+                    }
+
+                    continue;
+                }
+
+                if (!wasSuppressed)
+                {
+                    continue;
+                }
+
+                _hideWhenNotDockingSuppressedPanelIds.Remove(group.PanelId);
+                DockBlock active = ResolveVisibleActiveBlock(group);
+                if (active == null || GetPanelNode(group) == null)
+                {
+                    continue;
+                }
+
+                bool activeChanged = !string.Equals(group.ActiveBlockId, active.Id, StringComparison.OrdinalIgnoreCase);
+                bool visibleChanged = !active.IsVisible;
+                if (activeChanged || visibleChanged)
+                {
+                    SetPanelActiveBlock(group, active);
+                    changed = true;
+                }
+
+                EnsurePanelAttachedToLayout(group);
+            }
+
+            if (changed)
+            {
+                ClearDockingInteractions();
+                MarkLayoutDirty();
+            }
+        }
+
+        public static int HidePanelWhenNotDockingEnabledPanelCount =>
+            _panelGroups.Values.Count(group => group != null && group.HidePanelWhenNotDocking);
+
+        public static int HidePanelWhenNotDockingSuppressedPanelCount =>
+            _hideWhenNotDockingSuppressedPanelIds.Count;
+
+        public static string HidePanelWhenNotDockingSuppressedPanels =>
+            _hideWhenNotDockingSuppressedPanelIds.Count == 0
+                ? "None"
+                : string.Join(", ", _hideWhenNotDockingSuppressedPanelIds.OrderBy(id => id, StringComparer.OrdinalIgnoreCase));
 
         private static void RebuildGroupBarLayoutCache(int dragBarHeight)
         {
@@ -3351,7 +3564,7 @@ namespace op.io
             foreach (PanelGroup group in _panelGroups.Values)
             {
                 DockBlock active = ResolveVisibleActiveBlock(group);
-                if (active == null)
+                if (active == null || ShouldHidePanelForDockingMode(group))
                 {
                     continue;
                 }
@@ -4408,6 +4621,11 @@ namespace op.io
                 return;
             }
 
+            if (leftClickStarted && TryTogglePanelHideWhenNotDocking(_mousePosition))
+            {
+                return;
+            }
+
             if (leftClickStarted && TryTogglePanelLock(_mousePosition))
             {
                 return;
@@ -4681,6 +4899,25 @@ namespace op.io
                 clampedY = snapBounds.Bottom - blockH;
 
             _overlayDragPreviewBounds = new Rectangle(clampedX, clampedY, blockW, blockH);
+        }
+
+        private static bool TryTogglePanelHideWhenNotDocking(Point position)
+        {
+            DockBlock hideHit = HitTestPanelHideWhenNotDockingButton(position);
+            if (hideHit == null)
+            {
+                return false;
+            }
+
+            PanelGroup group = GetPanelGroupForBlock(hideHit);
+            if (group == null)
+            {
+                return false;
+            }
+
+            TogglePanelHideWhenNotDocking(group);
+            ClearDockingInteractions();
+            return true;
         }
 
         private static bool TryTogglePanelLock(Point position)
@@ -5009,6 +5246,19 @@ namespace op.io
             }
 
             group.IsLocked = !group.IsLocked;
+            PersistActiveDockingSetupState();
+        }
+
+        private static void TogglePanelHideWhenNotDocking(PanelGroup group)
+        {
+            if (group == null)
+            {
+                return;
+            }
+
+            group.HidePanelWhenNotDocking = !group.HidePanelWhenNotDocking;
+            ApplyHidePanelWhenNotDockingVisibility();
+            PersistActiveDockingSetupState();
         }
 
         private static void EnsureBlockLockState(DockBlock block)
@@ -5103,6 +5353,35 @@ namespace op.io
 
                     Rectangle closeBounds = GetCloseButtonBounds(block, dbh);
                     if (closeBounds != Rectangle.Empty && closeBounds.Contains(position))
+                    {
+                        return block;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static DockBlock HitTestPanelHideWhenNotDockingButton(Point position)
+        {
+            int standardDbh = GetActiveDragBarHeight();
+
+            for (int pass = 0; pass < 2; pass++)
+            {
+                bool overlayPass = pass == 0;
+                for (int i = _orderedBlocks.Count - 1; i >= 0; i--)
+                {
+                    DockBlock block = _orderedBlocks[i];
+                    if (block == null || !block.IsVisible || block.IsOverlay != overlayPass)
+                    {
+                        continue;
+                    }
+
+                    int dbh = block.IsOverlay ? UIStyle.DragBarHeight : standardDbh;
+                    if (dbh <= 0) continue;
+
+                    Rectangle hideBounds = GetPanelHideWhenNotDockingButtonBounds(block, dbh);
+                    if (hideBounds != Rectangle.Empty && hideBounds.Contains(position))
                     {
                         return block;
                     }
@@ -5315,27 +5594,34 @@ namespace op.io
 
         private static bool IsPointOnDragBarButton(DockBlock block, int dragBarHeight, Point position)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
-            return (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position)) ||
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle hideBounds, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
+            return (hideBounds != Rectangle.Empty && hideBounds.Contains(position)) ||
+                (panelLockBounds != Rectangle.Empty && panelLockBounds.Contains(position)) ||
                 (closeBounds != Rectangle.Empty && closeBounds.Contains(position)) ||
                 (mergeBounds != Rectangle.Empty && mergeBounds.Contains(position));
         }
 
         private static Rectangle GetCloseButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out _, out Rectangle closeBounds, out _);
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out _, out Rectangle closeBounds, out _);
             return closeBounds;
+        }
+
+        private static Rectangle GetPanelHideWhenNotDockingButtonBounds(DockBlock block, int dragBarHeight)
+        {
+            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle hideBounds, out _, out _, out _);
+            return hideBounds;
         }
 
         private static Rectangle GetPanelLockButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockBounds, out _, out _);
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out Rectangle panelLockBounds, out _, out _);
             return panelLockBounds;
         }
 
         private static Rectangle GetMergeButtonBounds(DockBlock block, int dragBarHeight)
         {
-            GetDragBarButtonBounds(block, dragBarHeight, out _, out _, out Rectangle mergeBounds);
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out _, out _, out Rectangle mergeBounds);
             return mergeBounds;
         }
 
@@ -5346,6 +5632,12 @@ namespace op.io
 
         private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeButtonBounds)
         {
+            GetDragBarButtonBounds(block, dragBarHeight, out _, out panelLockBounds, out closeBounds, out mergeButtonBounds);
+        }
+
+        private static void GetDragBarButtonBounds(DockBlock block, int dragBarHeight, out Rectangle hideWhenNotDockingBounds, out Rectangle panelLockBounds, out Rectangle closeBounds, out Rectangle mergeButtonBounds)
+        {
+            hideWhenNotDockingBounds = Rectangle.Empty;
             panelLockBounds = Rectangle.Empty;
             closeBounds = Rectangle.Empty;
             mergeButtonBounds = Rectangle.Empty;
@@ -5386,11 +5678,21 @@ namespace op.io
             }
 
             panelLockBounds = new Rectangle(lockX, y, buttonSize, buttonSize);
+            int leftAnchorX = lockX;
+            if (DockingModeEnabled)
+            {
+                int hideX = lockX - DragBarButtonSpacing - buttonSize;
+                if (hideX >= minimumX)
+                {
+                    hideWhenNotDockingBounds = new Rectangle(hideX, y, buttonSize, buttonSize);
+                    leftAnchorX = hideX;
+                }
+            }
 
             // Merge button only for overlay blocks — to the left of the lock button.
             if (block.IsOverlay)
             {
-                int mergeX = lockX - DragBarButtonSpacing - buttonSize;
+                int mergeX = leftAnchorX - DragBarButtonSpacing - buttonSize;
                 if (mergeX >= minimumX)
                 {
                     mergeButtonBounds = new Rectangle(mergeX, y, buttonSize, buttonSize);
@@ -7369,7 +7671,7 @@ namespace op.io
                 {
                     DrawRect(spriteBatch, dragBar, UIStyle.DragBarBackground);
                     bool dragBarHovered = string.Equals(_hoveredDragBarId, block.Id, StringComparison.Ordinal);
-                    GetDragBarButtonBounds(block, dragBarHeight, out Rectangle panelLockButtonBounds, out Rectangle closeButtonBounds, out Rectangle mergeButtonBounds);
+                    GetDragBarButtonBounds(block, dragBarHeight, out Rectangle hideWhenNotDockingButtonBounds, out Rectangle panelLockButtonBounds, out Rectangle closeButtonBounds, out Rectangle mergeButtonBounds);
                     Rectangle dragGrabBounds = GetDragBarGrabBounds(block, group, dragBarHeight);
 
                     if (dragBarHovered && dragGrabBounds != Rectangle.Empty)
@@ -7383,6 +7685,12 @@ namespace op.io
                     {
                         bool hovered = mergeButtonBounds.Contains(_mousePosition);
                         DrawOverlayMergeButton(spriteBatch, mergeButtonBounds, hovered);
+                    }
+
+                    if (hideWhenNotDockingButtonBounds != Rectangle.Empty && group != null)
+                    {
+                        bool hovered = hideWhenNotDockingButtonBounds.Contains(_mousePosition);
+                        DrawPanelHideWhenNotDockingButton(spriteBatch, hideWhenNotDockingButtonBounds, group.HidePanelWhenNotDocking, hovered);
                     }
 
                     if (panelLockButtonBounds != Rectangle.Empty)
@@ -7565,6 +7873,55 @@ namespace op.io
             string glyph = isLocked ? "L" : "U";
             Color glyphColor = Color.White;
             DrawCenteredGlyph(spriteBatch, glyphFont, glyph, bounds, glyphColor, -1f);
+        }
+
+        private static void DrawPanelHideWhenNotDockingButton(SpriteBatch spriteBatch, Rectangle bounds, bool enabled, bool hovered)
+        {
+            Color accent = UIStyle.AccentColor;
+            float strength = enabled ? 0.65f : 0.35f;
+            if (hovered)
+            {
+                strength = Math.Min(1f, strength + 0.15f);
+            }
+
+            Color background = accent * strength;
+            Color border = hovered ? accent : accent * 0.9f;
+            DrawRect(spriteBatch, bounds, background);
+            DrawRectOutline(spriteBatch, bounds, border, UIStyle.BlockBorderThickness);
+            DrawEyeIcon(spriteBatch, bounds, enabled, Color.White);
+        }
+
+        private static void DrawEyeIcon(SpriteBatch spriteBatch, Rectangle bounds, bool slashed, Color color)
+        {
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            int inset = Math.Max(3, bounds.Width / 5);
+            Vector2 left = new(bounds.X + inset, bounds.Y + bounds.Height / 2f);
+            Vector2 right = new(bounds.Right - inset, bounds.Y + bounds.Height / 2f);
+            Vector2 top = new(bounds.X + bounds.Width / 2f, bounds.Y + Math.Max(3, bounds.Height / 4f));
+            Vector2 bottom = new(bounds.X + bounds.Width / 2f, bounds.Bottom - Math.Max(3, bounds.Height / 4f));
+            DrawLine(spriteBatch, left, top, color, 2f);
+            DrawLine(spriteBatch, top, right, color, 2f);
+            DrawLine(spriteBatch, left, bottom, color, 2f);
+            DrawLine(spriteBatch, bottom, right, color, 2f);
+
+            int pupilSize = Math.Max(3, Math.Min(bounds.Width, bounds.Height) / 5);
+            Rectangle pupil = new(
+                bounds.X + (bounds.Width - pupilSize) / 2,
+                bounds.Y + (bounds.Height - pupilSize) / 2,
+                pupilSize,
+                pupilSize);
+            DrawRect(spriteBatch, pupil, color);
+
+            if (slashed)
+            {
+                Vector2 slashStart = new(bounds.X + inset - 1, bounds.Bottom - inset + 1);
+                Vector2 slashEnd = new(bounds.Right - inset + 1, bounds.Y + inset - 1);
+                DrawLine(spriteBatch, slashStart, slashEnd, color, 2f);
+            }
         }
 
         /// <summary>
@@ -7913,6 +8270,7 @@ namespace op.io
             }
 
             DrawBlockContentCore(spriteBatch, block, contentBounds);
+            DrawBlockLoadingOverlay(spriteBatch, block, contentBounds);
         }
 
         private static void DrawOverlayBlockContentClipped(SpriteBatch spriteBatch, DockBlock block, Rectangle contentBounds)
@@ -7921,6 +8279,7 @@ namespace op.io
             if (graphicsDevice == null || !TryBuildScissorRectangle(contentBounds, graphicsDevice.Viewport, out Rectangle scissorRect))
             {
                 DrawBlockContentCore(spriteBatch, block, contentBounds);
+                DrawBlockLoadingOverlay(spriteBatch, block, contentBounds);
                 return;
             }
 
@@ -7943,6 +8302,7 @@ namespace op.io
             try
             {
                 DrawBlockContentCore(spriteBatch, block, contentBounds);
+                DrawBlockLoadingOverlay(spriteBatch, block, contentBounds);
             }
             finally
             {
@@ -8037,6 +8397,9 @@ namespace op.io
                     break;
                 case DockBlockKind.Bars:
                     BarsBlock.Draw(spriteBatch, contentBounds);
+                    break;
+                case DockBlockKind.Map:
+                    MapBlock.Draw(spriteBatch, contentBounds);
                     break;
                 case DockBlockKind.Chat:
                     ChatBlock.Draw(spriteBatch, contentBounds);
@@ -8232,10 +8595,12 @@ namespace op.io
                 int dbh = GetDragBarHeightForBlock(block);
                 if (dbh <= 0) continue;
 
-                GetDragBarButtonBounds(block, dbh, out Rectangle lockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
+                GetDragBarButtonBounds(block, dbh, out Rectangle hideBounds, out Rectangle lockBounds, out Rectangle closeBounds, out Rectangle mergeBounds);
 
                 if (closeBounds != Rectangle.Empty && closeBounds.Contains(_mousePosition))
                     return "Btn_Close";
+                if (hideBounds != Rectangle.Empty && hideBounds.Contains(_mousePosition))
+                    return "Btn_PanelHideWhenNotDocking";
                 if (lockBounds != Rectangle.Empty && lockBounds.Contains(_mousePosition))
                     return "Btn_PanelLock";
                 if (mergeBounds != Rectangle.Empty && mergeBounds.Contains(_mousePosition))
@@ -8560,7 +8925,10 @@ namespace op.io
 
             if (ControlsBlock.IsRebindOverlayOpen())
             {
-                ControlsBlock.UpdateRebindOverlay(gameTime, mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                if (!BlockAsyncLoadManager.IsBlockLoading(DockBlockKind.Controls))
+                {
+                    ControlsBlock.UpdateRebindOverlay(gameTime, mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                }
                 return;
             }
 
@@ -8577,6 +8945,7 @@ namespace op.io
                 }
 
                 Rectangle contentBounds = GetPanelContentBounds(block, GetDragBarHeightForBlock(block));
+                bool blockLoading = BlockAsyncLoadManager.IsBlockLoading(block.Kind);
 
                 // Suppress mouse input for blocks whose content area is covered by an overlay block.
                 MouseState effectiveMouse = mouseState;
@@ -8613,7 +8982,7 @@ namespace op.io
                 else
                 {
                     bool cursorIn = block.Bounds.Contains(mouseState.Position);
-                    bool effectivelyLocked = IsBlockLocked(block) || IsPanelLocked(block);
+                    bool effectivelyLocked = IsBlockLocked(block) || IsPanelLocked(block) || blockLoading;
                     if (cursorIn && mouseState.LeftButton == ButtonState.Pressed && !effectivelyLocked)
                         guiState = GUIInteractionState.Interacting;
                     else if (cursorIn)
@@ -8622,6 +8991,11 @@ namespace op.io
                         guiState = GUIInteractionState.NotHovering;
                 }
                 _blockInteractionStates[block.Id] = guiState;
+
+                if (blockLoading)
+                {
+                    continue;
+                }
 
                 switch (block.Kind)
                 {
@@ -8664,6 +9038,9 @@ namespace op.io
                     case DockBlockKind.Bars:
                         BarsBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
+                    case DockBlockKind.Map:
+                        MapBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
+                        break;
                     case DockBlockKind.Chat:
                         ChatBlock.Update(gameTime, contentBounds, effectiveMouse, effectivePrevMouse);
                         break;
@@ -8678,7 +9055,10 @@ namespace op.io
 
             if (ControlsBlock.IsRebindOverlayOpen())
             {
-                ControlsBlock.UpdateRebindOverlay(gameTime, mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                if (!BlockAsyncLoadManager.IsBlockLoading(DockBlockKind.Controls))
+                {
+                    ControlsBlock.UpdateRebindOverlay(gameTime, mouseState, previousMouseState, keyboardState, previousKeyboardState);
+                }
             }
         }
 
@@ -9274,6 +9654,11 @@ namespace op.io
 
                 PanelGroup group = GetPanelGroupForBlock(block);
                 if (group == null || string.IsNullOrWhiteSpace(group.PanelId) || !attachedPanels.Add(group.PanelId))
+                {
+                    continue;
+                }
+
+                if (ShouldHidePanelForDockingMode(group))
                 {
                     continue;
                 }
@@ -10121,6 +10506,7 @@ namespace op.io
             }
 
             NormalizeAnchoredAuxiliaryBlocks();
+            ApplyHidePanelWhenNotDockingVisibility();
             EnsureVisibleBlocksAttachedToLayout();
             bool overlayBoundsChanged = UpdateOverlayBlockBounds();
 
@@ -11478,6 +11864,333 @@ namespace op.io
             }
 
             spriteBatch.Draw(_pixelTexture, bounds, color);
+        }
+
+        private static void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, float thickness = 1f)
+        {
+            if (_pixelTexture == null || spriteBatch == null || thickness <= 0f)
+            {
+                return;
+            }
+
+            Vector2 delta = end - start;
+            float length = delta.Length();
+            if (length <= 0.01f)
+            {
+                return;
+            }
+
+            float angle = MathF.Atan2(delta.Y, delta.X);
+            spriteBatch.Draw(
+                _pixelTexture,
+                start,
+                null,
+                color,
+                angle,
+                new Vector2(0f, 0.5f),
+                new Vector2(length, thickness),
+                SpriteEffects.None,
+                0f);
+        }
+
+        private static void DrawBlockLoadingOverlay(SpriteBatch spriteBatch, DockBlock block, Rectangle contentBounds)
+        {
+            if (spriteBatch == null ||
+                block == null ||
+                _pixelTexture == null ||
+                contentBounds.Width <= 0 ||
+                contentBounds.Height <= 0 ||
+                !BlockAsyncLoadManager.IsBlockLoading(block.Kind))
+            {
+                return;
+            }
+
+            DrawRect(spriteBatch, contentBounds, Color.Black * 0.48f);
+
+            string statusLine = BlockAsyncLoadManager.GetBlockLoadingLine(block.Kind);
+            UIStyle.UIFont statusFont = UIStyle.GetFontVariant(UIStyle.FontFamilyKey.Xenon, UIStyle.FontVariant.Regular);
+            int maxTextWidth = Math.Max(1, contentBounds.Width - 24);
+            float smallestSide = Math.Min(contentBounds.Width, contentBounds.Height);
+            float maxRadius = Math.Max(4f, (smallestSide - 12f) * 0.35f);
+            float minRadius = Math.Min(10f, maxRadius);
+            float radius = Math.Clamp(smallestSide * 0.12f, minRadius, Math.Min(28f, maxRadius));
+            float textScale = ResolveBlockLoadingStatusTextScale(
+                statusFont,
+                statusLine,
+                maxTextWidth,
+                contentBounds.Height,
+                radius,
+                out List<string> statusLines);
+            float textGap = statusLines.Count > 0 ? 8f : 0f;
+            float lineHeight = statusFont.IsAvailable ? MathF.Max(1f, statusFont.LineHeight * textScale) : 0f;
+            float textHeight = statusLines.Count * lineHeight;
+            float totalHeight = (radius * 2f) + textGap + textHeight;
+            float topY = contentBounds.Y + ((contentBounds.Height - totalHeight) * 0.5f);
+            float minTopY = contentBounds.Y + 6f;
+            float maxTopY = Math.Max(minTopY, contentBounds.Bottom - totalHeight - 6f);
+            topY = MathHelper.Clamp(topY, minTopY, maxTopY);
+            float centerY = topY + radius;
+            Vector2 center = new(contentBounds.X + (contentBounds.Width * 0.5f), centerY);
+            DrawLoadingSpinner(spriteBatch, center, radius);
+            DrawBlockLoadingStatusText(spriteBatch, statusFont, statusLines, contentBounds, center.Y + radius + textGap, maxTextWidth, textScale);
+        }
+
+        private static float ResolveBlockLoadingStatusTextScale(
+            UIStyle.UIFont font,
+            string statusLine,
+            int maxWidth,
+            int contentHeight,
+            float spinnerRadius,
+            out List<string> lines)
+        {
+            lines = [];
+            if (!font.IsAvailable || string.IsNullOrWhiteSpace(statusLine) || maxWidth <= 0 || contentHeight <= 0)
+            {
+                return 1f;
+            }
+
+            const float minTextScale = 0.12f;
+            float textScale = 1f;
+            for (int i = 0; i < 10; i++)
+            {
+                lines = BuildBlockLoadingStatusLines(font, statusLine, maxWidth, textScale);
+                if (lines.Count == 0)
+                {
+                    return textScale;
+                }
+
+                float lineHeight = MathF.Max(1f, font.LineHeight * textScale);
+                float textGap = 8f;
+                float availableHeight = MathF.Max(1f, contentHeight - 12f - (spinnerRadius * 2f) - textGap);
+                float requiredHeight = lines.Count * lineHeight;
+                if (requiredHeight <= availableHeight)
+                {
+                    return textScale;
+                }
+
+                float fittingScale = availableHeight / MathF.Max(1f, lines.Count * MathF.Max(1f, font.LineHeight));
+                float nextScale = MathHelper.Clamp(fittingScale, minTextScale, textScale);
+                if (MathF.Abs(nextScale - textScale) < 0.01f)
+                {
+                    return nextScale;
+                }
+
+                textScale = nextScale;
+            }
+
+            lines = BuildBlockLoadingStatusLines(font, statusLine, maxWidth, textScale);
+            return textScale;
+        }
+
+        private static List<string> BuildBlockLoadingStatusLines(UIStyle.UIFont font, string statusLine, int maxWidth, float textScale)
+        {
+            List<string> lines = [];
+            if (!font.IsAvailable || string.IsNullOrWhiteSpace(statusLine) || maxWidth <= 0 || textScale <= 0f)
+            {
+                return lines;
+            }
+
+            string normalized = statusLine.Replace('\r', ' ').Replace('\n', ' ').Trim();
+            string[] words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var current = new System.Text.StringBuilder();
+
+            foreach (string word in words)
+            {
+                AppendBlockLoadingStatusWord(font, word, maxWidth, textScale, current, lines);
+            }
+
+            if (current.Length > 0)
+            {
+                lines.Add(current.ToString());
+            }
+
+            return lines;
+        }
+
+        private static void AppendBlockLoadingStatusWord(
+            UIStyle.UIFont font,
+            string word,
+            int maxWidth,
+            float textScale,
+            System.Text.StringBuilder current,
+            List<string> lines)
+        {
+            if (string.IsNullOrEmpty(word))
+            {
+                return;
+            }
+
+            if (MeasureLoadingStatusTextWidth(font, word, textScale) > maxWidth)
+            {
+                if (current.Length > 0)
+                {
+                    lines.Add(current.ToString());
+                    current.Clear();
+                }
+
+                AppendWrappedLoadingStatusToken(font, word, maxWidth, textScale, current, lines);
+                return;
+            }
+
+            if (current.Length == 0)
+            {
+                current.Append(word);
+                return;
+            }
+
+            string candidate = current + " " + word;
+            if (MeasureLoadingStatusTextWidth(font, candidate, textScale) > maxWidth)
+            {
+                lines.Add(current.ToString());
+                current.Clear();
+                current.Append(word);
+                return;
+            }
+
+            current.Append(' ');
+            current.Append(word);
+        }
+
+        private static void AppendWrappedLoadingStatusToken(
+            UIStyle.UIFont font,
+            string token,
+            int maxWidth,
+            float textScale,
+            System.Text.StringBuilder current,
+            List<string> lines)
+        {
+            var piece = new System.Text.StringBuilder();
+            foreach (char c in token)
+            {
+                string candidate = piece.ToString() + c;
+                if (piece.Length > 0 && MeasureLoadingStatusTextWidth(font, candidate, textScale) > maxWidth)
+                {
+                    lines.Add(piece.ToString());
+                    piece.Clear();
+                }
+
+                piece.Append(c);
+            }
+
+            if (piece.Length > 0)
+            {
+                current.Append(piece);
+            }
+        }
+
+        private static float MeasureLoadingStatusTextWidth(UIStyle.UIFont font, string text, float textScale)
+        {
+            return font.IsAvailable && !string.IsNullOrEmpty(text)
+                ? font.MeasureString(text).X * MathF.Max(0.01f, textScale)
+                : 0f;
+        }
+
+        private static void DrawBlockLoadingStatusText(
+            SpriteBatch spriteBatch,
+            UIStyle.UIFont font,
+            List<string> lines,
+            Rectangle contentBounds,
+            float y,
+            int maxTextWidth,
+            float textScale)
+        {
+            if (!font.IsAvailable || font.Font == null || lines == null || lines.Count == 0 || maxTextWidth <= 0 || textScale <= 0f)
+            {
+                return;
+            }
+
+            float lineHeight = MathF.Max(1f, font.LineHeight * textScale);
+            float minY = contentBounds.Y + 6f;
+            float maxY = Math.Max(minY, contentBounds.Bottom - (lineHeight * lines.Count) - 6f);
+            float drawY = MathHelper.Clamp(y, minY, maxY);
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string line = lines[i];
+                if (string.IsNullOrEmpty(line))
+                {
+                    continue;
+                }
+
+                Vector2 size = font.MeasureString(line) * textScale;
+                float drawX = contentBounds.X + ((contentBounds.Width - size.X) * 0.5f);
+                float minX = contentBounds.X + 6f;
+                float maxX = Math.Max(minX, contentBounds.Right - size.X - 6f);
+                drawX = MathHelper.Clamp(drawX, minX, maxX);
+                Vector2 position = new(drawX, drawY + (i * lineHeight));
+                float drawScale = font.Scale * textScale;
+                spriteBatch.DrawString(font.Font, line, position + new Vector2(1f, 1f), Color.Black * 0.65f, 0f, Vector2.Zero, drawScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font.Font, line, position, Color.White * 0.9f, 0f, Vector2.Zero, drawScale, SpriteEffects.None, 0f);
+            }
+        }
+
+        private static void DrawLoadingSpinner(SpriteBatch spriteBatch, Vector2 center, float radius)
+        {
+            EnsureLoadingCircleTexture(spriteBatch?.GraphicsDevice);
+            if (_loadingCircleTexture == null || _loadingCircleTexture.IsDisposed || radius <= 0f)
+            {
+                return;
+            }
+
+            const int circleCount = 9;
+            float t = (float)Core.GAMETIME;
+            for (int i = 0; i < circleCount; i++)
+            {
+                float seed = i * 1.713f;
+                float angle =
+                    (i * MathF.Tau / circleCount) +
+                    (t * (0.86f + (0.08f * MathF.Sin(seed)))) +
+                    (MathF.Sin((t * 1.31f) + seed) * 0.38f);
+                float orbit = radius * (0.52f + (0.18f * MathF.Sin((t * 1.07f) + (seed * 1.7f))));
+                orbit = Math.Clamp(orbit, radius * 0.18f, radius * 0.82f);
+                float dotSize = Math.Clamp(radius * (0.17f + (0.06f * MathF.Sin((t * 1.93f) + seed))), 3f, 8f);
+                float alpha = MathHelper.Clamp(
+                    0.35f + (0.45f * (0.5f + (0.5f * MathF.Sin((t * 1.55f) + (seed * 2.3f))))),
+                    0.25f,
+                    0.95f);
+                Vector2 position = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * orbit;
+                Rectangle dotBounds = new(
+                    (int)MathF.Round(position.X - (dotSize * 0.5f)),
+                    (int)MathF.Round(position.Y - (dotSize * 0.5f)),
+                    Math.Max(1, (int)MathF.Ceiling(dotSize)),
+                    Math.Max(1, (int)MathF.Ceiling(dotSize)));
+                spriteBatch.Draw(_loadingCircleTexture, dotBounds, Color.White * alpha);
+            }
+        }
+
+        private static void EnsureLoadingCircleTexture(GraphicsDevice graphicsDevice)
+        {
+            if (graphicsDevice == null)
+            {
+                return;
+            }
+
+            if (_loadingCircleTexture != null &&
+                !_loadingCircleTexture.IsDisposed &&
+                ReferenceEquals(_loadingCircleTexture.GraphicsDevice, graphicsDevice))
+            {
+                return;
+            }
+
+            _loadingCircleTexture?.Dispose();
+            const int textureSize = 32;
+            Color[] pixels = new Color[textureSize * textureSize];
+            float center = (textureSize - 1) * 0.5f;
+            float radius = center;
+            for (int y = 0; y < textureSize; y++)
+            {
+                for (int x = 0; x < textureSize; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+                    float normalized = MathHelper.Clamp(distance / radius, 0f, 1f);
+                    float alpha = 1f - (normalized * normalized);
+                    pixels[(y * textureSize) + x] = Color.White * alpha;
+                }
+            }
+
+            _loadingCircleTexture = new Texture2D(graphicsDevice, textureSize, textureSize, false, SurfaceFormat.Color);
+            _loadingCircleTexture.SetData(pixels);
         }
 
         private static void DrawRectOutline(SpriteBatch spriteBatch, Rectangle bounds, Color color, int thickness)

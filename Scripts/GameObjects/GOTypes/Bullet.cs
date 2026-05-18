@@ -21,7 +21,7 @@ namespace op.io
         public float BulletDamage { get; }
         public float BulletPenetration { get; }
         public float BulletKnockback { get; }
-        public float MaxSpeed { get; }
+        public float MaxSpeed { get; private set; }
         public float MaxLifespan { get; }
         public float DragFactor { get; }
         public new bool IsDying { get; private set; } = false;
@@ -35,6 +35,7 @@ namespace op.io
         private float _barrelTravelDistance;
         private float _barrelEntryOffset;
         private float _barrelLockedSpeed;
+        private bool _ownerClearanceLocked;
 
         public Bullet(int id, Vector2 position, Vector2 velocity, float mass,
                       float maxLifespan, float dragFactor, Shape shape,
@@ -73,13 +74,20 @@ namespace op.io
             };
         }
 
-        /// <summary>True while the bullet is still inside its firing barrel.</summary>
-        public bool IsOwnerImmune => IsBarrelLocked;
+        /// <summary>True while the bullet has not physically cleared its firing owner.</summary>
+        public bool IsOwnerImmune => IsBarrelLocked || _ownerClearanceLocked;
+        public bool IsOwnerClearanceLocked => _ownerClearanceLocked;
+
+        public void BeginOwnerClearance(int ownerId)
+        {
+            _barrelOwnerId = ownerId;
+            _ownerClearanceLocked = ownerId >= 0;
+        }
 
         public void LockToBarrel(int ownerId, int barrelIndex, float barrelLength, float lockedSpeed)
         {
             float radius = Shape != null ? MathF.Min(Shape.Width, Shape.Height) * 0.5f : 0f;
-            _barrelOwnerId = ownerId;
+            BeginOwnerClearance(ownerId);
             _barrelIndex = barrelIndex;
             _barrelLockedSpeed = MathF.Max(0f, lockedSpeed);
             _barrelEntryOffset = MathF.Min(radius, MathF.Max(barrelLength * 0.5f, 0f));
@@ -140,6 +148,7 @@ namespace op.io
 
             Vector2 movement = Velocity * Core.DELTATIME;
             Position += movement;
+            RefreshOwnerClearance();
         }
 
         private Agent ResolveBarrelOwner()
@@ -192,7 +201,54 @@ namespace op.io
 
             _barrelTravelDistance = travelDistance;
             _barrelTravelProgress = MathF.Min(nextProgress, travelDistance);
+            ExpandMaxSpeedFor(Velocity);
+            RefreshOwnerClearance(owner);
             return true;
+        }
+
+        private void ExpandMaxSpeedFor(Vector2 velocity)
+        {
+            if (MaxSpeed <= 0f)
+            {
+                return;
+            }
+
+            float speed = velocity.Length();
+            if (speed > MaxSpeed)
+            {
+                MaxSpeed = speed;
+            }
+        }
+
+        private void RefreshOwnerClearance(Agent owner = null)
+        {
+            if (!_ownerClearanceLocked)
+            {
+                return;
+            }
+
+            owner ??= ResolveBarrelOwner();
+            if (owner == null || owner.ID != OwnerID)
+            {
+                _ownerClearanceLocked = false;
+                return;
+            }
+
+            float bulletRadius = Shape != null
+                ? MathF.Max(Shape.Width, Shape.Height) * 0.5f
+                : BulletCollisionSystem.BulletRadius;
+            float ownerRadius = owner.Shape != null
+                ? MathF.Max(owner.Shape.Width, owner.Shape.Height) * 0.5f
+                : BulletCollisionSystem.EnemyRadius;
+
+            float clearDistance = bulletRadius + ownerRadius + 0.5f;
+            float clearDistanceSquared = clearDistance * clearDistance;
+            bool currentPositionClear = Vector2.DistanceSquared(Position, owner.Position) >= clearDistanceSquared;
+            bool previousPositionClear = Vector2.DistanceSquared(PreviousPosition, owner.Position) >= clearDistanceSquared;
+            if (currentPositionClear && previousPositionClear)
+            {
+                _ownerClearanceLocked = false;
+            }
         }
     }
 }

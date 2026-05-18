@@ -32,9 +32,10 @@ namespace op.io
 
             Agent player = Core.Instance.PlayerOrNull;
             bool playerCanAct = player != null && !player.IsDeadOrDying;
+            bool gameBlockLoading = BlockAsyncLoadManager.IsBlockLoading(DockBlockKind.Game);
 
             // Fire Action — silently ignored when player has no barrels equipped
-            if (InputManager.IsInputActive("Fire"))
+            if (!gameBlockLoading && InputManager.IsInputActive("Fire"))
             {
                 if (playerCanAct && player.BarrelCount > 0)
                 {
@@ -43,31 +44,31 @@ namespace op.io
             }
 
             // Barrel carousel — Q rotates left (clockwise), E rotates right; no-op with <2 barrels
-            if (InputManager.IsInputActive("BarrelLeft"))
+            if (!gameBlockLoading && InputManager.IsInputActive("BarrelLeft"))
             {
                 if (playerCanAct && player.BarrelCount >= 2)
                     player.SwitchBarrelLeft();
             }
-            if (InputManager.IsInputActive("BarrelRight"))
+            if (!gameBlockLoading && InputManager.IsInputActive("BarrelRight"))
             {
                 if (playerCanAct && player.BarrelCount >= 2)
                     player.SwitchBarrelRight();
             }
 
             // Body swap — Ctrl+Q rotates left, Ctrl+E rotates right; no-op with <2 bodies
-            if (InputManager.IsInputActive(ControlKeyMigrations.BodyLeftKey))
+            if (!gameBlockLoading && InputManager.IsInputActive(ControlKeyMigrations.BodyLeftKey))
             {
                 if (playerCanAct && player.BodyCount >= 2)
                     player.SwitchBodyLeft();
             }
-            if (InputManager.IsInputActive(ControlKeyMigrations.BodyRightKey))
+            if (!gameBlockLoading && InputManager.IsInputActive(ControlKeyMigrations.BodyRightKey))
             {
                 if (playerCanAct && player.BodyCount >= 2)
                     player.SwitchBodyRight();
             }
 
             // Respawn Action — only activates when the player is dead or dying.
-            if (InputManager.IsInputActive(ControlKeyMigrations.RespawnKey))
+            if (!gameBlockLoading && InputManager.IsInputActive(ControlKeyMigrations.RespawnKey))
             {
                 bool isAlive = player != null && !player.IsDying && player.CurrentHealth > 0f;
                 DebugLogger.PrintPlayer($"[Respawn] Shift+R detected. player={player?.ID.ToString() ?? "null"}, IsDying={player?.IsDying}, HP={player?.CurrentHealth:F1}, isAlive={isAlive}");
@@ -91,7 +92,7 @@ namespace op.io
             }
 
             // ReturnCursorToPlayer Handling
-            if (InputManager.IsInputActive("ReturnCursorToPlayer"))
+            if (!gameBlockLoading && InputManager.IsInputActive("ReturnCursorToPlayer"))
             {
                 if (player != null)
                 {
@@ -103,7 +104,7 @@ namespace op.io
 
             // CameraSnapToPlayer (Shift+Space)
             // Free: snap camera to player once.  Scout: no-op (always centered).  Locked: reset offset.
-            if (InputManager.IsInputActive(ControlKeyMigrations.CameraSnapToPlayerKey))
+            if (!gameBlockLoading && InputManager.IsInputActive(ControlKeyMigrations.CameraSnapToPlayerKey))
             {
                 string camMode = ControlStateManager.ContainsEnumState(ControlKeyMigrations.CameraLockModeKey)
                     ? ControlStateManager.GetEnumValue(ControlKeyMigrations.CameraLockModeKey)
@@ -117,11 +118,11 @@ namespace op.io
             }
 
             // Camera scroll zoom — ScrollIn brings the camera closer, ScrollOut moves it farther
-            if (InputManager.IsInputActive(ControlKeyMigrations.ScrollInKey))
+            if (!gameBlockLoading && InputManager.IsInputActive(ControlKeyMigrations.ScrollInKey))
             {
                 BlockManager.ApplyCameraZoom(1);
             }
-            if (InputManager.IsInputActive(ControlKeyMigrations.ScrollOutKey))
+            if (!gameBlockLoading && InputManager.IsInputActive(ControlKeyMigrations.ScrollOutKey))
             {
                 BlockManager.ApplyCameraZoom(-1);
             }

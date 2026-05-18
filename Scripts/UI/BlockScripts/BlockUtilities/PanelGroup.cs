@@ -26,6 +26,7 @@ namespace op.io.UI.BlockScripts.BlockUtilities
         public string ActiveBlockId { get; private set; }
         public bool TabsExpanded { get; set; } = true;
         public bool IsLocked { get; set; } = false;
+        public bool HidePanelWhenNotDocking { get; set; } = false;
 
         public DockBlock ActiveBlock => _blocks.FirstOrDefault(b => string.Equals(b.Id, ActiveBlockId, StringComparison.OrdinalIgnoreCase)) ?? _blocks.FirstOrDefault();
 

@@ -11,12 +11,27 @@ namespace op.io.UI.BlockScripts.Blocks
     {
         public const string BlockTitle = "Levels";
 
-        private const int HeaderHeight = 34;
-        private const int ButtonHeight = 22;
-        private const int ButtonGap = 6;
+        private const int HeaderWideHeight = 42;
+        private const int HeaderCompactHeight = 58;
+        private const int HeaderCompactWidth = 330;
+        private const int ButtonHeight = 20;
+        private const int ButtonGap = 4;
         private const int RowPadding = 8;
-        private const int RowGap = 6;
-        private const int RowMinHeight = 74;
+        private const int CompactRowPadding = 6;
+        private const int RowGap = 5;
+        private const int RowMinHeight = 64;
+        private const int CompactRowMinHeight = 88;
+        private const int RowButtonMinWidth = 48;
+        private const int RowButtonMaxWidth = 70;
+        private const int RowSideButtonReserve = 86;
+        private const int RowStackedButtonWidth = 64;
+        private const int RowStackedThreshold = 275;
+        private const float HeaderTitleTextScale = 0.78f;
+        private const float HeaderSummaryTextScale = 0.66f;
+        private const float RowTitleTextScale = 0.78f;
+        private const float RowBodyTextScale = 0.66f;
+        private const float HeaderButtonTextScale = 0.66f;
+        private const float RowButtonTextScale = 0.68f;
 
         public const string PreviousTooltipKey = "GameLevelPrevious";
         public const string NextTooltipKey = "GameLevelNext";
@@ -189,11 +204,14 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static Rectangle ResolveHeaderBounds(Rectangle contentBounds)
         {
+            int preferredHeight = contentBounds.Width < HeaderCompactWidth
+                ? HeaderCompactHeight
+                : HeaderWideHeight;
             return new Rectangle(
                 contentBounds.X,
                 contentBounds.Y,
                 contentBounds.Width,
-                Math.Min(HeaderHeight, Math.Max(0, contentBounds.Height)));
+                Math.Min(preferredHeight, Math.Max(0, contentBounds.Height)));
         }
 
         private static float CalculateContentHeight(int rowCount, int listWidth)
@@ -208,11 +226,17 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private static int CalculateRowHeight(int listWidth)
         {
-            int textRoom = Math.Max(0, listWidth - 130);
-            int descriptionLines = textRoom < 220 ? 2 : 1;
-            int configLines = textRoom < 260 ? 2 : 1;
-            int textHeight = (int)MathF.Ceiling((descriptionLines + configLines + 2) * Math.Max(_lineHeight, 16f));
-            return Math.Max(RowMinHeight, textHeight + RowPadding * 2);
+            bool stacked = ShouldStackRowButton(listWidth);
+            int padding = ResolveRowPadding(listWidth);
+            int visibleTextLines = listWidth < 210 ? 3 : 4;
+            float lineHeight = ResolveRowLineHeight();
+            int textHeight = (int)MathF.Ceiling(visibleTextLines * lineHeight);
+            if (stacked)
+            {
+                return Math.Max(CompactRowMinHeight, textHeight + ButtonHeight + (padding * 3));
+            }
+
+            return Math.Max(RowMinHeight, textHeight + (padding * 2));
         }
 
         private static void RebuildRowLayouts(Rectangle listBounds, IReadOnlyList<GameLevelDefinition> levels, int listWidth)
@@ -228,30 +252,41 @@ namespace op.io.UI.BlockScripts.Blocks
             foreach (GameLevelDefinition level in levels)
             {
                 Rectangle rowBounds = new(listBounds.X, y, listBounds.Width, rowHeight);
-                int buttonWidth = Math.Min(86, Math.Max(58, rowBounds.Width / 4));
-                Rectangle buttonBounds = new(
-                    rowBounds.Right - RowPadding - buttonWidth,
-                    rowBounds.Y + RowPadding,
-                    buttonWidth,
-                    ButtonHeight);
-                _rowLayouts.Add(new LevelRowLayout(level, rowBounds, buttonBounds));
+                int padding = ResolveRowPadding(rowBounds.Width);
+                bool stacked = ShouldStackRowButton(rowBounds.Width);
+                int buttonWidth = stacked
+                    ? Math.Min(RowStackedButtonWidth, Math.Max(RowButtonMinWidth, rowBounds.Width - padding * 2))
+                    : Math.Min(RowButtonMaxWidth, Math.Max(RowButtonMinWidth, rowBounds.Width / 4));
+                Rectangle buttonBounds = stacked
+                    ? new Rectangle(
+                        rowBounds.Right - padding - buttonWidth,
+                        rowBounds.Bottom - padding - ButtonHeight,
+                        buttonWidth,
+                        ButtonHeight)
+                    : new Rectangle(
+                        rowBounds.Right - padding - buttonWidth,
+                        rowBounds.Y + padding,
+                        buttonWidth,
+                        ButtonHeight);
+                int textRight = stacked
+                    ? rowBounds.Right - padding
+                    : Math.Max(rowBounds.X + padding, buttonBounds.X - padding);
+                Rectangle textBounds = new(
+                    rowBounds.X + padding,
+                    rowBounds.Y + padding,
+                    Math.Max(0, textRight - rowBounds.X - padding),
+                    Math.Max(0, (stacked ? buttonBounds.Y : rowBounds.Bottom - padding) - rowBounds.Y - padding));
+                _rowLayouts.Add(new LevelRowLayout(level, rowBounds, textBounds, buttonBounds, stacked));
                 y += rowHeight + RowGap;
             }
         }
 
         private static void RegisterHeaderButtons(Rectangle headerBounds)
         {
-            int buttonWidth = Math.Min(80, Math.Max(54, (headerBounds.Width - RowPadding * 2 - ButtonGap * 2) / 3));
-            int y = headerBounds.Y + Math.Max(0, (headerBounds.Height - ButtonHeight) / 2);
-            int right = headerBounds.Right - RowPadding;
-
-            Rectangle next = new(right - buttonWidth, y, buttonWidth, ButtonHeight);
-            Rectangle reload = new(next.X - ButtonGap - buttonWidth, y, buttonWidth, ButtonHeight);
-            Rectangle previous = new(reload.X - ButtonGap - buttonWidth, y, buttonWidth, ButtonHeight);
-
-            _buttonBoundsByKey[PreviousTooltipKey] = previous;
-            _buttonBoundsByKey[ReloadTooltipKey] = reload;
-            _buttonBoundsByKey[NextTooltipKey] = next;
+            HeaderLayout layout = BuildHeaderLayout(headerBounds);
+            _buttonBoundsByKey[PreviousTooltipKey] = layout.PreviousButtonBounds;
+            _buttonBoundsByKey[ReloadTooltipKey] = layout.ReloadButtonBounds;
+            _buttonBoundsByKey[NextTooltipKey] = layout.NextButtonBounds;
         }
 
         private static void RegisterRowButtons(IEnumerable<LevelRowLayout> rows)
@@ -295,6 +330,118 @@ namespace op.io.UI.BlockScripts.Blocks
             }
         }
 
+        private static HeaderLayout BuildHeaderLayout(Rectangle bounds)
+        {
+            int padding = ResolveHeaderPadding(bounds.Width);
+            bool compact = bounds.Width < HeaderCompactWidth;
+            int buttonHeight = Math.Min(ButtonHeight, Math.Max(1, bounds.Height - padding * 2));
+            int buttonY = compact
+                ? bounds.Bottom - padding - buttonHeight
+                : bounds.Y + Math.Max(0, (bounds.Height - buttonHeight) / 2);
+            Rectangle buttonRowBounds = new(
+                bounds.X + padding,
+                buttonY,
+                Math.Max(0, bounds.Width - padding * 2),
+                buttonHeight);
+            int reloadWidth = compact ? 36 : 58;
+            int sideWidth = compact ? 28 : 38;
+            IReadOnlyList<Rectangle> buttons = BlockButtonRowLayout.BuildRow(
+                buttonRowBounds,
+                [sideWidth, reloadWidth, sideWidth],
+                buttonHeight,
+                ButtonGap,
+                BlockButtonRowLayout.Alignment.Right);
+            Rectangle previous = buttons.Count > 0 ? buttons[0] : Rectangle.Empty;
+            Rectangle reload = buttons.Count > 1 ? buttons[1] : Rectangle.Empty;
+            Rectangle next = buttons.Count > 2 ? buttons[2] : Rectangle.Empty;
+
+            int textRight = compact || previous == Rectangle.Empty
+                ? bounds.Right - padding
+                : Math.Max(bounds.X + padding, previous.X - ButtonGap);
+            Rectangle activeTextBounds = new(
+                bounds.X + padding,
+                bounds.Y + 3,
+                Math.Max(0, textRight - bounds.X - padding),
+                16);
+            int summaryBottom = compact && previous != Rectangle.Empty
+                ? Math.Max(bounds.Y + 18, previous.Y - 2)
+                : bounds.Bottom - 3;
+            Rectangle summaryTextBounds = new(
+                bounds.X + padding,
+                bounds.Y + 20,
+                Math.Max(0, textRight - bounds.X - padding),
+                Math.Max(0, summaryBottom - (bounds.Y + 20)));
+
+            return new HeaderLayout(activeTextBounds, summaryTextBounds, previous, reload, next);
+        }
+
+        private static int ResolveHeaderPadding(int width) => width < HeaderCompactWidth ? CompactRowPadding : RowPadding;
+
+        private static int ResolveRowPadding(int width) => width < RowStackedThreshold ? CompactRowPadding : RowPadding;
+
+        private static bool ShouldStackRowButton(int width) => width < RowStackedThreshold;
+
+        private static float ResolveRowLineHeight() => MathF.Max(12f, MathF.Ceiling(Math.Max(_lineHeight, 16f) * RowBodyTextScale));
+
+        private static string GetHeaderButtonLabel(string key, Rectangle bounds)
+        {
+            if (bounds.Width <= 52)
+            {
+                return key switch
+                {
+                    PreviousTooltipKey => "<",
+                    NextTooltipKey => ">",
+                    _ => "R"
+                };
+            }
+
+            return key switch
+            {
+                PreviousTooltipKey => "<",
+                NextTooltipKey => ">",
+                _ => "Reload"
+            };
+        }
+
+        private static Vector2 MeasureScaledString(UIStyle.UIFont font, string text, float textScale)
+        {
+            return font.IsAvailable && !string.IsNullOrEmpty(text)
+                ? font.MeasureString(text) * Math.Clamp(textScale, 0.45f, 1.25f)
+                : Vector2.Zero;
+        }
+
+        private static void DrawScaledString(
+            SpriteBatch spriteBatch,
+            UIStyle.UIFont font,
+            string text,
+            Vector2 position,
+            Color color,
+            float textScale)
+        {
+            if (spriteBatch == null || !font.IsAvailable || string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            float resolvedTextScale = Math.Clamp(textScale, 0.45f, 1.25f);
+            if (MathF.Abs(resolvedTextScale - 1f) <= 0.001f)
+            {
+                font.DrawString(spriteBatch, text, position, color);
+                return;
+            }
+
+            spriteBatch.DrawString(
+                font.Font,
+                text,
+                position,
+                color,
+                0f,
+                Vector2.Zero,
+                font.Scale * resolvedTextScale,
+                SpriteEffects.None,
+                0f);
+        }
+
         private static void DrawHeader(SpriteBatch spriteBatch, Rectangle bounds, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
         {
             if (bounds.Width <= 0 || bounds.Height <= 0)
@@ -304,19 +451,22 @@ namespace op.io.UI.BlockScripts.Blocks
 
             FillRect(spriteBatch, bounds, UIStyle.BlockBackground * 0.72f);
 
+            HeaderLayout layout = BuildHeaderLayout(bounds);
             GameLevelDefinition active = GameLevelManager.ActiveLevel;
             string title = $"Active: {active.DisplayName}";
-            Vector2 titlePosition = new(bounds.X + RowPadding, bounds.Y + 3);
-            boldFont.DrawString(spriteBatch, title, titlePosition, UIStyle.TextColor);
+            string titleText = TruncateToWidth(title, boldFont, layout.ActiveTextBounds.Width, HeaderTitleTextScale);
+            Vector2 titlePosition = new(layout.ActiveTextBounds.X, layout.ActiveTextBounds.Y);
+            DrawScaledString(spriteBatch, boldFont, titleText, titlePosition, UIStyle.TextColor, HeaderTitleTextScale);
 
             string summary = GameLevelManager.ActiveLevelLoadoutSummary;
-            Vector2 summaryPosition = new(bounds.X + RowPadding, bounds.Y + 18);
-            regularFont.DrawString(spriteBatch, TruncateToWidth(summary, regularFont, Math.Max(40, bounds.Width - RowPadding * 2 - 270)), summaryPosition, UIStyle.MutedTextColor);
+            string summaryText = TruncateToWidth(summary, regularFont, layout.SummaryTextBounds.Width, HeaderSummaryTextScale);
+            Vector2 summaryPosition = new(layout.SummaryTextBounds.X, layout.SummaryTextBounds.Y);
+            DrawScaledString(spriteBatch, regularFont, summaryText, summaryPosition, UIStyle.MutedTextColor, HeaderSummaryTextScale);
 
             Point pointer = Mouse.GetState().Position;
-            DrawHeaderButton(spriteBatch, PreviousTooltipKey, "Prev", pointer);
-            DrawHeaderButton(spriteBatch, ReloadTooltipKey, "Reload", pointer);
-            DrawHeaderButton(spriteBatch, NextTooltipKey, "Next", pointer);
+            DrawHeaderButton(spriteBatch, PreviousTooltipKey, GetHeaderButtonLabel(PreviousTooltipKey, layout.PreviousButtonBounds), pointer);
+            DrawHeaderButton(spriteBatch, ReloadTooltipKey, GetHeaderButtonLabel(ReloadTooltipKey, layout.ReloadButtonBounds), pointer);
+            DrawHeaderButton(spriteBatch, NextTooltipKey, GetHeaderButtonLabel(NextTooltipKey, layout.NextButtonBounds), pointer);
         }
 
         private static void DrawHeaderButton(SpriteBatch spriteBatch, string key, string label, Point pointer)
@@ -332,7 +482,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 label,
                 UIButtonRenderer.ButtonStyle.Grey,
                 UIButtonRenderer.IsHovered(bounds, pointer),
-                isDisabled: BlockManager.IsBlockLocked(DockBlockKind.Levels));
+                isDisabled: BlockManager.IsBlockLocked(DockBlockKind.Levels),
+                textScale: HeaderButtonTextScale);
         }
 
         private static void DrawLevelRow(SpriteBatch spriteBatch, LevelRowLayout row, UIStyle.UIFont boldFont, UIStyle.UIFont regularFont)
@@ -345,22 +496,37 @@ namespace op.io.UI.BlockScripts.Blocks
             FillRect(spriteBatch, row.Bounds, fill);
             DrawRectOutline(spriteBatch, row.Bounds, border, 1);
 
-            int textRight = Math.Max(row.Bounds.X + 40, row.ButtonBounds.X - RowPadding);
-            int textWidth = Math.Max(0, textRight - row.Bounds.X - RowPadding);
-            Vector2 titlePosition = new(row.Bounds.X + RowPadding, row.Bounds.Y + RowPadding);
-            boldFont.DrawString(spriteBatch, row.Level.DisplayName, titlePosition, active ? UIStyle.AccentColor : UIStyle.TextColor);
+            int textWidth = Math.Max(0, row.TextBounds.Width);
+            float lineHeight = ResolveRowLineHeight();
+            Vector2 titlePosition = new(row.TextBounds.X, row.TextBounds.Y);
+            DrawScaledString(
+                spriteBatch,
+                boldFont,
+                TruncateToWidth(row.Level.DisplayName, boldFont, textWidth, RowTitleTextScale),
+                titlePosition,
+                active ? UIStyle.AccentColor : UIStyle.TextColor,
+                RowTitleTextScale);
 
-            string description = TruncateToWidth(row.Level.Description, regularFont, textWidth);
-            Vector2 descriptionPosition = new(row.Bounds.X + RowPadding, row.Bounds.Y + RowPadding + _lineHeight);
-            regularFont.DrawString(spriteBatch, description, descriptionPosition, UIStyle.TextColor);
+            string description = TruncateToWidth(row.Level.Description, regularFont, textWidth, RowBodyTextScale);
+            Vector2 descriptionPosition = new(row.TextBounds.X, row.TextBounds.Y + lineHeight);
+            DrawScaledString(spriteBatch, regularFont, description, descriptionPosition, UIStyle.TextColor, RowBodyTextScale);
 
-            string loadout = TruncateToWidth(GameLevelManager.BuildLevelLoadoutSummary(row.Level), regularFont, textWidth);
-            Vector2 loadoutPosition = new(row.Bounds.X + RowPadding, row.Bounds.Y + RowPadding + (_lineHeight * 2f));
-            regularFont.DrawString(spriteBatch, loadout, loadoutPosition, UIStyle.MutedTextColor);
+            string loadout = TruncateToWidth(GameLevelManager.BuildLevelLoadoutSummary(row.Level), regularFont, textWidth, RowBodyTextScale);
+            Vector2 loadoutPosition = new(row.TextBounds.X, row.TextBounds.Y + (lineHeight * 2f));
+            DrawScaledString(spriteBatch, regularFont, loadout, loadoutPosition, UIStyle.MutedTextColor, RowBodyTextScale);
 
             string config = $"Terrain: {row.Level.TerrainConfigurationKey} | Ocean: {row.Level.OceanBiomeConfigurationKey}";
-            Vector2 configPosition = new(row.Bounds.X + RowPadding, row.Bounds.Y + RowPadding + (_lineHeight * 3f));
-            regularFont.DrawString(spriteBatch, TruncateToWidth(config, regularFont, textWidth), configPosition, UIStyle.MutedTextColor);
+            if (row.TextBounds.Height >= lineHeight * 3.5f)
+            {
+                Vector2 configPosition = new(row.TextBounds.X, row.TextBounds.Y + (lineHeight * 3f));
+                DrawScaledString(
+                    spriteBatch,
+                    regularFont,
+                    TruncateToWidth(config, regularFont, textWidth, RowBodyTextScale),
+                    configPosition,
+                    UIStyle.MutedTextColor,
+                    RowBodyTextScale);
+            }
 
             UIButtonRenderer.Draw(
                 spriteBatch,
@@ -368,7 +534,8 @@ namespace op.io.UI.BlockScripts.Blocks
                 active ? "Reload" : "Load",
                 active ? UIButtonRenderer.ButtonStyle.Blue : UIButtonRenderer.ButtonStyle.Grey,
                 UIButtonRenderer.IsHovered(row.ButtonBounds, pointer),
-                isDisabled: BlockManager.IsBlockLocked(DockBlockKind.Levels));
+                isDisabled: BlockManager.IsBlockLocked(DockBlockKind.Levels),
+                textScale: RowButtonTextScale);
         }
 
         private static string GetLevelTooltipKey(GameLevelDefinition level)
@@ -381,7 +548,7 @@ namespace op.io.UI.BlockScripts.Blocks
             return ManualTooltipKey;
         }
 
-        private static string TruncateToWidth(string text, UIStyle.UIFont font, int maxWidth)
+        private static string TruncateToWidth(string text, UIStyle.UIFont font, int maxWidth, float textScale = 1f)
         {
             text ??= string.Empty;
             if (maxWidth <= 0 || !font.IsAvailable)
@@ -389,7 +556,7 @@ namespace op.io.UI.BlockScripts.Blocks
                 return string.Empty;
             }
 
-            if (font.MeasureString(text).X <= maxWidth)
+            if (MeasureScaledString(font, text, textScale).X <= maxWidth)
             {
                 return text;
             }
@@ -399,7 +566,7 @@ namespace op.io.UI.BlockScripts.Blocks
             while (length > 0)
             {
                 string candidate = text[..length].TrimEnd() + suffix;
-                if (font.MeasureString(candidate).X <= maxWidth)
+                if (MeasureScaledString(font, candidate, textScale).X <= maxWidth)
                 {
                     return candidate;
                 }
@@ -447,16 +614,43 @@ namespace op.io.UI.BlockScripts.Blocks
 
         private readonly struct LevelRowLayout
         {
-            public LevelRowLayout(GameLevelDefinition level, Rectangle bounds, Rectangle buttonBounds)
+            public LevelRowLayout(GameLevelDefinition level, Rectangle bounds, Rectangle textBounds, Rectangle buttonBounds, bool stackedButton)
             {
                 Level = level;
                 Bounds = bounds;
+                TextBounds = textBounds;
                 ButtonBounds = buttonBounds;
+                StackedButton = stackedButton;
             }
 
             public GameLevelDefinition Level { get; }
             public Rectangle Bounds { get; }
+            public Rectangle TextBounds { get; }
             public Rectangle ButtonBounds { get; }
+            public bool StackedButton { get; }
+        }
+
+        private readonly struct HeaderLayout
+        {
+            public HeaderLayout(
+                Rectangle activeTextBounds,
+                Rectangle summaryTextBounds,
+                Rectangle previousButtonBounds,
+                Rectangle reloadButtonBounds,
+                Rectangle nextButtonBounds)
+            {
+                ActiveTextBounds = activeTextBounds;
+                SummaryTextBounds = summaryTextBounds;
+                PreviousButtonBounds = previousButtonBounds;
+                ReloadButtonBounds = reloadButtonBounds;
+                NextButtonBounds = nextButtonBounds;
+            }
+
+            public Rectangle ActiveTextBounds { get; }
+            public Rectangle SummaryTextBounds { get; }
+            public Rectangle PreviousButtonBounds { get; }
+            public Rectangle ReloadButtonBounds { get; }
+            public Rectangle NextButtonBounds { get; }
         }
     }
 }

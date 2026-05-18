@@ -44,6 +44,12 @@ internal static class Program
             }
 
             if (args.Length > 0 &&
+                string.Equals(args[0], "terrain-camera-window-authority", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunTerrainCameraWindowAuthorityProbe();
+            }
+
+            if (args.Length > 0 &&
                 string.Equals(args[0], "terrain-startup-readiness", StringComparison.OrdinalIgnoreCase))
             {
                 return RunTerrainStartupReadinessProbe();
@@ -86,6 +92,12 @@ internal static class Program
             }
 
             if (args.Length > 0 &&
+                string.Equals(args[0], "terrain-resident-mask-authority", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunTerrainResidentMaskAuthorityProbe();
+            }
+
+            if (args.Length > 0 &&
                 string.Equals(args[0], "terrain-impulse", StringComparison.OrdinalIgnoreCase))
             {
                 return RunTerrainImpulseProbe();
@@ -122,9 +134,27 @@ internal static class Program
             }
 
             if (args.Length > 0 &&
+                string.Equals(args[0], "map-biome-authority", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunMapBiomeAuthorityProbe();
+            }
+
+            if (args.Length > 0 &&
+                string.Equals(args[0], "map-global-pan-cache", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunMapGlobalPanCacheProbe();
+            }
+
+            if (args.Length > 0 &&
                 string.Equals(args[0], "ocean-debug-borders", StringComparison.OrdinalIgnoreCase))
             {
                 return RunOceanDebugBordersProbe();
+            }
+
+            if (args.Length > 0 &&
+                string.Equals(args[0], "ocean-debug-high-travel", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunOceanDebugHighTravelProbe();
             }
 
             if (args.Length > 0 &&
@@ -879,6 +909,224 @@ internal static class Program
         return emptyAppliedTerrainForcesAbyss ? 0 : 1;
     }
 
+    private static int RunMapBiomeAuthorityProbe()
+    {
+        const int seed = 1337;
+        const float sampleStep = 128f;
+        const float minX = -6656f;
+        const float maxX = -4608f;
+        const float minY = -6656f;
+        const float maxY = -4608f;
+
+        ResetRuntimeState();
+        Core core = CreateHeadlessCore();
+        Core.Instance = core;
+        core.GameObjects = new List<GameObject>();
+        core.StaticObjects = new List<GameObject>();
+        core.PhysicsManager = new PhysicsManager();
+
+        Assembly gameplayAssembly = typeof(Core).Assembly;
+        Type terrainType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground", throwOnError: true)!;
+        Type oceanBiomeType = gameplayAssembly.GetType("op.io.OceanBiomeType", throwOnError: true)!;
+        Type mapSamplingContextType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+MapSamplingContext", throwOnError: true)!;
+        BindingFlags staticFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
+        PrepareTerrainForSeed(terrainType, staticFlags, seed);
+        terrainType.GetMethod("ResetRuntimeTerrainObjectsForLevelLoad", staticFlags)!.Invoke(null, []);
+        ((IDictionary)terrainType.GetField("ResidentChunks", staticFlags)!.GetValue(null)!).Clear();
+        terrainType.GetMethod("ResetTerrainChunkWorkerQueues", staticFlags)!.Invoke(null, []);
+
+        MethodInfo buildChunkBoundsMethod = terrainType.GetMethod(
+            "BuildChunkBounds",
+            staticFlags,
+            binder: null,
+            [typeof(float), typeof(float), typeof(float), typeof(float)],
+            modifiers: null)!;
+        MethodInfo buildResidentChunksSynchronouslyMethod = terrainType.GetMethod(
+            "BuildResidentChunksSynchronously",
+            staticFlags)!;
+        MethodInfo trySampleMapMethod = terrainType.GetMethod(
+            "TrySampleMapAtWorldPosition",
+            staticFlags,
+            binder: null,
+            [
+                typeof(Vector2),
+                typeof(bool),
+                typeof(bool).MakeByRefType(),
+                oceanBiomeType.MakeByRefType(),
+                typeof(bool).MakeByRefType(),
+                typeof(bool),
+                typeof(float),
+                mapSamplingContextType
+            ],
+            modifiers: null)!;
+        MethodInfo createMapSamplingContextMethod = terrainType.GetMethod(
+            "CreateMapSamplingContext",
+            staticFlags)!;
+
+        object chunkBounds = buildChunkBoundsMethod.Invoke(null, [minX, maxX, minY, maxY])!;
+        bool residentReady = (bool)buildResidentChunksSynchronouslyMethod.Invoke(null, [chunkBounds, false, false])!;
+        object mapSamplingContext = createMapSamplingContextMethod.Invoke(null, [])!;
+
+        int samples = 0;
+        int terrainMismatches = 0;
+        int biomeMismatches = 0;
+        int unresolvedSamples = 0;
+        string firstMismatch = "none";
+
+        try
+        {
+            for (float y = minY; y <= maxY; y += sampleStep)
+            {
+                for (float x = minX; x <= maxX; x += sampleStep)
+                {
+                    Vector2 position = new(x, y);
+                    samples++;
+
+                    object[] screenArgs =
+                    [
+                        position,
+                        false,
+                        false,
+                        Activator.CreateInstance(oceanBiomeType)!,
+                        false,
+                        false,
+                        sampleStep,
+                        null!
+                    ];
+                    object[] backgroundArgs =
+                    [
+                        position,
+                        false,
+                        false,
+                        Activator.CreateInstance(oceanBiomeType)!,
+                        false,
+                        true,
+                        sampleStep,
+                        mapSamplingContext
+                    ];
+
+                    bool screenResolved = (bool)trySampleMapMethod.Invoke(null, screenArgs)!;
+                    bool backgroundResolved = (bool)trySampleMapMethod.Invoke(null, backgroundArgs)!;
+                    if (!screenResolved || !backgroundResolved)
+                    {
+                        unresolvedSamples++;
+                        if (string.Equals(firstMismatch, "none", StringComparison.Ordinal))
+                        {
+                            firstMismatch = $"unresolved at ({x:0.###},{y:0.###}) screen={screenResolved} background={backgroundResolved}";
+                        }
+                        continue;
+                    }
+
+                    bool screenTerrain = (bool)screenArgs[2];
+                    bool backgroundTerrain = (bool)backgroundArgs[2];
+                    string screenBiome = screenArgs[3]?.ToString() ?? "null";
+                    string backgroundBiome = backgroundArgs[3]?.ToString() ?? "null";
+
+                    if (screenTerrain != backgroundTerrain)
+                    {
+                        terrainMismatches++;
+                        if (string.Equals(firstMismatch, "none", StringComparison.Ordinal))
+                        {
+                            firstMismatch = $"terrain at ({x:0.###},{y:0.###}) screen={screenTerrain} background={backgroundTerrain}";
+                        }
+                    }
+                    else if (!screenTerrain && !string.Equals(screenBiome, backgroundBiome, StringComparison.Ordinal))
+                    {
+                        biomeMismatches++;
+                        if (string.Equals(firstMismatch, "none", StringComparison.Ordinal))
+                        {
+                            firstMismatch = $"biome at ({x:0.###},{y:0.###}) screen={screenBiome} background={backgroundBiome}";
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (mapSamplingContext is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+
+        int residentChunks = (int)terrainType.GetProperty("TerrainResidentChunkCount", staticFlags)!.GetValue(null)!;
+        Console.WriteLine("MapBiomeAuthorityProbe");
+        Console.WriteLine($"Seed={seed}");
+        Console.WriteLine($"Bounds={minX:0.###},{maxX:0.###},{minY:0.###},{maxY:0.###}");
+        Console.WriteLine($"ResidentReady={residentReady}");
+        Console.WriteLine($"ResidentChunks={residentChunks}");
+        Console.WriteLine($"Samples={samples}");
+        Console.WriteLine($"TerrainMismatches={terrainMismatches}");
+        Console.WriteLine($"BiomeMismatches={biomeMismatches}");
+        Console.WriteLine($"UnresolvedSamples={unresolvedSamples}");
+        Console.WriteLine($"FirstMismatch={firstMismatch}");
+
+        return residentReady &&
+            samples > 0 &&
+            terrainMismatches == 0 &&
+            biomeMismatches == 0 &&
+            unresolvedSamples == 0
+                ? 0
+                : 1;
+    }
+
+    private static int RunMapGlobalPanCacheProbe()
+    {
+        ResetRuntimeState();
+
+        Assembly gameplayAssembly = typeof(Core).Assembly;
+        Type mapBlockType = gameplayAssembly.GetType("op.io.UI.BlockScripts.Blocks.MapBlock", throwOnError: true)!;
+        Type mapModeType = mapBlockType.GetNestedType("MapMode", BindingFlags.NonPublic)!;
+        BindingFlags staticFlags = BindingFlags.NonPublic | BindingFlags.Static;
+        BindingFlags instanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        object globalMode = Enum.Parse(mapModeType, "Global");
+        MethodInfo resolveRenderPlanMethod = mapBlockType.GetMethod(
+            "ResolveMapTextureRenderPlan",
+            staticFlags,
+            binder: null,
+            [
+                typeof(Rectangle),
+                typeof(float),
+                typeof(float),
+                typeof(float),
+                typeof(float),
+                mapModeType
+            ],
+            modifiers: null)!;
+
+        Rectangle drawBounds = new(0, 0, 360, 240);
+        const float minX = -4096f;
+        const float maxX = 4096f;
+        const float minY = -2730.667f;
+        const float maxY = 2730.667f;
+
+        object initialPlan = resolveRenderPlanMethod.Invoke(null, [drawBounds, minX, maxX, minY, maxY, globalMode])!;
+        object smallMovePlan = resolveRenderPlanMethod.Invoke(null, [drawBounds, minX + 64f, maxX + 64f, minY + 64f, maxY + 64f, globalMode])!;
+        object farMovePlan = resolveRenderPlanMethod.Invoke(null, [drawBounds, minX + 9000f, maxX + 9000f, minY + 9000f, maxY + 9000f, globalMode])!;
+
+        bool smallMoveReusesCache = RenderPlanBoundsEqual(initialPlan, smallMovePlan, instanceFlags);
+        bool farMoveChangesCache = !RenderPlanBoundsEqual(initialPlan, farMovePlan, instanceFlags);
+        bool initialPlanCoversView = RenderPlanCoversView(initialPlan, minX, maxX, minY, maxY, instanceFlags);
+        bool smallMovePlanCoversView = RenderPlanCoversView(smallMovePlan, minX + 64f, maxX + 64f, minY + 64f, maxY + 64f, instanceFlags);
+
+        Console.WriteLine("MapGlobalPanCacheProbe");
+        Console.WriteLine($"InitialBounds={FormatRenderPlanBounds(initialPlan, instanceFlags)}");
+        Console.WriteLine($"SmallMoveBounds={FormatRenderPlanBounds(smallMovePlan, instanceFlags)}");
+        Console.WriteLine($"FarMoveBounds={FormatRenderPlanBounds(farMovePlan, instanceFlags)}");
+        Console.WriteLine($"SmallMoveReusesCache={smallMoveReusesCache}");
+        Console.WriteLine($"FarMoveChangesCache={farMoveChangesCache}");
+        Console.WriteLine($"InitialPlanCoversView={initialPlanCoversView}");
+        Console.WriteLine($"SmallMovePlanCoversView={smallMovePlanCoversView}");
+
+        return smallMoveReusesCache &&
+            farMoveChangesCache &&
+            initialPlanCoversView &&
+            smallMovePlanCoversView
+                ? 0
+                : 1;
+    }
+
     private static int RunOceanDebugBordersProbe()
     {
         const int seed = 1337;
@@ -999,6 +1247,176 @@ internal static class Program
             cameraShiftKeepsGridStable
                 ? 0
                 : 1;
+    }
+
+    private static int RunOceanDebugHighTravelProbe()
+    {
+        const int seed = 1337;
+        const float halfWidth = 512f;
+        const float halfHeight = 512f;
+
+        ResetRuntimeState();
+        Core core = CreateHeadlessCore();
+        Core.Instance = core;
+        core.GameObjects = new List<GameObject>();
+        core.StaticObjects = new List<GameObject>();
+        core.PhysicsManager = new PhysicsManager();
+
+        Agent? player = AgentLoader.LoadAgents().FirstOrDefault(static agent => agent.IsPlayer);
+        if (player == null)
+        {
+            player = CreateOceanDebugProbePlayer();
+        }
+
+        ApplyDatabaseLoadout(player);
+        core.Player = player;
+        core.GameObjects.Add(player);
+
+        Assembly gameplayAssembly = typeof(Core).Assembly;
+        Type terrainType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground", throwOnError: true)!;
+        Type oceanBiomeType = gameplayAssembly.GetType("op.io.OceanBiomeType", throwOnError: true)!;
+        BindingFlags staticFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        PrepareTerrainForSeed(terrainType, staticFlags, seed);
+
+        MethodInfo prepareStartupAroundMethod = terrainType.GetMethod(
+            "PrepareStartupTerrainAroundWorldPosition",
+            staticFlags,
+            binder: null,
+            [typeof(Vector2)],
+            modifiers: null)!;
+        bool startupReady = (bool)prepareStartupAroundMethod.Invoke(null, [Vector2.Zero])!;
+        MethodInfo updateOceanDebugSegmentsMethod = terrainType.GetMethod(
+            "UpdateOceanBiomeDebugSegments",
+            staticFlags,
+            binder: null,
+            [typeof(float), typeof(float), typeof(float), typeof(float), typeof(bool)],
+            modifiers: null)!;
+        MethodInfo tryPromoteCompletedOceanTilesMethod = terrainType.GetMethod(
+            "TryPromoteCompletedOceanBiomeDebugTiles",
+            staticFlags)!;
+        MethodInfo buildChunkBoundsMethod = terrainType.GetMethod(
+            "BuildChunkBounds",
+            staticFlags,
+            binder: null,
+            [typeof(float), typeof(float), typeof(float), typeof(float)],
+            modifiers: null)!;
+        MethodInfo buildResidentChunksSynchronouslyMethod = terrainType.GetMethod(
+            "BuildResidentChunksSynchronously",
+            staticFlags)!;
+        MethodInfo validateVisibleNoIntersectionsMethod = terrainType.GetMethod(
+            "ValidateVisibleOceanBiomeDebugBorderNoIntersectionsForProbe",
+            staticFlags,
+            binder: null,
+            [typeof(int).MakeByRefType(), typeof(int).MakeByRefType()],
+            modifiers: null)!;
+        MethodInfo resolveOceanBiomeWithSourceMethod = terrainType.GetMethod(
+            "TryResolveOceanBiomeAtWorldPosition",
+            staticFlags,
+            binder: null,
+            [
+                typeof(Vector2),
+                oceanBiomeType.MakeByRefType(),
+                typeof(float).MakeByRefType(),
+                typeof(float).MakeByRefType(),
+                typeof(string).MakeByRefType()
+            ],
+            modifiers: null)!;
+        MethodInfo trySampleResidentOceanDebugChunkMethod = terrainType.GetMethod(
+            "TrySampleResidentOceanBiomeDebugChunkAtWorldPosition",
+            staticFlags,
+            binder: null,
+            [typeof(Vector2), oceanBiomeType.MakeByRefType(), typeof(float).MakeByRefType()],
+            modifiers: null)!;
+
+        float[] yCenters = [-4608f, -5120f, -6144f, -7168f, -8192f];
+        int requiredWindows = 0;
+        int passingWindows = 0;
+        int windowsWithVisibleBorders = 0;
+        int windowsWithSyncedRuntimeTransitions = 0;
+        List<string> rows = new();
+        foreach (float yCenter in yCenters)
+        {
+            player.Position = new Vector2(0f, yCenter);
+            float minX = -halfWidth;
+            float maxX = halfWidth;
+            float minY = yCenter - halfHeight;
+            float maxY = yCenter + halfHeight;
+            Console.WriteLine($"ProbingY={yCenter:0.###} Stage=build-chunks");
+            Console.Out.Flush();
+            object chunkBounds = buildChunkBoundsMethod.Invoke(
+                null,
+                [minX - 512f, maxX + 512f, minY - 512f, maxY + 512f])!;
+            bool chunksReady = (bool)buildResidentChunksSynchronouslyMethod.Invoke(null, [chunkBounds, false, false])!;
+            Console.WriteLine($"ProbingY={yCenter:0.###} Stage=update-borders ChunksReady={chunksReady}");
+            Console.Out.Flush();
+            tryPromoteCompletedOceanTilesMethod.Invoke(null, []);
+            updateOceanDebugSegmentsMethod.Invoke(null, [minX, maxX, minY, maxY, false]);
+            int streamedSegments = (int)terrainType.GetProperty("TerrainOceanDebugStreamedTileSegmentCount", staticFlags)!.GetValue(null)!;
+            int missingVisibleTiles = (int)terrainType.GetProperty("TerrainOceanDebugMissingVisibleTileCount", staticFlags)!.GetValue(null)!;
+            int visibleSegments = (int)terrainType.GetProperty("TerrainOceanDebugBorderSegmentCount", staticFlags)!.GetValue(null)!;
+            int cacheCount = (int)terrainType.GetProperty("TerrainOceanDebugTileCacheCount", staticFlags)!.GetValue(null)!;
+            string status = (string)terrainType.GetProperty("TerrainOceanDebugStreamedTileStatus", staticFlags)!.GetValue(null)!;
+            object[] noIntersectionArgs = [0, 0];
+            bool visibleBordersDoNotCross = (bool)validateVisibleNoIntersectionsMethod.Invoke(null, noIntersectionArgs)!;
+            int checkedPairs = Convert.ToInt32(noIntersectionArgs[0]);
+            int crossingPairs = Convert.ToInt32(noIntersectionArgs[1]);
+            bool hasVisibleBorders = streamedSegments > 0 && visibleSegments > 0;
+            if (hasVisibleBorders)
+            {
+                windowsWithVisibleBorders++;
+            }
+
+            OceanBiomeChunkSyncMetrics sync = ProbeOceanBiomeChunkSync(
+                resolveOceanBiomeWithSourceMethod,
+                trySampleResidentOceanDebugChunkMethod,
+                minX,
+                maxX,
+                minY,
+                maxY,
+                64f);
+            bool runtimeTransitionsSynced = !hasVisibleBorders ||
+                (sync.RuntimeWaterSamples > 0 &&
+                    sync.MismatchedSamples == 0 &&
+                    sync.NonChunkSourceSamples == 0 &&
+                    sync.RuntimeBiomeCount >= 2);
+            if (hasVisibleBorders && runtimeTransitionsSynced)
+            {
+                windowsWithSyncedRuntimeTransitions++;
+            }
+
+            bool passed = chunksReady &&
+                missingVisibleTiles == 0 &&
+                visibleBordersDoNotCross &&
+                runtimeTransitionsSynced;
+            requiredWindows++;
+
+            if (passed)
+            {
+                passingWindows++;
+            }
+
+            rows.Add(
+                $"Y={yCenter:0.###} ChunksReady={chunksReady} Streamed={streamedSegments} Visible={visibleSegments} Missing={missingVisibleTiles} Cache={cacheCount} HasVisibleBorders={hasVisibleBorders} NoCross={visibleBordersDoNotCross} CheckedPairs={checkedPairs} CrossingPairs={crossingPairs} RuntimeSamples={sync.RuntimeWaterSamples} RuntimeBiomes={sync.RuntimeBiomes} ResidentBiomes={sync.ResidentBiomes} RuntimeMismatches={sync.MismatchedSamples} NonChunkSources={sync.NonChunkSourceSamples} FirstMismatch={sync.FirstMismatch} FirstNonChunkSource={sync.FirstNonChunkSource} RuntimeSynced={runtimeTransitionsSynced} Passed={passed} Status={status}");
+        }
+
+        bool everyRequiredWindowPassed = requiredWindows > 0 &&
+            passingWindows == requiredWindows &&
+            windowsWithVisibleBorders > 0 &&
+            windowsWithSyncedRuntimeTransitions > 0;
+        Console.WriteLine("OceanDebugHighTravelProbe");
+        Console.WriteLine($"Seed={seed}");
+        Console.WriteLine($"StartupReady={startupReady}");
+        Console.WriteLine($"RequiredWindows={requiredWindows}");
+        Console.WriteLine($"PassingWindows={passingWindows}");
+        Console.WriteLine($"WindowsWithVisibleBorders={windowsWithVisibleBorders}");
+        Console.WriteLine($"WindowsWithSyncedRuntimeTransitions={windowsWithSyncedRuntimeTransitions}");
+        foreach (string row in rows)
+        {
+            Console.WriteLine(row);
+        }
+
+        Console.WriteLine($"EveryRequiredWindowPassed={everyRequiredWindowPassed}");
+        return startupReady && everyRequiredWindowPassed ? 0 : 1;
     }
 
     private static int RunOceanDebugVisionProbe()
@@ -1377,6 +1795,25 @@ internal static class Program
                 typeof(int).MakeByRefType()
             ],
             modifiers: null)!;
+        MethodInfo updateOceanDebugSegmentsMethod = terrainType.GetMethod(
+            "UpdateOceanBiomeDebugSegments",
+            staticFlags,
+            binder: null,
+            [typeof(float), typeof(float), typeof(float), typeof(float), typeof(bool)],
+            modifiers: null)!;
+        MethodInfo tryPromoteCompletedOceanTilesMethod = terrainType.GetMethod(
+            "TryPromoteCompletedOceanBiomeDebugTiles",
+            staticFlags)!;
+        MethodInfo buildChunkBoundsMethod = terrainType.GetMethod(
+            "BuildChunkBounds",
+            staticFlags,
+            binder: null,
+            [typeof(float), typeof(float), typeof(float), typeof(float)],
+            modifiers: null)!;
+        MethodInfo buildResidentChunksSynchronouslyMethod = terrainType.GetMethod(
+            "BuildResidentChunksSynchronously",
+            staticFlags)!;
+        MethodInfo buildChunkWorldBoundsMethod = terrainType.GetMethod("BuildChunkWorldBounds", staticFlags)!;
 
         object fullMapWindow = resolveFullMapWindowMethod.Invoke(null, [])!;
         Stopwatch totalStopwatch = Stopwatch.StartNew();
@@ -1456,6 +1893,79 @@ internal static class Program
         bool completedInOrder = fullMapComplete && snapshotReady && fullOceanReady;
         bool residentFullMapRemembered = fullMapChunks > 0 && residentChunks >= fullMapChunks && generatedChunks >= fullMapChunks;
         bool fullMapBordersBuilt = fullMapSegments > 0;
+        object fullMapBounds = buildChunkWorldBoundsMethod.Invoke(null, [fullMapWindow])!;
+        Type fullMapBoundsType = fullMapBounds.GetType();
+        float fullMapMinX = Convert.ToSingle(fullMapBoundsType.GetProperty("MinX")!.GetValue(fullMapBounds)!);
+        float fullMapMaxX = Convert.ToSingle(fullMapBoundsType.GetProperty("MaxX")!.GetValue(fullMapBounds)!);
+        float fullMapMinY = Convert.ToSingle(fullMapBoundsType.GetProperty("MinY")!.GetValue(fullMapBounds)!);
+        float fullMapMaxY = Convert.ToSingle(fullMapBoundsType.GetProperty("MaxY")!.GetValue(fullMapBounds)!);
+        float streamedProbeMinX = -512f;
+        float streamedProbeMaxX = 512f;
+        float streamedProbeMinY = fullMapMinY - 1536f;
+        float streamedProbeMaxY = fullMapMinY - 512f;
+        int streamedProbeFrames = 0;
+        int streamedProbeSegments = 0;
+        int streamedProbeMissingVisibleTiles = 0;
+        int streamedProbeCacheCount = 0;
+        string streamedProbeStatus = "candidate unavailable";
+        bool streamedProbeCandidateFound = ProbeStreamedOceanDebugBounds(
+            terrainType,
+            staticFlags,
+            buildChunkBoundsMethod,
+            buildResidentChunksSynchronouslyMethod,
+            tryPromoteCompletedOceanTilesMethod,
+            updateOceanDebugSegmentsMethod,
+            streamedProbeMinX,
+            streamedProbeMaxX,
+            streamedProbeMinY,
+            streamedProbeMaxY,
+            out int streamedProbeDirectSegments,
+            out streamedProbeSegments,
+            out streamedProbeMissingVisibleTiles,
+            out streamedProbeCacheCount,
+            out streamedProbeStatus);
+        streamedProbeFrames = streamedProbeCandidateFound ? 1 : 0;
+
+        bool streamedLocalBordersBuilt =
+            streamedProbeCandidateFound &&
+            streamedProbeSegments > 0 &&
+            streamedProbeMissingVisibleTiles == 0;
+        bool northProbeCandidateFound = ProbeStreamedOceanDebugBounds(
+            terrainType,
+            staticFlags,
+            buildChunkBoundsMethod,
+            buildResidentChunksSynchronouslyMethod,
+            tryPromoteCompletedOceanTilesMethod,
+            updateOceanDebugSegmentsMethod,
+            -512f,
+            512f,
+            fullMapMinY - 1536f,
+            fullMapMinY - 512f,
+            out int northProbeDirectSegments,
+            out int northProbeSegments,
+            out int northProbeMissingVisibleTiles,
+            out int northProbeCacheCount,
+            out string northProbeStatus);
+        bool southProbeCandidateFound = ProbeStreamedOceanDebugBounds(
+            terrainType,
+            staticFlags,
+            buildChunkBoundsMethod,
+            buildResidentChunksSynchronouslyMethod,
+            tryPromoteCompletedOceanTilesMethod,
+            updateOceanDebugSegmentsMethod,
+            -512f,
+            512f,
+            fullMapMaxY + 512f,
+            fullMapMaxY + 1536f,
+            out int southProbeDirectSegments,
+            out int southProbeSegments,
+            out int southProbeMissingVisibleTiles,
+            out int southProbeCacheCount,
+            out string southProbeStatus);
+        bool verticalStreamedBordersBuilt =
+            (!northProbeCandidateFound || (northProbeSegments > 0 && northProbeMissingVisibleTiles == 0)) &&
+            (!southProbeCandidateFound || (southProbeSegments > 0 && southProbeMissingVisibleTiles == 0)) &&
+            (northProbeCandidateFound || southProbeCandidateFound);
 
         Console.WriteLine("TerrainFullMapOceanBordersProbe");
         Console.WriteLine($"Seed={seed}");
@@ -1487,6 +1997,28 @@ internal static class Program
         Console.WriteLine($"StableBiomeRadiusValid={stableBiomeRadiusValid}");
         Console.WriteLine($"ProbeSuppressedComponents={probeSuppressedComponents}");
         Console.WriteLine($"RemainingTinyComponents={remainingTinyComponents}");
+        Console.WriteLine($"StreamedProbeCandidateFound={streamedProbeCandidateFound}");
+        Console.WriteLine($"StreamedProbeBounds={streamedProbeMinX:0.###},{streamedProbeMaxX:0.###},{streamedProbeMinY:0.###},{streamedProbeMaxY:0.###}");
+        Console.WriteLine($"StreamedProbeDirectSegments={streamedProbeDirectSegments}");
+        Console.WriteLine($"StreamedProbeFrames={streamedProbeFrames}");
+        Console.WriteLine($"StreamedProbeSegments={streamedProbeSegments}");
+        Console.WriteLine($"StreamedProbeMissingVisibleTiles={streamedProbeMissingVisibleTiles}");
+        Console.WriteLine($"StreamedProbeCacheCount={streamedProbeCacheCount}");
+        Console.WriteLine($"StreamedProbeStatus={streamedProbeStatus}");
+        Console.WriteLine($"StreamedLocalBordersBuilt={streamedLocalBordersBuilt}");
+        Console.WriteLine($"NorthProbeCandidateFound={northProbeCandidateFound}");
+        Console.WriteLine($"NorthProbeDirectSegments={northProbeDirectSegments}");
+        Console.WriteLine($"NorthProbeSegments={northProbeSegments}");
+        Console.WriteLine($"NorthProbeMissingVisibleTiles={northProbeMissingVisibleTiles}");
+        Console.WriteLine($"NorthProbeCacheCount={northProbeCacheCount}");
+        Console.WriteLine($"NorthProbeStatus={northProbeStatus}");
+        Console.WriteLine($"SouthProbeCandidateFound={southProbeCandidateFound}");
+        Console.WriteLine($"SouthProbeDirectSegments={southProbeDirectSegments}");
+        Console.WriteLine($"SouthProbeSegments={southProbeSegments}");
+        Console.WriteLine($"SouthProbeMissingVisibleTiles={southProbeMissingVisibleTiles}");
+        Console.WriteLine($"SouthProbeCacheCount={southProbeCacheCount}");
+        Console.WriteLine($"SouthProbeStatus={southProbeStatus}");
+        Console.WriteLine($"VerticalStreamedBordersBuilt={verticalStreamedBordersBuilt}");
         Console.WriteLine($"TinyBiomeViolationSummary={tinyBiomeViolationSummary}");
         Console.WriteLine($"Status={status}");
 
@@ -1498,9 +2030,136 @@ internal static class Program
             mainThreadBounded &&
             transitionSpacingValid &&
             fullMapNoIntersections &&
-            stableBiomeRadiusValid
+            stableBiomeRadiusValid &&
+            streamedLocalBordersBuilt &&
+            verticalStreamedBordersBuilt
                 ? 0
                 : 1;
+    }
+
+    private static bool ProbeStreamedOceanDebugBounds(
+        Type terrainType,
+        BindingFlags staticFlags,
+        MethodInfo buildChunkBoundsMethod,
+        MethodInfo buildResidentChunksSynchronouslyMethod,
+        MethodInfo tryPromoteCompletedOceanTilesMethod,
+        MethodInfo updateOceanDebugSegmentsMethod,
+        float minX,
+        float maxX,
+        float minY,
+        float maxY,
+        out int directSegments,
+        out int streamedSegments,
+        out int missingVisibleTiles,
+        out int cacheCount,
+        out string status)
+    {
+        streamedSegments = 0;
+        missingVisibleTiles = 0;
+        cacheCount = 0;
+        status = "streamed probe unavailable";
+        directSegments = 0;
+        object chunkBounds = buildChunkBoundsMethod.Invoke(
+            null,
+            [minX - 512f, maxX + 512f, minY - 512f, maxY + 512f])!;
+        bool chunksReady = (bool)buildResidentChunksSynchronouslyMethod.Invoke(null, [chunkBounds, false, false])!;
+        if (!chunksReady)
+        {
+            status = "terrain chunks unavailable";
+            return false;
+        }
+
+        tryPromoteCompletedOceanTilesMethod.Invoke(null, []);
+        updateOceanDebugSegmentsMethod.Invoke(null, [minX, maxX, minY, maxY, false]);
+        streamedSegments = (int)terrainType.GetProperty("TerrainOceanDebugStreamedTileSegmentCount", staticFlags)!.GetValue(null)!;
+        missingVisibleTiles = (int)terrainType.GetProperty("TerrainOceanDebugMissingVisibleTileCount", staticFlags)!.GetValue(null)!;
+        cacheCount = (int)terrainType.GetProperty("TerrainOceanDebugTileCacheCount", staticFlags)!.GetValue(null)!;
+        status = (string)terrainType.GetProperty("TerrainOceanDebugStreamedTileStatus", staticFlags)!.GetValue(null)!;
+        directSegments = streamedSegments;
+        return streamedSegments > 0 || missingVisibleTiles > 0;
+    }
+
+    private static bool TryResolveOutOfFullMapOceanDebugProbeBounds(
+        MethodInfo countDebugBordersMethod,
+        float fullMapMinX,
+        float fullMapMaxX,
+        float fullMapMinY,
+        float fullMapMaxY,
+        out float minX,
+        out float maxX,
+        out float minY,
+        out float maxY,
+        out int directSegments)
+    {
+        minX = maxX = minY = maxY = 0f;
+        directSegments = 0;
+        if (countDebugBordersMethod == null)
+        {
+            return false;
+        }
+
+        const float halfExtent = 512f;
+        float centerX = (fullMapMinX + fullMapMaxX) * 0.5f;
+        float centerY = (fullMapMinY + fullMapMaxY) * 0.5f;
+        float[] candidateX =
+        [
+            fullMapMaxX + 768f,
+            fullMapMaxX + 1792f,
+            fullMapMaxX + 2816f,
+            fullMapMinX - 768f,
+            fullMapMinX - 1792f,
+            fullMapMinX - 2816f,
+            centerX
+        ];
+        float[] candidateY =
+        [
+            centerY,
+            centerY + 1024f,
+            centerY - 1024f,
+            centerY + 2048f,
+            centerY - 2048f,
+            fullMapMaxY + 768f,
+            fullMapMaxY + 1792f,
+            fullMapMinY - 768f,
+            fullMapMinY - 1792f
+        ];
+
+        foreach (float x in candidateX)
+        {
+            foreach (float y in candidateY)
+            {
+                float candidateMinX = x - halfExtent;
+                float candidateMaxX = x + halfExtent;
+                float candidateMinY = y - halfExtent;
+                float candidateMaxY = y + halfExtent;
+                bool fullyOutsideFullMap =
+                    candidateMinX >= fullMapMaxX ||
+                    candidateMaxX <= fullMapMinX ||
+                    candidateMinY >= fullMapMaxY ||
+                    candidateMaxY <= fullMapMinY;
+                if (!fullyOutsideFullMap)
+                {
+                    continue;
+                }
+
+                int segmentCount = Convert.ToInt32(countDebugBordersMethod.Invoke(
+                    null,
+                    [candidateMinX, candidateMaxX, candidateMinY, candidateMaxY])!);
+                if (segmentCount <= 0)
+                {
+                    continue;
+                }
+
+                minX = candidateMinX;
+                maxX = candidateMaxX;
+                minY = candidateMinY;
+                maxY = candidateMaxY;
+                directSegments = segmentCount;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static int RunLevelStartupProbe()
@@ -1778,6 +2437,19 @@ internal static class Program
         float Depth,
         float OffshoreDistance);
 
+    private readonly record struct OceanBiomeChunkSyncMetrics(
+        int ResidentSamples,
+        int RuntimeWaterSamples,
+        int MatchingSamples,
+        int MismatchedSamples,
+        int NonChunkSourceSamples,
+        int RuntimeBiomeCount,
+        int ResidentBiomeCount,
+        string RuntimeBiomes,
+        string ResidentBiomes,
+        string FirstMismatch,
+        string FirstNonChunkSource);
+
     private static void PrepareTerrainForSeed(Type terrainType, BindingFlags staticFlags, int seed)
     {
         MethodInfo resolveSeedAnchorMethod = terrainType.GetMethod("ResolveSeedAnchorCentifoot", staticFlags)!;
@@ -1831,6 +2503,94 @@ internal static class Program
         return true;
     }
 
+    private static OceanBiomeChunkSyncMetrics ProbeOceanBiomeChunkSync(
+        MethodInfo resolveOceanBiomeWithSourceMethod,
+        MethodInfo trySampleResidentOceanDebugChunkMethod,
+        float minX,
+        float maxX,
+        float minY,
+        float maxY,
+        float sampleStep)
+    {
+        bool[] runtimeBiomesSeen = new bool[5];
+        bool[] residentBiomesSeen = new bool[5];
+        int residentSamples = 0;
+        int runtimeWaterSamples = 0;
+        int matchingSamples = 0;
+        int mismatchedSamples = 0;
+        int nonChunkSourceSamples = 0;
+        string firstMismatch = "none";
+        string firstNonChunkSource = "none";
+        float step = Math.Max(8f, sampleStep);
+
+        for (float y = minY; y <= maxY + 0.001f; y += step)
+        {
+            for (float x = minX; x <= maxX + 0.001f; x += step)
+            {
+                Vector2 position = new(x, y);
+                object[] residentArgs = [position, null!, 0f];
+                bool hasResidentSample = (bool)trySampleResidentOceanDebugChunkMethod.Invoke(null, residentArgs)!;
+                if (!hasResidentSample)
+                {
+                    continue;
+                }
+
+                int residentBiomeIndex = Math.Clamp(Convert.ToInt32(residentArgs[1]!), 0, residentBiomesSeen.Length - 1);
+                residentBiomesSeen[residentBiomeIndex] = true;
+                residentSamples++;
+
+                object[] runtimeArgs = [position, null!, 0f, 0f, null!];
+                bool runtimeResolved = (bool)resolveOceanBiomeWithSourceMethod.Invoke(null, runtimeArgs)!;
+                if (!runtimeResolved)
+                {
+                    continue;
+                }
+
+                int runtimeBiomeIndex = Math.Clamp(Convert.ToInt32(runtimeArgs[1]!), 0, runtimeBiomesSeen.Length - 1);
+                string sampleSource = runtimeArgs[4]?.ToString() ?? string.Empty;
+                runtimeBiomesSeen[runtimeBiomeIndex] = true;
+                runtimeWaterSamples++;
+
+                if (runtimeBiomeIndex == residentBiomeIndex)
+                {
+                    matchingSamples++;
+                }
+                else
+                {
+                    mismatchedSamples++;
+                    if (firstMismatch == "none")
+                    {
+                        firstMismatch =
+                            $"pos=({x:0.#},{y:0.#}) runtime={runtimeArgs[1]} resident={residentArgs[1]} source={sampleSource}";
+                    }
+                }
+
+                if (!string.Equals(sampleSource, "resident ocean biome chunk", StringComparison.Ordinal))
+                {
+                    nonChunkSourceSamples++;
+                    if (firstNonChunkSource == "none")
+                    {
+                        firstNonChunkSource =
+                            $"pos=({x:0.#},{y:0.#}) biome={runtimeArgs[1]} source={sampleSource}";
+                    }
+                }
+            }
+        }
+
+        return new OceanBiomeChunkSyncMetrics(
+            residentSamples,
+            runtimeWaterSamples,
+            matchingSamples,
+            mismatchedSamples,
+            nonChunkSourceSamples,
+            CountBiomesSeen(runtimeBiomesSeen),
+            CountBiomesSeen(residentBiomesSeen),
+            FormatBiomesSeen(runtimeBiomesSeen),
+            FormatBiomesSeen(residentBiomesSeen),
+            firstMismatch,
+            firstNonChunkSource);
+    }
+
     private static Vector2[] BuildProbeDirections(int count)
     {
         int directionCount = Math.Max(4, count);
@@ -1867,6 +2627,20 @@ internal static class Program
         }
 
         return offshoreDistance <= midnightDistance ? 3 : 4;
+    }
+
+    private static int CountBiomesSeen(bool[] biomesSeen)
+    {
+        int count = 0;
+        for (int i = 0; i < biomesSeen.Length; i++)
+        {
+            if (biomesSeen[i])
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static string FormatBiomesSeen(bool[] biomesSeen)
@@ -2358,6 +3132,108 @@ internal static class Program
         return objectAheadOfVisible && preloadContainsObject ? 0 : 1;
     }
 
+    private static int RunTerrainCameraWindowAuthorityProbe()
+    {
+        ResetRuntimeState();
+
+        Core core = CreateHeadlessCore();
+        Core.Instance = core;
+        core.GameObjects = new List<GameObject>();
+        core.StaticObjects = new List<GameObject>();
+        core.PhysicsManager = new PhysicsManager();
+
+        Agent? player = AgentLoader.LoadAgents().FirstOrDefault(static agent => agent.IsPlayer);
+        if (player == null)
+        {
+            Console.WriteLine("TerrainCameraWindowAuthorityProbe: player not found.");
+            return 1;
+        }
+
+        ApplyDatabaseLoadout(player);
+        core.Player = player;
+        core.GameObjects.Add(player);
+
+        Assembly gameplayAssembly = typeof(Core).Assembly;
+        Type terrainType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground", throwOnError: true)!;
+        BindingFlags staticFlags = BindingFlags.NonPublic | BindingFlags.Static;
+        BindingFlags instanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        PrepareTerrainForSeed(terrainType, staticFlags, 1337);
+        MethodInfo tryResolveWindowsMethod = terrainType.GetMethod("TryResolveTerrainStreamingWindows", staticFlags)!;
+        MethodInfo resolveStableTerrainObjectChunkWindowMethod = terrainType.GetMethod(
+            "ResolveStableTerrainObjectChunkWindow",
+            staticFlags)!;
+        Matrix fixedCamera = Matrix.CreateTranslation(-2048f, -1536f, 0f);
+        Rectangle panel = new(0, 0, 1280, 720);
+
+        player.Position = new Vector2(-4096f, -4096f);
+        object nearWindows = ResolveWindows(player.Position);
+        player.Position = new Vector2(4096f, 4096f);
+        object farWindows = ResolveWindows(player.Position);
+
+        object nearVisible = GetWindowBounds(nearWindows, "VisibleChunkWindow");
+        object farVisible = GetWindowBounds(farWindows, "VisibleChunkWindow");
+        object nearObjects = GetWindowBounds(nearWindows, "TerrainObjectChunkWindow");
+        object farObjects = GetWindowBounds(farWindows, "TerrainObjectChunkWindow");
+        object nearPreload = GetWindowBounds(nearWindows, "PreloadChunkWindow");
+        object farPreload = GetWindowBounds(farWindows, "PreloadChunkWindow");
+
+        bool visibleStable = ChunkBoundsEqualForProbe(nearVisible, farVisible, instanceFlags);
+        bool objectsStable = ChunkBoundsEqualForProbe(nearObjects, farObjects, instanceFlags);
+        bool preloadCanFollowPlayer = !ChunkBoundsEqualForProbe(nearPreload, farPreload, instanceFlags);
+        object initialTargetVisualWindow = resolveStableTerrainObjectChunkWindowMethod.Invoke(null, [nearObjects, nearVisible])!;
+        bool initialTargetUsesObjectBuffer = ChunkBoundsEqualForProbe(initialTargetVisualWindow, nearObjects, instanceFlags);
+        bool objectBufferContainsVisible = ChunkBoundsContains(nearObjects, nearVisible, instanceFlags);
+
+        Console.WriteLine("TerrainCameraWindowAuthorityProbe");
+        Console.WriteLine($"FixedCameraTranslation=(-2048,-1536)");
+        Console.WriteLine($"NearPlayer=(-4096,-4096)");
+        Console.WriteLine($"FarPlayer=(4096,4096)");
+        Console.WriteLine($"NearVisible={FormatChunkBoundsForProbe(nearVisible, instanceFlags)}");
+        Console.WriteLine($"FarVisible={FormatChunkBoundsForProbe(farVisible, instanceFlags)}");
+        Console.WriteLine($"NearObjects={FormatChunkBoundsForProbe(nearObjects, instanceFlags)}");
+        Console.WriteLine($"FarObjects={FormatChunkBoundsForProbe(farObjects, instanceFlags)}");
+        Console.WriteLine($"NearPreload={FormatChunkBoundsForProbe(nearPreload, instanceFlags)}");
+        Console.WriteLine($"FarPreload={FormatChunkBoundsForProbe(farPreload, instanceFlags)}");
+        Console.WriteLine($"VisibleStable={visibleStable}");
+        Console.WriteLine($"ObjectsStable={objectsStable}");
+        Console.WriteLine($"PreloadCanFollowPlayer={preloadCanFollowPlayer}");
+        Console.WriteLine($"InitialTargetVisual={FormatChunkBoundsForProbe(initialTargetVisualWindow, instanceFlags)}");
+        Console.WriteLine($"InitialTargetUsesObjectBuffer={initialTargetUsesObjectBuffer}");
+        Console.WriteLine($"ObjectBufferContainsVisible={objectBufferContainsVisible}");
+
+        return visibleStable &&
+            objectsStable &&
+            preloadCanFollowPlayer &&
+            initialTargetUsesObjectBuffer &&
+            objectBufferContainsVisible
+                ? 0
+                : 1;
+
+        object ResolveWindows(Vector2 playerPosition)
+        {
+            player.Position = playerPosition;
+            object[] args =
+            [
+                fixedCamera,
+                panel,
+                null!
+            ];
+            bool resolved = (bool)tryResolveWindowsMethod.Invoke(null, args)!;
+            if (!resolved)
+            {
+                throw new InvalidOperationException("Failed to resolve terrain streaming windows.");
+            }
+
+            return args[2]!;
+        }
+
+        object GetWindowBounds(object windows, string propertyName)
+        {
+            return windows.GetType().GetProperty(propertyName, instanceFlags)!.GetValue(windows)!;
+        }
+    }
+
     private static int RunTerrainStaleMaterializationProbe()
     {
         const int seed = 1337;
@@ -2526,6 +3402,144 @@ internal static class Program
         }
     }
 
+    private static int RunTerrainResidentMaskAuthorityProbe()
+    {
+        const int seed = 1337;
+
+        ResetRuntimeState();
+        Core core = CreateHeadlessCore();
+        Core.Instance = core;
+        core.GameObjects = new List<GameObject>();
+        core.StaticObjects = new List<GameObject>();
+        core.PhysicsManager = new PhysicsManager();
+
+        Assembly gameplayAssembly = typeof(Core).Assembly;
+        Type terrainType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground", throwOnError: true)!;
+        BindingFlags staticFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        BindingFlags instanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        PrepareTerrainForSeed(terrainType, staticFlags, seed);
+
+        Type chunkKeyType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+ChunkKey", throwOnError: true)!;
+        Type generatedChunkType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+GeneratedChunkData", throwOnError: true)!;
+        Type chunkBoundsType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+ChunkBounds", throwOnError: true)!;
+        Type combinedResidentMaskType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+CombinedResidentMask", throwOnError: true)!;
+        Type terrainWorldBoundsType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+TerrainWorldBounds", throwOnError: true)!;
+        Type materializationResultType = gameplayAssembly.GetType("op.io.GameBlockTerrainBackground+TerrainMaterializationResult", throwOnError: true)!;
+
+        FieldInfo chunkTextureResolutionField = terrainType.GetField("ChunkTextureResolution", staticFlags)!;
+        FieldInfo chunkWorldSizeField = terrainType.GetField("ChunkWorldSize", staticFlags)!;
+        FieldInfo landField = terrainType.GetField("Land", staticFlags)!;
+        MethodInfo buildChunkMethod = terrainType.GetMethod("BuildChunkData", staticFlags)!;
+        MethodInfo buildChunkWorldBoundsMethod = terrainType.GetMethod("BuildChunkWorldBounds", staticFlags)!;
+        MethodInfo buildTerrainMaterializationResultMethod = terrainType.GetMethod(
+            "BuildTerrainMaterializationResult",
+            staticFlags,
+            binder: null,
+            [combinedResidentMaskType, typeof(int), terrainWorldBoundsType],
+            modifiers: null)!;
+
+        ConstructorInfo chunkKeyConstructor = chunkKeyType.GetConstructor(instanceFlags, binder: null, [typeof(int), typeof(int)], modifiers: null)!;
+        ConstructorInfo chunkBoundsConstructor = chunkBoundsType.GetConstructor(instanceFlags, binder: null, [typeof(int), typeof(int), typeof(int), typeof(int)], modifiers: null)!;
+        ConstructorInfo combinedResidentMaskConstructor = combinedResidentMaskType.GetConstructor(instanceFlags, binder: null, [typeof(byte[]), typeof(int), typeof(int), typeof(int), typeof(int)], modifiers: null)!;
+        PropertyInfo hasLandProperty = generatedChunkType.GetProperty("HasLand", instanceFlags)!;
+        PropertyInfo componentCountProperty = materializationResultType.GetProperty("ComponentCount", instanceFlags)!;
+        PropertyInfo triangleCountProperty = materializationResultType.GetProperty("VisualTriangleCount", instanceFlags)!;
+        PropertyInfo visualObjectsProperty = materializationResultType.GetProperty("VisualObjects", instanceFlags)!;
+
+        int chunkTextureResolution = Convert.ToInt32(chunkTextureResolutionField.GetRawConstantValue() ?? chunkTextureResolutionField.GetValue(null));
+        float chunkWorldSize = Convert.ToSingle(chunkWorldSizeField.GetRawConstantValue() ?? chunkWorldSizeField.GetValue(null));
+        byte land = Convert.ToByte(landField.GetRawConstantValue() ?? landField.GetValue(null));
+        int selectedChunkX = 0;
+        int selectedChunkY = 0;
+        bool foundWaterChunk = false;
+        for (int chunkY = -10; chunkY <= 10 && !foundWaterChunk; chunkY++)
+        {
+            for (int chunkX = -10; chunkX <= 10; chunkX++)
+            {
+                object key = chunkKeyConstructor.Invoke([chunkX, chunkY]);
+                object chunk = buildChunkMethod.Invoke(null, [key])!;
+                bool hasLand = (bool)hasLandProperty.GetValue(chunk)!;
+                if (hasLand)
+                {
+                    continue;
+                }
+
+                selectedChunkX = chunkX;
+                selectedChunkY = chunkY;
+                foundWaterChunk = true;
+                break;
+            }
+        }
+
+        if (!foundWaterChunk)
+        {
+            Console.WriteLine("TerrainResidentMaskAuthorityProbe");
+            Console.WriteLine("FoundWaterChunk=False");
+            return 1;
+        }
+
+        int maskWidth = chunkTextureResolution;
+        int maskHeight = chunkTextureResolution;
+        byte[] syntheticMask = new byte[maskWidth * maskHeight];
+        int rectMin = chunkTextureResolution / 3;
+        int rectMax = (chunkTextureResolution * 2) / 3;
+        for (int y = rectMin; y < rectMax; y++)
+        {
+            for (int x = rectMin; x < rectMax; x++)
+            {
+                syntheticMask[x + (y * maskWidth)] = land;
+            }
+        }
+
+        object combinedMask = combinedResidentMaskConstructor.Invoke([syntheticMask, maskWidth, maskHeight, selectedChunkX, selectedChunkY]);
+        object chunkWindow = chunkBoundsConstructor.Invoke([selectedChunkX, selectedChunkX, selectedChunkY, selectedChunkY]);
+        object colliderWorldBounds = buildChunkWorldBoundsMethod.Invoke(null, [chunkWindow])!;
+        object materialization = buildTerrainMaterializationResultMethod.Invoke(null, [combinedMask, 1, colliderWorldBounds])!;
+
+        int componentCount = (int)componentCountProperty.GetValue(materialization)!;
+        int triangleCount = (int)triangleCountProperty.GetValue(materialization)!;
+        IList visualObjects = (IList)visualObjectsProperty.GetValue(materialization)!;
+        float cellWorldSize = chunkWorldSize / chunkTextureResolution;
+        float expectedMinX = (selectedChunkX * chunkWorldSize) + (rectMin * cellWorldSize);
+        float expectedMinY = (selectedChunkY * chunkWorldSize) + (rectMin * cellWorldSize);
+        float expectedMaxX = (selectedChunkX * chunkWorldSize) + (rectMax * cellWorldSize);
+        float expectedMaxY = (selectedChunkY * chunkWorldSize) + (rectMax * cellWorldSize);
+        bool visualOverlapsSyntheticLand = false;
+        for (int i = 0; i < visualObjects.Count; i++)
+        {
+            object bounds = visualObjects[i]!.GetType().GetProperty("Bounds", instanceFlags)!.GetValue(visualObjects[i])!;
+            float minX = GetTerrainBoundsValue(bounds, "MinX", instanceFlags);
+            float minY = GetTerrainBoundsValue(bounds, "MinY", instanceFlags);
+            float maxX = GetTerrainBoundsValue(bounds, "MaxX", instanceFlags);
+            float maxY = GetTerrainBoundsValue(bounds, "MaxY", instanceFlags);
+            if (maxX >= expectedMinX &&
+                minX <= expectedMaxX &&
+                maxY >= expectedMinY &&
+                minY <= expectedMaxY)
+            {
+                visualOverlapsSyntheticLand = true;
+                break;
+            }
+        }
+
+        bool residentMaskMaterialized = componentCount > 0 &&
+            triangleCount > 0 &&
+            visualOverlapsSyntheticLand;
+
+        Console.WriteLine("TerrainResidentMaskAuthorityProbe");
+        Console.WriteLine($"Seed={seed}");
+        Console.WriteLine($"WaterChunk={selectedChunkX},{selectedChunkY}");
+        Console.WriteLine($"SyntheticRectCells={rectMin}..{rectMax}");
+        Console.WriteLine($"ComponentCount={componentCount}");
+        Console.WriteLine($"VisualTriangleCount={triangleCount}");
+        Console.WriteLine($"VisualObjects={visualObjects.Count}");
+        Console.WriteLine($"VisualOverlapsSyntheticLand={visualOverlapsSyntheticLand}");
+        Console.WriteLine($"ResidentMaskMaterialized={residentMaskMaterialized}");
+
+        return residentMaskMaterialized ? 0 : 1;
+    }
+
     private static int RunTerrainImpulseProbe()
     {
         ResetRuntimeState();
@@ -2679,6 +3693,12 @@ internal static class Program
             binder: null,
             [typeof(Agent)],
             modifiers: null)!;
+        MethodInfo prepareMovementMethod = terrainType.GetMethod(
+            "TryPreparePlayerTerrainForMovement",
+            staticFlags,
+            binder: null,
+            [typeof(Agent), typeof(Vector2)],
+            modifiers: null)!;
 
         Vector2 centerPreviousPosition = Vector2.Zero;
         Vector2 centerTargetPosition = new(200f, 200f);
@@ -2698,18 +3718,48 @@ internal static class Program
         bool edgeRequestedAccess = (bool)terrainType.GetProperty("TerrainAccessRequestActive", staticFlags)!.GetValue(null)!;
         int blockedCount = (int)terrainType.GetProperty("TerrainMovementBlockedUntilReadyCount", staticFlags)!.GetValue(null)!;
 
+        terrainType.GetMethod("ResetRuntimeTerrainObjectsForLevelLoad", staticFlags)!.Invoke(null, []);
+        terrainType.GetMethod("ResetTerrainChunkWorkerQueues", staticFlags)!.Invoke(null, []);
+        PrepareTerrainForSeed(terrainType, staticFlags, 1337);
+        Type fogType = gameplayAssembly.GetType("op.io.FogOfWarManager", throwOnError: true)!;
+        fogType.GetProperty("PlayerSightRadius", staticFlags)!.SetValue(null, 2048f);
+        player.Position = new Vector2(0f, -5100f);
+        player.PreviousPosition = player.Position;
+        bool movementPreparationReady = (bool)prepareMovementMethod.Invoke(null, [player, new Vector2(0f, -20f)])!;
+        bool movementBarrierCleared = !(bool)terrainType.GetProperty("TerrainGenerationBarrierActive", staticFlags)!.GetValue(null)!;
+        int pendingCriticalAfterMovement = (int)terrainType.GetProperty("TerrainPendingCriticalChunkCount", staticFlags)!.GetValue(null)!;
+        bool materializationInFlightAfterMovement = (bool)terrainType.GetProperty("TerrainMaterializationInFlight", staticFlags)!.GetValue(null)!;
+        int oceanMissingAfterMovement = (int)terrainType.GetProperty("TerrainOceanDebugMissingVisibleTileCount", staticFlags)!.GetValue(null)!;
+        int blockedCountAfterMovement = (int)terrainType.GetProperty("TerrainMovementBlockedUntilReadyCount", staticFlags)!.GetValue(null)!;
+        string criticalStatusAfterMovement = (string)terrainType.GetProperty("TerrainCriticalGenerationStatus", staticFlags)!.GetValue(null)!;
+        string oceanStatusAfterMovement = (string)terrainType.GetProperty("TerrainOceanDebugStreamedTileStatus", staticFlags)!.GetValue(null)!;
+
         Console.WriteLine("TerrainAccessGateProbe");
         Console.WriteLine($"CenterNotReverted={centerNotReverted}");
         Console.WriteLine($"CenterDidNotRequestAccess={centerDidNotRequestAccess}");
         Console.WriteLine($"EdgeNotReverted={edgeNotReverted}");
         Console.WriteLine($"EdgeRequestedAccess={edgeRequestedAccess}");
         Console.WriteLine($"BlockedCount={blockedCount}");
+        Console.WriteLine($"MovementPreparationReady={movementPreparationReady}");
+        Console.WriteLine($"MovementBarrierCleared={movementBarrierCleared}");
+        Console.WriteLine($"PendingCriticalAfterMovement={pendingCriticalAfterMovement}");
+        Console.WriteLine($"MaterializationInFlightAfterMovement={materializationInFlightAfterMovement}");
+        Console.WriteLine($"OceanMissingAfterMovement={oceanMissingAfterMovement}");
+        Console.WriteLine($"BlockedCountAfterMovement={blockedCountAfterMovement}");
+        Console.WriteLine($"CriticalStatusAfterMovement={criticalStatusAfterMovement}");
+        Console.WriteLine($"OceanStatusAfterMovement={oceanStatusAfterMovement}");
 
         return centerNotReverted &&
             centerDidNotRequestAccess &&
             edgeNotReverted &&
             edgeRequestedAccess &&
-            blockedCount == 0
+            blockedCount == 0 &&
+            movementPreparationReady &&
+            movementBarrierCleared &&
+            pendingCriticalAfterMovement == 0 &&
+            !materializationInFlightAfterMovement &&
+            oceanMissingAfterMovement == 0 &&
+            blockedCountAfterMovement == 0
                 ? 0
                 : 1;
     }
@@ -3095,6 +4145,50 @@ internal static class Program
             GetChunkBoundsValue(innerBounds, "MaxChunkY", instanceFlags) <= GetChunkBoundsValue(outerBounds, "MaxChunkY", instanceFlags);
     }
 
+    private static bool ChunkBoundsEqualForProbe(object leftBounds, object rightBounds, BindingFlags instanceFlags)
+    {
+        return GetChunkBoundsValue(leftBounds, "MinChunkX", instanceFlags) == GetChunkBoundsValue(rightBounds, "MinChunkX", instanceFlags) &&
+            GetChunkBoundsValue(leftBounds, "MaxChunkX", instanceFlags) == GetChunkBoundsValue(rightBounds, "MaxChunkX", instanceFlags) &&
+            GetChunkBoundsValue(leftBounds, "MinChunkY", instanceFlags) == GetChunkBoundsValue(rightBounds, "MinChunkY", instanceFlags) &&
+            GetChunkBoundsValue(leftBounds, "MaxChunkY", instanceFlags) == GetChunkBoundsValue(rightBounds, "MaxChunkY", instanceFlags);
+    }
+
+    private static bool RenderPlanBoundsEqual(object leftPlan, object rightPlan, BindingFlags instanceFlags)
+    {
+        const float tolerance = 0.001f;
+        return MathF.Abs(GetRenderPlanValue(leftPlan, "SampleMinX", instanceFlags) - GetRenderPlanValue(rightPlan, "SampleMinX", instanceFlags)) <= tolerance &&
+            MathF.Abs(GetRenderPlanValue(leftPlan, "SampleMaxX", instanceFlags) - GetRenderPlanValue(rightPlan, "SampleMaxX", instanceFlags)) <= tolerance &&
+            MathF.Abs(GetRenderPlanValue(leftPlan, "SampleMinY", instanceFlags) - GetRenderPlanValue(rightPlan, "SampleMinY", instanceFlags)) <= tolerance &&
+            MathF.Abs(GetRenderPlanValue(leftPlan, "SampleMaxY", instanceFlags) - GetRenderPlanValue(rightPlan, "SampleMaxY", instanceFlags)) <= tolerance;
+    }
+
+    private static bool RenderPlanCoversView(
+        object plan,
+        float minX,
+        float maxX,
+        float minY,
+        float maxY,
+        BindingFlags instanceFlags)
+    {
+        return GetRenderPlanValue(plan, "SampleMinX", instanceFlags) <= minX &&
+            GetRenderPlanValue(plan, "SampleMaxX", instanceFlags) >= maxX &&
+            GetRenderPlanValue(plan, "SampleMinY", instanceFlags) <= minY &&
+            GetRenderPlanValue(plan, "SampleMaxY", instanceFlags) >= maxY;
+    }
+
+    private static string FormatRenderPlanBounds(object plan, BindingFlags instanceFlags)
+    {
+        return $"{GetRenderPlanValue(plan, "SampleMinX", instanceFlags):0.###}," +
+            $"{GetRenderPlanValue(plan, "SampleMaxX", instanceFlags):0.###}," +
+            $"{GetRenderPlanValue(plan, "SampleMinY", instanceFlags):0.###}," +
+            $"{GetRenderPlanValue(plan, "SampleMaxY", instanceFlags):0.###}";
+    }
+
+    private static float GetRenderPlanValue(object plan, string propertyName, BindingFlags instanceFlags)
+    {
+        return (float)plan.GetType().GetProperty(propertyName, instanceFlags)!.GetValue(plan)!;
+    }
+
     private static string FormatChunkBoundsForProbe(object bounds, BindingFlags instanceFlags)
     {
         return $"{GetChunkBoundsValue(bounds, "MinChunkX", instanceFlags)}..{GetChunkBoundsValue(bounds, "MaxChunkX", instanceFlags)}, " +
@@ -3202,10 +4296,10 @@ internal static class Program
         {
             BulletDamage = 10f,
             BulletPenetration = 0f,
-            BulletSpeed = 400f,
+            BulletSpeed = 120f,
             ReloadSpeed = 1f,
             BulletMaxLifespan = 3f,
-            BulletMass = 0.5f,
+            BulletMass = 9f,
             BulletHealth = 20f,
             BulletFillAlphaRaw = -1,
             BulletOutlineAlphaRaw = -1,
@@ -3213,6 +4307,8 @@ internal static class Program
         };
 
         Shape ownerShape = new("Circle", 50, 50, 0, Color.White, Color.Transparent, 0);
+        const float ownerForwardSpeed = 90f;
+        Vector2 ownerVelocity = new(ownerForwardSpeed, 0f);
         Agent owner = new(
             1,
             "ProbeOwner",
@@ -3223,7 +4319,7 @@ internal static class Program
             isCollidable: true,
             dynamicPhysics: true,
             ownerShape,
-            baseSpeed: 0f,
+            baseSpeed: ownerForwardSpeed,
             isPlayer: true,
             Color.White,
             Color.Transparent,
@@ -3236,11 +4332,15 @@ internal static class Program
 
         Core.DELTATIME = 1f / 60f;
         Core.GAMETIME = 0f;
+        owner.PreviousPosition = owner.Position - ownerVelocity * Core.DELTATIME;
         BulletManager.SpawnBullet(owner);
         Bullet? bullet = BulletManager.GetBullets().FirstOrDefault();
+        bool inheritedMomentumAtSpawn = bullet != null &&
+            bullet.Velocity.X >= ownerForwardSpeed + barrel.BulletSpeed - 0.01f;
         bool initiallyLocked = bullet != null &&
             bullet.IsBarrelLocked &&
             bullet.IsOwnerImmune &&
+            BulletManager.OwnerImmuneBulletCount == 1 &&
             BulletManager.BarrelLockedBulletCount == 1 &&
             BulletManager.CollisionReadyBulletCount == 0;
 
@@ -3249,40 +4349,80 @@ internal static class Program
         {
             Core.GAMETIME += Core.DELTATIME;
             owner.PreviousPosition = owner.Position;
+            owner.Position += ownerVelocity * Core.DELTATIME;
             BulletManager.Update();
             frames++;
         }
 
         bool exitedBarrel = bullet != null && !bullet.IsBarrelLocked;
-        bool collisionReadyAtExit = exitedBarrel &&
-            !bullet!.IsOwnerImmune &&
+        float velocityAtBarrelExitX = bullet?.Velocity.X ?? 0f;
+        float maxSpeedAtBarrelExit = bullet?.MaxSpeed ?? 0f;
+        bool ownerImmuneAfterBarrelExit = exitedBarrel &&
+            bullet!.IsOwnerImmune &&
+            BulletManager.OwnerImmuneBulletCount == 1 &&
             BulletManager.BarrelLockedBulletCount == 0 &&
             BulletManager.CollisionReadyBulletCount == 1;
 
         float healthBefore = owner.CurrentHealth;
+        BulletCollisionSystem.Update(Core.DELTATIME);
+        bool ownerProtectedWhileStillOverlapping = MathF.Abs(owner.CurrentHealth - healthBefore) < 0.001f;
+
+        int ownerClearanceFrames = 0;
+        while (bullet != null && bullet.IsOwnerImmune && ownerClearanceFrames < 120)
+        {
+            Core.GAMETIME += Core.DELTATIME;
+            owner.PreviousPosition = owner.Position;
+            owner.Position += ownerVelocity * Core.DELTATIME;
+            BulletManager.Update();
+            BulletCollisionSystem.Update(Core.DELTATIME);
+            ownerClearanceFrames++;
+        }
+
+        bool clearedOwner = bullet != null &&
+            !bullet.IsOwnerImmune &&
+            BulletManager.OwnerImmuneBulletCount == 0;
+        bool relativeMomentumPreserved =
+            velocityAtBarrelExitX >= ownerForwardSpeed + barrel.BulletSpeed - 0.01f &&
+            maxSpeedAtBarrelExit >= velocityAtBarrelExitX - 0.01f;
+
+        float healthBeforeReturnHit = owner.CurrentHealth;
         if (bullet != null)
         {
-            bullet.PreviousPosition = owner.Position;
+            float bulletRadius = bullet.Shape != null ? bullet.Shape.Width * 0.5f : BulletCollisionSystem.BulletRadius;
+            float ownerRadius = owner.Shape != null ? owner.Shape.Width * 0.5f : BulletCollisionSystem.EnemyRadius;
+            float startOffset = bulletRadius + ownerRadius + 8f;
+            bullet.PreviousPosition = owner.Position + new Vector2(startOffset, 0f);
             bullet.Position = owner.Position;
-            bullet.Velocity = Vector2.Zero;
+            bullet.Velocity = new Vector2(-barrel.BulletSpeed, 0f);
         }
 
         BulletCollisionSystem.Update(Core.DELTATIME);
-        bool ownerCollisionAfterExit = owner.CurrentHealth < healthBefore;
+        bool ownerCollisionAfterTrueClear = owner.CurrentHealth < healthBeforeReturnHit;
 
         Console.WriteLine("BulletBarrelCollisionProbe");
+        Console.WriteLine($"InheritedMomentumAtSpawn={inheritedMomentumAtSpawn}");
         Console.WriteLine($"InitiallyLocked={initiallyLocked}");
         Console.WriteLine($"ExitedBarrel={exitedBarrel}");
         Console.WriteLine($"FramesUntilExit={frames}");
-        Console.WriteLine($"CollisionReadyAtExit={collisionReadyAtExit}");
-        Console.WriteLine($"OwnerHealthBefore={healthBefore:0.###}");
-        Console.WriteLine($"OwnerHealthAfter={owner.CurrentHealth:0.###}");
-        Console.WriteLine($"OwnerCollisionAfterExit={ownerCollisionAfterExit}");
+        Console.WriteLine($"OwnerImmuneAfterBarrelExit={ownerImmuneAfterBarrelExit}");
+        Console.WriteLine($"OwnerProtectedWhileStillOverlapping={ownerProtectedWhileStillOverlapping}");
+        Console.WriteLine($"OwnerClearanceFrames={ownerClearanceFrames}");
+        Console.WriteLine($"ClearedOwner={clearedOwner}");
+        Console.WriteLine($"VelocityAtBarrelExitX={velocityAtBarrelExitX:0.###}");
+        Console.WriteLine($"MaxSpeedAtBarrelExit={maxSpeedAtBarrelExit:0.###}");
+        Console.WriteLine($"RelativeMomentumPreserved={relativeMomentumPreserved}");
+        Console.WriteLine($"OwnerHealthBeforeReturnHit={healthBeforeReturnHit:0.###}");
+        Console.WriteLine($"OwnerHealthAfterReturnHit={owner.CurrentHealth:0.###}");
+        Console.WriteLine($"OwnerCollisionAfterTrueClear={ownerCollisionAfterTrueClear}");
 
-        return initiallyLocked &&
+        return inheritedMomentumAtSpawn &&
+            initiallyLocked &&
             exitedBarrel &&
-            collisionReadyAtExit &&
-            ownerCollisionAfterExit
+            ownerImmuneAfterBarrelExit &&
+            ownerProtectedWhileStillOverlapping &&
+            clearedOwner &&
+            relativeMomentumPreserved &&
+            ownerCollisionAfterTrueClear
                 ? 0
                 : 1;
     }
@@ -3616,6 +4756,8 @@ internal static class Program
         private MethodInfo? _prepareFogMethod;
         private MethodInfo? _drawFogOverlayMethod;
         private MethodInfo? _isWorldPositionClearOfFogMethod;
+        private MethodInfo? _buildChunkBoundsMethod;
+        private MethodInfo? _buildResidentChunksSynchronouslyMethod;
         private FieldInfo? _fogRenderTargetField;
         private readonly Color[] _pixels = new Color[RenderWidth * RenderHeight];
         private readonly Color[] _fogPixels = new Color[RenderWidth * RenderHeight];
@@ -3642,6 +4784,11 @@ internal static class Program
             Core.ForceDebugMode = true;
             Core.GAMETIME = 0f;
             Core.DELTATIME = 1f / 60f;
+            ControlStateManager.SetSwitchState("OceanBiomeDebug", true, "OceanDebugRenderProbe.Initialize");
+            if (!ControlStateManager.GetSwitchState("OceanBiomeDebug"))
+            {
+                ControlStateManager.SetSwitchState("OceanBiomeDebug", true, "OceanDebugRenderProbe.Initialize.ForceOn");
+            }
             GameObjects = new List<GameObject>();
             StaticObjects = new List<GameObject>();
             PhysicsManager = new PhysicsManager();
@@ -3714,6 +4861,15 @@ internal static class Program
                 binder: null,
                 [typeof(SpriteBatch)],
                 modifiers: null)!;
+            _buildChunkBoundsMethod = terrainType.GetMethod(
+                "BuildChunkBounds",
+                staticFlags,
+                binder: null,
+                [typeof(float), typeof(float), typeof(float), typeof(float)],
+                modifiers: null)!;
+            _buildResidentChunksSynchronouslyMethod = terrainType.GetMethod(
+                "BuildResidentChunksSynchronously",
+                staticFlags)!;
             Type fogType = gameplayAssembly.GetType("op.io.FogOfWarManager", throwOnError: true)!;
             _prepareFogMethod = fogType.GetMethod(
                 "Prepare",
@@ -3839,6 +4995,7 @@ internal static class Program
                 }
 
                 Core.GAMETIME = frameIndex / 60f;
+                PrepareTerrainChunksForCamera(cameras[cameraIndex]);
                 _prepareFogMethod.Invoke(null, [cameras[cameraIndex]]);
                 _prepareOverlayMethod.Invoke(null, [_spriteBatch, cameras[cameraIndex]]);
 
@@ -3927,6 +5084,9 @@ internal static class Program
                 $"MaxWarmOverlayMilliseconds={maxWarmOverlayMilliseconds:0.###}\n" +
                 $"TerrainOceanDebugSegments={GetTerrainPropertyValue("TerrainOceanDebugBorderSegmentCount")}\n" +
                 $"TerrainOceanDebugDrawStatus={GetTerrainPropertyValue("TerrainOceanDebugDrawStatus")}\n" +
+                $"TerrainOceanDebugStreamedTileSegments={GetTerrainPropertyValue("TerrainOceanDebugStreamedTileSegmentCount")}\n" +
+                $"TerrainOceanDebugMissingVisibleTiles={GetTerrainPropertyValue("TerrainOceanDebugMissingVisibleTileCount")}\n" +
+                $"TerrainOceanDebugStreamedTileStatus={GetTerrainPropertyValue("TerrainOceanDebugStreamedTileStatus")}\n" +
                 $"TerrainOceanDebugCache={GetTerrainPropertyValue("TerrainOceanDebugTileCacheCount")}\n" +
                 $"TerrainOceanDebugQueued={GetTerrainPropertyValue("TerrainOceanDebugQueuedTileCount")}\n" +
                 $"TerrainOceanDebugActive={GetTerrainPropertyValue("TerrainOceanDebugActiveTileBuildCount")}\n" +
@@ -4046,6 +5206,7 @@ internal static class Program
             }
 
             Matrix camera = BuildCamera(cameraCenter);
+            PrepareTerrainChunksForCamera(camera);
             if (drawFogOverlay)
             {
                 _prepareFogMethod.Invoke(null, [camera]);
@@ -4080,6 +5241,51 @@ internal static class Program
             }
 
             return redPixels;
+        }
+
+        private void PrepareTerrainChunksForCamera(Matrix camera)
+        {
+            if (_buildChunkBoundsMethod == null ||
+                _buildResidentChunksSynchronouslyMethod == null ||
+                !TryResolveCameraWorldBounds(
+                    camera,
+                    out float minX,
+                    out float maxX,
+                    out float minY,
+                    out float maxY))
+            {
+                return;
+            }
+
+            const float chunkBuildMargin = 512f;
+            object chunkBounds = _buildChunkBoundsMethod.Invoke(
+                null,
+                [minX - chunkBuildMargin, maxX + chunkBuildMargin, minY - chunkBuildMargin, maxY + chunkBuildMargin])!;
+            _buildResidentChunksSynchronouslyMethod.Invoke(null, [chunkBounds, false, false]);
+        }
+
+        private static bool TryResolveCameraWorldBounds(
+            Matrix camera,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY)
+        {
+            Matrix inverse = Matrix.Invert(camera);
+            Vector2 topLeft = Vector2.Transform(Vector2.Zero, inverse);
+            Vector2 topRight = Vector2.Transform(new Vector2(RenderWidth, 0f), inverse);
+            Vector2 bottomLeft = Vector2.Transform(new Vector2(0f, RenderHeight), inverse);
+            Vector2 bottomRight = Vector2.Transform(new Vector2(RenderWidth, RenderHeight), inverse);
+            minX = MathF.Min(MathF.Min(topLeft.X, topRight.X), MathF.Min(bottomLeft.X, bottomRight.X));
+            maxX = MathF.Max(MathF.Max(topLeft.X, topRight.X), MathF.Max(bottomLeft.X, bottomRight.X));
+            minY = MathF.Min(MathF.Min(topLeft.Y, topRight.Y), MathF.Min(bottomLeft.Y, bottomRight.Y));
+            maxY = MathF.Max(MathF.Max(topLeft.Y, topRight.Y), MathF.Max(bottomLeft.Y, bottomRight.Y));
+            return float.IsFinite(minX) &&
+                float.IsFinite(maxX) &&
+                float.IsFinite(minY) &&
+                float.IsFinite(maxY) &&
+                maxX > minX &&
+                maxY > minY;
         }
 
         private void RenderOceanDebugScene(
